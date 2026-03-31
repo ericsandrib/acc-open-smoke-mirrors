@@ -87,3 +87,30 @@
 ### Phase 4: Live Journey Integration
 - [x] Implement deriveLiveJourney helper to convert wizard state
 - [x] Merge live journey with seeded data in ServicingProvider
+
+## Spec 004: Child KYC Tasks
+
+### Phase 1: Foundation
+- [x] Create kycChildSubTasks utility (constants, parser, ID generator)
+- [x] Update computeFlatTaskOrder to push 3 derived IDs per child
+- [x] Update reducer cases (SET_TASK_DATA, SET_TASK_STATUS, CONFIRM_TASK, REOPEN_TASK, REMOVE_KYC_CHILD)
+
+### Phase 2: Form Components
+- [x] Create KycChildInfoForm (editable, pre-populated from RelatedParty)
+- [x] Create KycChildDocumentsForm (static upload mockup)
+- [x] Create KycChildResultsForm (pending placeholder)
+- [x] Update formRegistry with 3 new entries and descriptions
+
+### Phase 3: Navigation & Display
+- [x] Update TaskContent for sub-task ID resolution and title
+- [x] Update WizardFooter for sub-task status resolution
+- [x] Update DetailSidebar for sub-task detail display
+- [x] Update StepSidebar for sub-task highlight matching
+- [x] Update KycForm to navigate to -info suffix
+
+### Phase 4: Servicing View
+- [x] Update servicingStore to generate 3 JourneyTask objects per child action
+
+### Phase 5: Cleanup
+- [x] Delete old KycChildForm
+- [x] Verify build passes

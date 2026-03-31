@@ -1,4 +1,5 @@
 import { useWorkflow } from '@/stores/workflowStore'
+import { parseChildSubTaskId, KYC_CHILD_SUB_TASKS } from '@/utils/kycChildSubTasks'
 
 export function DetailSidebar() {
   const { state } = useWorkflow()
@@ -7,6 +8,15 @@ export function DetailSidebar() {
   const activeChild = state.tasks
     .flatMap((t) => t.children ?? [])
     .find((c) => c.id === state.activeTaskId)
+
+  // Resolve sub-task IDs
+  const parsed = parseChildSubTaskId(state.activeTaskId)
+  const subTaskChild = parsed
+    ? state.tasks.flatMap((t) => t.children ?? []).find((c) => c.id === parsed.childId)
+    : null
+  const subTaskDef = parsed
+    ? KYC_CHILD_SUB_TASKS.find((s) => s.suffix === parsed.suffix)
+    : null
 
   const title = activeTask?.title ?? activeChild?.name ?? ''
   const assignedTo = activeTask?.assignedTo ?? ''
@@ -44,6 +54,24 @@ export function DetailSidebar() {
             <span className="text-muted-foreground">Status</span>
             <p className="font-medium text-foreground capitalize">
               {activeChild.status.replace('_', ' ')}
+            </p>
+          </div>
+        </div>
+      )}
+      {!activeTask && !activeChild && subTaskChild && subTaskDef && (
+        <div className="space-y-3">
+          <div>
+            <span className="text-muted-foreground">KYC Review</span>
+            <p className="font-medium text-foreground">{subTaskChild.name}</p>
+          </div>
+          <div>
+            <span className="text-muted-foreground">Task</span>
+            <p className="font-medium text-foreground">{subTaskDef.title}</p>
+          </div>
+          <div>
+            <span className="text-muted-foreground">Status</span>
+            <p className="font-medium text-foreground capitalize">
+              {subTaskChild.status.replace('_', ' ')}
             </p>
           </div>
         </div>

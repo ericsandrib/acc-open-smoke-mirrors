@@ -1,6 +1,7 @@
 import { createContext, useContext, useReducer, useCallback, type ReactNode } from 'react'
 import type { WorkflowState, WorkflowAction, Task } from '@/types/workflow'
 import { actions, tasks, initialRelatedParties, initialFinancialAccounts } from '@/data/seed'
+import { getChildSubTaskIds, parseChildSubTaskId } from '@/utils/kycChildSubTasks'
 
 function computeFlatTaskOrder(allTasks: Task[], allActions: typeof actions): string[] {
   const order: string[] = []
@@ -15,7 +16,7 @@ function computeFlatTaskOrder(allTasks: Task[], allActions: typeof actions): str
       order.push(task.id)
       if (task.children) {
         for (const child of task.children) {
-          order.push(child.id)
+          order.push(...getChildSubTaskIds(child.id))
         }
       }
     }
@@ -45,13 +46,15 @@ function workflowReducer(state: WorkflowState, action: WorkflowAction): Workflow
     }
 
     case 'SET_TASK_STATUS': {
+      const parsed = parseChildSubTaskId(action.taskId)
+      const childId = parsed?.childId ?? action.taskId
       const newTasks = state.tasks.map((t) => {
-        if (t.id === action.taskId) {
+        if (t.id === childId) {
           return { ...t, status: action.status }
         }
         if (t.children) {
           const newChildren = t.children.map((c) =>
-            c.id === action.taskId ? { ...c, status: action.status } : c
+            c.id === childId ? { ...c, status: action.status } : c
           )
           return { ...t, children: newChildren }
         }
@@ -65,13 +68,13 @@ function workflowReducer(state: WorkflowState, action: WorkflowAction): Workflow
         ? state.submittedTaskIds
         : [...state.submittedTaskIds, action.taskId]
 
-      // Collect ALL task IDs (parents + children) regardless of status
+      // Collect ALL task IDs (parents + child sub-tasks) regardless of status
       const allTaskIds: string[] = []
       for (const t of state.tasks) {
         allTaskIds.push(t.id)
         if (t.children) {
           for (const c of t.children) {
-            allTaskIds.push(c.id)
+            allTaskIds.push(...getChildSubTaskIds(c.id))
           }
         }
       }
@@ -103,13 +106,15 @@ function workflowReducer(state: WorkflowState, action: WorkflowAction): Workflow
     }
 
     case 'REOPEN_TASK': {
+      const parsedReopen = parseChildSubTaskId(action.taskId)
+      const reopenChildId = parsedReopen?.childId ?? action.taskId
       const newTasks = state.tasks.map((t) => {
-        if (t.id === action.taskId && t.status === 'complete') {
+        if (t.id === reopenChildId && t.status === 'complete') {
           return { ...t, status: 'in_progress' as const }
         }
         if (t.children) {
           const newChildren = t.children.map((c) =>
-            c.id === action.taskId && c.status === 'complete'
+            c.id === reopenChildId && c.status === 'complete'
               ? { ...c, status: 'in_progress' as const }
               : c
           )
@@ -167,7 +172,12 @@ function workflowReducer(state: WorkflowState, action: WorkflowAction): Workflow
       })
       const newOrder = computeFlatTaskOrder(newTasks, state.actions)
       const activeStillExists = newOrder.includes(state.activeTaskId)
-      const { [action.childId]: _, ...remainingTaskData } = state.taskData
+      // Clean up all sub-task data keys for the removed child
+      const subTaskIds = getChildSubTaskIds(action.childId)
+      const remainingTaskData = { ...state.taskData }
+      for (const id of subTaskIds) {
+        delete remainingTaskData[id]
+      }
       return {
         ...state,
         tasks: newTasks,
@@ -245,13 +255,15 @@ function workflowReducer(state: WorkflowState, action: WorkflowAction): Workflow
 
     case 'SET_TASK_DATA': {
       // Mark task as in_progress on first data entry
+      const parsedData = parseChildSubTaskId(action.taskId)
+      const dataChildId = parsedData?.childId ?? action.taskId
       const newTasks = state.tasks.map((t) => {
-        if (t.id === action.taskId && t.status === 'not_started') {
+        if (t.id === dataChildId && t.status === 'not_started') {
           return { ...t, status: 'in_progress' as const }
         }
         if (t.children) {
           const newChildren = t.children.map((c) =>
-            c.id === action.taskId && c.status === 'not_started'
+            c.id === dataChildId && c.status === 'not_started'
               ? { ...c, status: 'in_progress' as const }
               : c
           )

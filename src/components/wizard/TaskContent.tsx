@@ -1,5 +1,6 @@
 import { useWorkflow } from '@/stores/workflowStore'
 import { formComponents, taskDescriptions } from './formRegistry'
+import { parseChildSubTaskId, KYC_CHILD_SUB_TASKS } from '@/utils/kycChildSubTasks'
 
 export function TaskContent() {
   const { state } = useWorkflow()
@@ -9,8 +10,20 @@ export function TaskContent() {
     .flatMap((t) => t.children ?? [])
     .find((c) => c.id === state.activeTaskId)
 
-  const formKey = activeTask?.formKey ?? activeChild?.formKey
-  const title = activeTask?.title ?? activeChild?.name ?? ''
+  // Resolve sub-task IDs (e.g. kyc-child-123-info → child + sub-task)
+  const parsed = parseChildSubTaskId(state.activeTaskId)
+  const subTaskChild = parsed
+    ? state.tasks.flatMap((t) => t.children ?? []).find((c) => c.id === parsed.childId)
+    : null
+  const subTaskDef = parsed
+    ? KYC_CHILD_SUB_TASKS.find((s) => s.suffix === parsed.suffix)
+    : null
+
+  const formKey = activeTask?.formKey ?? activeChild?.formKey ?? subTaskDef?.formKey
+  const title = activeTask?.title
+    ?? (subTaskChild && subTaskDef ? `${subTaskChild.name} — ${subTaskDef.title}` : null)
+    ?? activeChild?.name
+    ?? ''
 
   const FormComponent = formKey ? formComponents[formKey] : null
 

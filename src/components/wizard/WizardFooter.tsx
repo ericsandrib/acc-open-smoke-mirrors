@@ -2,6 +2,7 @@ import { useWorkflow } from '@/stores/workflowStore'
 import { Button } from '@/components/ui/button'
 import { ChevronLeft, ChevronRight, Check, Pencil } from 'lucide-react'
 import type { TaskStatus } from '@/types/workflow'
+import { parseChildSubTaskId } from '@/utils/kycChildSubTasks'
 
 function getActiveTaskStatus(state: ReturnType<typeof useWorkflow>['state']): TaskStatus {
   // Check parent tasks
@@ -11,6 +12,14 @@ function getActiveTaskStatus(state: ReturnType<typeof useWorkflow>['state']): Ta
   for (const t of state.tasks) {
     const child = t.children?.find((c) => c.id === state.activeTaskId)
     if (child) return child.status
+  }
+  // Check child sub-task IDs
+  const parsed = parseChildSubTaskId(state.activeTaskId)
+  if (parsed) {
+    for (const t of state.tasks) {
+      const child = t.children?.find((c) => c.id === parsed.childId)
+      if (child) return child.status
+    }
   }
   return 'not_started'
 }

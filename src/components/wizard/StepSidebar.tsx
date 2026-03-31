@@ -3,6 +3,7 @@ import type { TaskStatus } from '@/types/workflow'
 import { cn } from '@/lib/utils'
 import { getActionStatus } from '@/utils/getActionStatus'
 import { teamMembers } from '@/data/teamMembers'
+import { parseChildSubTaskId } from '@/utils/kycChildSubTasks'
 import { Circle, Loader, CheckCircle2, Ban, User } from 'lucide-react'
 import {
   Tooltip,
@@ -110,7 +111,11 @@ export function StepSidebar() {
                         className={cn(
                           'w-full text-left px-3 py-2 rounded-md text-sm flex items-center justify-between gap-2 transition-colors',
                           state.activeTaskId === task.id ||
-                          (task.children?.some((c) => c.id === state.activeTaskId) ?? false)
+                          (task.children?.some((c) => {
+                            if (c.id === state.activeTaskId) return true
+                            const parsed = parseChildSubTaskId(state.activeTaskId)
+                            return parsed ? c.id === parsed.childId : false
+                          }) ?? false)
                             ? 'bg-accent text-accent-foreground font-medium'
                             : 'hover:bg-muted text-foreground'
                         )}

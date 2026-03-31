@@ -99,7 +99,7 @@ export function KycForm() {
           {children.map((child) => (
             <button
               key={child.id}
-              onClick={() => dispatch({ type: 'SET_ACTIVE_TASK', taskId: child.id })}
+              onClick={() => dispatch({ type: 'SET_ACTIVE_TASK', taskId: `${child.id}-info` })}
               className="w-full flex items-center justify-between rounded-lg border border-border p-3 text-left cursor-pointer hover:bg-muted/50 transition-colors"
             >
               <div className="flex items-center gap-3">

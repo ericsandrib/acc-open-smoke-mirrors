@@ -4,6 +4,7 @@ import type { WorkflowState } from '@/types/workflow'
 import { seededJourneys } from '@/data/servicingSeed'
 import { useWorkflow } from './workflowStore'
 import { getActionStatus } from '@/utils/getActionStatus'
+import { KYC_CHILD_SUB_TASKS } from '@/utils/kycChildSubTasks'
 
 function deriveLiveJourney(state: WorkflowState): Journey | null {
   const primaryParty = state.relatedParties.find((p) => p.isPrimary)
@@ -37,18 +38,18 @@ function deriveLiveJourney(state: WorkflowState): Journey | null {
       tasks: parentJourneyTasks,
     }
 
-    // Create a separate JourneyAction for each KYC child
+    // Create a separate JourneyAction for each KYC child with 3 sub-tasks
     const childActions: JourneyAction[] = actionTasks.flatMap((t) =>
       (t.children ?? []).map((c): JourneyAction => {
-        const childTask: JourneyTask = {
-          id: `${journeyId}-${c.id}`,
+        const childTasks: JourneyTask[] = KYC_CHILD_SUB_TASKS.map((sub) => ({
+          id: `${journeyId}-${c.id}-${sub.suffix}`,
           actionId: `${journeyId}-${action.id}-${c.id}`,
           journeyId,
-          title: `KYC: ${c.name}`,
+          title: sub.title,
           status: c.status,
           assignedTo: t.assignedTo,
           nickname: `${journeyName} - KYC: ${c.name}`,
-        }
+        }))
         return {
           id: `${journeyId}-${action.id}-${c.id}`,
           journeyId,
@@ -56,7 +57,7 @@ function deriveLiveJourney(state: WorkflowState): Journey | null {
           status: c.status === 'blocked' ? 'in_progress' as const : c.status,
           nickname: `${journeyName} - KYC: ${c.name}`,
           parentActionId: `${journeyId}-${action.id}`,
-          tasks: [childTask],
+          tasks: childTasks,
         }
       }),
     )
