@@ -64,6 +64,7 @@ export interface WorkflowState {
   flatTaskOrder: string[]
   taskData: Record<string, Record<string, unknown>>
   journeyName?: string
+  journeyId?: string
 }
 
 export type WorkflowAction =

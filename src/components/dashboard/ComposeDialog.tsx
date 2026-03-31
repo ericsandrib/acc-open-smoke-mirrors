@@ -13,6 +13,7 @@ import {
   SelectItem,
 } from '@/components/ui/select'
 import { useWorkflow } from '@/stores/workflowStore'
+import { useServicing } from '@/stores/servicingStore'
 import { relationships } from '@/data/relationships'
 
 interface ComposeDialogProps {
@@ -35,6 +36,7 @@ export function ComposeDialog({ onClose }: ComposeDialogProps) {
   const [actionType, setActionType] = useState('')
   const [relationshipId, setRelationshipId] = useState('')
   const { dispatch } = useWorkflow()
+  const { currentLiveJourney, saveCurrentJourney } = useServicing()
   const navigate = useNavigate()
 
   const canSubmit = actionType === 'client-onboarding' && relationshipId !== ''
@@ -42,6 +44,10 @@ export function ComposeDialog({ onClose }: ComposeDialogProps) {
   function handleSubmit() {
     const relationship = relationships.find((r) => r.id === relationshipId)
     if (!relationship) return
+
+    if (currentLiveJourney) {
+      saveCurrentJourney(currentLiveJourney)
+    }
 
     dispatch({
       type: 'INITIALIZE_FROM_RELATIONSHIP',

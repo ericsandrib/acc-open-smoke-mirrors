@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { ArrowLeft, Circle, Loader, CheckCircle2, Ban } from 'lucide-react'
 import { useServicing } from '@/stores/servicingStore'
+import { useWorkflow } from '@/stores/workflowStore'
 import { StatusBadge as ServicingStatusBadge } from '@/components/servicing/StatusBadge'
 import { Button } from '@/components/ui/button'
 import { ThemeToggle } from '@/components/ui/theme-toggle'
@@ -62,6 +63,7 @@ function getActionStatus(tasks: JourneyTask[]): TaskStatus {
 export function JourneyDetailPage() {
   const { journeyId } = useParams<{ journeyId: string }>()
   const { journeys } = useServicing()
+  const { state: workflowState } = useWorkflow()
   const navigate = useNavigate()
 
   const journey = journeys.find((j) => j.id === journeyId)
@@ -98,7 +100,7 @@ export function JourneyDetailPage() {
           </div>
           <div className="flex items-center gap-1">
             <ThemeToggle />
-            {journey.id === 'live-current' && (
+            {journey.id === workflowState.journeyId && (
               <Button variant="ghost" size="sm" onClick={() => navigate('/wizard')}>
                 Continue in Wizard
               </Button>

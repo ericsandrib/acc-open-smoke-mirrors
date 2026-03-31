@@ -253,6 +253,7 @@ function workflowReducer(state: WorkflowState, action: WorkflowAction): Workflow
           'client-info': action.clientInfo,
         },
         journeyName: action.journeyName,
+        journeyId: `journey-${Date.now()}`,
       }
     }
 

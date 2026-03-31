@@ -1,5 +1,6 @@
 import { useNavigate } from 'react-router-dom'
 import { useServicing } from '@/stores/servicingStore'
+import { useWorkflow } from '@/stores/workflowStore'
 import {
   Table,
   TableBody,
@@ -12,6 +13,7 @@ import { StatusBadge } from './StatusBadge'
 
 export function JourneysTable() {
   const { journeys } = useServicing()
+  const { state } = useWorkflow()
   const navigate = useNavigate()
 
   return (
@@ -39,7 +41,7 @@ export function JourneysTable() {
           return (
             <TableRow key={journey.id} className="cursor-pointer" onClick={() => navigate(`/servicing/${journey.id}`)}>
               <TableCell className="font-medium">
-                {journey.id === 'live-current' ? (
+                {journey.id === state.journeyId ? (
                   <span className="flex items-center gap-2">
                     {journey.name}
                     <span className="inline-flex h-2 w-2 rounded-full bg-blue-500 animate-pulse" />
