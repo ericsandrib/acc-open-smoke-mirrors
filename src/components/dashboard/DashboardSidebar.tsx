@@ -1,5 +1,6 @@
 import { LayoutDashboard, Users, Briefcase, BarChart3, Settings, Plus } from 'lucide-react'
 import { Button } from '@/components/ui/button'
+import { ThemeToggle } from '@/components/ui/theme-toggle'
 
 const navItems = [
   { icon: LayoutDashboard, label: 'Dashboard', active: true },
@@ -16,8 +17,9 @@ interface DashboardSidebarProps {
 export function DashboardSidebar({ onCreateClick }: DashboardSidebarProps) {
   return (
     <aside className="flex w-60 flex-col border-r border-border bg-muted/30">
-      <div className="flex h-14 items-center border-b border-border px-4">
+      <div className="flex h-14 items-center justify-between border-b border-border px-4">
         <span className="text-sm font-semibold tracking-tight">Wealth Platform</span>
+        <ThemeToggle />
       </div>
 
       <nav className="flex-1 space-y-1 p-2">
