@@ -38,17 +38,18 @@ function AddPartyForm({ type, onAdd }: { type: RelatedPartyType; onAdd: () => vo
 
   return (
     <div className="rounded-lg border border-dashed border-border p-4 space-y-4">
-      <div className="grid grid-cols-2 gap-4">
-        <div className="space-y-2">
-          <Label>Full Name</Label>
-          <Input
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            placeholder="Full name"
-          />
-        </div>
-        <div className="space-y-2">
-          <Label>Relationship</Label>
+      <div className="grid grid-cols-3 items-center gap-4">
+        <Label>Full Name</Label>
+        <Input
+          value={name}
+          onChange={(e) => setName(e.target.value)}
+          placeholder="Full name"
+          className="col-span-2"
+        />
+      </div>
+      <div className="grid grid-cols-3 items-center gap-4">
+        <Label>Relationship</Label>
+        <div className="col-span-2">
           <Select value={relationship} onValueChange={setRelationship}>
             <SelectTrigger>
               <SelectValue placeholder="Select..." />
@@ -61,13 +62,14 @@ function AddPartyForm({ type, onAdd }: { type: RelatedPartyType; onAdd: () => vo
           </Select>
         </div>
       </div>
-      <div className="space-y-2">
+      <div className="grid grid-cols-3 items-center gap-4">
         <Label>Email</Label>
         <Input
           value={email}
           onChange={(e) => setEmail(e.target.value)}
           type="email"
           placeholder="email@example.com"
+          className="col-span-2"
         />
       </div>
       <div className="flex gap-2 justify-end">
@@ -114,17 +116,18 @@ function PartyCard({ party, relationships }: { party: { id: string; name: string
       </button>
       {open && (
         <div className="border-t border-border px-3 pb-3 pt-3 space-y-4">
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label>Full Name</Label>
-              <Input
-                value={party.name}
-                onChange={(e) => update({ name: e.target.value })}
-                placeholder="Full name"
-              />
-            </div>
-            <div className="space-y-2">
-              <Label>Relationship</Label>
+          <div className="grid grid-cols-3 items-center gap-4">
+            <Label>Full Name</Label>
+            <Input
+              value={party.name}
+              onChange={(e) => update({ name: e.target.value })}
+              placeholder="Full name"
+              className="col-span-2"
+            />
+          </div>
+          <div className="grid grid-cols-3 items-center gap-4">
+            <Label>Relationship</Label>
+            <div className="col-span-2">
               <Select value={party.relationship ?? ''} onValueChange={(v) => update({ relationship: v })}>
                 <SelectTrigger>
                   <SelectValue placeholder="Select..." />
@@ -137,13 +140,14 @@ function PartyCard({ party, relationships }: { party: { id: string; name: string
               </Select>
             </div>
           </div>
-          <div className="space-y-2">
+          <div className="grid grid-cols-3 items-center gap-4">
             <Label>Email</Label>
             <Input
               value={party.email ?? ''}
               onChange={(e) => update({ email: e.target.value })}
               type="email"
               placeholder="email@example.com"
+              className="col-span-2"
             />
           </div>
         </div>
