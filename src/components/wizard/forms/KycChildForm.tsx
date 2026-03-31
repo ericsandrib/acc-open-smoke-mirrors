@@ -16,10 +16,6 @@ export function KycChildForm() {
 
   return (
     <div className="space-y-4">
-      <p className="text-sm text-muted-foreground">
-        KYC review for <strong>{child.name}</strong>
-      </p>
-
       <div className="grid grid-cols-3 items-center gap-4">
         <Label>ID Type</Label>
         <div className="col-span-2">

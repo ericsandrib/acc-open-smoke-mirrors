@@ -3,7 +3,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui/select'
 import { Button } from '@/components/ui/button'
-import { Plus, Trash2, Landmark, ChevronRight } from 'lucide-react'
+import { Plus, Trash2, ChevronRight } from 'lucide-react'
 import { useWorkflow } from '@/stores/workflowStore'
 import type { AccountType, FinancialAccount } from '@/types/workflow'
 
@@ -243,14 +243,6 @@ export function FinancialAccountsForm() {
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center gap-2">
-        <Landmark className="h-5 w-5 text-muted-foreground" />
-        <h3 className="text-base font-semibold">Financial Accounts</h3>
-      </div>
-      <p className="text-sm text-muted-foreground">
-        Accounts you'd like to transfer or manage for this client.
-      </p>
-
       <div className="space-y-2">
         {state.financialAccounts.length === 0 ? (
           <div className="rounded-lg border border-dashed border-border p-4 text-center">
