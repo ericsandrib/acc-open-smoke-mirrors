@@ -93,16 +93,24 @@ function PartyCard({ party, relationships }: { party: { id: string; name: string
         onClick={() => setOpen(!open)}
         className="flex items-center justify-between w-full p-3"
       >
-        <div className="flex items-center gap-3">
-          <div className="h-8 w-8 rounded-full bg-muted flex items-center justify-center text-sm font-medium shrink-0">
-            {party.name[0]}
-          </div>
+        <div className="flex items-center gap-2">
+          <ChevronRight className={`h-4 w-4 text-muted-foreground shrink-0 transition-transform ${open ? 'rotate-90' : ''}`} />
           <span className="text-sm font-medium">{party.name}</span>
           {party.relationship && (
             <span className="text-xs text-muted-foreground">{party.relationship}</span>
           )}
         </div>
-        <ChevronRight className={`h-4 w-4 text-muted-foreground shrink-0 transition-transform ${open ? 'rotate-90' : ''}`} />
+        <Button
+          variant="ghost"
+          size="icon"
+          className="h-7 w-7 shrink-0 text-muted-foreground hover:text-destructive"
+          onClick={(e) => {
+            e.stopPropagation()
+            dispatch({ type: 'REMOVE_RELATED_PARTY', partyId: party.id })
+          }}
+        >
+          <Trash2 className="h-3.5 w-3.5" />
+        </Button>
       </button>
       {open && (
         <div className="border-t border-border px-3 pb-3 pt-3 space-y-4">
@@ -137,17 +145,6 @@ function PartyCard({ party, relationships }: { party: { id: string; name: string
               type="email"
               placeholder="email@example.com"
             />
-          </div>
-          <div className="flex justify-end">
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => dispatch({ type: 'REMOVE_RELATED_PARTY', partyId: party.id })}
-              className="text-muted-foreground hover:text-destructive"
-            >
-              <Trash2 className="h-4 w-4 mr-1" />
-              Remove
-            </Button>
           </div>
         </div>
       )}
