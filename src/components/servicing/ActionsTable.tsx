@@ -31,6 +31,7 @@ export function ActionsTable() {
           <TableHead>Journey</TableHead>
           <TableHead>Relationship</TableHead>
           <TableHead>Status</TableHead>
+          <TableHead>Assigned To</TableHead>
           <TableHead className="text-right">Tasks Complete</TableHead>
         </TableRow>
       </TableHeader>
@@ -45,6 +46,7 @@ export function ActionsTable() {
               <TableCell>
                 <StatusBadge status={row.status} />
               </TableCell>
+              <TableCell>{[...new Set(row.tasks.map((t) => t.assignedTo))].join(', ')}</TableCell>
               <TableCell className="text-right">
                 {complete}/{row.tasks.length}
               </TableCell>
