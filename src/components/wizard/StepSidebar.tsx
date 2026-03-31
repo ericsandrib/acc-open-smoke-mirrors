@@ -75,7 +75,8 @@ export function StepSidebar() {
                         onClick={() => dispatch({ type: 'SET_ACTIVE_TASK', taskId: task.id })}
                         className={cn(
                           'w-full text-left px-3 py-2 rounded-md text-sm flex items-center justify-between gap-2 transition-colors',
-                          state.activeTaskId === task.id
+                          state.activeTaskId === task.id ||
+                          (task.children?.some((c) => c.id === state.activeTaskId) ?? false)
                             ? 'bg-accent text-accent-foreground font-medium'
                             : 'hover:bg-muted text-foreground'
                         )}
@@ -83,26 +84,6 @@ export function StepSidebar() {
                         <span className="truncate">{task.title}</span>
                         <StatusBadge status={task.status} />
                       </button>
-                      {task.children && task.children.length > 0 && (
-                        <ul className="ml-4 mt-1 space-y-1">
-                          {task.children.map((child) => (
-                            <li key={child.id}>
-                              <button
-                                onClick={() => dispatch({ type: 'SET_ACTIVE_TASK', taskId: child.id })}
-                                className={cn(
-                                  'w-full text-left px-3 py-1.5 rounded-md text-xs flex items-center justify-between gap-2 transition-colors',
-                                  state.activeTaskId === child.id
-                                    ? 'bg-accent text-accent-foreground font-medium'
-                                    : 'hover:bg-muted text-foreground'
-                                )}
-                              >
-                                <span className="truncate">{child.name}</span>
-                                <StatusBadge status={child.status} className="h-3 w-3" />
-                              </button>
-                            </li>
-                          ))}
-                        </ul>
-                      )}
                     </li>
                   ))}
                 </ul>

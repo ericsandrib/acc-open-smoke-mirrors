@@ -3,7 +3,7 @@ import { useWorkflow } from '@/stores/workflowStore'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Checkbox } from '@/components/ui/checkbox'
-import { CheckCircle2, ShieldAlert, ArrowLeft } from 'lucide-react'
+import { CheckCircle2, ShieldAlert, ArrowLeft, ChevronRight } from 'lucide-react'
 
 export function KycForm() {
   const { state, dispatch } = useWorkflow()
@@ -86,9 +86,10 @@ export function KycForm() {
             Pending Verification
           </h3>
           {children.map((child) => (
-            <div
+            <button
               key={child.id}
-              className="flex items-center justify-between rounded-lg border border-border p-3"
+              onClick={() => dispatch({ type: 'SET_ACTIVE_TASK', taskId: child.id })}
+              className="w-full flex items-center justify-between rounded-lg border border-border p-3 text-left cursor-pointer hover:bg-muted/50 transition-colors"
             >
               <div className="flex items-center gap-3">
                 <div className="flex h-8 w-8 items-center justify-center rounded-full bg-muted text-sm font-medium">
@@ -96,10 +97,13 @@ export function KycForm() {
                 </div>
                 <span className="text-sm font-medium">{child.name}</span>
               </div>
-              <Badge variant="secondary" className="capitalize text-xs">
-                {child.status.replace('_', ' ')}
-              </Badge>
-            </div>
+              <div className="flex items-center gap-2">
+                <Badge variant="secondary" className="capitalize text-xs">
+                  {child.status.replace('_', ' ')}
+                </Badge>
+                <ChevronRight className="h-4 w-4 text-muted-foreground" />
+              </div>
+            </button>
           ))}
         </div>
       </div>
