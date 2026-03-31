@@ -119,23 +119,21 @@ export function ComposeDialog({ onClose }: ComposeDialogProps) {
             </Select>
           </div>
 
-          {actionType === 'client-onboarding' && (
-            <div className="space-y-2">
-              <Label>Relationship</Label>
-              <Select value={relationshipId} onValueChange={setRelationshipId}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Select a relationship..." />
-                </SelectTrigger>
-                <SelectContent>
-                  {relationships.map((r) => (
-                    <SelectItem key={r.id} value={r.id}>
-                      {r.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-          )}
+          <div className="space-y-2">
+            <Label>Relationship</Label>
+            <Select value={relationshipId} onValueChange={setRelationshipId}>
+              <SelectTrigger>
+                <SelectValue placeholder="Select a relationship..." />
+              </SelectTrigger>
+              <SelectContent>
+                {relationships.map((r) => (
+                  <SelectItem key={r.id} value={r.id}>
+                    {r.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
 
           <Button
             onClick={handleSubmit}
