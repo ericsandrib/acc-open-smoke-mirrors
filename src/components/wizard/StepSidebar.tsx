@@ -2,6 +2,7 @@ import { useWorkflow } from '@/stores/workflowStore'
 import { Badge } from '@/components/ui/badge'
 import type { TaskStatus } from '@/types/workflow'
 import { cn } from '@/lib/utils'
+import { getActionStatus } from '@/utils/getActionStatus'
 
 const statusColors: Record<TaskStatus, string> = {
   not_started: 'bg-gray-200 text-gray-700',
@@ -11,7 +12,7 @@ const statusColors: Record<TaskStatus, string> = {
 }
 
 const statusLabels: Record<TaskStatus, string> = {
-  not_started: 'Not Started',
+  not_started: 'Ready to Begin',
   in_progress: 'In Progress',
   complete: 'Complete',
   blocked: 'Blocked',
@@ -31,9 +32,14 @@ export function StepSidebar() {
 
           return (
             <div key={action.id} className="mb-6">
-              <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-2">
-                {action.title}
-              </h3>
+              <div className="flex items-center justify-between mb-2">
+                <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                  {action.title}
+                </h3>
+                <Badge className={cn('text-[10px] px-1.5 py-0 shrink-0', statusColors[getActionStatus(state.tasks, action.id)])} variant="secondary">
+                  {statusLabels[getActionStatus(state.tasks, action.id)]}
+                </Badge>
+              </div>
               <ul className="space-y-1">
                 {actionTasks.map((task) => (
                   <li key={task.id}>

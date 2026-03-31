@@ -1,6 +1,7 @@
 import dagre from 'dagre'
 import type { Node, Edge } from '@xyflow/react'
 import type { WorkflowState } from '@/types/workflow'
+import { getActionStatus } from '@/utils/getActionStatus'
 
 export function workflowToFlow(state: WorkflowState) {
   const nodes: Node[] = []
@@ -12,7 +13,7 @@ export function workflowToFlow(state: WorkflowState) {
     nodes.push({
       id: action.id,
       type: 'actionNode',
-      data: { label: action.title },
+      data: { label: action.title, status: getActionStatus(state.tasks, action.id) },
       position: { x: 0, y: 0 },
     })
 
