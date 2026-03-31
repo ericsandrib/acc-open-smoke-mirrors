@@ -9,12 +9,16 @@ import type { AccountType } from '@/types/workflow'
 import {
   ChevronDown,
   ChevronRight,
+  Minus,
   Plus,
+  Shield,
   Wallet,
   FileText,
   FileSignature,
   ClipboardList,
-  Circle,
+  Upload,
+  CheckCircle2,
+  X,
 } from 'lucide-react'
 
 const accountTypeLabels: Record<AccountType, string> = {
@@ -56,6 +60,34 @@ export function OpenAccountsForm() {
 
   const allAccountTypes = childAccountTypes.length > 0 ? childAccountTypes : accountTypesFromNames
   const requiredDocs = getRequiredDocuments(allAccountTypes)
+
+  // Annuity helpers
+  const isAnnuity = (child: { name: string }) => child.name.includes(' - Annuity')
+  const topLevelChildren = children.filter((c) => !isAnnuity(c))
+  const getAnnuities = (parentName: string) =>
+    children.filter((c) => c.name.startsWith(`${parentName} - Annuity`))
+
+  const handleAddAnnuity = (parentName: string) => {
+    const existing = getAnnuities(parentName)
+    const nextNum = existing.length + 1
+    dispatch({
+      type: 'SPAWN_CHILD',
+      parentTaskId: openAccountsTask!.id,
+      childName: `${parentName} - Annuity ${nextNum}`,
+      childType: 'account-opening',
+    })
+  }
+
+  const handleRemoveLastAnnuity = (parentName: string) => {
+    const existing = getAnnuities(parentName)
+    if (existing.length === 0) return
+    const last = existing[existing.length - 1]
+    dispatch({
+      type: 'REMOVE_CHILD',
+      parentTaskId: openAccountsTask!.id,
+      childId: last.id,
+    })
+  }
 
   const handlePickerConfirm = (selections: { accountType: AccountType; label: string; count: number }[]) => {
     for (const sel of selections) {
@@ -171,26 +203,78 @@ export function OpenAccountsForm() {
 
         {children.length > 0 ? (
           <div className="space-y-2">
-            {children.map((child) => (
-              <button
-                key={child.id}
-                onClick={() => dispatch({ type: 'SET_ACTIVE_TASK', taskId: `${child.id}-details` })}
-                className="w-full flex items-center justify-between rounded-lg border border-border p-3 text-left cursor-pointer hover:bg-muted/50 transition-colors"
-              >
-                <div className="flex items-center gap-3">
-                  <div className="flex h-8 w-8 items-center justify-center rounded-full bg-muted text-sm font-medium">
-                    <Wallet className="h-4 w-4" />
+            {topLevelChildren.map((child) => {
+              const annuities = getAnnuities(child.name)
+              return (
+                <div key={child.id} className="space-y-1">
+                  {/* Account row */}
+                  <div className="flex items-center justify-between rounded-lg border border-border p-3 hover:bg-muted/50 transition-colors">
+                    <button
+                      onClick={() => dispatch({ type: 'SET_ACTIVE_TASK', taskId: `${child.id}-details` })}
+                      className="flex-1 flex items-center gap-3 text-left cursor-pointer"
+                    >
+                      <div className="flex h-8 w-8 items-center justify-center rounded-full bg-muted text-sm font-medium">
+                        <Wallet className="h-4 w-4" />
+                      </div>
+                      <span className="text-sm font-medium">{child.name}</span>
+                    </button>
+                    <div className="flex items-center gap-2">
+                      <Badge variant="secondary" className="capitalize text-xs">
+                        {child.status.replace('_', ' ')}
+                      </Badge>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="text-xs h-7"
+                        onClick={() => handleAddAnnuity(child.name)}
+                      >
+                        <Plus className="h-3 w-3 mr-1" />
+                        Add annuity
+                      </Button>
+                      <button
+                        onClick={() => dispatch({ type: 'SET_ACTIVE_TASK', taskId: `${child.id}-details` })}
+                        className="cursor-pointer"
+                      >
+                        <ChevronRight className="h-4 w-4 text-muted-foreground" />
+                      </button>
+                    </div>
                   </div>
-                  <span className="text-sm font-medium">{child.name}</span>
+
+                  {/* Annuity row with +/- counter */}
+                  {annuities.length > 0 && (
+                    <div className="ml-8 flex items-center justify-between rounded-lg border border-border/50 bg-muted/30 p-3">
+                      <div className="flex items-center gap-3">
+                        <div className="flex h-8 w-8 items-center justify-center rounded-full bg-muted text-sm font-medium">
+                          <Shield className="h-4 w-4" />
+                        </div>
+                        <span className="text-sm font-medium">Annuities</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <Button
+                          variant="outline"
+                          size="icon"
+                          className="h-7 w-7"
+                          onClick={() => handleRemoveLastAnnuity(child.name)}
+                        >
+                          <Minus className="h-3 w-3" />
+                        </Button>
+                        <span className="w-6 text-center text-sm tabular-nums font-medium">
+                          {annuities.length}
+                        </span>
+                        <Button
+                          variant="outline"
+                          size="icon"
+                          className="h-7 w-7"
+                          onClick={() => handleAddAnnuity(child.name)}
+                        >
+                          <Plus className="h-3 w-3" />
+                        </Button>
+                      </div>
+                    </div>
+                  )}
                 </div>
-                <div className="flex items-center gap-2">
-                  <Badge variant="secondary" className="capitalize text-xs">
-                    {child.status.replace('_', ' ')}
-                  </Badge>
-                  <ChevronRight className="h-4 w-4 text-muted-foreground" />
-                </div>
-              </button>
-            ))}
+              )
+            })}
           </div>
         ) : (
           <div className="rounded-lg border border-dashed border-border p-6 text-center">
@@ -221,16 +305,63 @@ export function OpenAccountsForm() {
           </h3>
         </div>
         {children.length > 0 && requiredDocs.length > 0 ? (
-          <div className="rounded-lg border border-border divide-y divide-border">
-            {requiredDocs.map((doc) => (
-              <div key={doc.id} className="flex items-start gap-3 px-4 py-3">
-                <Circle className="h-4 w-4 mt-0.5 text-muted-foreground/50 shrink-0" />
-                <div>
-                  <p className="text-sm font-medium">{doc.label}</p>
-                  <p className="text-xs text-muted-foreground">{doc.description}</p>
+          <div className="space-y-4">
+            {requiredDocs.map((doc) => {
+              const uploadedFiles = (data[`doc-${doc.id}`] as string[] | undefined) ?? []
+              const hasFiles = uploadedFiles.length > 0
+
+              return (
+                <div key={doc.id} className="grid grid-cols-3 items-start gap-4">
+                  <div>
+                    <Label className="flex items-center gap-1.5">
+                      {doc.label}
+                      {hasFiles && <CheckCircle2 className="h-3 w-3 text-green-600 dark:text-green-400" />}
+                    </Label>
+                    <p className="text-xs text-muted-foreground mt-0.5">{doc.description}</p>
+                  </div>
+                  <div className="col-span-2 space-y-1.5">
+                    {uploadedFiles.map((fileName, i) => (
+                      <div
+                        key={i}
+                        className="flex items-center justify-between rounded-md border border-border bg-muted/50 px-3 py-2 text-sm"
+                      >
+                        <div className="flex items-center gap-2 min-w-0">
+                          <FileText className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
+                          <span className="truncate">{fileName}</span>
+                        </div>
+                        <button
+                          type="button"
+                          className="text-muted-foreground hover:text-foreground shrink-0 ml-2"
+                          onClick={() => {
+                            const next = uploadedFiles.filter((_, idx) => idx !== i)
+                            updateField(`doc-${doc.id}`, next)
+                          }}
+                        >
+                          <X className="h-3.5 w-3.5" />
+                        </button>
+                      </div>
+                    ))}
+                    <label className="flex cursor-pointer items-center justify-center gap-2 rounded-md border border-dashed border-input px-3 py-2 text-sm transition-colors hover:border-muted-foreground/30 hover:bg-muted/30">
+                      <Upload className="h-3.5 w-3.5 text-muted-foreground" />
+                      <span className="text-muted-foreground">
+                        {hasFiles ? 'Upload another' : 'Choose file'}
+                      </span>
+                      <input
+                        type="file"
+                        className="sr-only"
+                        onChange={(e) => {
+                          const file = e.target.files?.[0]
+                          if (file) {
+                            updateField(`doc-${doc.id}`, [...uploadedFiles, file.name])
+                          }
+                          e.target.value = ''
+                        }}
+                      />
+                    </label>
+                  </div>
                 </div>
-              </div>
-            ))}
+              )
+            })}
           </div>
         ) : (
           <div className="rounded-lg border border-dashed border-border p-4 text-center">

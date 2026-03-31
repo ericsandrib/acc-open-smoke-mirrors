@@ -3,7 +3,9 @@ import { useWorkflow } from '@/stores/workflowStore'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Checkbox } from '@/components/ui/checkbox'
-import { CheckCircle2, ShieldAlert, ArrowLeft, ChevronRight, Info } from 'lucide-react'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import { CheckCircle2, ShieldAlert, ArrowLeft, ChevronDown, ChevronRight, Info } from 'lucide-react'
 
 export function KycForm() {
   const { state, dispatch } = useWorkflow()
@@ -18,6 +20,16 @@ export function KycForm() {
     () => new Set(needsKycMembers.map((m) => m.id))
   )
   const [showConfirmation, setShowConfirmation] = useState(false)
+  const [expandedIds, setExpandedIds] = useState<Set<string>>(new Set())
+
+  const toggleExpanded = (id: string) => {
+    setExpandedIds((prev) => {
+      const next = new Set(prev)
+      if (next.has(id)) next.delete(id)
+      else next.add(id)
+      return next
+    })
+  }
 
   const toggleMember = (id: string) => {
     setSelectedIds((prev) => {
@@ -216,25 +228,77 @@ export function KycForm() {
             <h3 className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
               Requires Verification
             </h3>
-            {needsKycMembers.map((member) => (
-              <label
-                key={member.id}
-                className="flex cursor-pointer items-center justify-between rounded-lg border border-border p-3 transition-colors hover:bg-muted/50"
-              >
-                <div className="flex items-center gap-3">
-                  <Checkbox
-                    checked={selectedIds.has(member.id)}
-                    onCheckedChange={() => toggleMember(member.id)}
-                  />
-                  <div>
-                    <span className="text-sm font-medium">{member.name}</span>
-                    {member.relationship && (
-                      <span className="ml-2 text-xs text-muted-foreground">{member.relationship}</span>
-                    )}
+            {needsKycMembers.map((member) => {
+              const isExpanded = expandedIds.has(member.id)
+              return (
+                <div key={member.id} className="rounded-lg border border-border transition-colors">
+                  <div className="flex items-center gap-3 p-3 hover:bg-muted/50">
+                    <Checkbox
+                      checked={selectedIds.has(member.id)}
+                      onCheckedChange={() => toggleMember(member.id)}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => toggleExpanded(member.id)}
+                      className="flex flex-1 items-center justify-between text-left cursor-pointer"
+                    >
+                      <div>
+                        <span className="text-sm font-medium">{member.name}</span>
+                        {member.relationship && (
+                          <span className="ml-2 text-xs text-muted-foreground">{member.relationship}</span>
+                        )}
+                      </div>
+                      {isExpanded ? (
+                        <ChevronDown className="h-4 w-4 text-muted-foreground" />
+                      ) : (
+                        <ChevronRight className="h-4 w-4 text-muted-foreground" />
+                      )}
+                    </button>
                   </div>
+                  {isExpanded && (
+                    <div className="border-t border-border px-3 py-4 pl-10 space-y-3">
+                      <div className="grid grid-cols-3 items-center gap-4">
+                        <Label>Role</Label>
+                        <Input
+                          className="col-span-2"
+                          value={member.role ?? ''}
+                          onChange={(e) => dispatch({ type: 'UPDATE_RELATED_PARTY', partyId: member.id, updates: { role: e.target.value } })}
+                        />
+                      </div>
+                      <div className="grid grid-cols-3 items-center gap-4">
+                        <Label>Date of birth</Label>
+                        <Input
+                          type="date"
+                          className="col-span-2"
+                          value={member.dob ?? ''}
+                          onChange={(e) => dispatch({ type: 'UPDATE_RELATED_PARTY', partyId: member.id, updates: { dob: e.target.value } })}
+                        />
+                      </div>
+                      <div className="grid grid-cols-3 items-center gap-4">
+                        <Label>Email</Label>
+                        <Input
+                          type="email"
+                          placeholder="name@example.com"
+                          className="col-span-2"
+                          value={member.email ?? ''}
+                          onChange={(e) => dispatch({ type: 'UPDATE_RELATED_PARTY', partyId: member.id, updates: { email: e.target.value } })}
+                        />
+                      </div>
+                      <div className="grid grid-cols-3 items-center gap-4">
+                        <Label>Phone</Label>
+                        <Input
+                          type="tel"
+                          placeholder="+1 (555) 000-0000"
+                          className="col-span-2"
+                          value={member.phone ?? ''}
+                          onChange={(e) => dispatch({ type: 'UPDATE_RELATED_PARTY', partyId: member.id, updates: { phone: e.target.value } })}
+                        />
+                      </div>
+                    </div>
+                  )}
                 </div>
-              </label>
-            ))}
+              )
+            })}
           </div>
 
           <Button
