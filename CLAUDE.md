@@ -5,6 +5,8 @@ A wizard-like workflow demo for account opening with two endpoints:
 - **Workflow Viewer** (`/workflow`) — React Flow graph visualization of the workflow
 - **Wizard Frontend** (`/wizard`) — Step-by-step wizard UI
 
+See [docs/product-context.md](docs/product-context.md) for full product context (what this is, who it's for, the domain model).
+
 ## Tech Stack
 - React + TypeScript (Vite)
 - shadcn/ui + Tailwind CSS

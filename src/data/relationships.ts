@@ -18,8 +18,8 @@ export const relationships: Relationship[] = [
       { id: 'member-3', name: 'Robert Smith', type: 'household_member', relationship: 'Child' },
     ],
     financialAccounts: [
-      { id: 'acct-1', accountName: 'Smith Family Trust', accountType: 'trust', custodian: 'Fidelity', estimatedValue: '2,500,000', transferType: 'full' },
-      { id: 'acct-2', accountName: 'John IRA', accountType: 'ira', custodian: 'Charles Schwab', accountNumber: '****4521', estimatedValue: '850,000', transferType: 'full' },
+      { id: 'acct-1', accountName: 'Smith Family Trust', accountType: 'trust', custodian: 'Fidelity', estimatedValue: '2,500,000' },
+      { id: 'acct-2', accountName: 'John IRA', accountType: 'ira', custodian: 'Charles Schwab', accountNumber: '****4521', estimatedValue: '850,000' },
     ],
   },
   {
@@ -38,8 +38,8 @@ export const relationships: Relationship[] = [
       { id: 'johnson-2', name: 'Sarah Johnson', type: 'household_member', relationship: 'Spouse' },
     ],
     financialAccounts: [
-      { id: 'johnson-acct-1', accountName: 'Johnson Family Trust', accountType: 'trust', custodian: 'Vanguard', estimatedValue: '4,200,000', transferType: 'full' },
-      { id: 'johnson-acct-2', accountName: 'Michael Roth IRA', accountType: 'roth_ira', custodian: 'Fidelity', estimatedValue: '620,000', transferType: 'full' },
+      { id: 'johnson-acct-1', accountName: 'Johnson Family Trust', accountType: 'trust', custodian: 'Vanguard', estimatedValue: '4,200,000' },
+      { id: 'johnson-acct-2', accountName: 'Michael Roth IRA', accountType: 'roth_ira', custodian: 'Fidelity', estimatedValue: '620,000' },
     ],
   },
   {
@@ -59,7 +59,7 @@ export const relationships: Relationship[] = [
       { id: 'davis-3', name: 'Olivia Davis', type: 'household_member', relationship: 'Child' },
     ],
     financialAccounts: [
-      { id: 'davis-acct-1', accountName: 'Davis Brokerage', accountType: 'brokerage', custodian: 'Merrill Lynch', estimatedValue: '1,150,000', transferType: 'full' },
+      { id: 'davis-acct-1', accountName: 'Davis Brokerage', accountType: 'brokerage', custodian: 'Merrill Lynch', estimatedValue: '1,150,000' },
     ],
   },
 ]

@@ -24,8 +24,6 @@ function AddAccountForm({ onDone }: { onDone: () => void }) {
   const [custodian, setCustodian] = useState('')
   const [accountNumber, setAccountNumber] = useState('')
   const [estimatedValue, setEstimatedValue] = useState('')
-  const [transferType, setTransferType] = useState<'full' | 'partial' | ''>('')
-
   const handleAdd = () => {
     if (!accountName.trim()) return
     dispatch({
@@ -37,7 +35,6 @@ function AddAccountForm({ onDone }: { onDone: () => void }) {
         custodian: custodian || undefined,
         accountNumber: accountNumber || undefined,
         estimatedValue: estimatedValue || undefined,
-        transferType: transferType || undefined,
       },
     })
     setAccountName('')
@@ -45,7 +42,6 @@ function AddAccountForm({ onDone }: { onDone: () => void }) {
     setCustodian('')
     setAccountNumber('')
     setEstimatedValue('')
-    setTransferType('')
     onDone()
   }
 
@@ -101,20 +97,6 @@ function AddAccountForm({ onDone }: { onDone: () => void }) {
           placeholder="e.g. 500,000"
           className="col-span-2"
         />
-      </div>
-      <div className="grid grid-cols-3 items-center gap-4">
-        <Label>Transfer Type</Label>
-        <div className="col-span-2">
-          <Select value={transferType} onValueChange={(v) => setTransferType(v as 'full' | 'partial')}>
-            <SelectTrigger>
-              <SelectValue placeholder="Select..." />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="full">Full Transfer</SelectItem>
-              <SelectItem value="partial">Partial Transfer</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
       </div>
       <div className="flex gap-2 justify-end">
         <Button variant="outline" size="sm" onClick={onDone}>Cancel</Button>
@@ -214,20 +196,6 @@ function AccountCard({ account }: { account: FinancialAccount }) {
               className="col-span-2"
             />
           </div>
-          <div className="grid grid-cols-3 items-center gap-4">
-            <Label>Transfer Type</Label>
-            <div className="col-span-2">
-              <Select value={account.transferType ?? ''} onValueChange={(v) => update({ transferType: v as 'full' | 'partial' })}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Select..." />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="full">Full Transfer</SelectItem>
-                  <SelectItem value="partial">Partial Transfer</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
         </div>
       )}
     </div>
@@ -245,7 +213,7 @@ export function FinancialAccountsForm() {
         <h3 className="text-base font-semibold">Existing Accounts</h3>
       </div>
       <p className="text-sm text-muted-foreground">
-        Pre-existing financial accounts the client is transferring to this firm.
+        Financial accounts associated with this client.
       </p>
 
       <div className="space-y-2">

@@ -1,11 +1,3 @@
-import { Users, Clock, CheckCircle2 } from 'lucide-react'
-
-const stats = [
-  { label: 'Active Onboardings', value: '3', icon: Users },
-  { label: 'Pending Reviews', value: '7', icon: Clock },
-  { label: 'Completed This Month', value: '12', icon: CheckCircle2 },
-]
-
 export function DashboardContent() {
   return (
     <div className="space-y-8">
@@ -17,16 +9,16 @@ export function DashboardContent() {
       </div>
 
       <div className="grid grid-cols-3 gap-6">
-        {stats.map((stat) => (
+        {Array.from({ length: 3 }).map((_, i) => (
           <div
-            key={stat.label}
-            className="rounded-lg border border-border bg-card p-6"
+            key={i}
+            className="rounded-lg border border-border bg-card p-6 animate-pulse"
           >
             <div className="flex items-center justify-between">
-              <span className="text-sm text-muted-foreground">{stat.label}</span>
-              <stat.icon className="h-4 w-4 text-muted-foreground" />
+              <div className="h-4 w-24 rounded bg-muted" />
+              <div className="h-4 w-4 rounded bg-muted" />
             </div>
-            <p className="mt-2 text-3xl font-semibold">{stat.value}</p>
+            <div className="mt-3 h-8 w-16 rounded bg-muted" />
           </div>
         ))}
       </div>

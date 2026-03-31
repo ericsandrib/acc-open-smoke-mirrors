@@ -1,73 +1,59 @@
-# React + TypeScript + Vite
+# Account Opening — Smoke & Mirrors
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+Design prototype for a client onboarding journey in a wealth management platform. No backend — this is a front-end-only demo for aligning on the user experience.
 
-Currently, two official plugins are available:
+See [docs/product-context.md](docs/product-context.md) for full product context.
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+## Quick start
 
-## React Compiler
-
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
-
-## Expanding the ESLint configuration
-
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
-
-```js
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-
-      // Remove tseslint.configs.recommended and replace with this
-      tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      tseslint.configs.stylisticTypeChecked,
-
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+```bash
+pnpm install
+pnpm dev
 ```
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
+## Routes
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
+| Route | Description |
+|-------|-------------|
+| `/` | Dashboard — select a relationship and start an onboarding journey |
+| `/wizard` | Wizard — step-by-step task UI for the onboarding workflow |
+| `/workflow` | Workflow viewer — React Flow graph of actions, tasks, and status |
 
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+## Tech stack
+
+- React + TypeScript (Vite)
+- shadcn/ui + Tailwind CSS
+- React Flow (@xyflow/react)
+- React Router
+
+## Project structure
+
 ```
+src/
+  types/        TypeScript type definitions
+  data/         Seed/mock data
+  stores/       React Context + useReducer state management
+  components/
+    wizard/     Wizard UI (sidebar, forms, footer)
+    workflow/   React Flow workflow viewer
+    dashboard/  Dashboard and journey creation
+  pages/        Route-level page components
+docs/           Product and domain documentation
+specs/          Feature specifications
+```
+
+## Commands
+
+| Command | Description |
+|---------|-------------|
+| `pnpm dev` | Start dev server |
+| `pnpm build` | Production build |
+| `pnpm lint` | Run ESLint |
+
+## Documentation
+
+- [Product context](docs/product-context.md) — what this is, who it's for, and why
+- [Relationship profiles](docs/Relationships/relationships.md) — how the platform models client relationships
+- [Households](docs/Relationships/households.md) — household member structure
+- [Specs index](specs/README.md) — feature specifications and status
+- [Progress](PROGRESS.md) — implementation progress tracking

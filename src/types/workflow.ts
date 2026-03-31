@@ -19,7 +19,6 @@ export interface FinancialAccount {
   custodian?: string
   accountNumber?: string
   estimatedValue?: string
-  transferType?: 'full' | 'partial'
 }
 
 export interface Task {
