@@ -252,6 +252,7 @@ function workflowReducer(state: WorkflowState, action: WorkflowAction): Workflow
         taskData: {
           'client-info': action.clientInfo,
         },
+        journeyName: action.journeyName,
       }
     }
 

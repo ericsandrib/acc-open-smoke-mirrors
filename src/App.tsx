@@ -6,6 +6,7 @@ import { DashboardPage } from '@/pages/DashboardPage'
 import { WizardPage } from '@/pages/WizardPage'
 import { WorkflowPage } from '@/pages/WorkflowPage'
 import { ServicingPage } from '@/pages/ServicingPage'
+import { JourneyDetailPage } from '@/pages/JourneyDetailPage'
 import { Agentation } from 'agentation'
 
 export default function App() {
@@ -19,6 +20,7 @@ export default function App() {
               <Route path="/wizard" element={<WizardPage />} />
               <Route path="/workflow" element={<WorkflowPage />} />
               <Route path="/servicing" element={<ServicingPage />} />
+              <Route path="/servicing/:journeyId" element={<JourneyDetailPage />} />
               <Route path="*" element={<Navigate to="/" replace />} />
             </Routes>
           </BrowserRouter>

@@ -21,6 +21,7 @@ export interface JourneyAction {
 
 export interface Journey {
   id: string
+  name: string
   relationshipName: string
   status: JourneyStatus
   createdAt: string

@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Minus, X } from 'lucide-react'
 import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Badge } from '@/components/ui/badge'
 import {
@@ -30,6 +31,7 @@ const actionTypes = [
 
 export function ComposeDialog({ onClose }: ComposeDialogProps) {
   const [minimized, setMinimized] = useState(false)
+  const [journeyName, setJourneyName] = useState('')
   const [actionType, setActionType] = useState('')
   const [relationshipId, setRelationshipId] = useState('')
   const { dispatch } = useWorkflow()
@@ -53,6 +55,7 @@ export function ComposeDialog({ onClose }: ComposeDialogProps) {
         dob: relationship.primaryContact.dob ?? '',
         clientType: relationship.primaryContact.clientType ?? '',
       },
+      journeyName: journeyName || 'Client Onboarding',
     })
     navigate('/wizard')
   }
@@ -92,6 +95,15 @@ export function ComposeDialog({ onClose }: ComposeDialogProps) {
       {/* Body */}
       {!minimized && (
         <div className="space-y-4 p-4">
+          <div className="space-y-2">
+            <Label>Journey Name</Label>
+            <Input
+              value={journeyName}
+              onChange={(e) => setJourneyName(e.target.value)}
+              placeholder="e.g. Smith Family Onboarding"
+            />
+          </div>
+
           <div className="space-y-2">
             <Label>Action Type</Label>
             <Select value={actionType} onValueChange={setActionType}>

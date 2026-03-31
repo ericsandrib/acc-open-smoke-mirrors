@@ -1,3 +1,4 @@
+import { useNavigate } from 'react-router-dom'
 import { useServicing } from '@/stores/servicingStore'
 import {
   Table,
@@ -11,6 +12,7 @@ import { StatusBadge } from './StatusBadge'
 
 export function TasksTable() {
   const { journeys } = useServicing()
+  const navigate = useNavigate()
 
   const rows = journeys.flatMap((journey) =>
     journey.actions.flatMap((action) =>
@@ -35,7 +37,7 @@ export function TasksTable() {
       </TableHeader>
       <TableBody>
         {rows.map((row) => (
-          <TableRow key={row.id}>
+          <TableRow key={row.id} className="cursor-pointer" onClick={() => navigate(`/servicing/${row.journeyId}`)}>
             <TableCell className="font-medium">{row.title}</TableCell>
             <TableCell>{row.actionTitle}</TableCell>
             <TableCell>{row.journeyName}</TableCell>
