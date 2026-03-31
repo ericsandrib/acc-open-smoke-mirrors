@@ -21,6 +21,7 @@ export default function App() {
               <Route path="/workflow" element={<WorkflowPage />} />
               <Route path="/servicing" element={<ServicingPage />} />
               <Route path="/servicing/:journeyId" element={<JourneyDetailPage />} />
+              <Route path="/servicing/:journeyId/action/:actionId" element={<JourneyDetailPage />} />
               <Route path="*" element={<Navigate to="/" replace />} />
             </Routes>
           </BrowserRouter>

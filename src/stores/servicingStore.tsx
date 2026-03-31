@@ -55,6 +55,7 @@ function deriveLiveJourney(state: WorkflowState): Journey | null {
           title: action.title,
           status: c.status === 'blocked' ? 'in_progress' as const : c.status,
           nickname: `${journeyName} - KYC: ${c.name}`,
+          parentActionId: `${journeyId}-${action.id}`,
           tasks: [childTask],
         }
       }),

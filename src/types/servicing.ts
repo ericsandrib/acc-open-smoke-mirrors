@@ -19,6 +19,7 @@ export interface JourneyAction {
   title: string
   status: JourneyStatus
   nickname?: string
+  parentActionId?: string
   tasks: JourneyTask[]
 }
 

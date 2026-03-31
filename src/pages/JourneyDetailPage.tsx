@@ -87,14 +87,18 @@ function getFormKeyForTask(workflowTaskId: string, tasks: Task[]): string | unde
 }
 
 export function JourneyDetailPage() {
-  const { journeyId } = useParams<{ journeyId: string }>()
+  const { journeyId, actionId } = useParams<{ journeyId: string; actionId?: string }>()
   const { journeys, updateJourneyAssignee } = useServicing()
   const { state: workflowState, dispatch } = useWorkflow()
   const navigate = useNavigate()
 
   const journey = journeys.find((j) => j.id === journeyId)
   const isLiveJourney = journey?.id === workflowState.journeyId
-  const allTasks = journey?.actions.flatMap((a) => a.tasks) ?? []
+  const focusedAction = actionId ? journey?.actions.find((a) => a.id === actionId) : null
+  const sidebarActions = focusedAction
+    ? [focusedAction]
+    : (journey?.actions.filter((a) => !a.parentActionId) ?? [])
+  const allTasks = (focusedAction ? [focusedAction] : journey?.actions ?? []).flatMap((a) => a.tasks)
   const [activeTaskId, setActiveTaskId] = useState<string | null>(allTasks[0]?.id ?? null)
 
   const activeTask = allTasks.find((t) => t.id === activeTaskId) ?? null
@@ -107,6 +111,12 @@ export function JourneyDetailPage() {
       dispatch({ type: 'SET_ACTIVE_TASK', taskId: workflowTaskId })
     }
   }
+
+  // Reset active task when route params change (e.g. navigating between parent/child views)
+  useEffect(() => {
+    setActiveTaskId(allTasks[0]?.id ?? null)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [journeyId, actionId])
 
   // Sync workflow activeTaskId on mount for live journey
   useEffect(() => {
@@ -159,8 +169,8 @@ export function JourneyDetailPage() {
               <ArrowLeft className="h-4 w-4 mr-1" />
               Servicing
             </Button>
-            <h1 className="text-sm font-semibold text-foreground">{journey.name}</h1>
-            <ServicingStatusBadge status={journey.status} />
+            <h1 className="text-sm font-semibold text-foreground">{focusedAction?.nickname ?? journey.name}</h1>
+            <ServicingStatusBadge status={focusedAction?.status ?? journey.status} />
           </div>
           <div className="flex items-center gap-1">
             <ThemeToggle />
@@ -176,7 +186,16 @@ export function JourneyDetailPage() {
         <div className="flex flex-1 overflow-hidden">
           {/* Left sidebar — task navigation */}
           <nav className="w-64 border-r border-border bg-sidebar-background p-2 overflow-y-auto">
-            {journey.actions.map((action) => (
+            {focusedAction && (
+              <button
+                onClick={() => navigate(`/servicing/${journeyId}`)}
+                className="flex items-center gap-1 px-3 py-2 mb-2 text-sm text-muted-foreground hover:text-foreground transition-colors"
+              >
+                <ArrowLeft className="h-3.5 w-3.5" />
+                Back to {journey.name}
+              </button>
+            )}
+            {sidebarActions.map((action) => (
               <div key={action.id} className="mb-6">
                 <div className="flex items-center justify-between mb-2 px-3">
                   <h3 className="text-xs font-semibold text-muted-foreground">
@@ -307,6 +326,17 @@ export function JourneyDetailPage() {
                 Journey
               </h3>
               <div className="space-y-3">
+                {focusedAction && (
+                  <div>
+                    <span className="text-muted-foreground">Parent Journey</span>
+                    <button
+                      onClick={() => navigate(`/servicing/${journeyId}`)}
+                      className="block font-medium text-foreground hover:underline"
+                    >
+                      {journey.name}
+                    </button>
+                  </div>
+                )}
                 <div>
                   <span className="text-muted-foreground">Relationship</span>
                   <p className="font-medium text-foreground">{journey.relationshipName}</p>

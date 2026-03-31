@@ -72,7 +72,7 @@ export function ActionsTable() {
       </TableHeader>
       <TableBody>
         {sortedRows.map((row) => (
-          <TableRow key={row.id} className="cursor-pointer" onClick={() => navigate(`/servicing/${row.journeyId}`)}>
+          <TableRow key={row.id} className="cursor-pointer" onClick={() => navigate(row.parentActionId ? `/servicing/${row.journeyId}/action/${row.id}` : `/servicing/${row.journeyId}`)}>
             <TableCell className="font-medium">{row.nickname}</TableCell>
             <TableCell>{row.title}</TableCell>
             <TableCell>{row.journeyName}</TableCell>
