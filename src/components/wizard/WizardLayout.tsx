@@ -18,7 +18,7 @@ export function WizardLayout() {
             <ArrowLeft className="h-4 w-4 mr-1" />
             Dashboard
           </Button>
-          <h1 className="text-sm font-semibold text-foreground">Account Opening Wizard</h1>
+          <h1 className="text-sm font-semibold text-foreground">Account Opening</h1>
         </div>
         <div className="flex items-center gap-1">
           <ThemeToggle />

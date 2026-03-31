@@ -23,7 +23,7 @@ export function DetailSidebar() {
             <p className="font-medium text-foreground">{title}</p>
           </div>
           <div>
-            <span className="text-muted-foreground">Assigned To</span>
+            <span className="text-muted-foreground">Owner</span>
             <p className="font-medium text-foreground">{assignedTo}</p>
           </div>
           <div>

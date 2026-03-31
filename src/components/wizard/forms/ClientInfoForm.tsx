@@ -9,38 +9,38 @@ export function ClientInfoForm() {
   return (
     <div className="space-y-4">
       <div className="grid grid-cols-3 items-center gap-4">
-        <Label htmlFor="firstName">First Name</Label>
+        <Label htmlFor="firstName">First name</Label>
         <Input
           id="firstName"
-          placeholder="John"
+          placeholder="e.g. Alex"
           className="col-span-2"
           value={(data.firstName as string) ?? ''}
           onChange={(e) => updateField('firstName', e.target.value)}
         />
       </div>
       <div className="grid grid-cols-3 items-center gap-4">
-        <Label htmlFor="lastName">Last Name</Label>
+        <Label htmlFor="lastName">Last name</Label>
         <Input
           id="lastName"
-          placeholder="Smith"
+          placeholder="e.g. Chen"
           className="col-span-2"
           value={(data.lastName as string) ?? ''}
           onChange={(e) => updateField('lastName', e.target.value)}
         />
       </div>
       <div className="grid grid-cols-3 items-center gap-4">
-        <Label htmlFor="email">Email Address</Label>
+        <Label htmlFor="email">Email</Label>
         <Input
           id="email"
           type="email"
-          placeholder="john.smith@example.com"
+          placeholder="name@example.com"
           className="col-span-2"
           value={(data.email as string) ?? ''}
           onChange={(e) => updateField('email', e.target.value)}
         />
       </div>
       <div className="grid grid-cols-3 items-center gap-4">
-        <Label htmlFor="phone">Phone Number</Label>
+        <Label htmlFor="phone">Phone</Label>
         <Input
           id="phone"
           type="tel"
@@ -51,7 +51,7 @@ export function ClientInfoForm() {
         />
       </div>
       <div className="grid grid-cols-3 items-center gap-4">
-        <Label htmlFor="dob">Date of Birth</Label>
+        <Label htmlFor="dob">Date of birth</Label>
         <Input
           id="dob"
           type="date"
@@ -61,14 +61,14 @@ export function ClientInfoForm() {
         />
       </div>
       <div className="grid grid-cols-3 items-center gap-4">
-        <Label>Client Type</Label>
+        <Label>Client type</Label>
         <div className="col-span-2">
           <Select
             value={(data.clientType as string) ?? ''}
             onValueChange={(v) => updateField('clientType', v)}
           >
             <SelectTrigger>
-              <SelectValue placeholder="Select type..." />
+              <SelectValue placeholder="Select type" />
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="individual">Individual</SelectItem>

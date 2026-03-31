@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui/select'
@@ -48,7 +48,7 @@ function AddAccountForm({ onDone }: { onDone: () => void }) {
   return (
     <div className="rounded-lg border border-dashed border-border p-4 space-y-4">
       <div className="grid grid-cols-3 items-center gap-4">
-        <Label>Account Name</Label>
+        <Label>Account name</Label>
         <Input
           value={accountName}
           onChange={(e) => setAccountName(e.target.value)}
@@ -57,11 +57,11 @@ function AddAccountForm({ onDone }: { onDone: () => void }) {
         />
       </div>
       <div className="grid grid-cols-3 items-center gap-4">
-        <Label>Account Type</Label>
+        <Label>Account type</Label>
         <div className="col-span-2">
           <Select value={accountType} onValueChange={(v) => setAccountType(v as AccountType)}>
             <SelectTrigger>
-              <SelectValue placeholder="Select..." />
+              <SelectValue placeholder="Select account type" />
             </SelectTrigger>
             <SelectContent>
               {Object.entries(accountTypeLabels).map(([value, label]) => (
@@ -72,7 +72,7 @@ function AddAccountForm({ onDone }: { onDone: () => void }) {
         </div>
       </div>
       <div className="grid grid-cols-3 items-center gap-4">
-        <Label>Current Custodian</Label>
+        <Label>Current custodian</Label>
         <Input
           value={custodian}
           onChange={(e) => setCustodian(e.target.value)}
@@ -81,7 +81,7 @@ function AddAccountForm({ onDone }: { onDone: () => void }) {
         />
       </div>
       <div className="grid grid-cols-3 items-center gap-4">
-        <Label>Account Number</Label>
+        <Label>Account number</Label>
         <Input
           value={accountNumber}
           onChange={(e) => setAccountNumber(e.target.value)}
@@ -90,7 +90,7 @@ function AddAccountForm({ onDone }: { onDone: () => void }) {
         />
       </div>
       <div className="grid grid-cols-3 items-center gap-4">
-        <Label>Estimated Value</Label>
+        <Label>Estimated value</Label>
         <Input
           value={estimatedValue}
           onChange={(e) => setEstimatedValue(e.target.value)}
@@ -100,9 +100,53 @@ function AddAccountForm({ onDone }: { onDone: () => void }) {
       </div>
       <div className="flex gap-2 justify-end">
         <Button variant="outline" size="sm" onClick={onDone}>Cancel</Button>
-        <Button size="sm" onClick={handleAdd} disabled={!accountName.trim()}>Add</Button>
+        <Button size="sm" onClick={handleAdd} disabled={!accountName.trim()}>Add account</Button>
       </div>
     </div>
+  )
+}
+
+function DeleteAccountButton({ account }: { account: FinancialAccount }) {
+  const { dispatch } = useWorkflow()
+  const [confirming, setConfirming] = useState(false)
+
+  useEffect(() => {
+    if (!confirming) return
+    const timer = setTimeout(() => setConfirming(false), 3000)
+    return () => clearTimeout(timer)
+  }, [confirming])
+
+  if (confirming) {
+    return (
+      <Button
+        variant="ghost"
+        size="sm"
+        className="h-7 shrink-0 text-destructive hover:text-destructive hover:bg-destructive/10 text-xs gap-1"
+        onClick={(e) => {
+          e.stopPropagation()
+          dispatch({ type: 'REMOVE_FINANCIAL_ACCOUNT', accountId: account.id })
+        }}
+        aria-label={`Confirm remove ${account.accountName}`}
+      >
+        <Trash2 className="h-3.5 w-3.5" />
+        Remove?
+      </Button>
+    )
+  }
+
+  return (
+    <Button
+      variant="ghost"
+      size="icon"
+      className="h-7 w-7 shrink-0 text-muted-foreground hover:text-destructive"
+      onClick={(e) => {
+        e.stopPropagation()
+        setConfirming(true)
+      }}
+      aria-label={`Remove ${account.accountName}`}
+    >
+      <Trash2 className="h-3.5 w-3.5" />
+    </Button>
   )
 }
 
@@ -119,34 +163,25 @@ function AccountCard({ account }: { account: FinancialAccount }) {
       <button
         type="button"
         onClick={() => setOpen(!open)}
-        className="flex items-center justify-between w-full p-3"
+        className="flex items-center justify-between w-full p-3 hover:bg-muted/50 rounded-t-lg focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+        aria-expanded={open}
       >
         <div className="flex items-center gap-2">
-          <ChevronRight className={`h-4 w-4 text-muted-foreground shrink-0 transition-transform ${open ? 'rotate-90' : ''}`} />
+          <ChevronRight className={`h-4 w-4 text-muted-foreground shrink-0 transition-transform duration-200 ease-out ${open ? 'rotate-90' : ''}`} />
           <span className="text-sm font-medium">{account.accountName}</span>
           {account.accountType && (
             <span className="text-xs text-muted-foreground">{accountTypeLabels[account.accountType]}</span>
           )}
           {account.custodian && (
-            <span className="text-xs text-muted-foreground">@ {account.custodian}</span>
+            <span className="text-xs text-muted-foreground">at {account.custodian}</span>
           )}
         </div>
-        <Button
-          variant="ghost"
-          size="icon"
-          className="h-7 w-7 shrink-0 text-muted-foreground hover:text-destructive"
-          onClick={(e) => {
-            e.stopPropagation()
-            dispatch({ type: 'REMOVE_FINANCIAL_ACCOUNT', accountId: account.id })
-          }}
-        >
-          <Trash2 className="h-3.5 w-3.5" />
-        </Button>
+        <DeleteAccountButton account={account} />
       </button>
       {open && (
         <div className="border-t border-border px-3 pb-3 pt-3 space-y-4">
           <div className="grid grid-cols-3 items-center gap-4">
-            <Label>Account Name</Label>
+            <Label>Account name</Label>
             <Input
               value={account.accountName}
               onChange={(e) => update({ accountName: e.target.value })}
@@ -155,11 +190,11 @@ function AccountCard({ account }: { account: FinancialAccount }) {
             />
           </div>
           <div className="grid grid-cols-3 items-center gap-4">
-            <Label>Account Type</Label>
+            <Label>Account type</Label>
             <div className="col-span-2">
               <Select value={account.accountType ?? ''} onValueChange={(v) => update({ accountType: v as AccountType })}>
                 <SelectTrigger>
-                  <SelectValue placeholder="Select..." />
+                  <SelectValue placeholder="Select account type" />
                 </SelectTrigger>
                 <SelectContent>
                   {Object.entries(accountTypeLabels).map(([value, label]) => (
@@ -170,7 +205,7 @@ function AccountCard({ account }: { account: FinancialAccount }) {
             </div>
           </div>
           <div className="grid grid-cols-3 items-center gap-4">
-            <Label>Current Custodian</Label>
+            <Label>Current custodian</Label>
             <Input
               value={account.custodian ?? ''}
               onChange={(e) => update({ custodian: e.target.value })}
@@ -179,7 +214,7 @@ function AccountCard({ account }: { account: FinancialAccount }) {
             />
           </div>
           <div className="grid grid-cols-3 items-center gap-4">
-            <Label>Account Number</Label>
+            <Label>Account number</Label>
             <Input
               value={account.accountNumber ?? ''}
               onChange={(e) => update({ accountNumber: e.target.value })}
@@ -188,7 +223,7 @@ function AccountCard({ account }: { account: FinancialAccount }) {
             />
           </div>
           <div className="grid grid-cols-3 items-center gap-4">
-            <Label>Estimated Value</Label>
+            <Label>Estimated value</Label>
             <Input
               value={account.estimatedValue ?? ''}
               onChange={(e) => update({ estimatedValue: e.target.value })}
@@ -210,16 +245,22 @@ export function FinancialAccountsForm() {
     <div className="space-y-4">
       <div className="flex items-center gap-2">
         <Landmark className="h-5 w-5 text-muted-foreground" />
-        <h3 className="text-base font-semibold">Existing Accounts</h3>
+        <h3 className="text-base font-semibold">Financial Accounts</h3>
       </div>
       <p className="text-sm text-muted-foreground">
-        Financial accounts associated with this client.
+        Accounts you'd like to transfer or manage for this client.
       </p>
 
       <div className="space-y-2">
-        {state.financialAccounts.map((account) => (
-          <AccountCard key={account.id} account={account} />
-        ))}
+        {state.financialAccounts.length === 0 ? (
+          <div className="rounded-lg border border-dashed border-border p-4 text-center">
+            <p className="text-sm text-muted-foreground">No financial accounts added yet. Add accounts you'd like to transfer or manage.</p>
+          </div>
+        ) : (
+          state.financialAccounts.map((account) => (
+            <AccountCard key={account.id} account={account} />
+          ))
+        )}
       </div>
 
       {showAdd ? (
@@ -227,7 +268,7 @@ export function FinancialAccountsForm() {
       ) : (
         <Button variant="outline" className="w-full" onClick={() => setShowAdd(true)}>
           <Plus className="h-4 w-4 mr-2" />
-          Add Account
+          Add account
         </Button>
       )}
     </div>

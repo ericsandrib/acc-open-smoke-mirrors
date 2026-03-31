@@ -4,6 +4,7 @@ import { Label } from '@/components/ui/label'
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui/select'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
 import { Plus, Trash2, Users, UserPlus, Building2, ChevronRight, Shield } from 'lucide-react'
 import { useWorkflow } from '@/stores/workflowStore'
 import type { RelatedParty } from '@/types/workflow'
@@ -51,11 +52,11 @@ function AddHouseholdMemberForm({ onDone }: { onDone: () => void }) {
     <div className="rounded-lg border border-dashed border-border p-4 space-y-4">
       <div className="grid grid-cols-3 items-center gap-4">
         <Label>First name</Label>
-        <Input className="col-span-2" value={firstName} onChange={(e) => setFirstName(e.target.value)} placeholder="First name" />
+        <Input className="col-span-2" value={firstName} onChange={(e) => setFirstName(e.target.value)} placeholder="e.g. Jane" />
       </div>
       <div className="grid grid-cols-3 items-center gap-4">
         <Label>Last name</Label>
-        <Input className="col-span-2" value={lastName} onChange={(e) => setLastName(e.target.value)} placeholder="Last name" />
+        <Input className="col-span-2" value={lastName} onChange={(e) => setLastName(e.target.value)} placeholder="e.g. Doe" />
       </div>
       <div className="grid grid-cols-3 items-center gap-4">
         <Label>Relationship</Label>
@@ -81,7 +82,7 @@ function AddHouseholdMemberForm({ onDone }: { onDone: () => void }) {
       </div>
       <div className="grid grid-cols-3 items-center gap-4">
         <Label>Email</Label>
-        <Input className="col-span-2" value={email} onChange={(e) => setEmail(e.target.value)} type="email" placeholder="email@example.com" />
+        <Input className="col-span-2" value={email} onChange={(e) => setEmail(e.target.value)} type="email" placeholder="name@example.com" />
       </div>
       <div className="grid grid-cols-3 items-center gap-4">
         <Label>Phone</Label>
@@ -128,11 +129,11 @@ function AddContactForm({ onDone }: { onDone: () => void }) {
     <div className="rounded-lg border border-dashed border-border p-4 space-y-4">
       <div className="grid grid-cols-3 items-center gap-4">
         <Label>First name</Label>
-        <Input className="col-span-2" value={firstName} onChange={(e) => setFirstName(e.target.value)} placeholder="First name" />
+        <Input className="col-span-2" value={firstName} onChange={(e) => setFirstName(e.target.value)} placeholder="e.g. Jane" />
       </div>
       <div className="grid grid-cols-3 items-center gap-4">
         <Label>Last name</Label>
-        <Input className="col-span-2" value={lastName} onChange={(e) => setLastName(e.target.value)} placeholder="Last name" />
+        <Input className="col-span-2" value={lastName} onChange={(e) => setLastName(e.target.value)} placeholder="e.g. Doe" />
       </div>
       <div className="grid grid-cols-3 items-center gap-4">
         <Label>Relationship</Label>
@@ -158,7 +159,7 @@ function AddContactForm({ onDone }: { onDone: () => void }) {
       </div>
       <div className="grid grid-cols-3 items-center gap-4">
         <Label>Email</Label>
-        <Input className="col-span-2" value={email} onChange={(e) => setEmail(e.target.value)} type="email" placeholder="email@example.com" />
+        <Input className="col-span-2" value={email} onChange={(e) => setEmail(e.target.value)} type="email" placeholder="name@example.com" />
       </div>
       <div className="grid grid-cols-3 items-center gap-4">
         <Label>Phone</Label>
@@ -198,7 +199,7 @@ function AddOrganizationForm({ onDone }: { onDone: () => void }) {
     <div className="rounded-lg border border-dashed border-border p-4 space-y-4">
       <div className="grid grid-cols-3 items-center gap-4">
         <Label>Organization name</Label>
-        <Input className="col-span-2" value={orgName} onChange={(e) => setOrgName(e.target.value)} placeholder="Organization name" />
+        <Input className="col-span-2" value={orgName} onChange={(e) => setOrgName(e.target.value)} placeholder="e.g. Smith Family Trust" />
       </div>
       <div className="grid grid-cols-3 items-center gap-4">
         <Label>Role</Label>
@@ -312,7 +313,14 @@ function HouseholdMemberCard({ party }: { party: RelatedParty }) {
             <Badge variant="secondary" className="text-[10px] text-green-700 bg-green-100">Verified</Badge>
           )}
           {party.kycStatus === 'needs_kyc' && (
-            <Badge variant="secondary" className="text-[10px] text-amber-700 bg-amber-100">Needs KYC</Badge>
+            <TooltipProvider delayDuration={300}>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Badge variant="secondary" className="text-[10px] text-amber-700 bg-amber-100">Needs verification</Badge>
+                </TooltipTrigger>
+                <TooltipContent><p>Identity verification required</p></TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
           )}
         </div>
         <DeleteButton party={party} />
@@ -325,7 +333,7 @@ function HouseholdMemberCard({ party }: { party: RelatedParty }) {
               className="col-span-2"
               value={party.firstName ?? ''}
               onChange={(e) => update({ firstName: e.target.value, name: `${e.target.value} ${party.lastName ?? ''}`.trim() })}
-              placeholder="First name"
+              placeholder="e.g. Jane"
             />
           </div>
           <div className="grid grid-cols-3 items-center gap-4">
@@ -334,7 +342,7 @@ function HouseholdMemberCard({ party }: { party: RelatedParty }) {
               className="col-span-2"
               value={party.lastName ?? ''}
               onChange={(e) => update({ lastName: e.target.value, name: `${party.firstName ?? ''} ${e.target.value}`.trim() })}
-              placeholder="Last name"
+              placeholder="e.g. Doe"
             />
           </div>
           <div className="grid grid-cols-3 items-center gap-4">
@@ -366,7 +374,7 @@ function HouseholdMemberCard({ party }: { party: RelatedParty }) {
               value={party.email ?? ''}
               onChange={(e) => update({ email: e.target.value })}
               type="email"
-              placeholder="email@example.com"
+              placeholder="name@example.com"
             />
           </div>
           <div className="grid grid-cols-3 items-center gap-4">
@@ -442,7 +450,7 @@ function ContactCard({ party }: { party: RelatedParty }) {
               className="col-span-2"
               value={party.firstName ?? ''}
               onChange={(e) => update({ firstName: e.target.value, name: `${e.target.value} ${party.lastName ?? ''}`.trim() })}
-              placeholder="First name"
+              placeholder="e.g. Jane"
             />
           </div>
           <div className="grid grid-cols-3 items-center gap-4">
@@ -451,7 +459,7 @@ function ContactCard({ party }: { party: RelatedParty }) {
               className="col-span-2"
               value={party.lastName ?? ''}
               onChange={(e) => update({ lastName: e.target.value, name: `${party.firstName ?? ''} ${e.target.value}`.trim() })}
-              placeholder="Last name"
+              placeholder="e.g. Doe"
             />
           </div>
           <div className="grid grid-cols-3 items-center gap-4">
@@ -483,7 +491,7 @@ function ContactCard({ party }: { party: RelatedParty }) {
               value={party.email ?? ''}
               onChange={(e) => update({ email: e.target.value })}
               type="email"
-              placeholder="email@example.com"
+              placeholder="name@example.com"
             />
           </div>
           <div className="grid grid-cols-3 items-center gap-4">
@@ -538,7 +546,7 @@ function OrganizationCard({ party }: { party: RelatedParty }) {
               className="col-span-2"
               value={party.organizationName ?? ''}
               onChange={(e) => update({ organizationName: e.target.value, name: e.target.value })}
-              placeholder="Organization name"
+              placeholder="e.g. Smith Family Trust"
             />
           </div>
           <div className="grid grid-cols-3 items-center gap-4">
@@ -600,12 +608,12 @@ export function RelatedPartiesForm() {
           <h3 className="text-base font-semibold">Household Members</h3>
         </div>
         <p className="text-sm text-muted-foreground">
-          Household members included in this onboarding journey.
+          People in the household you're onboarding — the primary contact and their family.
         </p>
 
         <div className="space-y-2">
           {householdMembers.length === 0 ? (
-            <EmptyState message="No household members added. Add at least the primary contact to continue." />
+            <EmptyState message="No household members added yet. Start by adding the primary contact." />
           ) : (
             householdMembers.map((member) => (
               <HouseholdMemberCard key={member.id} party={member} />
@@ -660,7 +668,7 @@ export function RelatedPartiesForm() {
           <h3 className="text-base font-semibold">Related Organizations</h3>
         </div>
         <p className="text-sm text-muted-foreground">
-          Businesses and entities linked to this household.
+          Businesses, trusts, or entities connected to the household.
         </p>
 
         <div className="space-y-2">
