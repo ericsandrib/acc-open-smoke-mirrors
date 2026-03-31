@@ -8,7 +8,7 @@ import {
 import '@xyflow/react/dist/style.css'
 import { useWorkflow } from '@/stores/workflowStore'
 import { workflowToFlow } from '@/components/workflow/workflowToFlow'
-import { ActionNode } from '@/components/workflow/ActionNode'
+import { ActionGroupNode } from '@/components/workflow/ActionGroupNode'
 import { TaskNode } from '@/components/workflow/TaskNode'
 import { KycChildNode } from '@/components/workflow/KycChildNode'
 import { Button } from '@/components/ui/button'
@@ -16,7 +16,7 @@ import { useNavigate } from 'react-router-dom'
 import { ArrowLeft } from 'lucide-react'
 
 const nodeTypes: NodeTypes = {
-  actionNode: ActionNode,
+  actionGroupNode: ActionGroupNode,
   taskNode: TaskNode,
   kycChildNode: KycChildNode,
 }
