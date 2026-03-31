@@ -65,9 +65,9 @@ export const tasks: Task[] = [
 ]
 
 export const initialRelatedParties: RelatedParty[] = [
-  { id: 'member-1', name: 'John Smith', type: 'household_member' },
-  { id: 'member-2', name: 'Jane Smith', type: 'household_member', relationship: 'Spouse' },
-  { id: 'member-3', name: 'Robert Smith', type: 'household_member', relationship: 'Child' },
+  { id: 'member-1', name: 'John Smith', type: 'household_member', kycStatus: 'verified' },
+  { id: 'member-2', name: 'Jane Smith', type: 'household_member', relationship: 'Spouse', kycStatus: 'needs_kyc' },
+  { id: 'member-3', name: 'Robert Smith', type: 'household_member', relationship: 'Child', kycStatus: 'needs_kyc' },
 ]
 
 export const initialFinancialAccounts: FinancialAccount[] = [

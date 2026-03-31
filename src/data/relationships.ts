@@ -13,9 +13,9 @@ export const relationships: Relationship[] = [
       clientType: 'joint',
     },
     relatedParties: [
-      { id: 'member-1', name: 'John Smith', type: 'household_member' },
-      { id: 'member-2', name: 'Jane Smith', type: 'household_member', relationship: 'Spouse' },
-      { id: 'member-3', name: 'Robert Smith', type: 'household_member', relationship: 'Child' },
+      { id: 'member-1', name: 'John Smith', type: 'household_member', kycStatus: 'verified' },
+      { id: 'member-2', name: 'Jane Smith', type: 'household_member', relationship: 'Spouse', kycStatus: 'needs_kyc' },
+      { id: 'member-3', name: 'Robert Smith', type: 'household_member', relationship: 'Child', kycStatus: 'needs_kyc' },
     ],
     financialAccounts: [
       { id: 'acct-1', accountName: 'Smith Family Trust', accountType: 'trust', custodian: 'Fidelity', estimatedValue: '2,500,000' },
@@ -34,8 +34,8 @@ export const relationships: Relationship[] = [
       clientType: 'trust',
     },
     relatedParties: [
-      { id: 'johnson-1', name: 'Michael Johnson', type: 'household_member' },
-      { id: 'johnson-2', name: 'Sarah Johnson', type: 'household_member', relationship: 'Spouse' },
+      { id: 'johnson-1', name: 'Michael Johnson', type: 'household_member', kycStatus: 'verified' },
+      { id: 'johnson-2', name: 'Sarah Johnson', type: 'household_member', relationship: 'Spouse', kycStatus: 'verified' },
     ],
     financialAccounts: [
       { id: 'johnson-acct-1', accountName: 'Johnson Family Trust', accountType: 'trust', custodian: 'Vanguard', estimatedValue: '4,200,000' },
@@ -54,9 +54,9 @@ export const relationships: Relationship[] = [
       clientType: 'individual',
     },
     relatedParties: [
-      { id: 'davis-1', name: 'Emily Davis', type: 'household_member' },
-      { id: 'davis-2', name: 'James Davis', type: 'household_member', relationship: 'Spouse' },
-      { id: 'davis-3', name: 'Olivia Davis', type: 'household_member', relationship: 'Child' },
+      { id: 'davis-1', name: 'Emily Davis', type: 'household_member', kycStatus: 'needs_kyc' },
+      { id: 'davis-2', name: 'James Davis', type: 'household_member', relationship: 'Spouse', kycStatus: 'needs_kyc' },
+      { id: 'davis-3', name: 'Olivia Davis', type: 'household_member', relationship: 'Child', kycStatus: 'needs_kyc' },
     ],
     financialAccounts: [
       { id: 'davis-acct-1', accountName: 'Davis Brokerage', accountType: 'brokerage', custodian: 'Merrill Lynch', estimatedValue: '1,150,000' },

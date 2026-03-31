@@ -8,6 +8,7 @@ export interface RelatedParty {
   type: RelatedPartyType
   relationship?: string
   email?: string
+  kycStatus?: 'verified' | 'needs_kyc'
 }
 
 export type AccountType = 'brokerage' | 'ira' | 'roth_ira' | '401k' | 'trust' | 'checking' | 'savings'
