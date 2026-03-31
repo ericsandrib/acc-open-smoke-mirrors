@@ -299,12 +299,14 @@ function HouseholdMemberCard({ party }: { party: RelatedParty }) {
         className="flex items-center justify-between w-full p-3 hover:bg-muted/50 rounded-t-lg focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
         aria-expanded={open}
       >
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 min-w-0">
           <ChevronRight className={`h-4 w-4 text-muted-foreground shrink-0 transition-transform duration-200 ease-out ${open ? 'rotate-90' : ''}`} />
-          <span className="text-sm font-medium">{party.name}</span>
+          <span className="text-sm font-medium truncate">{party.name}</span>
           {party.role && (
-            <span className="text-xs text-muted-foreground">{party.role}</span>
+            <span className="text-xs text-muted-foreground shrink-0">{party.role}</span>
           )}
+        </div>
+        <div className="flex items-center gap-2 shrink-0">
           {party.isPrimary && (
             <Badge variant="secondary" className="text-[10px] gap-1">
               <Shield className="h-2.5 w-2.5" />
@@ -324,8 +326,8 @@ function HouseholdMemberCard({ party }: { party: RelatedParty }) {
               </Tooltip>
             </TooltipProvider>
           )}
+          <DeleteButton party={party} />
         </div>
-        <DeleteButton party={party} />
       </button>
       {open && (
         <div className="border-t border-border px-3 pb-3 pt-3 space-y-4">

@@ -68,6 +68,8 @@ export interface WorkflowState {
 export type WorkflowAction =
   | { type: 'SET_ACTIVE_TASK'; taskId: string }
   | { type: 'SET_TASK_STATUS'; taskId: string; status: TaskStatus }
+  | { type: 'CONFIRM_TASK'; taskId: string }
+  | { type: 'REOPEN_TASK'; taskId: string }
   | { type: 'SPAWN_KYC_CHILD'; parentTaskId: string; childName: string }
   | { type: 'REMOVE_KYC_CHILD'; parentTaskId: string; childId: string }
   | { type: 'ADD_RELATED_PARTY'; party: RelatedParty }

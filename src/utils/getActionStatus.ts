@@ -1,16 +1,16 @@
 import type { Task, TaskStatus } from '@/types/workflow'
 
 export function getActionStatus(tasks: Task[], actionId: string): TaskStatus {
-  const actionTasks = tasks
-    .filter((t) => t.actionId === actionId)
-    .sort((a, b) => a.order - b.order)
+  const actionTasks = tasks.filter((t) => t.actionId === actionId)
 
   if (actionTasks.length === 0) return 'not_started'
 
-  const lastTask = actionTasks[actionTasks.length - 1]
+  const allComplete = actionTasks.every((t) => t.status === 'complete')
+  if (allComplete) return 'complete'
 
-  if (lastTask.status === 'complete') return 'complete'
-  if (lastTask.status === 'blocked') return 'blocked'
+  const anyBlocked = actionTasks.some((t) => t.status === 'blocked')
+  const anyInProgress = actionTasks.some((t) => t.status === 'in_progress' || t.status === 'complete')
+  if (anyBlocked && !anyInProgress) return 'blocked'
 
   const anyStarted = actionTasks.some((t) => t.status !== 'not_started')
   if (anyStarted) return 'in_progress'

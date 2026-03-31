@@ -65,6 +65,42 @@ function workflowReducer(state: WorkflowState, action: WorkflowAction): Workflow
       return { ...state, tasks: newTasks }
     }
 
+    case 'CONFIRM_TASK': {
+      const newTasks = state.tasks.map((t) => {
+        if (t.id === action.taskId && t.status === 'in_progress') {
+          return { ...t, status: 'complete' as const }
+        }
+        if (t.children) {
+          const newChildren = t.children.map((c) =>
+            c.id === action.taskId && c.status === 'in_progress'
+              ? { ...c, status: 'complete' as const }
+              : c
+          )
+          return { ...t, children: newChildren }
+        }
+        return t
+      })
+      return { ...state, tasks: newTasks }
+    }
+
+    case 'REOPEN_TASK': {
+      const newTasks = state.tasks.map((t) => {
+        if (t.id === action.taskId && t.status === 'complete') {
+          return { ...t, status: 'in_progress' as const }
+        }
+        if (t.children) {
+          const newChildren = t.children.map((c) =>
+            c.id === action.taskId && c.status === 'complete'
+              ? { ...c, status: 'in_progress' as const }
+              : c
+          )
+          return { ...t, children: newChildren }
+        }
+        return t
+      })
+      return { ...state, tasks: newTasks }
+    }
+
     case 'SPAWN_KYC_CHILD': {
       const newTasks = state.tasks.map((t) => {
         if (t.id === action.parentTaskId && t.children) {
@@ -211,54 +247,25 @@ function workflowReducer(state: WorkflowState, action: WorkflowAction): Workflow
 
     case 'GO_NEXT': {
       const idx = state.flatTaskOrder.indexOf(state.activeTaskId)
-      if (idx < state.flatTaskOrder.length - 1) {
-        const nextId = state.flatTaskOrder[idx + 1]
+      if (idx >= state.flatTaskOrder.length - 1) return state
 
-        // Find which action the current and next tasks belong to
-        const currentTask = state.tasks.find((t) => t.id === state.activeTaskId || t.children?.some((c) => c.id === state.activeTaskId))
-        const nextTask = state.tasks.find((t) => t.id === nextId || t.children?.some((c) => c.id === nextId))
-        const currentActionId = currentTask?.actionId
-        const nextActionId = nextTask?.actionId
-        const crossingActionBoundary = currentActionId && nextActionId && currentActionId !== nextActionId
-
-        const newTasks = state.tasks.map((t) => {
-          // When crossing action boundary, complete all tasks in the previous action
-          if (crossingActionBoundary && t.actionId === currentActionId) {
-            const completedChildren = t.children?.map((c) => ({ ...c, status: 'complete' as const }))
-            return { ...t, status: 'complete' as const, children: completedChildren }
-          }
-          // Start the next task
-          if (t.id === nextId && t.status === 'not_started') {
-            return { ...t, status: 'in_progress' as const }
-          }
-          if (t.children) {
-            const newChildren = t.children.map((c) =>
-              c.id === nextId && c.status === 'not_started'
-                ? { ...c, status: 'in_progress' as const }
-                : c
-            )
-            return { ...t, children: newChildren }
-          }
-          return t
-        })
-        return { ...state, tasks: newTasks, activeTaskId: nextId }
-      }
-
-      // Last task in the workflow — complete the entire final action
-      if (idx === state.flatTaskOrder.length - 1) {
-        const currentTask = state.tasks.find((t) => t.id === state.activeTaskId || t.children?.some((c) => c.id === state.activeTaskId))
-        const currentActionId = currentTask?.actionId
-        const newTasks = state.tasks.map((t) => {
-          if (t.actionId === currentActionId) {
-            const completedChildren = t.children?.map((c) => ({ ...c, status: 'complete' as const }))
-            return { ...t, status: 'complete' as const, children: completedChildren }
-          }
-          return t
-        })
-        return { ...state, tasks: newTasks }
-      }
-
-      return state
+      const nextId = state.flatTaskOrder[idx + 1]
+      // Mark next task as in_progress if not yet started
+      const newTasks = state.tasks.map((t) => {
+        if (t.id === nextId && t.status === 'not_started') {
+          return { ...t, status: 'in_progress' as const }
+        }
+        if (t.children) {
+          const newChildren = t.children.map((c) =>
+            c.id === nextId && c.status === 'not_started'
+              ? { ...c, status: 'in_progress' as const }
+              : c
+          )
+          return { ...t, children: newChildren }
+        }
+        return t
+      })
+      return { ...state, tasks: newTasks, activeTaskId: nextId }
     }
 
     case 'GO_BACK': {
