@@ -20,7 +20,9 @@ export function KycForm() {
     () => new Set(needsKycMembers.map((m) => m.id))
   )
   const [showConfirmation, setShowConfirmation] = useState(false)
-  const [expandedIds, setExpandedIds] = useState<Set<string>>(new Set())
+  const [expandedIds, setExpandedIds] = useState<Set<string>>(
+    () => new Set(needsKycMembers.map((m) => m.id))
+  )
 
   const toggleExpanded = (id: string) => {
     setExpandedIds((prev) => {
@@ -257,6 +259,24 @@ export function KycForm() {
                   </div>
                   {isExpanded && (
                     <div className="border-t border-border px-3 py-4 pl-10 space-y-3">
+                      <div className="grid grid-cols-3 items-center gap-4">
+                        <Label>First name</Label>
+                        <Input
+                          className="col-span-2"
+                          placeholder="e.g. Alex"
+                          value={member.firstName ?? ''}
+                          onChange={(e) => dispatch({ type: 'UPDATE_RELATED_PARTY', partyId: member.id, updates: { firstName: e.target.value } })}
+                        />
+                      </div>
+                      <div className="grid grid-cols-3 items-center gap-4">
+                        <Label>Last name</Label>
+                        <Input
+                          className="col-span-2"
+                          placeholder="e.g. Smith"
+                          value={member.lastName ?? ''}
+                          onChange={(e) => dispatch({ type: 'UPDATE_RELATED_PARTY', partyId: member.id, updates: { lastName: e.target.value } })}
+                        />
+                      </div>
                       <div className="grid grid-cols-3 items-center gap-4">
                         <Label>Role</Label>
                         <Input
