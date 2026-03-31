@@ -7,6 +7,7 @@ import { AccountTypePickerDialog } from './AccountTypePickerDialog'
 import { getRequiredDocuments } from '@/utils/accountDocuments'
 import type { AccountType } from '@/types/workflow'
 import {
+  ChevronDown,
   ChevronRight,
   Plus,
   Wallet,
@@ -30,6 +31,7 @@ export function OpenAccountsForm() {
   const { state, dispatch } = useWorkflow()
   const { data, updateField } = useTaskData('open-accounts')
   const [pickerOpen, setPickerOpen] = useState(false)
+  const [refOpen, setRefOpen] = useState(true)
 
   const openAccountsTask = state.tasks.find((t) => t.formKey === 'open-accounts')
   const children = openAccountsTask?.children ?? []
@@ -73,61 +75,81 @@ export function OpenAccountsForm() {
 
   return (
     <div className="space-y-8">
-      {/* Section 1: Existing Accounts */}
-      <section>
-        <div className="flex items-center gap-2 mb-3">
-          <Wallet className="h-4 w-4 text-muted-foreground" />
+      {/* Collapsible Reference section */}
+      <section className="rounded-lg border border-border">
+        <button
+          type="button"
+          onClick={() => setRefOpen((o) => !o)}
+          className="w-full flex items-center justify-between px-4 py-3 text-left hover:bg-muted/50 transition-colors"
+        >
           <h3 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
-            Existing Accounts
+            Reference
           </h3>
-        </div>
-        {state.financialAccounts.length > 0 ? (
-          <div className="rounded-lg border border-border divide-y divide-border">
-            {state.financialAccounts.map((account) => (
-              <div key={account.id} className="flex items-center justify-between px-4 py-3">
-                <div className="flex items-center gap-2">
-                  <span className="text-sm font-medium">{account.accountName}</span>
-                  {account.accountType && (
-                    <Badge variant="outline" className="text-[10px] px-1.5 py-0">
-                      {accountTypeLabels[account.accountType]}
-                    </Badge>
-                  )}
-                </div>
-                <div className="flex items-center gap-4 text-xs text-muted-foreground">
-                  {account.custodian && <span>{account.custodian}</span>}
-                  {account.estimatedValue && (
-                    <span className="tabular-nums font-medium text-foreground">
-                      ${account.estimatedValue}
-                    </span>
-                  )}
-                </div>
+          {refOpen ? (
+            <ChevronDown className="h-4 w-4 text-muted-foreground" />
+          ) : (
+            <ChevronRight className="h-4 w-4 text-muted-foreground" />
+          )}
+        </button>
+
+        {refOpen && (
+          <div className="px-4 pb-4 space-y-6 border-t border-border pt-4">
+            {/* Existing Accounts */}
+            <div>
+              <div className="flex items-center gap-2 mb-3">
+                <Wallet className="h-4 w-4 text-muted-foreground" />
+                <h4 className="text-sm font-medium text-muted-foreground">
+                  Existing Accounts
+                </h4>
               </div>
-            ))}
-          </div>
-        ) : (
-          <div className="rounded-lg border border-dashed border-border p-4 text-center">
-            <p className="text-sm text-muted-foreground">
-              No existing accounts. Add accounts in the Financial Accounts step.
-            </p>
+              {state.financialAccounts.length > 0 ? (
+                <div className="rounded-lg border border-border divide-y divide-border">
+                  {state.financialAccounts.map((account) => (
+                    <div key={account.id} className="flex items-center justify-between px-4 py-3">
+                      <div className="flex items-center gap-2">
+                        <span className="text-sm font-medium">{account.accountName}</span>
+                        {account.accountType && (
+                          <Badge variant="outline" className="text-[10px] px-1.5 py-0">
+                            {accountTypeLabels[account.accountType]}
+                          </Badge>
+                        )}
+                      </div>
+                      <div className="flex items-center gap-4 text-xs text-muted-foreground">
+                        {account.custodian && <span>{account.custodian}</span>}
+                        {account.estimatedValue && (
+                          <span className="tabular-nums font-medium text-foreground">
+                            ${account.estimatedValue}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-sm text-muted-foreground">
+                  No existing accounts. Add accounts in the Financial Accounts step.
+                </p>
+              )}
+            </div>
+
+            {/* Additional Instructions */}
+            <div>
+              <div className="flex items-center gap-2 mb-3">
+                <ClipboardList className="h-4 w-4 text-muted-foreground" />
+                <Label htmlFor="additionalInstructions" className="text-sm font-medium text-muted-foreground">
+                  Additional Instructions
+                </Label>
+              </div>
+              <textarea
+                id="additionalInstructions"
+                className="flex min-h-[100px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                placeholder="Enter any special instructions for account opening..."
+                value={(data.additionalInstructions as string) ?? ''}
+                onChange={(e) => updateField('additionalInstructions', e.target.value)}
+              />
+            </div>
           </div>
         )}
-      </section>
-
-      {/* Section 2: Additional Instructions */}
-      <section>
-        <div className="flex items-center gap-2 mb-3">
-          <ClipboardList className="h-4 w-4 text-muted-foreground" />
-          <Label htmlFor="additionalInstructions" className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
-            Additional Instructions
-          </Label>
-        </div>
-        <textarea
-          id="additionalInstructions"
-          className="flex min-h-[100px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-          placeholder="Enter any special instructions for account opening..."
-          value={(data.additionalInstructions as string) ?? ''}
-          onChange={(e) => updateField('additionalInstructions', e.target.value)}
-        />
       </section>
 
       {/* Section 3: Accounts to be Opened */}
