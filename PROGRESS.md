@@ -63,3 +63,27 @@
 
 ### Phase 4: Cross-Task Summary
 - [x] Wire Placeholder2Form review summary to display data from client-info and placeholder-1 tasks
+
+## Spec 003: Servicing Route
+
+### Phase 1: Foundation
+- [x] Define servicing types (Journey, JourneyAction, JourneyTask)
+- [x] Create seed data with 4 journeys across existing relationships
+- [x] Build servicing store with context provider
+- [x] Add Table and Tabs UI components
+
+### Phase 2: Sidebar & Routing
+- [x] Update DashboardSidebar with activeItem prop and Servicing nav item
+- [x] Create ServicingPage and ServicingLayout
+- [x] Register /servicing route in App.tsx
+
+### Phase 3: Table Views
+- [x] Build ServicingContent with tab switcher
+- [x] Build JourneysTable with progress column
+- [x] Build ActionsTable with tasks-complete column
+- [x] Build TasksTable with action/journey context
+- [x] Create StatusBadge component with color-coded badges
+
+### Phase 4: Live Journey Integration
+- [x] Implement deriveLiveJourney helper to convert wizard state
+- [x] Merge live journey with seeded data in ServicingProvider
