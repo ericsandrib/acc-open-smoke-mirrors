@@ -1,15 +1,11 @@
 import { useNavigate } from 'react-router-dom'
-import { LayoutDashboard, ClipboardList, Users, Briefcase, BarChart3, Settings, Plus } from 'lucide-react'
+import { LayoutDashboard, ClipboardList, Plus } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { ThemeToggle } from '@/components/ui/theme-toggle'
 
 const navItems = [
   { icon: LayoutDashboard, label: 'Dashboard', path: '/' },
   { icon: ClipboardList, label: 'Servicing', path: '/servicing' },
-  { icon: Users, label: 'Clients' },
-  { icon: Briefcase, label: 'Portfolios' },
-  { icon: BarChart3, label: 'Reports' },
-  { icon: Settings, label: 'Settings' },
 ]
 
 interface DashboardSidebarProps {
