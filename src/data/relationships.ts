@@ -69,4 +69,27 @@ export const relationships: Relationship[] = [
       { id: 'davis-acct-1', accountName: 'Davis Brokerage', accountType: 'brokerage', custodian: 'Merrill Lynch', estimatedValue: '1,150,000' },
     ],
   },
+  {
+    id: 'garcia-family',
+    name: 'The Garcia Family',
+    primaryContact: {
+      firstName: 'Maria',
+      lastName: 'Garcia',
+      email: 'maria.garcia@example.com',
+      phone: '+1 (555) 456-7890',
+      dob: '1979-04-12',
+      clientType: 'joint',
+    },
+    relatedParties: [
+      { id: 'garcia-1', name: 'Maria Garcia', firstName: 'Maria', lastName: 'Garcia', type: 'household_member', role: 'Client', isPrimary: true, email: 'maria.garcia@example.com', phone: '+1 (555) 456-7890', dob: '1979-04-12', kycStatus: 'verified' },
+      { id: 'garcia-2', name: 'Carlos Garcia', firstName: 'Carlos', lastName: 'Garcia', type: 'household_member', relationship: 'Spouse', role: 'Spouse', email: 'carlos.garcia@example.com', phone: '+1 (555) 456-7891', dob: '1977-09-28', kycStatus: 'verified' },
+      { id: 'garcia-3', name: 'Sofia Garcia', firstName: 'Sofia', lastName: 'Garcia', type: 'household_member', relationship: 'Child', role: 'Dependent', dob: '2008-06-03', kycStatus: 'needs_kyc' },
+      { id: 'garcia-contact-1', name: 'Elena Vargas', firstName: 'Elena', lastName: 'Vargas', type: 'related_contact', relationship: 'CPA', relationshipCategory: 'Professional', email: 'evargas@taxgroup.com', phone: '+1 (555) 567-0012' },
+      { id: 'garcia-org-1', name: 'Garcia Ventures LLC', organizationName: 'Garcia Ventures LLC', type: 'related_organization', role: 'Business Entity', relationshipCategory: 'Business' },
+    ],
+    financialAccounts: [
+      { id: 'garcia-acct-1', accountName: 'Garcia Joint Brokerage', accountType: 'brokerage', custodian: 'TD Ameritrade', estimatedValue: '1,800,000' },
+      { id: 'garcia-acct-2', accountName: 'Maria 401k', accountType: '401k', custodian: 'Vanguard', accountNumber: '****7832', estimatedValue: '520,000' },
+    ],
+  },
 ]
