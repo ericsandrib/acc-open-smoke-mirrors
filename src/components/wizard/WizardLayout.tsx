@@ -20,10 +20,12 @@ export function WizardLayout() {
       </header>
       <div className="flex flex-1 overflow-hidden">
         <StepSidebar />
-        <TaskContent />
+        <div className="flex-1 flex flex-col overflow-hidden">
+          <TaskContent />
+          <WizardFooter />
+        </div>
         <DetailSidebar />
       </div>
-      <WizardFooter />
     </div>
   )
 }
