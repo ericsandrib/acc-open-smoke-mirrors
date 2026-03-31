@@ -1,0 +1,28 @@
+import { Handle, Position, type NodeProps } from '@xyflow/react'
+import { Badge } from '@/components/ui/badge'
+import type { TaskStatus } from '@/types/workflow'
+
+const statusColors: Record<TaskStatus, string> = {
+  not_started: 'bg-gray-200 text-gray-700',
+  in_progress: 'bg-blue-100 text-blue-700',
+  complete: 'bg-green-100 text-green-700',
+  blocked: 'bg-red-100 text-red-700',
+}
+
+export function TaskNode({ data }: NodeProps) {
+  const status = data.status as TaskStatus
+
+  return (
+    <div className="bg-card border border-border rounded-lg px-4 py-3 shadow-sm min-w-[160px]">
+      <Handle type="target" position={Position.Top} className="!bg-border" />
+      <div className="text-sm font-medium text-card-foreground">{data.label as string}</div>
+      <div className="flex items-center justify-between mt-1 gap-2">
+        <span className="text-[10px] text-muted-foreground">{data.assignedTo as string}</span>
+        <Badge className={`text-[10px] px-1.5 py-0 ${statusColors[status]}`} variant="secondary">
+          {status.replace('_', ' ')}
+        </Badge>
+      </div>
+      <Handle type="source" position={Position.Bottom} className="!bg-border" />
+    </div>
+  )
+}
