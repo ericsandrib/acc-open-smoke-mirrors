@@ -1,4 +1,4 @@
-import { createContext, useContext, useReducer, type ReactNode } from 'react'
+import { createContext, useContext, useReducer, useCallback, type ReactNode } from 'react'
 import type { WorkflowState, WorkflowAction, Task } from '@/types/workflow'
 import { actions, tasks, initialRelatedParties, initialFinancialAccounts } from '@/data/seed'
 
@@ -31,6 +31,7 @@ const initialState: WorkflowState = {
   financialAccounts: [...initialFinancialAccounts],
   activeTaskId: tasks[0].id,
   flatTaskOrder: computeFlatTaskOrder(tasks, actions),
+  taskData: {},
 }
 
 function workflowReducer(state: WorkflowState, action: WorkflowAction): WorkflowState {
@@ -99,11 +100,13 @@ function workflowReducer(state: WorkflowState, action: WorkflowAction): Workflow
       })
       const newOrder = computeFlatTaskOrder(newTasks, state.actions)
       const activeStillExists = newOrder.includes(state.activeTaskId)
+      const { [action.childId]: _, ...remainingTaskData } = state.taskData
       return {
         ...state,
         tasks: newTasks,
         flatTaskOrder: newOrder,
         activeTaskId: activeStillExists ? state.activeTaskId : action.parentTaskId,
+        taskData: remainingTaskData,
       }
     }
 
@@ -144,6 +147,19 @@ function workflowReducer(state: WorkflowState, action: WorkflowAction): Workflow
       return {
         ...state,
         financialAccounts: state.financialAccounts.filter((a) => a.id !== action.accountId),
+      }
+    }
+
+    case 'SET_TASK_DATA': {
+      return {
+        ...state,
+        taskData: {
+          ...state.taskData,
+          [action.taskId]: {
+            ...state.taskData[action.taskId],
+            ...action.fields,
+          },
+        },
       }
     }
 
@@ -231,4 +247,25 @@ export function useWorkflow() {
   const context = useContext(WorkflowContext)
   if (!context) throw new Error('useWorkflow must be used within WorkflowProvider')
   return context
+}
+
+export function useTaskData(taskId: string) {
+  const { state, dispatch } = useWorkflow()
+  const data = state.taskData[taskId] ?? {}
+
+  const updateField = useCallback(
+    (field: string, value: unknown) => {
+      dispatch({ type: 'SET_TASK_DATA', taskId, fields: { [field]: value } })
+    },
+    [dispatch, taskId]
+  )
+
+  const updateFields = useCallback(
+    (fields: Record<string, unknown>) => {
+      dispatch({ type: 'SET_TASK_DATA', taskId, fields })
+    },
+    [dispatch, taskId]
+  )
+
+  return { data, updateField, updateFields }
 }

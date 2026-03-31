@@ -53,6 +53,7 @@ export interface WorkflowState {
   financialAccounts: FinancialAccount[]
   activeTaskId: string
   flatTaskOrder: string[]
+  taskData: Record<string, Record<string, unknown>>
 }
 
 export type WorkflowAction =
@@ -66,5 +67,6 @@ export type WorkflowAction =
   | { type: 'ADD_FINANCIAL_ACCOUNT'; account: FinancialAccount }
   | { type: 'UPDATE_FINANCIAL_ACCOUNT'; accountId: string; updates: Partial<Omit<FinancialAccount, 'id'>> }
   | { type: 'REMOVE_FINANCIAL_ACCOUNT'; accountId: string }
+  | { type: 'SET_TASK_DATA'; taskId: string; fields: Record<string, unknown> }
   | { type: 'GO_NEXT' }
   | { type: 'GO_BACK' }

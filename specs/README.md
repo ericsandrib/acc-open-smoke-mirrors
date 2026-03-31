@@ -7,3 +7,4 @@ Specs are numbered sequentially to show the order in which features were designe
 | #   | Name                         | Status    |
 | --- | ---------------------------- | --------- |
 | 001 | [Wizard Workflow](001-wizard-workflow.md) | Complete |
+| 002 | [Task Data Persistence](002-task-data-persistence.md) | Complete |
