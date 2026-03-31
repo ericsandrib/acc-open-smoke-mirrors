@@ -40,13 +40,7 @@ function workflowReducer(state: WorkflowState, action: WorkflowAction): Workflow
       const taskExists =
         state.flatTaskOrder.includes(action.taskId)
       if (!taskExists) return state
-      const newTasks = state.tasks.map((t) => {
-        if (t.id === action.taskId && t.status === 'not_started') {
-          return { ...t, status: 'in_progress' as const }
-        }
-        return t
-      })
-      return { ...state, tasks: newTasks, activeTaskId: action.taskId }
+      return { ...state, activeTaskId: action.taskId }
     }
 
     case 'SET_TASK_STATUS': {
@@ -213,8 +207,24 @@ function workflowReducer(state: WorkflowState, action: WorkflowAction): Workflow
     }
 
     case 'SET_TASK_DATA': {
+      // Mark task as in_progress on first data entry
+      const newTasks = state.tasks.map((t) => {
+        if (t.id === action.taskId && t.status === 'not_started') {
+          return { ...t, status: 'in_progress' as const }
+        }
+        if (t.children) {
+          const newChildren = t.children.map((c) =>
+            c.id === action.taskId && c.status === 'not_started'
+              ? { ...c, status: 'in_progress' as const }
+              : c
+          )
+          return { ...t, children: newChildren }
+        }
+        return t
+      })
       return {
         ...state,
+        tasks: newTasks,
         taskData: {
           ...state.taskData,
           [action.taskId]: {
@@ -250,22 +260,7 @@ function workflowReducer(state: WorkflowState, action: WorkflowAction): Workflow
       if (idx >= state.flatTaskOrder.length - 1) return state
 
       const nextId = state.flatTaskOrder[idx + 1]
-      // Mark next task as in_progress if not yet started
-      const newTasks = state.tasks.map((t) => {
-        if (t.id === nextId && t.status === 'not_started') {
-          return { ...t, status: 'in_progress' as const }
-        }
-        if (t.children) {
-          const newChildren = t.children.map((c) =>
-            c.id === nextId && c.status === 'not_started'
-              ? { ...c, status: 'in_progress' as const }
-              : c
-          )
-          return { ...t, children: newChildren }
-        }
-        return t
-      })
-      return { ...state, tasks: newTasks, activeTaskId: nextId }
+      return { ...state, activeTaskId: nextId }
     }
 
     case 'GO_BACK': {

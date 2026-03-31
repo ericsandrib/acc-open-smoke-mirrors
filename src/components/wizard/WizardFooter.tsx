@@ -56,13 +56,22 @@ export function WizardFooter() {
           <span className="text-sm text-muted-foreground">Assigned to compliance</span>
         )}
 
-        <Button
-          onClick={() => dispatch({ type: 'GO_NEXT' })}
-          disabled={isLast}
-        >
-          Next
-          <ChevronRight className="h-4 w-4" />
-        </Button>
+        {isLast ? (
+          <Button
+            onClick={() => dispatch({ type: 'CONFIRM_TASK', taskId: state.activeTaskId })}
+            disabled={activeStatus === 'complete'}
+          >
+            <Check className="h-4 w-4" />
+            Complete
+          </Button>
+        ) : (
+          <Button
+            onClick={() => dispatch({ type: 'GO_NEXT' })}
+          >
+            Next
+            <ChevronRight className="h-4 w-4" />
+          </Button>
+        )}
       </div>
     </footer>
   )

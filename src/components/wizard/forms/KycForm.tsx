@@ -3,7 +3,7 @@ import { useWorkflow } from '@/stores/workflowStore'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Checkbox } from '@/components/ui/checkbox'
-import { CheckCircle2, ShieldAlert, ArrowLeft, ChevronRight } from 'lucide-react'
+import { CheckCircle2, ShieldAlert, ArrowLeft, ChevronRight, Info } from 'lucide-react'
 
 export function KycForm() {
   const { state, dispatch } = useWorkflow()
@@ -48,9 +48,20 @@ export function KycForm() {
   if (hasChildren) {
     return (
       <div className="space-y-6">
-        <p className="text-sm text-muted-foreground">
-          Identity verification has been initiated. Complete each member's KYC review below.
-        </p>
+        <div className="rounded-lg border border-blue-200 bg-blue-50 p-4 dark:border-blue-800 dark:bg-blue-950/30">
+          <div className="flex items-start gap-3">
+            <Info className="mt-0.5 h-5 w-5 flex-shrink-0 text-blue-600 dark:text-blue-400" />
+            <div className="space-y-1">
+              <h3 className="text-sm font-semibold text-blue-900 dark:text-blue-100">
+                Nothing needed from you
+              </h3>
+              <p className="text-sm text-blue-800 dark:text-blue-200">
+                Identity verification has been submitted. The compliance team will complete KYC checks
+                on your behalf and reach out if anything is needed. You can move on to the next task.
+              </p>
+            </div>
+          </div>
+        </div>
 
         {verifiedMembers.length > 0 && (
           <div className="space-y-2">
