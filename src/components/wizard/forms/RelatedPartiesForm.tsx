@@ -4,8 +4,10 @@ import { Label } from '@/components/ui/label'
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui/select'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
+import { Checkbox } from '@/components/ui/checkbox'
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
-import { Plus, Trash2, Users, UserPlus, Building2, ChevronRight, Shield } from 'lucide-react'
+import { Plus, Trash2, Users, UserPlus, Building2, ChevronRight, Shield, Info } from 'lucide-react'
+import { cn } from '@/lib/utils'
 import { useWorkflow } from '@/stores/workflowStore'
 import type { RelatedParty } from '@/types/workflow'
 
@@ -587,17 +589,137 @@ function EmptyState({ message }: { message: string }) {
   )
 }
 
+// --- Add mode toggle ---
+
+function AddModeToggle({
+  mode,
+  onModeChange,
+}: {
+  mode: 'new' | 'existing'
+  onModeChange: (mode: 'new' | 'existing') => void
+}) {
+  return (
+    <div className="flex gap-1 rounded-lg border border-border p-1 bg-muted/30">
+      <button
+        type="button"
+        className={cn(
+          'flex-1 rounded-md px-3 py-1.5 text-sm font-medium transition-colors',
+          mode === 'new'
+            ? 'bg-background text-foreground shadow-sm'
+            : 'text-muted-foreground hover:text-foreground'
+        )}
+        onClick={() => onModeChange('new')}
+      >
+        New
+      </button>
+      <button
+        type="button"
+        className={cn(
+          'flex-1 rounded-md px-3 py-1.5 text-sm font-medium transition-colors',
+          mode === 'existing'
+            ? 'bg-background text-foreground shadow-sm'
+            : 'text-muted-foreground hover:text-foreground'
+        )}
+        onClick={() => onModeChange('existing')}
+      >
+        Existing
+      </button>
+    </div>
+  )
+}
+
+// --- Restore hidden parties checklist ---
+
+function RestorePartiesChecklist({
+  hiddenParties,
+  onRestore,
+  onCancel,
+}: {
+  hiddenParties: RelatedParty[]
+  onRestore: (ids: string[]) => void
+  onCancel: () => void
+}) {
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
+
+  const toggle = (id: string) => {
+    setSelectedIds((prev) => {
+      const next = new Set(prev)
+      if (next.has(id)) next.delete(id)
+      else next.add(id)
+      return next
+    })
+  }
+
+  return (
+    <div className="rounded-lg border border-dashed border-border p-4 space-y-4">
+      <p className="text-sm text-muted-foreground">
+        Select members to add back to this onboarding journey.
+      </p>
+      <div className="space-y-2">
+        {hiddenParties.map((party) => (
+          <label
+            key={party.id}
+            className="flex cursor-pointer items-center gap-3 rounded-lg border border-border p-3 transition-colors hover:bg-muted/50"
+          >
+            <Checkbox
+              checked={selectedIds.has(party.id)}
+              onCheckedChange={() => toggle(party.id)}
+            />
+            <div className="flex items-center gap-2">
+              <span className="text-sm font-medium">{party.name}</span>
+              {party.relationship && (
+                <span className="text-xs text-muted-foreground">{party.relationship}</span>
+              )}
+              {party.role && (
+                <span className="text-xs text-muted-foreground">{party.role}</span>
+              )}
+            </div>
+          </label>
+        ))}
+      </div>
+      <div className="flex gap-2 justify-end">
+        <Button variant="outline" size="sm" onClick={onCancel}>Cancel</Button>
+        <Button
+          size="sm"
+          onClick={() => onRestore(Array.from(selectedIds))}
+          disabled={selectedIds.size === 0}
+        >
+          Restore{selectedIds.size > 0 ? ` ${selectedIds.size}` : ''} {selectedIds.size === 1 ? 'member' : 'members'}
+        </Button>
+      </div>
+    </div>
+  )
+}
+
+// --- Hidden members note ---
+
+function HiddenMembersNote({ count, typeLabel }: { count: number; typeLabel: string }) {
+  if (count === 0) return null
+  return (
+    <p className="text-xs text-muted-foreground flex items-center gap-1.5">
+      <Info className="h-3.5 w-3.5 shrink-0" />
+      {count} {typeLabel}{count > 1 ? 's' : ''} not included in this journey.
+    </p>
+  )
+}
+
 // --- Main form ---
 
 export function RelatedPartiesForm() {
-  const { state } = useWorkflow()
+  const { state, dispatch } = useWorkflow()
   const [showAddHousehold, setShowAddHousehold] = useState(false)
   const [showAddContact, setShowAddContact] = useState(false)
   const [showAddOrg, setShowAddOrg] = useState(false)
+  const [householdAddMode, setHouseholdAddMode] = useState<'new' | 'existing'>('new')
+  const [contactAddMode, setContactAddMode] = useState<'new' | 'existing'>('new')
+  const [orgAddMode, setOrgAddMode] = useState<'new' | 'existing'>('new')
 
-  const householdMembers = state.relatedParties.filter((p) => p.type === 'household_member')
-  const relatedContacts = state.relatedParties.filter((p) => p.type === 'related_contact')
-  const relatedOrgs = state.relatedParties.filter((p) => p.type === 'related_organization')
+  const householdMembers = state.relatedParties.filter((p) => p.type === 'household_member' && !p.isHidden)
+  const hiddenHouseholdMembers = state.relatedParties.filter((p) => p.type === 'household_member' && p.isHidden)
+  const relatedContacts = state.relatedParties.filter((p) => p.type === 'related_contact' && !p.isHidden)
+  const hiddenContacts = state.relatedParties.filter((p) => p.type === 'related_contact' && p.isHidden)
+  const relatedOrgs = state.relatedParties.filter((p) => p.type === 'related_organization' && !p.isHidden)
+  const hiddenOrgs = state.relatedParties.filter((p) => p.type === 'related_organization' && p.isHidden)
 
   return (
     <div className="space-y-8">
@@ -621,8 +743,27 @@ export function RelatedPartiesForm() {
           )}
         </div>
 
+        <HiddenMembersNote count={hiddenHouseholdMembers.length} typeLabel="member" />
+
         {showAddHousehold ? (
-          <AddHouseholdMemberForm onDone={() => setShowAddHousehold(false)} />
+          <div className="space-y-3">
+            {hiddenHouseholdMembers.length > 0 && (
+              <AddModeToggle mode={householdAddMode} onModeChange={setHouseholdAddMode} />
+            )}
+            {householdAddMode === 'new' || hiddenHouseholdMembers.length === 0 ? (
+              <AddHouseholdMemberForm onDone={() => { setShowAddHousehold(false); setHouseholdAddMode('new') }} />
+            ) : (
+              <RestorePartiesChecklist
+                hiddenParties={hiddenHouseholdMembers}
+                onRestore={(ids) => {
+                  dispatch({ type: 'RESTORE_RELATED_PARTIES', partyIds: ids })
+                  setShowAddHousehold(false)
+                  setHouseholdAddMode('new')
+                }}
+                onCancel={() => { setShowAddHousehold(false); setHouseholdAddMode('new') }}
+              />
+            )}
+          </div>
         ) : (
           <Button variant="outline" className="w-full" onClick={() => setShowAddHousehold(true)}>
             <Plus className="h-4 w-4 mr-2" />
@@ -651,8 +792,27 @@ export function RelatedPartiesForm() {
           )}
         </div>
 
+        <HiddenMembersNote count={hiddenContacts.length} typeLabel="contact" />
+
         {showAddContact ? (
-          <AddContactForm onDone={() => setShowAddContact(false)} />
+          <div className="space-y-3">
+            {hiddenContacts.length > 0 && (
+              <AddModeToggle mode={contactAddMode} onModeChange={setContactAddMode} />
+            )}
+            {contactAddMode === 'new' || hiddenContacts.length === 0 ? (
+              <AddContactForm onDone={() => { setShowAddContact(false); setContactAddMode('new') }} />
+            ) : (
+              <RestorePartiesChecklist
+                hiddenParties={hiddenContacts}
+                onRestore={(ids) => {
+                  dispatch({ type: 'RESTORE_RELATED_PARTIES', partyIds: ids })
+                  setShowAddContact(false)
+                  setContactAddMode('new')
+                }}
+                onCancel={() => { setShowAddContact(false); setContactAddMode('new') }}
+              />
+            )}
+          </div>
         ) : (
           <Button variant="outline" className="w-full" onClick={() => setShowAddContact(true)}>
             <Plus className="h-4 w-4 mr-2" />
@@ -681,8 +841,27 @@ export function RelatedPartiesForm() {
           )}
         </div>
 
+        <HiddenMembersNote count={hiddenOrgs.length} typeLabel="organization" />
+
         {showAddOrg ? (
-          <AddOrganizationForm onDone={() => setShowAddOrg(false)} />
+          <div className="space-y-3">
+            {hiddenOrgs.length > 0 && (
+              <AddModeToggle mode={orgAddMode} onModeChange={setOrgAddMode} />
+            )}
+            {orgAddMode === 'new' || hiddenOrgs.length === 0 ? (
+              <AddOrganizationForm onDone={() => { setShowAddOrg(false); setOrgAddMode('new') }} />
+            ) : (
+              <RestorePartiesChecklist
+                hiddenParties={hiddenOrgs}
+                onRestore={(ids) => {
+                  dispatch({ type: 'RESTORE_RELATED_PARTIES', partyIds: ids })
+                  setShowAddOrg(false)
+                  setOrgAddMode('new')
+                }}
+                onCancel={() => { setShowAddOrg(false); setOrgAddMode('new') }}
+              />
+            )}
+          </div>
         ) : (
           <Button variant="outline" className="w-full" onClick={() => setShowAddOrg(true)}>
             <Plus className="h-4 w-4 mr-2" />

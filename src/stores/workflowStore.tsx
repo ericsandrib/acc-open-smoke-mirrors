@@ -141,7 +141,18 @@ function workflowReducer(state: WorkflowState, action: WorkflowAction): Workflow
       if (party?.isPrimary) return state
       return {
         ...state,
-        relatedParties: state.relatedParties.filter((p) => p.id !== action.partyId),
+        relatedParties: state.relatedParties.map((p) =>
+          p.id === action.partyId ? { ...p, isHidden: true } : p
+        ),
+      }
+    }
+
+    case 'RESTORE_RELATED_PARTIES': {
+      return {
+        ...state,
+        relatedParties: state.relatedParties.map((p) =>
+          action.partyIds.includes(p.id) ? { ...p, isHidden: false } : p
+        ),
       }
     }
 

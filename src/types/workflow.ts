@@ -17,6 +17,7 @@ export interface RelatedParty {
   phone?: string
   dob?: string
   kycStatus?: 'verified' | 'needs_kyc'
+  isHidden?: boolean
 }
 
 export type AccountType = 'brokerage' | 'ira' | 'roth_ira' | '401k' | 'trust' | 'checking' | 'savings'
@@ -73,6 +74,7 @@ export type WorkflowAction =
   | { type: 'UPDATE_RELATED_PARTY'; partyId: string; updates: Partial<Omit<RelatedParty, 'id' | 'type' | 'isPrimary'>> }
   | { type: 'SET_PRIMARY_MEMBER'; partyId: string }
   | { type: 'REMOVE_RELATED_PARTY'; partyId: string }
+  | { type: 'RESTORE_RELATED_PARTIES'; partyIds: string[] }
   | { type: 'ADD_FINANCIAL_ACCOUNT'; account: FinancialAccount }
   | { type: 'UPDATE_FINANCIAL_ACCOUNT'; accountId: string; updates: Partial<Omit<FinancialAccount, 'id'>> }
   | { type: 'REMOVE_FINANCIAL_ACCOUNT'; accountId: string }

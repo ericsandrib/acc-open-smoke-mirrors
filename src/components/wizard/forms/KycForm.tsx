@@ -10,7 +10,7 @@ export function KycForm() {
   const kycTask = state.tasks.find((t) => t.formKey === 'kyc')
   const children = kycTask?.children ?? []
 
-  const householdMembers = state.relatedParties.filter((p) => p.type === 'household_member')
+  const householdMembers = state.relatedParties.filter((p) => p.type === 'household_member' && !p.isHidden)
   const verifiedMembers = householdMembers.filter((m) => m.kycStatus === 'verified')
   const needsKycMembers = householdMembers.filter((m) => m.kycStatus !== 'verified')
 
