@@ -1,13 +1,14 @@
 import { useWorkflow } from '@/stores/workflowStore'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
-import { householdMembers } from '@/data/seed'
 import { UserPlus, Trash2 } from 'lucide-react'
 
 export function KycForm() {
   const { state, dispatch } = useWorkflow()
   const kycTask = state.tasks.find((t) => t.formKey === 'kyc')
   const children = kycTask?.children ?? []
+
+  const householdMembers = state.relatedParties.filter((p) => p.type === 'household_member')
 
   const spawnedMemberIds = children.map((c) => {
     const member = householdMembers.find((m) => m.name === c.name)

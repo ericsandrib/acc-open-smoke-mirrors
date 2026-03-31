@@ -1,45 +1,171 @@
+import { useState } from 'react'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui/select'
 import { Button } from '@/components/ui/button'
-import { Plus } from 'lucide-react'
+import { Plus, Trash2, Users, UserPlus } from 'lucide-react'
+import { useWorkflow } from '@/stores/workflowStore'
+import type { RelatedPartyType } from '@/types/workflow'
 
-export function RelatedPartiesForm() {
+const householdRelationships = ['Spouse', 'Child', 'Parent', 'Sibling']
+const nonHouseholdRelationships = ['Business Partner', 'Beneficiary', 'Trustee', 'Power of Attorney', 'Authorized Signer']
+
+function AddPartyForm({ type, onAdd }: { type: RelatedPartyType; onAdd: () => void }) {
+  const { dispatch } = useWorkflow()
+  const [name, setName] = useState('')
+  const [relationship, setRelationship] = useState('')
+  const [email, setEmail] = useState('')
+
+  const relationships = type === 'household_member' ? householdRelationships : nonHouseholdRelationships
+
+  const handleAdd = () => {
+    if (!name.trim()) return
+    dispatch({
+      type: 'ADD_RELATED_PARTY',
+      party: {
+        id: `${type}-${Date.now()}`,
+        name: name.trim(),
+        type,
+        relationship: relationship || undefined,
+        email: email || undefined,
+      },
+    })
+    setName('')
+    setRelationship('')
+    setEmail('')
+    onAdd()
+  }
+
   return (
-    <div className="space-y-6">
-      <div className="rounded-lg border border-border p-4 space-y-4">
-        <h4 className="text-sm font-medium">Related Party #1</h4>
-        <div className="grid grid-cols-2 gap-4">
-          <div className="space-y-2">
-            <Label htmlFor="rp1Name">Full Name</Label>
-            <Input id="rp1Name" placeholder="Jane Smith" />
-          </div>
-          <div className="space-y-2">
-            <Label>Relationship</Label>
-            <Select>
-              <SelectTrigger>
-                <SelectValue placeholder="Select..." />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="spouse">Spouse</SelectItem>
-                <SelectItem value="child">Child</SelectItem>
-                <SelectItem value="parent">Parent</SelectItem>
-                <SelectItem value="business-partner">Business Partner</SelectItem>
-                <SelectItem value="beneficiary">Beneficiary</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
+    <div className="rounded-lg border border-dashed border-border p-4 space-y-4">
+      <div className="grid grid-cols-2 gap-4">
+        <div className="space-y-2">
+          <Label>Full Name</Label>
+          <Input
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            placeholder="Full name"
+          />
         </div>
         <div className="space-y-2">
-          <Label htmlFor="rp1Email">Email</Label>
-          <Input id="rp1Email" type="email" placeholder="jane.smith@example.com" />
+          <Label>Relationship</Label>
+          <Select value={relationship} onValueChange={setRelationship}>
+            <SelectTrigger>
+              <SelectValue placeholder="Select..." />
+            </SelectTrigger>
+            <SelectContent>
+              {relationships.map((r) => (
+                <SelectItem key={r} value={r}>{r}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </div>
       </div>
+      <div className="space-y-2">
+        <Label>Email</Label>
+        <Input
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
+          type="email"
+          placeholder="email@example.com"
+        />
+      </div>
+      <div className="flex gap-2 justify-end">
+        <Button variant="outline" size="sm" onClick={onAdd}>Cancel</Button>
+        <Button size="sm" onClick={handleAdd} disabled={!name.trim()}>Add</Button>
+      </div>
+    </div>
+  )
+}
 
-      <Button variant="outline" className="w-full">
-        <Plus className="h-4 w-4 mr-2" />
-        Add Related Party
+function PartyCard({ party }: { party: { id: string; name: string; relationship?: string; email?: string } }) {
+  const { dispatch } = useWorkflow()
+
+  return (
+    <div className="flex items-center justify-between rounded-lg border border-border p-3">
+      <div className="flex items-center gap-3">
+        <div className="h-8 w-8 rounded-full bg-muted flex items-center justify-center text-sm font-medium">
+          {party.name[0]}
+        </div>
+        <div>
+          <span className="text-sm font-medium">{party.name}</span>
+          {party.relationship && (
+            <span className="text-xs text-muted-foreground ml-2">{party.relationship}</span>
+          )}
+        </div>
+      </div>
+      <Button
+        variant="ghost"
+        size="icon"
+        onClick={() => dispatch({ type: 'REMOVE_RELATED_PARTY', partyId: party.id })}
+      >
+        <Trash2 className="h-4 w-4 text-muted-foreground" />
       </Button>
+    </div>
+  )
+}
+
+export function RelatedPartiesForm() {
+  const { state } = useWorkflow()
+  const [showAddHousehold, setShowAddHousehold] = useState(false)
+  const [showAddRelated, setShowAddRelated] = useState(false)
+
+  const householdMembers = state.relatedParties.filter((p) => p.type === 'household_member')
+  const relatedParties = state.relatedParties.filter((p) => p.type === 'related_party')
+
+  return (
+    <div className="space-y-8">
+      {/* Household Members Section */}
+      <section className="space-y-4">
+        <div className="flex items-center gap-2">
+          <Users className="h-5 w-5 text-muted-foreground" />
+          <h3 className="text-base font-semibold">Household Members</h3>
+        </div>
+        <p className="text-sm text-muted-foreground">
+          People in the household who will be onboarded as part of this account opening.
+        </p>
+
+        <div className="space-y-2">
+          {householdMembers.map((member) => (
+            <PartyCard key={member.id} party={member} />
+          ))}
+        </div>
+
+        {showAddHousehold ? (
+          <AddPartyForm type="household_member" onAdd={() => setShowAddHousehold(false)} />
+        ) : (
+          <Button variant="outline" className="w-full" onClick={() => setShowAddHousehold(true)}>
+            <Plus className="h-4 w-4 mr-2" />
+            Add Household Member
+          </Button>
+        )}
+      </section>
+
+      {/* Related Parties Section */}
+      <section className="space-y-4">
+        <div className="flex items-center gap-2">
+          <UserPlus className="h-5 w-5 text-muted-foreground" />
+          <h3 className="text-base font-semibold">Related Parties</h3>
+        </div>
+        <p className="text-sm text-muted-foreground">
+          Non-household members related to the people being onboarded (e.g. business partners, beneficiaries).
+        </p>
+
+        <div className="space-y-2">
+          {relatedParties.map((party) => (
+            <PartyCard key={party.id} party={party} />
+          ))}
+        </div>
+
+        {showAddRelated ? (
+          <AddPartyForm type="related_party" onAdd={() => setShowAddRelated(false)} />
+        ) : (
+          <Button variant="outline" className="w-full" onClick={() => setShowAddRelated(true)}>
+            <Plus className="h-4 w-4 mr-2" />
+            Add Related Party
+          </Button>
+        )}
+      </section>
     </div>
   )
 }

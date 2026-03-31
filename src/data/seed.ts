@@ -1,4 +1,4 @@
-import type { Action, Task } from '@/types/workflow'
+import type { Action, Task, RelatedParty } from '@/types/workflow'
 
 export const actions: Action[] = [
   { id: 'collect-client-data', title: 'Collect Client Data', order: 1 },
@@ -64,8 +64,8 @@ export const tasks: Task[] = [
   },
 ]
 
-export const householdMembers = [
-  { id: 'member-1', name: 'John Smith' },
-  { id: 'member-2', name: 'Jane Smith' },
-  { id: 'member-3', name: 'Robert Smith' },
+export const initialRelatedParties: RelatedParty[] = [
+  { id: 'member-1', name: 'John Smith', type: 'household_member' },
+  { id: 'member-2', name: 'Jane Smith', type: 'household_member', relationship: 'Spouse' },
+  { id: 'member-3', name: 'Robert Smith', type: 'household_member', relationship: 'Child' },
 ]

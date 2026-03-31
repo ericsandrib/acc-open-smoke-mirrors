@@ -1,6 +1,6 @@
 import { createContext, useContext, useReducer, type ReactNode } from 'react'
 import type { WorkflowState, WorkflowAction, Task } from '@/types/workflow'
-import { actions, tasks } from '@/data/seed'
+import { actions, tasks, initialRelatedParties } from '@/data/seed'
 
 function computeFlatTaskOrder(allTasks: Task[], allActions: typeof actions): string[] {
   const order: string[] = []
@@ -27,6 +27,7 @@ function computeFlatTaskOrder(allTasks: Task[], allActions: typeof actions): str
 const initialState: WorkflowState = {
   actions,
   tasks: tasks.map((t) => ({ ...t, children: t.children ? [...t.children] : undefined })),
+  relatedParties: [...initialRelatedParties],
   activeTaskId: tasks[0].id,
   flatTaskOrder: computeFlatTaskOrder(tasks, actions),
 }
@@ -102,6 +103,17 @@ function workflowReducer(state: WorkflowState, action: WorkflowAction): Workflow
         tasks: newTasks,
         flatTaskOrder: newOrder,
         activeTaskId: activeStillExists ? state.activeTaskId : action.parentTaskId,
+      }
+    }
+
+    case 'ADD_RELATED_PARTY': {
+      return { ...state, relatedParties: [...state.relatedParties, action.party] }
+    }
+
+    case 'REMOVE_RELATED_PARTY': {
+      return {
+        ...state,
+        relatedParties: state.relatedParties.filter((p) => p.id !== action.partyId),
       }
     }
 
