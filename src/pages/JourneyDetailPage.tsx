@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { ArrowLeft, Circle, Loader, CheckCircle2, Ban, CheckCheck } from 'lucide-react'
 import { useServicing } from '@/stores/servicingStore'
@@ -15,7 +15,8 @@ import {
 } from '@/components/ui/select'
 import { cn } from '@/lib/utils'
 import { teamMembers } from '@/data/teamMembers'
-import type { TaskStatus } from '@/types/workflow'
+import { formComponents, taskDescriptions } from '@/components/wizard/formRegistry'
+import type { Task, TaskStatus } from '@/types/workflow'
 import type { JourneyTask } from '@/types/servicing'
 import {
   Tooltip,
@@ -68,18 +69,73 @@ function getActionStatus(tasks: JourneyTask[]): TaskStatus {
   return 'not_started'
 }
 
+function stripJourneyPrefix(servicingTaskId: string, journeyId: string): string {
+  const prefix = `${journeyId}-`
+  return servicingTaskId.startsWith(prefix)
+    ? servicingTaskId.slice(prefix.length)
+    : servicingTaskId
+}
+
+function getFormKeyForTask(workflowTaskId: string, tasks: Task[]): string | undefined {
+  const parentTask = tasks.find((t) => t.id === workflowTaskId)
+  if (parentTask) return parentTask.formKey
+  for (const task of tasks) {
+    const child = task.children?.find((c) => c.id === workflowTaskId)
+    if (child) return child.formKey
+  }
+  return undefined
+}
+
 export function JourneyDetailPage() {
   const { journeyId } = useParams<{ journeyId: string }>()
   const { journeys, updateJourneyAssignee } = useServicing()
-  const { state: workflowState } = useWorkflow()
+  const { state: workflowState, dispatch } = useWorkflow()
   const navigate = useNavigate()
 
   const journey = journeys.find((j) => j.id === journeyId)
+  const isLiveJourney = journey?.id === workflowState.journeyId
   const allTasks = journey?.actions.flatMap((a) => a.tasks) ?? []
   const [activeTaskId, setActiveTaskId] = useState<string | null>(allTasks[0]?.id ?? null)
 
   const activeTask = allTasks.find((t) => t.id === activeTaskId) ?? null
   const activeAction = journey?.actions.find((a) => a.tasks.some((t) => t.id === activeTaskId)) ?? null
+
+  const handleTaskSelect = (taskId: string) => {
+    setActiveTaskId(taskId)
+    if (isLiveJourney && journey) {
+      const workflowTaskId = stripJourneyPrefix(taskId, journey.id)
+      dispatch({ type: 'SET_ACTIVE_TASK', taskId: workflowTaskId })
+    }
+  }
+
+  // Sync workflow activeTaskId on mount for live journey
+  useEffect(() => {
+    if (isLiveJourney && activeTaskId && journey) {
+      const wfId = stripJourneyPrefix(activeTaskId, journey.id)
+      dispatch({ type: 'SET_ACTIVE_TASK', taskId: wfId })
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
+  // Bidirectional sync: when KycForm changes activeTaskId in workflow store, reflect in sidebar
+  useEffect(() => {
+    if (isLiveJourney && journey && workflowState.activeTaskId) {
+      const servicingId = `${journey.id}-${workflowState.activeTaskId}`
+      if (allTasks.some((t) => t.id === servicingId) && servicingId !== activeTaskId) {
+        setActiveTaskId(servicingId)
+      }
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [workflowState.activeTaskId])
+
+  // Resolve formKey for the active task (live journey only)
+  const workflowTaskId = isLiveJourney && activeTask && journey
+    ? stripJourneyPrefix(activeTask.id, journey.id)
+    : null
+  const formKey = workflowTaskId
+    ? getFormKeyForTask(workflowTaskId, workflowState.tasks)
+    : undefined
+  const FormComponent = formKey ? formComponents[formKey] : null
 
   if (!journey) {
     return (
@@ -136,7 +192,7 @@ export function JourneyDetailPage() {
                     return (
                       <li key={task.id}>
                         <button
-                          onClick={() => setActiveTaskId(task.id)}
+                          onClick={() => handleTaskSelect(task.id)}
                           className={cn(
                             'w-full text-left px-3 py-2 rounded-md text-sm flex items-center justify-between gap-2 transition-colors',
                             activeTaskId === task.id
@@ -178,26 +234,40 @@ export function JourneyDetailPage() {
                     Part of {activeAction.title}
                   </span>
                 </div>
-                <div className="rounded-lg border border-border p-6 space-y-4">
-                  <div className="grid grid-cols-2 gap-4 text-sm">
-                    <div>
-                      <span className="text-muted-foreground">Assigned To</span>
-                      <p className="font-medium">{activeTask.assignedTo}</p>
+                {FormComponent ? (
+                  <>
+                    {formKey && taskDescriptions[formKey] && (
+                      <p className="text-base text-muted-foreground">{taskDescriptions[formKey]}</p>
+                    )}
+                    <FormComponent />
+                  </>
+                ) : (
+                  <div className="rounded-lg border border-border p-6 space-y-4">
+                    <div className="grid grid-cols-2 gap-4 text-sm">
+                      <div>
+                        <span className="text-muted-foreground">Assigned To</span>
+                        <p className="font-medium">{activeTask.assignedTo}</p>
+                      </div>
+                      <div>
+                        <span className="text-muted-foreground">Status</span>
+                        <p className="font-medium capitalize">{activeTask.status.replace('_', ' ')}</p>
+                      </div>
+                      <div>
+                        <span className="text-muted-foreground">Journey</span>
+                        <p className="font-medium">{journey.relationshipName}</p>
+                      </div>
+                      <div>
+                        <span className="text-muted-foreground">Action</span>
+                        <p className="font-medium">{activeAction.title}</p>
+                      </div>
                     </div>
-                    <div>
-                      <span className="text-muted-foreground">Status</span>
-                      <p className="font-medium capitalize">{activeTask.status.replace('_', ' ')}</p>
-                    </div>
-                    <div>
-                      <span className="text-muted-foreground">Journey</span>
-                      <p className="font-medium">{journey.relationshipName}</p>
-                    </div>
-                    <div>
-                      <span className="text-muted-foreground">Action</span>
-                      <p className="font-medium">{activeAction.title}</p>
-                    </div>
+                    {!isLiveJourney && (
+                      <p className="text-sm text-muted-foreground text-center pt-2">
+                        Form editing is available for active journeys.
+                      </p>
+                    )}
                   </div>
-                </div>
+                )}
               </div>
             ) : (
               <div className="text-muted-foreground text-center mt-20">
