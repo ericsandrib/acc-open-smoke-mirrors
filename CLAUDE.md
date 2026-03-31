@@ -26,6 +26,19 @@ A wizard-like workflow demo for account opening with two endpoints:
 - `specs/` — Feature specifications
 - `PROGRESS.md` — Progress tracking against specs
 
+## Specs & Progress Tracking
+- Each feature or plan gets a numbered spec file in `specs/` (e.g. `002-feature-name.md`)
+- Numbers are zero-padded, three digits, and always increment from the highest existing spec
+- `specs/README.md` is the index — add every new spec to the table there with its status
+- `PROGRESS.md` tracks implementation progress per spec with checkbox phases
+- When all phases of a spec are checked off, mark it **Complete** in `specs/README.md`
+
+### When creating a new spec
+1. Find the highest existing spec number in `specs/`
+2. Create `specs/<next-number>-<short-name>.md` with the spec content
+3. Add a row to the table in `specs/README.md`
+4. Add a corresponding section to `PROGRESS.md` with phase checklists
+
 ## Commands
 - `pnpm dev` — Start dev server
 - `pnpm build` — Production build
