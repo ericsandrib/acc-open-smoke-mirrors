@@ -110,6 +110,15 @@ function workflowReducer(state: WorkflowState, action: WorkflowAction): Workflow
       return { ...state, relatedParties: [...state.relatedParties, action.party] }
     }
 
+    case 'UPDATE_RELATED_PARTY': {
+      return {
+        ...state,
+        relatedParties: state.relatedParties.map((p) =>
+          p.id === action.partyId ? { ...p, ...action.updates } : p
+        ),
+      }
+    }
+
     case 'REMOVE_RELATED_PARTY': {
       return {
         ...state,

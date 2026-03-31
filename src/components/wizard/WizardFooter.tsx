@@ -18,10 +18,7 @@ export function WizardFooter() {
         <ChevronLeft className="h-4 w-4" />
         Back
       </Button>
-      <span className="text-xs text-muted-foreground">
-        Step {idx + 1} of {state.flatTaskOrder.length}
-      </span>
-      <Button
+<Button
         onClick={() => dispatch({ type: 'GO_NEXT' })}
         disabled={isLast}
       >

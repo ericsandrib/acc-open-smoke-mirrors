@@ -48,6 +48,7 @@ export type WorkflowAction =
   | { type: 'SPAWN_KYC_CHILD'; parentTaskId: string; childName: string }
   | { type: 'REMOVE_KYC_CHILD'; parentTaskId: string; childId: string }
   | { type: 'ADD_RELATED_PARTY'; party: RelatedParty }
+  | { type: 'UPDATE_RELATED_PARTY'; partyId: string; updates: Partial<Pick<RelatedParty, 'name' | 'relationship' | 'email'>> }
   | { type: 'REMOVE_RELATED_PARTY'; partyId: string }
   | { type: 'GO_NEXT' }
   | { type: 'GO_BACK' }

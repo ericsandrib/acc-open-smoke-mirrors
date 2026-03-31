@@ -3,7 +3,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui/select'
 import { Button } from '@/components/ui/button'
-import { Plus, Trash2, Users, UserPlus } from 'lucide-react'
+import { Plus, Trash2, Users, UserPlus, ChevronRight } from 'lucide-react'
 import { useWorkflow } from '@/stores/workflowStore'
 import type { RelatedPartyType } from '@/types/workflow'
 
@@ -78,29 +78,79 @@ function AddPartyForm({ type, onAdd }: { type: RelatedPartyType; onAdd: () => vo
   )
 }
 
-function PartyCard({ party }: { party: { id: string; name: string; relationship?: string; email?: string } }) {
+function PartyCard({ party, relationships }: { party: { id: string; name: string; type: RelatedPartyType; relationship?: string; email?: string }; relationships: string[] }) {
   const { dispatch } = useWorkflow()
+  const [open, setOpen] = useState(false)
+
+  const update = (updates: Partial<Pick<typeof party, 'name' | 'relationship' | 'email'>>) => {
+    dispatch({ type: 'UPDATE_RELATED_PARTY', partyId: party.id, updates })
+  }
 
   return (
-    <div className="flex items-center justify-between rounded-lg border border-border p-3">
-      <div className="flex items-center gap-3">
-        <div className="h-8 w-8 rounded-full bg-muted flex items-center justify-center text-sm font-medium">
-          {party.name[0]}
-        </div>
-        <div>
+    <div className="rounded-lg border border-border">
+      <button
+        type="button"
+        onClick={() => setOpen(!open)}
+        className="flex items-center justify-between w-full p-3"
+      >
+        <div className="flex items-center gap-3">
+          <div className="h-8 w-8 rounded-full bg-muted flex items-center justify-center text-sm font-medium shrink-0">
+            {party.name[0]}
+          </div>
           <span className="text-sm font-medium">{party.name}</span>
           {party.relationship && (
-            <span className="text-xs text-muted-foreground ml-2">{party.relationship}</span>
+            <span className="text-xs text-muted-foreground">{party.relationship}</span>
           )}
         </div>
-      </div>
-      <Button
-        variant="ghost"
-        size="icon"
-        onClick={() => dispatch({ type: 'REMOVE_RELATED_PARTY', partyId: party.id })}
-      >
-        <Trash2 className="h-4 w-4 text-muted-foreground" />
-      </Button>
+        <ChevronRight className={`h-4 w-4 text-muted-foreground shrink-0 transition-transform ${open ? 'rotate-90' : ''}`} />
+      </button>
+      {open && (
+        <div className="border-t border-border px-3 pb-3 pt-3 space-y-4">
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label>Full Name</Label>
+              <Input
+                value={party.name}
+                onChange={(e) => update({ name: e.target.value })}
+                placeholder="Full name"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>Relationship</Label>
+              <Select value={party.relationship ?? ''} onValueChange={(v) => update({ relationship: v })}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select..." />
+                </SelectTrigger>
+                <SelectContent>
+                  {relationships.map((r) => (
+                    <SelectItem key={r} value={r}>{r}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+          <div className="space-y-2">
+            <Label>Email</Label>
+            <Input
+              value={party.email ?? ''}
+              onChange={(e) => update({ email: e.target.value })}
+              type="email"
+              placeholder="email@example.com"
+            />
+          </div>
+          <div className="flex justify-end">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => dispatch({ type: 'REMOVE_RELATED_PARTY', partyId: party.id })}
+              className="text-muted-foreground hover:text-destructive"
+            >
+              <Trash2 className="h-4 w-4 mr-1" />
+              Remove
+            </Button>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
@@ -127,7 +177,7 @@ export function RelatedPartiesForm() {
 
         <div className="space-y-2">
           {householdMembers.map((member) => (
-            <PartyCard key={member.id} party={member} />
+            <PartyCard key={member.id} party={member} relationships={householdRelationships} />
           ))}
         </div>
 
@@ -153,7 +203,7 @@ export function RelatedPartiesForm() {
 
         <div className="space-y-2">
           {relatedParties.map((party) => (
-            <PartyCard key={party.id} party={party} />
+            <PartyCard key={party.id} party={party} relationships={nonHouseholdRelationships} />
           ))}
         </div>
 

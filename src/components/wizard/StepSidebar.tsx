@@ -52,7 +52,7 @@ export function StepSidebar() {
 
   return (
     <TooltipProvider delayDuration={300}>
-      <nav className="w-64 border-r border-border bg-sidebar-background p-4 overflow-y-auto">
+      <nav className="w-64 border-r border-border bg-sidebar-background p-2 overflow-y-auto">
         {state.actions
           .sort((a, b) => a.order - b.order)
           .map((action) => {
@@ -62,8 +62,8 @@ export function StepSidebar() {
 
             return (
               <div key={action.id} className="mb-6">
-                <div className="flex items-center justify-between mb-2">
-                  <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                <div className="flex items-center justify-between mb-2 px-3">
+                  <h3 className="text-xs font-semibold text-muted-foreground">
                     {action.title}
                   </h3>
                   <StatusBadge status={getActionStatus(state.tasks, action.id)} />
