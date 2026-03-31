@@ -1,60 +1,91 @@
+import { useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useServicing } from '@/stores/servicingStore'
 import {
   Table,
   TableBody,
   TableCell,
-  TableHead,
   TableHeader,
   TableRow,
 } from '@/components/ui/table'
+import { SortableTableHead } from '@/components/ui/sortable-table-head'
 import { StatusBadge } from './StatusBadge'
+import { useSortableTable } from '@/hooks/useSortableTable'
+import {
+  compareString,
+  compareStatus,
+  compareFraction,
+  journeyStatusOrder,
+} from '@/lib/sort-comparators'
 
 export function ActionsTable() {
   const { journeys } = useServicing()
   const navigate = useNavigate()
 
   const rows = journeys.flatMap((journey) =>
-    journey.actions.map((action) => ({
-      ...action,
-      journeyName: journey.name,
-      relationshipName: journey.relationshipName,
-      journeyId: journey.id,
-    })),
+    journey.actions.map((action) => {
+      const complete = action.tasks.filter((t) => t.status === 'complete').length
+      return {
+        ...action,
+        journeyName: journey.name,
+        relationshipName: journey.relationshipName,
+        journeyId: journey.id,
+        assignedToDisplay: [...new Set(action.tasks.map((t) => t.assignedTo))].join(', '),
+        complete,
+        total: action.tasks.length,
+      }
+    }),
   )
+
+  type Row = (typeof rows)[number]
+
+  const comparators = useMemo(
+    () => ({
+      nickname: compareString<Row>((r) => r.nickname ?? ''),
+      title: compareString<Row>((r) => r.title),
+      journeyName: compareString<Row>((r) => r.journeyName),
+      relationshipName: compareString<Row>((r) => r.relationshipName),
+      status: compareStatus<Row>((r) => r.status, journeyStatusOrder),
+      assignedTo: compareString<Row>((r) => r.assignedToDisplay),
+      tasksComplete: compareFraction<Row>(
+        (r) => r.complete,
+        (r) => r.total,
+      ),
+    }),
+    [],
+  )
+
+  const { sortedRows, sortKey, sortDirection, onSort } = useSortableTable(rows, comparators)
 
   return (
     <Table>
       <TableHeader>
         <TableRow>
-          <TableHead className="w-[250px]">Action Nickname</TableHead>
-          <TableHead className="w-[200px]">Action Type</TableHead>
-          <TableHead>Journey</TableHead>
-          <TableHead>Relationship</TableHead>
-          <TableHead>Status</TableHead>
-          <TableHead>Assigned To</TableHead>
-          <TableHead className="text-right">Tasks Complete</TableHead>
+          <SortableTableHead sortKey="nickname" currentSortKey={sortKey} currentDirection={sortDirection} onSort={onSort} className="w-[250px]">Action Nickname</SortableTableHead>
+          <SortableTableHead sortKey="title" currentSortKey={sortKey} currentDirection={sortDirection} onSort={onSort} className="w-[200px]">Action Type</SortableTableHead>
+          <SortableTableHead sortKey="journeyName" currentSortKey={sortKey} currentDirection={sortDirection} onSort={onSort}>Journey</SortableTableHead>
+          <SortableTableHead sortKey="relationshipName" currentSortKey={sortKey} currentDirection={sortDirection} onSort={onSort}>Relationship</SortableTableHead>
+          <SortableTableHead sortKey="status" currentSortKey={sortKey} currentDirection={sortDirection} onSort={onSort}>Status</SortableTableHead>
+          <SortableTableHead sortKey="assignedTo" currentSortKey={sortKey} currentDirection={sortDirection} onSort={onSort}>Assigned To</SortableTableHead>
+          <SortableTableHead sortKey="tasksComplete" currentSortKey={sortKey} currentDirection={sortDirection} onSort={onSort} className="text-right">Tasks Complete</SortableTableHead>
         </TableRow>
       </TableHeader>
       <TableBody>
-        {rows.map((row) => {
-          const complete = row.tasks.filter((t) => t.status === 'complete').length
-          return (
-            <TableRow key={row.id} className="cursor-pointer" onClick={() => navigate(`/servicing/${row.journeyId}`)}>
-              <TableCell className="font-medium">{row.nickname}</TableCell>
-              <TableCell>{row.title}</TableCell>
-              <TableCell>{row.journeyName}</TableCell>
-              <TableCell>{row.relationshipName}</TableCell>
-              <TableCell>
-                <StatusBadge status={row.status} />
-              </TableCell>
-              <TableCell>{[...new Set(row.tasks.map((t) => t.assignedTo))].join(', ')}</TableCell>
-              <TableCell className="text-right">
-                {complete}/{row.tasks.length}
-              </TableCell>
-            </TableRow>
-          )
-        })}
+        {sortedRows.map((row) => (
+          <TableRow key={row.id} className="cursor-pointer" onClick={() => navigate(`/servicing/${row.journeyId}`)}>
+            <TableCell className="font-medium">{row.nickname}</TableCell>
+            <TableCell>{row.title}</TableCell>
+            <TableCell>{row.journeyName}</TableCell>
+            <TableCell>{row.relationshipName}</TableCell>
+            <TableCell>
+              <StatusBadge status={row.status} />
+            </TableCell>
+            <TableCell>{row.assignedToDisplay}</TableCell>
+            <TableCell className="text-right">
+              {row.complete}/{row.total}
+            </TableCell>
+          </TableRow>
+        ))}
       </TableBody>
     </Table>
   )
