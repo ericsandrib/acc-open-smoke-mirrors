@@ -27,7 +27,8 @@ export function ActionsTable() {
     <Table>
       <TableHeader>
         <TableRow>
-          <TableHead className="w-[200px]">Action</TableHead>
+          <TableHead className="w-[250px]">Action Nickname</TableHead>
+          <TableHead className="w-[200px]">Action Type</TableHead>
           <TableHead>Journey</TableHead>
           <TableHead>Relationship</TableHead>
           <TableHead>Status</TableHead>
@@ -40,7 +41,8 @@ export function ActionsTable() {
           const complete = row.tasks.filter((t) => t.status === 'complete').length
           return (
             <TableRow key={row.id} className="cursor-pointer" onClick={() => navigate(`/servicing/${row.journeyId}`)}>
-              <TableCell className="font-medium">{row.title}</TableCell>
+              <TableCell className="font-medium">{row.nickname}</TableCell>
+              <TableCell>{row.title}</TableCell>
               <TableCell>{row.journeyName}</TableCell>
               <TableCell>{row.relationshipName}</TableCell>
               <TableCell>

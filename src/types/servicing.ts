@@ -10,6 +10,7 @@ export interface JourneyTask {
   status: TaskStatus
   assignedTo: string
   isSubTask?: boolean
+  nickname?: string
 }
 
 export interface JourneyAction {
@@ -17,6 +18,7 @@ export interface JourneyAction {
   journeyId: string
   title: string
   status: JourneyStatus
+  nickname?: string
   tasks: JourneyTask[]
 }
 

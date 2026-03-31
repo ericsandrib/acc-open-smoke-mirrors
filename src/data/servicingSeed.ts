@@ -21,6 +21,7 @@ function buildJourney(
         title: t.title,
         status: taskStatuses[t.id] ?? 'not_started' as TaskStatus,
         assignedTo,
+        nickname: `${name} - ${action.title}`,
       }))
 
     const allComplete = actionTasks.every((t) => t.status === 'complete')
@@ -33,6 +34,7 @@ function buildJourney(
       id: `${id}-${action.id}`,
       journeyId: id,
       title: action.title,
+      nickname: `${name} - ${action.title}`,
       status: allComplete
         ? 'complete' as const
         : anyBlocked

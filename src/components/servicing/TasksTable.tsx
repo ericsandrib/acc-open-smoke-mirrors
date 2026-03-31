@@ -30,7 +30,8 @@ export function TasksTable() {
       <TableHeader>
         <TableRow>
           <TableHead className="w-[200px]">Task</TableHead>
-          <TableHead>Action</TableHead>
+          <TableHead>Action Nickname</TableHead>
+          <TableHead>Action Type</TableHead>
           <TableHead>Journey</TableHead>
           <TableHead>Relationship</TableHead>
           <TableHead>Status</TableHead>
@@ -47,6 +48,7 @@ export function TasksTable() {
                 row.title
               )}
             </TableCell>
+            <TableCell>{row.nickname}</TableCell>
             <TableCell>{row.actionTitle}</TableCell>
             <TableCell>{row.journeyName}</TableCell>
             <TableCell>{row.relationshipName}</TableCell>

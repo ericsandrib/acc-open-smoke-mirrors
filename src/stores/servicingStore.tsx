@@ -11,6 +11,7 @@ function deriveLiveJourney(state: WorkflowState): Journey | null {
   if (!state.journeyId) return null
 
   const journeyId = state.journeyId
+  const journeyName = state.journeyName ?? 'Client Onboarding'
 
   const journeyActions = state.actions.map((action) => {
     const actionStatus = getActionStatus(state.tasks, action.id)
@@ -24,6 +25,7 @@ function deriveLiveJourney(state: WorkflowState): Journey | null {
           title: t.title,
           status: t.status,
           assignedTo: t.assignedTo,
+          nickname: `${journeyName} - ${action.title}`,
         }
         const children: JourneyTask[] = (t.children ?? []).map((c) => ({
           id: `${journeyId}-${c.id}`,
@@ -33,6 +35,7 @@ function deriveLiveJourney(state: WorkflowState): Journey | null {
           status: c.status,
           assignedTo: t.assignedTo,
           isSubTask: true,
+          nickname: `${journeyName} - KYC: ${c.name}`,
         }))
         return [parent, ...children]
       })
@@ -42,6 +45,7 @@ function deriveLiveJourney(state: WorkflowState): Journey | null {
       journeyId,
       title: action.title,
       status: actionStatus === 'blocked' ? 'in_progress' as const : actionStatus,
+      nickname: `${journeyName} - ${action.title}`,
       tasks: actionTasks,
     }
   })
@@ -51,7 +55,7 @@ function deriveLiveJourney(state: WorkflowState): Journey | null {
 
   return {
     id: journeyId,
-    name: state.journeyName ?? 'Client Onboarding',
+    name: journeyName,
     relationshipName: primaryParty.name ?? 'Current Journey',
     status: allComplete ? 'complete' : anyStarted ? 'in_progress' : 'not_started',
     createdAt: new Date().toISOString().split('T')[0],
