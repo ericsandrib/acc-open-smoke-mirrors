@@ -13,41 +13,54 @@ function deriveLiveJourney(state: WorkflowState): Journey | null {
   const journeyId = state.journeyId
   const journeyName = state.journeyName ?? 'Client Onboarding'
 
-  const journeyActions = state.actions.map((action) => {
+  const journeyActions = state.actions.flatMap((action) => {
     const actionStatus = getActionStatus(state.tasks, action.id)
-    const actionTasks = state.tasks
-      .filter((t) => t.actionId === action.id)
-      .flatMap((t) => {
-        const parent: JourneyTask = {
-          id: `${journeyId}-${t.id}`,
-          actionId: `${journeyId}-${action.id}`,
-          journeyId,
-          title: t.title,
-          status: t.status,
-          assignedTo: t.assignedTo,
-          nickname: `${journeyName} - ${action.title}`,
-        }
-        const children: JourneyTask[] = (t.children ?? []).map((c) => ({
-          id: `${journeyId}-${c.id}`,
-          actionId: `${journeyId}-${action.id}`,
-          journeyId,
-          title: `KYC: ${c.name}`,
-          status: c.status,
-          assignedTo: t.assignedTo,
-          isSubTask: true,
-          nickname: `${journeyName} - KYC: ${c.name}`,
-        }))
-        return [parent, ...children]
-      })
+    const actionTasks = state.tasks.filter((t) => t.actionId === action.id)
 
-    return {
+    // Collect parent-level tasks (without children) for this action
+    const parentJourneyTasks = actionTasks.map((t): JourneyTask => ({
+      id: `${journeyId}-${t.id}`,
+      actionId: `${journeyId}-${action.id}`,
+      journeyId,
+      title: t.title,
+      status: t.status,
+      assignedTo: t.assignedTo,
+      nickname: `${journeyName} - ${action.title}`,
+    }))
+
+    const parentAction: JourneyAction = {
       id: `${journeyId}-${action.id}`,
       journeyId,
       title: action.title,
       status: actionStatus === 'blocked' ? 'in_progress' as const : actionStatus,
       nickname: `${journeyName} - ${action.title}`,
-      tasks: actionTasks,
+      tasks: parentJourneyTasks,
     }
+
+    // Create a separate JourneyAction for each KYC child
+    const childActions: JourneyAction[] = actionTasks.flatMap((t) =>
+      (t.children ?? []).map((c): JourneyAction => {
+        const childTask: JourneyTask = {
+          id: `${journeyId}-${c.id}`,
+          actionId: `${journeyId}-${action.id}-${c.id}`,
+          journeyId,
+          title: `KYC: ${c.name}`,
+          status: c.status,
+          assignedTo: t.assignedTo,
+          nickname: `${journeyName} - KYC: ${c.name}`,
+        }
+        return {
+          id: `${journeyId}-${action.id}-${c.id}`,
+          journeyId,
+          title: action.title,
+          status: c.status === 'blocked' ? 'in_progress' as const : c.status,
+          nickname: `${journeyName} - KYC: ${c.name}`,
+          tasks: [childTask],
+        }
+      }),
+    )
+
+    return [parentAction, ...childActions]
   })
 
   const anyStarted = state.tasks.some((t) => t.status !== 'not_started')
