@@ -53,11 +53,11 @@ export function KycForm() {
             <Info className="mt-0.5 h-5 w-5 flex-shrink-0 text-blue-600 dark:text-blue-400" />
             <div className="space-y-1">
               <h3 className="text-sm font-semibold text-blue-900 dark:text-blue-100">
-                Nothing needed from you
+                Handed off to compliance
               </h3>
               <p className="text-sm text-blue-800 dark:text-blue-200">
-                Identity verification has been submitted. The compliance team will complete KYC checks
-                on your behalf and reach out if anything is needed. You can move on to the next task.
+                The compliance team will review and complete KYC for the members listed below.
+                There's nothing more you need to do on this step — continue to the next task whenever you're ready.
               </p>
             </div>
           </div>
