@@ -3,7 +3,7 @@ import type { TaskStatus } from '@/types/workflow'
 import { cn } from '@/lib/utils'
 import { getActionStatus } from '@/utils/getActionStatus'
 import { teamMembers } from '@/data/teamMembers'
-import { parseChildSubTaskId } from '@/utils/kycChildSubTasks'
+import { parseChildSubTaskId } from '@/utils/childTaskRegistry'
 import { Circle, Loader, CheckCircle2, Ban, User } from 'lucide-react'
 import {
   Tooltip,

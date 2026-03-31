@@ -22,6 +22,8 @@ export interface RelatedParty {
 
 export type AccountType = 'brokerage' | 'ira' | 'roth_ira' | '401k' | 'trust' | 'checking' | 'savings'
 
+export type ChildType = 'kyc' | 'account-opening'
+
 export interface FinancialAccount {
   id: string
   accountName: string
@@ -39,14 +41,15 @@ export interface Task {
   assignedTo: string
   formKey: string
   order: number
-  children?: KycChild[]
+  children?: ChildTask[]
 }
 
-export interface KycChild {
+export interface ChildTask {
   id: string
   name: string
   status: TaskStatus
   formKey: string
+  childType: ChildType
 }
 
 export interface Action {
@@ -74,8 +77,8 @@ export type WorkflowAction =
   | { type: 'SET_TASK_STATUS'; taskId: string; status: TaskStatus }
   | { type: 'CONFIRM_TASK'; taskId: string }
   | { type: 'REOPEN_TASK'; taskId: string }
-  | { type: 'SPAWN_KYC_CHILD'; parentTaskId: string; childName: string }
-  | { type: 'REMOVE_KYC_CHILD'; parentTaskId: string; childId: string }
+  | { type: 'SPAWN_CHILD'; parentTaskId: string; childName: string; childType: ChildType }
+  | { type: 'REMOVE_CHILD'; parentTaskId: string; childId: string }
   | { type: 'ADD_RELATED_PARTY'; party: RelatedParty }
   | { type: 'UPDATE_RELATED_PARTY'; partyId: string; updates: Partial<Omit<RelatedParty, 'id' | 'type' | 'isPrimary'>> }
   | { type: 'SET_PRIMARY_MEMBER'; partyId: string }

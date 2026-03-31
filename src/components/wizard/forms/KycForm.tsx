@@ -33,9 +33,10 @@ export function KycForm() {
   const handleConfirm = () => {
     for (const member of selectedMembers) {
       dispatch({
-        type: 'SPAWN_KYC_CHILD',
+        type: 'SPAWN_CHILD',
         parentTaskId: kycTask!.id,
         childName: member.name,
+        childType: 'kyc',
       })
     }
     setShowConfirmation(false)

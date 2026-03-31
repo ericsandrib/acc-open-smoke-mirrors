@@ -1,5 +1,5 @@
 import { useWorkflow } from '@/stores/workflowStore'
-import { parseChildSubTaskId, KYC_CHILD_SUB_TASKS } from '@/utils/kycChildSubTasks'
+import { parseChildSubTaskId } from '@/utils/childTaskRegistry'
 
 export function DetailSidebar() {
   const { state } = useWorkflow()
@@ -15,7 +15,7 @@ export function DetailSidebar() {
     ? state.tasks.flatMap((t) => t.children ?? []).find((c) => c.id === parsed.childId)
     : null
   const subTaskDef = parsed
-    ? KYC_CHILD_SUB_TASKS.find((s) => s.suffix === parsed.suffix)
+    ? parsed.config.subTasks.find((s) => s.suffix === parsed.suffix)
     : null
 
   const title = activeTask?.title ?? activeChild?.name ?? ''
@@ -47,7 +47,7 @@ export function DetailSidebar() {
       {!activeTask && activeChild && (
         <div className="space-y-3">
           <div>
-            <span className="text-muted-foreground">KYC Review</span>
+            <span className="text-muted-foreground">Child Action</span>
             <p className="font-medium text-foreground">{activeChild.name}</p>
           </div>
           <div>
@@ -58,10 +58,10 @@ export function DetailSidebar() {
           </div>
         </div>
       )}
-      {!activeTask && !activeChild && subTaskChild && subTaskDef && (
+      {!activeTask && !activeChild && subTaskChild && subTaskDef && parsed && (
         <div className="space-y-3">
           <div>
-            <span className="text-muted-foreground">KYC Review</span>
+            <span className="text-muted-foreground">{parsed.config.displayLabel}</span>
             <p className="font-medium text-foreground">{subTaskChild.name}</p>
           </div>
           <div>

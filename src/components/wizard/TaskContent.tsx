@@ -1,6 +1,6 @@
 import { useWorkflow } from '@/stores/workflowStore'
 import { formComponents, taskDescriptions } from './formRegistry'
-import { parseChildSubTaskId, KYC_CHILD_SUB_TASKS } from '@/utils/kycChildSubTasks'
+import { parseChildSubTaskId } from '@/utils/childTaskRegistry'
 
 export function TaskContent() {
   const { state } = useWorkflow()
@@ -16,7 +16,7 @@ export function TaskContent() {
     ? state.tasks.flatMap((t) => t.children ?? []).find((c) => c.id === parsed.childId)
     : null
   const subTaskDef = parsed
-    ? KYC_CHILD_SUB_TASKS.find((s) => s.suffix === parsed.suffix)
+    ? parsed.config.subTasks.find((s) => s.suffix === parsed.suffix)
     : null
 
   const formKey = activeTask?.formKey ?? activeChild?.formKey ?? subTaskDef?.formKey

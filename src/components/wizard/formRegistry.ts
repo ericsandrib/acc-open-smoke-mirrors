@@ -5,7 +5,11 @@ import { KycForm } from './forms/KycForm'
 import { KycChildInfoForm } from './forms/KycChildInfoForm'
 import { KycChildDocumentsForm } from './forms/KycChildDocumentsForm'
 import { KycChildResultsForm } from './forms/KycChildResultsForm'
-import { Placeholder1Form, Placeholder2Form } from './forms/PlaceholderForm'
+import { Placeholder2Form } from './forms/PlaceholderForm'
+import { OpenAccountsForm } from './forms/OpenAccountsForm'
+import { AcctChildDetailsForm } from './forms/AcctChildDetailsForm'
+import { AcctChildDocumentsForm } from './forms/AcctChildDocumentsForm'
+import { AcctChildReviewForm } from './forms/AcctChildReviewForm'
 
 export const formComponents: Record<string, React.ComponentType> = {
   'client-info': ClientInfoForm,
@@ -15,7 +19,10 @@ export const formComponents: Record<string, React.ComponentType> = {
   'kyc-child-info': KycChildInfoForm,
   'kyc-child-documents': KycChildDocumentsForm,
   'kyc-child-results': KycChildResultsForm,
-  'placeholder-1': Placeholder1Form,
+  'open-accounts': OpenAccountsForm,
+  'acct-child-details': AcctChildDetailsForm,
+  'acct-child-documents': AcctChildDocumentsForm,
+  'acct-child-review': AcctChildReviewForm,
   'placeholder-2': Placeholder2Form,
 }
 
@@ -33,8 +40,14 @@ export const taskDescriptions: Partial<Record<string, string>> = {
     'Upload the required identity documents for compliance verification.',
   'kyc-child-results':
     'View the results of the compliance review for this household member.',
-  'placeholder-1':
-    'Configure the account\'s branch assignment, relationship manager, and access settings.',
+  'open-accounts':
+    'Select the types of accounts to open, review documents, and prepare for signature.',
+  'acct-child-details':
+    'Review and confirm the details for this financial account.',
+  'acct-child-documents':
+    'Upload required documents for the account opening application.',
+  'acct-child-review':
+    'Review all account opening details before submission.',
   'placeholder-2':
     'Review the information gathered during onboarding and confirm everything is accurate before submitting.',
 }

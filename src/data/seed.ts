@@ -45,13 +45,14 @@ export const tasks: Task[] = [
     children: [],
   },
   {
-    id: 'placeholder-1',
-    title: 'Account Setup',
+    id: 'open-accounts',
+    title: 'Open Accounts',
     actionId: 'account-opening',
     status: 'not_started',
     assignedTo: 'Unassigned',
-    formKey: 'placeholder-1',
+    formKey: 'open-accounts',
     order: 1,
+    children: [],
   },
   {
     id: 'placeholder-2',

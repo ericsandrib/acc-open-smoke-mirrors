@@ -1,7 +1,9 @@
 import { createContext, useContext, useReducer, useCallback, type ReactNode } from 'react'
 import type { WorkflowState, WorkflowAction, Task } from '@/types/workflow'
 import { actions, tasks, initialRelatedParties, initialFinancialAccounts } from '@/data/seed'
-import { getChildSubTaskIds, parseChildSubTaskId } from '@/utils/kycChildSubTasks'
+import { getChildSubTaskIds, getChildTypeConfig, parseChildSubTaskId } from '@/utils/childTaskRegistry'
+
+let childIdCounter = 0
 
 function computeFlatTaskOrder(allTasks: Task[], allActions: typeof actions): string[] {
   const order: string[] = []
@@ -16,7 +18,7 @@ function computeFlatTaskOrder(allTasks: Task[], allActions: typeof actions): str
       order.push(task.id)
       if (task.children) {
         for (const child of task.children) {
-          order.push(...getChildSubTaskIds(child.id))
+          order.push(...getChildSubTaskIds(child.id, child.childType))
         }
       }
     }
@@ -74,7 +76,7 @@ function workflowReducer(state: WorkflowState, action: WorkflowAction): Workflow
         allTaskIds.push(t.id)
         if (t.children) {
           for (const c of t.children) {
-            allTaskIds.push(...getChildSubTaskIds(c.id))
+            allTaskIds.push(...getChildSubTaskIds(c.id, c.childType))
           }
         }
       }
@@ -137,10 +139,11 @@ function workflowReducer(state: WorkflowState, action: WorkflowAction): Workflow
       return { ...state, tasks: newTasks, assignedTo: action.assignee }
     }
 
-    case 'SPAWN_KYC_CHILD': {
+    case 'SPAWN_CHILD': {
+      const config = getChildTypeConfig(action.childType)
       const newTasks = state.tasks.map((t) => {
         if (t.id === action.parentTaskId && t.children) {
-          const childId = `kyc-child-${Date.now()}`
+          const childId = `${config.idPrefix}-${Date.now()}-${++childIdCounter}`
           return {
             ...t,
             children: [
@@ -149,7 +152,8 @@ function workflowReducer(state: WorkflowState, action: WorkflowAction): Workflow
                 id: childId,
                 name: action.childName,
                 status: 'not_started' as const,
-                formKey: 'kyc-child',
+                formKey: config.idPrefix,
+                childType: action.childType,
               },
             ],
           }
@@ -160,9 +164,12 @@ function workflowReducer(state: WorkflowState, action: WorkflowAction): Workflow
       return { ...state, tasks: newTasks, flatTaskOrder: newOrder }
     }
 
-    case 'REMOVE_KYC_CHILD': {
+    case 'REMOVE_CHILD': {
+      let removedChildType: import('@/types/workflow').ChildType | null = null
       const newTasks = state.tasks.map((t) => {
         if (t.id === action.parentTaskId && t.children) {
+          const child = t.children.find((c) => c.id === action.childId)
+          if (child) removedChildType = child.childType
           return {
             ...t,
             children: t.children.filter((c) => c.id !== action.childId),
@@ -173,10 +180,12 @@ function workflowReducer(state: WorkflowState, action: WorkflowAction): Workflow
       const newOrder = computeFlatTaskOrder(newTasks, state.actions)
       const activeStillExists = newOrder.includes(state.activeTaskId)
       // Clean up all sub-task data keys for the removed child
-      const subTaskIds = getChildSubTaskIds(action.childId)
       const remainingTaskData = { ...state.taskData }
-      for (const id of subTaskIds) {
-        delete remainingTaskData[id]
+      if (removedChildType) {
+        const subTaskIds = getChildSubTaskIds(action.childId, removedChildType)
+        for (const id of subTaskIds) {
+          delete remainingTaskData[id]
+        }
       }
       return {
         ...state,

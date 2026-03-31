@@ -71,7 +71,7 @@ export const seededJourneys: Journey[] = [
     'related-parties': 'complete',
     'financial-accounts': 'complete',
     'kyc-review': 'complete',
-    'placeholder-1': 'complete',
+    'open-accounts': 'complete',
     'placeholder-2': 'complete',
   }),
   buildJourney('journey-johnson', 'Johnson Trust Onboarding', 'Johnson Trust', 'Bob Martinez', 'Alice Chen', '2026-03-05', {
@@ -79,7 +79,7 @@ export const seededJourneys: Journey[] = [
     'related-parties': 'complete',
     'financial-accounts': 'complete',
     'kyc-review': 'blocked',
-    'placeholder-1': 'not_started',
+    'open-accounts': 'not_started',
     'placeholder-2': 'not_started',
   }),
   buildJourney('journey-davis', 'Davis Household Onboarding', 'Davis Household', 'Carol Williams', 'Bob Martinez', '2026-03-20', {
@@ -87,7 +87,7 @@ export const seededJourneys: Journey[] = [
     'related-parties': 'not_started',
     'financial-accounts': 'not_started',
     'kyc-review': 'not_started',
-    'placeholder-1': 'not_started',
+    'open-accounts': 'not_started',
     'placeholder-2': 'not_started',
   }),
   buildJourney('journey-garcia', 'Garcia Family Onboarding', 'The Garcia Family', 'Diana Torres', 'Carol Williams', '2026-03-28', {
@@ -95,7 +95,7 @@ export const seededJourneys: Journey[] = [
     'related-parties': 'in_progress',
     'financial-accounts': 'not_started',
     'kyc-review': 'not_started',
-    'placeholder-1': 'not_started',
+    'open-accounts': 'not_started',
     'placeholder-2': 'not_started',
   }),
 ]

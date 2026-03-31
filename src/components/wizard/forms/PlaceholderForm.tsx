@@ -1,69 +1,8 @@
 import { useWorkflow, useTaskData } from '@/stores/workflowStore'
-import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
-import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui/select'
 import { Checkbox } from '@/components/ui/checkbox'
 import { Badge } from '@/components/ui/badge'
+import { Label } from '@/components/ui/label'
 import type { AccountType, RelatedParty } from '@/types/workflow'
-
-export function Placeholder1Form() {
-  const { data, updateField } = useTaskData('placeholder-1')
-
-  return (
-    <div className="space-y-4">
-      <div className="grid grid-cols-3 items-center gap-4">
-        <Label htmlFor="accountNumber">Account Number</Label>
-        <Input id="accountNumber" placeholder="Auto-generated" disabled className="col-span-2" />
-      </div>
-      <div className="grid grid-cols-3 items-center gap-4">
-        <Label>Branch Code</Label>
-        <div className="col-span-2">
-          <Select
-            value={(data.branchCode as string) ?? ''}
-            onValueChange={(v) => updateField('branchCode', v)}
-          >
-            <SelectTrigger>
-              <SelectValue placeholder="Select branch..." />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="nyc">New York - 001</SelectItem>
-              <SelectItem value="lon">London - 002</SelectItem>
-              <SelectItem value="zurich">Zurich - 003</SelectItem>
-              <SelectItem value="singapore">Singapore - 004</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
-      </div>
-      <div className="grid grid-cols-3 items-center gap-4">
-        <Label htmlFor="rmCode">Relationship Manager Code</Label>
-        <Input
-          id="rmCode"
-          placeholder="RM-0001"
-          className="col-span-2"
-          value={(data.rmCode as string) ?? ''}
-          onChange={(e) => updateField('rmCode', e.target.value)}
-        />
-      </div>
-      <div className="grid grid-cols-3 items-center gap-4">
-        <Label htmlFor="onlineBanking">Online Banking Access</Label>
-        <div className="col-span-2">
-          <Checkbox
-            id="onlineBanking"
-            checked={!!data.onlineBanking}
-            onCheckedChange={(v) => updateField('onlineBanking', v)}
-          />
-        </div>
-      </div>
-    </div>
-  )
-}
-
-const branchLabels: Record<string, string> = {
-  nyc: 'New York - 001',
-  lon: 'London - 002',
-  zurich: 'Zurich - 003',
-  singapore: 'Singapore - 004',
-}
 
 const accountTypeLabels: Record<AccountType, string> = {
   brokerage: 'Brokerage',
@@ -131,10 +70,9 @@ export function Placeholder2Form() {
   const { state } = useWorkflow()
   const { data, updateField } = useTaskData('placeholder-2')
   const clientInfo = state.taskData['client-info'] ?? {}
-  const accountSetup = state.taskData['placeholder-1'] ?? {}
+  const openAccountsData = state.taskData['open-accounts'] ?? {}
 
   const clientName = [clientInfo.firstName, clientInfo.lastName].filter(Boolean).join(' ')
-  const branch = branchLabels[accountSetup.branchCode as string] ?? undefined
 
   const visibleParties = state.relatedParties.filter((p) => !p.isHidden)
   const householdMembers = visibleParties.filter((p) => p.type === 'household_member')
@@ -143,6 +81,9 @@ export function Placeholder2Form() {
 
   const kycTask = state.tasks.find((t) => t.id === 'kyc-review')
   const kycChildren = kycTask?.children ?? []
+
+  const openAccountsTask = state.tasks.find((t) => t.id === 'open-accounts')
+  const acctChildren = openAccountsTask?.children ?? []
 
   const totalValue = state.financialAccounts.reduce((sum, a) => {
     const num = parseFloat((a.estimatedValue ?? '').replace(/,/g, ''))
@@ -265,16 +206,37 @@ export function Placeholder2Form() {
         )}
       </ReviewSection>
 
-      {/* Account Setup */}
-      <ReviewSection title="Account Setup">
-        {(branch || accountSetup.rmCode) ? (
-          <dl className="space-y-1">
-            <ReviewRow label="Branch" value={branch} />
-            <ReviewRow label="RM Code" value={accountSetup.rmCode as string} />
-            <ReviewRow label="Online Banking" value={accountSetup.onlineBanking ? 'Enabled' : 'Not requested'} />
-          </dl>
+      {/* Account Opening */}
+      <ReviewSection title={`Accounts to Open${acctChildren.length ? ` (${acctChildren.length})` : ''}`}>
+        {acctChildren.length > 0 ? (
+          <div className="space-y-1">
+            {acctChildren.map((child) => {
+              let statusLabel = 'Not Started'
+              let statusClass = 'bg-muted text-muted-foreground'
+              if (child.status === 'complete') {
+                statusLabel = 'Complete'
+                statusClass = 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400'
+              } else if (child.status === 'in_progress') {
+                statusLabel = 'In Progress'
+                statusClass = 'bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-400'
+              }
+              return (
+                <div key={child.id} className="flex items-center justify-between py-1.5 text-sm">
+                  <span>{child.name}</span>
+                  <Badge variant="secondary" className={`text-[10px] px-1.5 py-0 ${statusClass}`}>
+                    {statusLabel}
+                  </Badge>
+                </div>
+              )
+            })}
+          </div>
         ) : (
-          <p className="text-sm text-muted-foreground">Account setup not completed yet.</p>
+          <p className="text-sm text-muted-foreground">No accounts to open selected yet.</p>
+        )}
+        {typeof openAccountsData.additionalInstructions === 'string' && openAccountsData.additionalInstructions && (
+          <div className="pt-2 border-t border-border">
+            <ReviewRow label="Instructions" value={openAccountsData.additionalInstructions as string} />
+          </div>
         )}
       </ReviewSection>
 
