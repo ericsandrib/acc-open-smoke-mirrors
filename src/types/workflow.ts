@@ -68,5 +68,6 @@ export type WorkflowAction =
   | { type: 'UPDATE_FINANCIAL_ACCOUNT'; accountId: string; updates: Partial<Omit<FinancialAccount, 'id'>> }
   | { type: 'REMOVE_FINANCIAL_ACCOUNT'; accountId: string }
   | { type: 'SET_TASK_DATA'; taskId: string; fields: Record<string, unknown> }
+  | { type: 'INITIALIZE_FROM_RELATIONSHIP'; relatedParties: RelatedParty[]; financialAccounts: FinancialAccount[]; clientInfo: Record<string, unknown> }
   | { type: 'GO_NEXT' }
   | { type: 'GO_BACK' }

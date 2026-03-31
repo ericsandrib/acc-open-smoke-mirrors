@@ -163,6 +163,26 @@ function workflowReducer(state: WorkflowState, action: WorkflowAction): Workflow
       }
     }
 
+    case 'INITIALIZE_FROM_RELATIONSHIP': {
+      const freshTasks = tasks.map((t) => ({
+        ...t,
+        status: 'not_started' as const,
+        children: t.children ? [] : undefined,
+      }))
+      const newOrder = computeFlatTaskOrder(freshTasks, actions)
+      return {
+        actions: [...actions],
+        tasks: freshTasks,
+        relatedParties: action.relatedParties,
+        financialAccounts: action.financialAccounts,
+        activeTaskId: freshTasks[0].id,
+        flatTaskOrder: newOrder,
+        taskData: {
+          'client-info': action.clientInfo,
+        },
+      }
+    }
+
     case 'GO_NEXT': {
       const idx = state.flatTaskOrder.indexOf(state.activeTaskId)
       if (idx < state.flatTaskOrder.length - 1) {

@@ -4,7 +4,7 @@ import { DetailSidebar } from './DetailSidebar'
 import { WizardFooter } from './WizardFooter'
 import { Button } from '@/components/ui/button'
 import { useNavigate } from 'react-router-dom'
-import { GitBranch } from 'lucide-react'
+import { ArrowLeft, GitBranch } from 'lucide-react'
 
 export function WizardLayout() {
   const navigate = useNavigate()
@@ -12,7 +12,13 @@ export function WizardLayout() {
   return (
     <div className="flex flex-col h-screen bg-background">
       <header className="border-b border-border px-4 py-2 flex items-center justify-between shrink-0">
-        <h1 className="text-sm font-semibold text-foreground">Account Opening Wizard</h1>
+        <div className="flex items-center gap-3">
+          <Button variant="ghost" size="sm" onClick={() => navigate('/')}>
+            <ArrowLeft className="h-4 w-4 mr-1" />
+            Dashboard
+          </Button>
+          <h1 className="text-sm font-semibold text-foreground">Account Opening Wizard</h1>
+        </div>
         <Button variant="ghost" size="sm" onClick={() => navigate('/workflow')}>
           <GitBranch className="h-4 w-4 mr-1" />
           View Workflow
