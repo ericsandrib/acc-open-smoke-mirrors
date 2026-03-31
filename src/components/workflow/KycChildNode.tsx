@@ -13,13 +13,13 @@ export function KycChildNode({ data }: NodeProps) {
   const status = data.status as TaskStatus
 
   return (
-    <div className="bg-blue-50 border border-blue-200 rounded-lg px-4 py-2 shadow-sm min-w-[140px]">
-      <Handle type="target" position={Position.Top} className="!bg-blue-300" />
+    <div className="bg-blue-50 border border-blue-200 rounded-lg px-4 py-2 shadow-sm w-full">
+      <Handle type="target" position={Position.Left} className="!bg-blue-300" />
       <div className="text-xs font-medium text-blue-900">{data.label as string}</div>
       <Badge className={`text-[10px] px-1.5 py-0 mt-1 ${statusColors[status]}`} variant="secondary">
         {status.replace('_', ' ')}
       </Badge>
-      <Handle type="source" position={Position.Bottom} className="!bg-blue-300" />
+      <Handle type="source" position={Position.Right} className="!bg-blue-300" />
     </div>
   )
 }

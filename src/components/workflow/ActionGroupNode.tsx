@@ -21,7 +21,7 @@ export function ActionGroupNode({ data }: NodeProps) {
 
   return (
     <div className="rounded-lg border border-border bg-muted/30 h-full w-full">
-      <Handle type="target" position={Position.Top} className="!bg-primary" />
+      <Handle type="target" position={Position.Left} className="!bg-primary" />
       <div className="bg-primary text-primary-foreground rounded-t-lg px-4 py-2 flex items-center justify-between gap-2">
         <span className="text-sm font-semibold">{data.label as string}</span>
         {status && (
@@ -30,7 +30,7 @@ export function ActionGroupNode({ data }: NodeProps) {
           </Badge>
         )}
       </div>
-      <Handle type="source" position={Position.Bottom} className="!bg-primary" />
+      <Handle type="source" position={Position.Right} className="!bg-primary" />
     </div>
   )
 }

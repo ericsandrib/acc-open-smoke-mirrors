@@ -3,14 +3,14 @@ import type { Node, Edge } from '@xyflow/react'
 import type { WorkflowState } from '@/types/workflow'
 import { getActionStatus } from '@/utils/getActionStatus'
 
-const TASK_W = 180
+const TASK_W = 200
 const TASK_H = 70
-const KYC_W = 150
+const KYC_W = 160
 const KYC_H = 50
 const HEADER_H = 50
-const PAD = 20
-const TASK_GAP = 16
-const KYC_GAP = 12
+const PAD = 28
+const TASK_GAP = 40
+const KYC_GAP = 14
 
 export function workflowToFlow(state: WorkflowState) {
   const nodes: Node[] = []
@@ -27,8 +27,8 @@ export function workflowToFlow(state: WorkflowState) {
       .filter((t) => t.actionId === action.id)
       .sort((a, b) => a.order - b.order)
 
-    let cursorY = HEADER_H + PAD
-    let maxWidth = TASK_W
+    let cursorX = PAD
+    let maxHeight = TASK_H
 
     for (let i = 0; i < actionTasks.length; i++) {
       const task = actionTasks[i]
@@ -40,10 +40,11 @@ export function workflowToFlow(state: WorkflowState) {
         parentId: action.id,
         extent: 'parent' as const,
         data: { label: task.title, status: task.status, assignedTo: task.assignedTo },
-        position: { x: PAD, y: cursorY },
+        position: { x: cursorX, y: HEADER_H + PAD },
+        style: { width: TASK_W },
       })
 
-      cursorY += TASK_H
+      let colHeight = TASK_H
 
       // Sequential task-to-task edges (dashed)
       if (i > 0) {
@@ -56,16 +57,12 @@ export function workflowToFlow(state: WorkflowState) {
         })
       }
 
-      // KYC children in horizontal row below task
+      // KYC children in vertical column below task
       if (task.children && task.children.length > 0) {
-        cursorY += TASK_GAP
-
-        const totalChildrenWidth =
-          task.children.length * KYC_W + (task.children.length - 1) * KYC_GAP
+        let childY = HEADER_H + PAD + TASK_H + TASK_GAP
 
         for (let j = 0; j < task.children.length; j++) {
           const child = task.children[j]
-          const childX = PAD + j * (KYC_W + KYC_GAP)
 
           nodes.push({
             id: child.id,
@@ -73,7 +70,8 @@ export function workflowToFlow(state: WorkflowState) {
             parentId: action.id,
             extent: 'parent' as const,
             data: { label: child.name, status: child.status },
-            position: { x: childX, y: cursorY },
+            position: { x: cursorX, y: childY },
+            style: { width: KYC_W },
           })
 
           edges.push({
@@ -82,17 +80,19 @@ export function workflowToFlow(state: WorkflowState) {
             target: child.id,
             type: 'smoothstep',
           })
+
+          childY += KYC_H + KYC_GAP
         }
 
-        maxWidth = Math.max(maxWidth, totalChildrenWidth)
-        cursorY += KYC_H
+        colHeight = TASK_H + TASK_GAP + task.children.length * KYC_H + (task.children.length - 1) * KYC_GAP
       }
 
-      cursorY += TASK_GAP
+      maxHeight = Math.max(maxHeight, colHeight)
+      cursorX += Math.max(TASK_W, KYC_W) + TASK_GAP
     }
 
-    const groupW = maxWidth + 2 * PAD
-    const groupH = cursorY - TASK_GAP + PAD // remove trailing gap, add padding
+    const groupW = cursorX - TASK_GAP + PAD // remove trailing gap, add padding
+    const groupH = HEADER_H + PAD + maxHeight + PAD
 
     groupDimensions[action.id] = { width: groupW, height: groupH }
 
@@ -130,7 +130,7 @@ export function workflowToFlow(state: WorkflowState) {
   // Pass 2: Dagre layout for group nodes only
   const g = new dagre.graphlib.Graph()
   g.setDefaultEdgeLabel(() => ({}))
-  g.setGraph({ rankdir: 'TB', nodesep: 60, ranksep: 80 })
+  g.setGraph({ rankdir: 'LR', nodesep: 60, ranksep: 100 })
 
   for (const action of sortedActions) {
     const dim = groupDimensions[action.id]

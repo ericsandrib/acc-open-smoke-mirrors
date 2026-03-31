@@ -13,8 +13,8 @@ export function TaskNode({ data }: NodeProps) {
   const status = data.status as TaskStatus
 
   return (
-    <div className="bg-card border border-border rounded-lg px-4 py-3 shadow-sm min-w-[160px]">
-      <Handle type="target" position={Position.Top} className="!bg-border" />
+    <div className="bg-card border border-border rounded-lg px-4 py-3 shadow-sm w-full">
+      <Handle type="target" position={Position.Left} className="!bg-border" />
       <div className="text-sm font-medium text-card-foreground">{data.label as string}</div>
       <div className="flex items-center justify-between mt-1 gap-2">
         <span className="text-[10px] text-muted-foreground">{data.assignedTo as string}</span>
@@ -22,7 +22,7 @@ export function TaskNode({ data }: NodeProps) {
           {status.replace('_', ' ')}
         </Badge>
       </div>
-      <Handle type="source" position={Position.Bottom} className="!bg-border" />
+      <Handle type="source" position={Position.Right} className="!bg-border" />
     </div>
   )
 }
