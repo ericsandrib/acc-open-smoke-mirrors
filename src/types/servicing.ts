@@ -9,6 +9,7 @@ export interface JourneyTask {
   title: string
   status: TaskStatus
   assignedTo: string
+  isSubTask?: boolean
 }
 
 export interface JourneyAction {

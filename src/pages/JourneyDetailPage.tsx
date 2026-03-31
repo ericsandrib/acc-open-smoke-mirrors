@@ -144,7 +144,7 @@ export function JourneyDetailPage() {
                               : 'hover:bg-muted text-foreground',
                           )}
                         >
-                          <span className="truncate">{task.title}</span>
+                          <span className={cn("truncate", task.isSubTask && "pl-3 text-xs text-muted-foreground")}>{task.title}</span>
                           <span className="flex items-center gap-1">
                             {isTaskSubmitted && task.status !== 'complete' && (
                               <Tooltip>

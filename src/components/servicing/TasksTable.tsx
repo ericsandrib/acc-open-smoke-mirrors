@@ -40,7 +40,13 @@ export function TasksTable() {
       <TableBody>
         {rows.map((row) => (
           <TableRow key={row.id} className="cursor-pointer" onClick={() => navigate(`/servicing/${row.journeyId}`)}>
-            <TableCell className="font-medium">{row.title}</TableCell>
+            <TableCell className="font-medium">
+              {row.isSubTask ? (
+                <span className="pl-4 text-muted-foreground">{row.title}</span>
+              ) : (
+                row.title
+              )}
+            </TableCell>
             <TableCell>{row.actionTitle}</TableCell>
             <TableCell>{row.journeyName}</TableCell>
             <TableCell>{row.relationshipName}</TableCell>

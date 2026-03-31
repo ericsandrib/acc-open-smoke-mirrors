@@ -16,14 +16,26 @@ function deriveLiveJourney(state: WorkflowState): Journey | null {
     const actionStatus = getActionStatus(state.tasks, action.id)
     const actionTasks = state.tasks
       .filter((t) => t.actionId === action.id)
-      .map((t) => ({
-        id: `${journeyId}-${t.id}`,
-        actionId: `${journeyId}-${action.id}`,
-        journeyId,
-        title: t.title,
-        status: t.status,
-        assignedTo: t.assignedTo,
-      }))
+      .flatMap((t) => {
+        const parent: JourneyTask = {
+          id: `${journeyId}-${t.id}`,
+          actionId: `${journeyId}-${action.id}`,
+          journeyId,
+          title: t.title,
+          status: t.status,
+          assignedTo: t.assignedTo,
+        }
+        const children: JourneyTask[] = (t.children ?? []).map((c) => ({
+          id: `${journeyId}-${c.id}`,
+          actionId: `${journeyId}-${action.id}`,
+          journeyId,
+          title: `KYC: ${c.name}`,
+          status: c.status,
+          assignedTo: t.assignedTo,
+          isSubTask: true,
+        }))
+        return [parent, ...children]
+      })
 
     return {
       id: `${journeyId}-${action.id}`,
