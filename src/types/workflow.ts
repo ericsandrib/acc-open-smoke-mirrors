@@ -10,6 +10,18 @@ export interface RelatedParty {
   email?: string
 }
 
+export type AccountType = 'brokerage' | 'ira' | 'roth_ira' | '401k' | 'trust' | 'checking' | 'savings'
+
+export interface FinancialAccount {
+  id: string
+  accountName: string
+  accountType?: AccountType
+  custodian?: string
+  accountNumber?: string
+  estimatedValue?: string
+  transferType?: 'full' | 'partial'
+}
+
 export interface Task {
   id: string
   title: string
@@ -38,6 +50,7 @@ export interface WorkflowState {
   actions: Action[]
   tasks: Task[]
   relatedParties: RelatedParty[]
+  financialAccounts: FinancialAccount[]
   activeTaskId: string
   flatTaskOrder: string[]
 }
@@ -50,5 +63,8 @@ export type WorkflowAction =
   | { type: 'ADD_RELATED_PARTY'; party: RelatedParty }
   | { type: 'UPDATE_RELATED_PARTY'; partyId: string; updates: Partial<Pick<RelatedParty, 'name' | 'relationship' | 'email'>> }
   | { type: 'REMOVE_RELATED_PARTY'; partyId: string }
+  | { type: 'ADD_FINANCIAL_ACCOUNT'; account: FinancialAccount }
+  | { type: 'UPDATE_FINANCIAL_ACCOUNT'; accountId: string; updates: Partial<Omit<FinancialAccount, 'id'>> }
+  | { type: 'REMOVE_FINANCIAL_ACCOUNT'; accountId: string }
   | { type: 'GO_NEXT' }
   | { type: 'GO_BACK' }

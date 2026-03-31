@@ -1,6 +1,6 @@
 import { createContext, useContext, useReducer, type ReactNode } from 'react'
 import type { WorkflowState, WorkflowAction, Task } from '@/types/workflow'
-import { actions, tasks, initialRelatedParties } from '@/data/seed'
+import { actions, tasks, initialRelatedParties, initialFinancialAccounts } from '@/data/seed'
 
 function computeFlatTaskOrder(allTasks: Task[], allActions: typeof actions): string[] {
   const order: string[] = []
@@ -28,6 +28,7 @@ const initialState: WorkflowState = {
   actions,
   tasks: tasks.map((t) => ({ ...t, children: t.children ? [...t.children] : undefined })),
   relatedParties: [...initialRelatedParties],
+  financialAccounts: [...initialFinancialAccounts],
   activeTaskId: tasks[0].id,
   flatTaskOrder: computeFlatTaskOrder(tasks, actions),
 }
@@ -123,6 +124,26 @@ function workflowReducer(state: WorkflowState, action: WorkflowAction): Workflow
       return {
         ...state,
         relatedParties: state.relatedParties.filter((p) => p.id !== action.partyId),
+      }
+    }
+
+    case 'ADD_FINANCIAL_ACCOUNT': {
+      return { ...state, financialAccounts: [...state.financialAccounts, action.account] }
+    }
+
+    case 'UPDATE_FINANCIAL_ACCOUNT': {
+      return {
+        ...state,
+        financialAccounts: state.financialAccounts.map((a) =>
+          a.id === action.accountId ? { ...a, ...action.updates } : a
+        ),
+      }
+    }
+
+    case 'REMOVE_FINANCIAL_ACCOUNT': {
+      return {
+        ...state,
+        financialAccounts: state.financialAccounts.filter((a) => a.id !== action.accountId),
       }
     }
 

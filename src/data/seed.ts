@@ -1,4 +1,4 @@
-import type { Action, Task, RelatedParty } from '@/types/workflow'
+import type { Action, Task, RelatedParty, FinancialAccount } from '@/types/workflow'
 
 export const actions: Action[] = [
   { id: 'collect-client-data', title: 'Collect Client Data', order: 1 },
@@ -68,4 +68,9 @@ export const initialRelatedParties: RelatedParty[] = [
   { id: 'member-1', name: 'John Smith', type: 'household_member' },
   { id: 'member-2', name: 'Jane Smith', type: 'household_member', relationship: 'Spouse' },
   { id: 'member-3', name: 'Robert Smith', type: 'household_member', relationship: 'Child' },
+]
+
+export const initialFinancialAccounts: FinancialAccount[] = [
+  { id: 'acct-1', accountName: 'Smith Family Trust', accountType: 'trust', custodian: 'Fidelity', estimatedValue: '2,500,000', transferType: 'full' },
+  { id: 'acct-2', accountName: 'John IRA', accountType: 'ira', custodian: 'Charles Schwab', accountNumber: '****4521', estimatedValue: '850,000', transferType: 'full' },
 ]
