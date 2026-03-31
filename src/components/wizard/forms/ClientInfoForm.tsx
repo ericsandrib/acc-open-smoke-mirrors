@@ -1,6 +1,6 @@
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { Select } from '@/components/ui/select'
+import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui/select'
 
 export function ClientInfoForm() {
   return (
@@ -28,13 +28,17 @@ export function ClientInfoForm() {
         <Input id="dob" type="date" />
       </div>
       <div className="space-y-2">
-        <Label htmlFor="clientType">Client Type</Label>
-        <Select id="clientType">
-          <option value="">Select type...</option>
-          <option value="individual">Individual</option>
-          <option value="joint">Joint</option>
-          <option value="trust">Trust</option>
-          <option value="corporate">Corporate</option>
+        <Label>Client Type</Label>
+        <Select>
+          <SelectTrigger>
+            <SelectValue placeholder="Select type..." />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="individual">Individual</SelectItem>
+            <SelectItem value="joint">Joint</SelectItem>
+            <SelectItem value="trust">Trust</SelectItem>
+            <SelectItem value="corporate">Corporate</SelectItem>
+          </SelectContent>
         </Select>
       </div>
     </div>

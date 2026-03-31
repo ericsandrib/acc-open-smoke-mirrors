@@ -1,6 +1,6 @@
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { Select } from '@/components/ui/select'
+import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui/select'
 import { Checkbox } from '@/components/ui/checkbox'
 
 export function Placeholder1Form() {
@@ -11,13 +11,17 @@ export function Placeholder1Form() {
         <Input id="accountNumber" placeholder="Auto-generated" disabled />
       </div>
       <div className="space-y-2">
-        <Label htmlFor="branchCode">Branch Code</Label>
-        <Select id="branchCode">
-          <option value="">Select branch...</option>
-          <option value="nyc">New York - 001</option>
-          <option value="lon">London - 002</option>
-          <option value="zurich">Zurich - 003</option>
-          <option value="singapore">Singapore - 004</option>
+        <Label>Branch Code</Label>
+        <Select>
+          <SelectTrigger>
+            <SelectValue placeholder="Select branch..." />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="nyc">New York - 001</SelectItem>
+            <SelectItem value="lon">London - 002</SelectItem>
+            <SelectItem value="zurich">Zurich - 003</SelectItem>
+            <SelectItem value="singapore">Singapore - 004</SelectItem>
+          </SelectContent>
         </Select>
       </div>
       <div className="space-y-2">

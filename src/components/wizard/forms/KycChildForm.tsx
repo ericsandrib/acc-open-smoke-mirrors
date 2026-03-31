@@ -1,7 +1,7 @@
 import { useWorkflow } from '@/stores/workflowStore'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { Select } from '@/components/ui/select'
+import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui/select'
 import { Checkbox } from '@/components/ui/checkbox'
 
 export function KycChildForm() {
@@ -20,12 +20,16 @@ export function KycChildForm() {
       </p>
 
       <div className="space-y-2">
-        <Label htmlFor="idType">ID Type</Label>
-        <Select id="idType">
-          <option value="">Select ID type...</option>
-          <option value="passport">Passport</option>
-          <option value="drivers-license">Driver's License</option>
-          <option value="national-id">National ID</option>
+        <Label>ID Type</Label>
+        <Select>
+          <SelectTrigger>
+            <SelectValue placeholder="Select ID type..." />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="passport">Passport</SelectItem>
+            <SelectItem value="drivers-license">Driver's License</SelectItem>
+            <SelectItem value="national-id">National ID</SelectItem>
+          </SelectContent>
         </Select>
       </div>
       <div className="space-y-2">
@@ -41,12 +45,16 @@ export function KycChildForm() {
         <Input id="expiryDate" type="date" />
       </div>
       <div className="space-y-2">
-        <Label htmlFor="riskRating">Risk Rating</Label>
-        <Select id="riskRating">
-          <option value="">Select risk rating...</option>
-          <option value="low">Low</option>
-          <option value="medium">Medium</option>
-          <option value="high">High</option>
+        <Label>Risk Rating</Label>
+        <Select>
+          <SelectTrigger>
+            <SelectValue placeholder="Select risk rating..." />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="low">Low</SelectItem>
+            <SelectItem value="medium">Medium</SelectItem>
+            <SelectItem value="high">High</SelectItem>
+          </SelectContent>
         </Select>
       </div>
       <div className="flex items-center gap-2">

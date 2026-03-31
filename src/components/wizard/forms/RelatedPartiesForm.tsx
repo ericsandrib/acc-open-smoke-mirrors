@@ -1,6 +1,6 @@
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { Select } from '@/components/ui/select'
+import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui/select'
 import { Button } from '@/components/ui/button'
 import { Plus } from 'lucide-react'
 
@@ -15,14 +15,18 @@ export function RelatedPartiesForm() {
             <Input id="rp1Name" placeholder="Jane Smith" />
           </div>
           <div className="space-y-2">
-            <Label htmlFor="rp1Relationship">Relationship</Label>
-            <Select id="rp1Relationship">
-              <option value="">Select...</option>
-              <option value="spouse">Spouse</option>
-              <option value="child">Child</option>
-              <option value="parent">Parent</option>
-              <option value="business-partner">Business Partner</option>
-              <option value="beneficiary">Beneficiary</option>
+            <Label>Relationship</Label>
+            <Select>
+              <SelectTrigger>
+                <SelectValue placeholder="Select..." />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="spouse">Spouse</SelectItem>
+                <SelectItem value="child">Child</SelectItem>
+                <SelectItem value="parent">Parent</SelectItem>
+                <SelectItem value="business-partner">Business Partner</SelectItem>
+                <SelectItem value="beneficiary">Beneficiary</SelectItem>
+              </SelectContent>
             </Select>
           </div>
         </div>
