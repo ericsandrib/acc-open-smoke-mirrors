@@ -21,6 +21,7 @@ export function WizardFooter() {
   const isFirst = idx === 0
   const isLast = idx === state.flatTaskOrder.length - 1
   const activeStatus = getActiveTaskStatus(state)
+  const isSubmitted = state.submittedTaskIds.includes(state.activeTaskId)
 
   return (
     <footer className="border-t border-border bg-background px-6 py-3 flex justify-between items-center shrink-0">
@@ -34,13 +35,22 @@ export function WizardFooter() {
       </Button>
 
       <div className="flex items-center gap-2">
-        {activeStatus === 'in_progress' && (
+        {activeStatus === 'in_progress' && !isSubmitted && (
           <Button
             variant="outline"
             onClick={() => dispatch({ type: 'CONFIRM_TASK', taskId: state.activeTaskId })}
           >
             <Check className="h-4 w-4" />
             Confirm
+          </Button>
+        )}
+        {isSubmitted && activeStatus === 'in_progress' && (
+          <Button
+            variant="outline"
+            onClick={() => dispatch({ type: 'REOPEN_TASK', taskId: state.activeTaskId })}
+          >
+            <Pencil className="h-4 w-4" />
+            Edit
           </Button>
         )}
         {activeStatus === 'complete' && (
@@ -59,7 +69,7 @@ export function WizardFooter() {
         {isLast ? (
           <Button
             onClick={() => dispatch({ type: 'CONFIRM_TASK', taskId: state.activeTaskId })}
-            disabled={activeStatus === 'complete'}
+            disabled={activeStatus === 'complete' || isSubmitted}
           >
             <Check className="h-4 w-4" />
             Complete

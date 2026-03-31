@@ -26,5 +26,6 @@ export interface Journey {
   status: JourneyStatus
   createdAt: string
   assignedTo: string
+  createdBy: string
   actions: JourneyAction[]
 }

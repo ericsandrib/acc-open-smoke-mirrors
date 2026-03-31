@@ -7,6 +7,7 @@ function buildJourney(
   name: string,
   relationshipName: string,
   assignedTo: string,
+  createdBy: string,
   createdAt: string,
   taskStatuses: Record<string, TaskStatus>,
 ): Journey {
@@ -19,7 +20,7 @@ function buildJourney(
         journeyId: id,
         title: t.title,
         status: taskStatuses[t.id] ?? 'not_started' as TaskStatus,
-        assignedTo: t.assignedTo,
+        assignedTo,
       }))
 
     const allComplete = actionTasks.every((t) => t.status === 'complete')
@@ -51,6 +52,7 @@ function buildJourney(
     name,
     relationshipName,
     assignedTo,
+    createdBy,
     createdAt,
     status: allActionsComplete
       ? 'complete'
@@ -62,7 +64,7 @@ function buildJourney(
 }
 
 export const seededJourneys: Journey[] = [
-  buildJourney('journey-smith', 'Smith Family Onboarding', 'The Smith Family', 'Alice Chen', '2026-02-10', {
+  buildJourney('journey-smith', 'Smith Family Onboarding', 'The Smith Family', 'Alice Chen', 'Edward Kim', '2026-02-10', {
     'client-info': 'complete',
     'related-parties': 'complete',
     'financial-accounts': 'complete',
@@ -70,7 +72,7 @@ export const seededJourneys: Journey[] = [
     'placeholder-1': 'complete',
     'placeholder-2': 'complete',
   }),
-  buildJourney('journey-johnson', 'Johnson Trust Onboarding', 'Johnson Trust', 'Bob Martinez', '2026-03-05', {
+  buildJourney('journey-johnson', 'Johnson Trust Onboarding', 'Johnson Trust', 'Bob Martinez', 'Alice Chen', '2026-03-05', {
     'client-info': 'complete',
     'related-parties': 'complete',
     'financial-accounts': 'complete',
@@ -78,7 +80,7 @@ export const seededJourneys: Journey[] = [
     'placeholder-1': 'not_started',
     'placeholder-2': 'not_started',
   }),
-  buildJourney('journey-davis', 'Davis Household Onboarding', 'Davis Household', 'Carol Williams', '2026-03-20', {
+  buildJourney('journey-davis', 'Davis Household Onboarding', 'Davis Household', 'Carol Williams', 'Bob Martinez', '2026-03-20', {
     'client-info': 'in_progress',
     'related-parties': 'not_started',
     'financial-accounts': 'not_started',
@@ -86,9 +88,9 @@ export const seededJourneys: Journey[] = [
     'placeholder-1': 'not_started',
     'placeholder-2': 'not_started',
   }),
-  buildJourney('journey-smith-2', 'Smith Family Onboarding 2', 'The Smith Family', 'Alice Chen', '2026-03-28', {
-    'client-info': 'not_started',
-    'related-parties': 'not_started',
+  buildJourney('journey-garcia', 'Garcia Family Onboarding', 'The Garcia Family', 'Diana Torres', 'Carol Williams', '2026-03-28', {
+    'client-info': 'complete',
+    'related-parties': 'in_progress',
     'financial-accounts': 'not_started',
     'kyc-review': 'not_started',
     'placeholder-1': 'not_started',

@@ -16,7 +16,7 @@ An onboarding journey is a guided, multi-step workflow that an advisor initiates
 
 ### How it starts
 
-Advisors manage prospects through the platform's existing [relationship profiles](./Relationships/relationships.md). When discussions with a prospect reach the right stage, the advisor creates an onboarding journey from the dashboard. This selects the relationship (household) and kicks off the workflow.
+Advisors manage prospects through the platform's existing [relationship profiles](./product/relationships.md). When discussions with a prospect reach the right stage, the advisor creates an onboarding journey from the dashboard. This selects the relationship (household) and kicks off the workflow.
 
 This prototype picks up at the point where the advisor is ready to start onboarding. Everything upstream (prospect management, initial conversations, relationship creation) is out of scope.
 
@@ -24,7 +24,7 @@ This prototype picks up at the point where the advisor is ready to start onboard
 
 Each onboarding journey covers a **household** — a primary contact and their related members (spouse, children, dependents, etc.). The primary household member is the main point of contact, but the journey collects data for and runs KYC on multiple individuals within the household.
 
-See [Households & Organizations](./Relationships/households.md) for how the platform models household structures.
+See [Households & Organizations](./product/households.md) for how the platform models household structures.
 
 ### The workflow
 

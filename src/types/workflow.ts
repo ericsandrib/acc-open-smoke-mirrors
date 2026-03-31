@@ -65,6 +65,8 @@ export interface WorkflowState {
   taskData: Record<string, Record<string, unknown>>
   journeyName?: string
   journeyId?: string
+  assignedTo?: string
+  submittedTaskIds: string[]
 }
 
 export type WorkflowAction =
@@ -83,6 +85,7 @@ export type WorkflowAction =
   | { type: 'UPDATE_FINANCIAL_ACCOUNT'; accountId: string; updates: Partial<Omit<FinancialAccount, 'id'>> }
   | { type: 'REMOVE_FINANCIAL_ACCOUNT'; accountId: string }
   | { type: 'SET_TASK_DATA'; taskId: string; fields: Record<string, unknown> }
-  | { type: 'INITIALIZE_FROM_RELATIONSHIP'; relatedParties: RelatedParty[]; financialAccounts: FinancialAccount[]; clientInfo: Record<string, unknown>; journeyName?: string }
+  | { type: 'INITIALIZE_FROM_RELATIONSHIP'; relatedParties: RelatedParty[]; financialAccounts: FinancialAccount[]; clientInfo: Record<string, unknown>; journeyName?: string; assignedTo?: string }
+  | { type: 'SET_JOURNEY_ASSIGNEE'; assignee: string }
   | { type: 'GO_NEXT' }
   | { type: 'GO_BACK' }

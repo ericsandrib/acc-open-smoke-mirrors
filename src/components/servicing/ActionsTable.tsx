@@ -17,7 +17,8 @@ export function ActionsTable() {
   const rows = journeys.flatMap((journey) =>
     journey.actions.map((action) => ({
       ...action,
-      journeyName: journey.relationshipName,
+      journeyName: journey.name,
+      relationshipName: journey.relationshipName,
       journeyId: journey.id,
     })),
   )
@@ -28,6 +29,7 @@ export function ActionsTable() {
         <TableRow>
           <TableHead className="w-[200px]">Action</TableHead>
           <TableHead>Journey</TableHead>
+          <TableHead>Relationship</TableHead>
           <TableHead>Status</TableHead>
           <TableHead className="text-right">Tasks Complete</TableHead>
         </TableRow>
@@ -39,6 +41,7 @@ export function ActionsTable() {
             <TableRow key={row.id} className="cursor-pointer" onClick={() => navigate(`/servicing/${row.journeyId}`)}>
               <TableCell className="font-medium">{row.title}</TableCell>
               <TableCell>{row.journeyName}</TableCell>
+              <TableCell>{row.relationshipName}</TableCell>
               <TableCell>
                 <StatusBadge status={row.status} />
               </TableCell>

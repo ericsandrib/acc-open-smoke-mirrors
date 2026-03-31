@@ -32,6 +32,7 @@ const initialState: WorkflowState = {
   activeTaskId: tasks[0].id,
   flatTaskOrder: computeFlatTaskOrder(tasks, actions),
   taskData: {},
+  submittedTaskIds: [],
 }
 
 function workflowReducer(state: WorkflowState, action: WorkflowAction): WorkflowState {
@@ -60,21 +61,45 @@ function workflowReducer(state: WorkflowState, action: WorkflowAction): Workflow
     }
 
     case 'CONFIRM_TASK': {
-      const newTasks = state.tasks.map((t) => {
-        if (t.id === action.taskId && t.status === 'in_progress') {
-          return { ...t, status: 'complete' as const }
-        }
+      const newSubmitted = state.submittedTaskIds.includes(action.taskId)
+        ? state.submittedTaskIds
+        : [...state.submittedTaskIds, action.taskId]
+
+      // Collect ALL task IDs (parents + children) regardless of status
+      const allTaskIds: string[] = []
+      for (const t of state.tasks) {
+        allTaskIds.push(t.id)
         if (t.children) {
-          const newChildren = t.children.map((c) =>
-            c.id === action.taskId && c.status === 'in_progress'
-              ? { ...c, status: 'complete' as const }
-              : c
-          )
-          return { ...t, children: newChildren }
+          for (const c of t.children) {
+            allTaskIds.push(c.id)
+          }
         }
-        return t
-      })
-      return { ...state, tasks: newTasks }
+      }
+
+      // Check if every task has been submitted
+      const allSubmitted = allTaskIds.length > 0 && allTaskIds.every((id) => newSubmitted.includes(id))
+
+      if (allSubmitted) {
+        // Final task — flip everything to complete
+        const newTasks = state.tasks.map((t) => {
+          const updatedTask = newSubmitted.includes(t.id)
+            ? { ...t, status: 'complete' as const }
+            : t
+          if (updatedTask.children) {
+            const newChildren = updatedTask.children.map((c) =>
+              newSubmitted.includes(c.id)
+                ? { ...c, status: 'complete' as const }
+                : c
+            )
+            return { ...updatedTask, children: newChildren }
+          }
+          return updatedTask
+        })
+        return { ...state, tasks: newTasks, submittedTaskIds: [] }
+      }
+
+      // Not the last task — just record the submission, keep status as in_progress
+      return { ...state, submittedTaskIds: newSubmitted }
     }
 
     case 'REOPEN_TASK': {
@@ -92,7 +117,19 @@ function workflowReducer(state: WorkflowState, action: WorkflowAction): Workflow
         }
         return t
       })
-      return { ...state, tasks: newTasks }
+      return {
+        ...state,
+        tasks: newTasks,
+        submittedTaskIds: state.submittedTaskIds.filter((id) => id !== action.taskId),
+      }
+    }
+
+    case 'SET_JOURNEY_ASSIGNEE': {
+      const newTasks = state.tasks.map((t) => ({
+        ...t,
+        assignedTo: action.assignee,
+      }))
+      return { ...state, tasks: newTasks, assignedTo: action.assignee }
     }
 
     case 'SPAWN_KYC_CHILD': {
@@ -236,9 +273,11 @@ function workflowReducer(state: WorkflowState, action: WorkflowAction): Workflow
     }
 
     case 'INITIALIZE_FROM_RELATIONSHIP': {
+      const assignee = action.assignedTo ?? 'Unassigned'
       const freshTasks = tasks.map((t) => ({
         ...t,
         status: 'not_started' as const,
+        assignedTo: assignee,
         children: t.children ? [] : undefined,
       }))
       const newOrder = computeFlatTaskOrder(freshTasks, actions)
@@ -254,6 +293,8 @@ function workflowReducer(state: WorkflowState, action: WorkflowAction): Workflow
         },
         journeyName: action.journeyName,
         journeyId: `journey-${Date.now()}`,
+        assignedTo: assignee,
+        submittedTaskIds: [],
       }
     }
 

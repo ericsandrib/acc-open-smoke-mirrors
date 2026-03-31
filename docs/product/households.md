@@ -136,6 +136,6 @@ The Passport quick-view card includes a Household tab listing all members with:
 
 ## Related
 
-- [Relationship Profiles](./01-relationship-profiles.md) — the full relationship record and how it is structured
-- [Investments, Communications & Documents](./03-investments-communications-documents.md) — the supporting data tabs on each relationship profile
-- [Embeddable UI & Integration](../07-enterprise/03-embeddable-ui-and-integration.md) — how external systems like CRM integrate with the platform
+- [Relationship Profiles](./relationships.md) — the full relationship record and how it is structured
+- Investments, Communications & Documents — the supporting data tabs on each relationship profile
+- Embeddable UI & Integration — how external systems like CRM integrate with the platform

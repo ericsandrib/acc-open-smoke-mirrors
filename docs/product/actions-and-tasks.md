@@ -194,6 +194,6 @@ When a task is paused, the user selects who or what they are waiting for:
 
 ## Related
 
-- [Workflow Lifecycle](./02-workflow-lifecycle.md) — Status definitions, transition rules, and how work progresses through the platform
-- [Journeys](./03-journeys.md) — Multi-action workflows that orchestrate sequences of actions
-- [SLAs, Deadlines & Compliance](./04-slas-deadlines-compliance.md) — How the platform calculates deadlines, tracks standing, and maintains audit trails
+- [Workflow Lifecycle](./workflow-lifecycle.md) — Status definitions, transition rules, and how work progresses through the platform
+- Journeys — Multi-action workflows that orchestrate sequences of actions
+- SLAs, Deadlines & Compliance — How the platform calculates deadlines, tracks standing, and maintains audit trails

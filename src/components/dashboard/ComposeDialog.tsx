@@ -15,6 +15,7 @@ import {
 import { useWorkflow } from '@/stores/workflowStore'
 import { useServicing } from '@/stores/servicingStore'
 import { relationships } from '@/data/relationships'
+import { teamMembers } from '@/data/teamMembers'
 
 interface ComposeDialogProps {
   onClose: () => void
@@ -35,6 +36,7 @@ export function ComposeDialog({ onClose }: ComposeDialogProps) {
   const [journeyName, setJourneyName] = useState('')
   const [actionType, setActionType] = useState('')
   const [relationshipId, setRelationshipId] = useState('')
+  const [assignedTo, setAssignedTo] = useState('')
   const { dispatch } = useWorkflow()
   const { currentLiveJourney, saveCurrentJourney } = useServicing()
   const navigate = useNavigate()
@@ -62,6 +64,7 @@ export function ComposeDialog({ onClose }: ComposeDialogProps) {
         clientType: relationship.primaryContact.clientType ?? '',
       },
       journeyName: journeyName || 'Client Onboarding',
+      assignedTo: assignedTo || undefined,
     })
     navigate('/wizard')
   }
@@ -147,6 +150,22 @@ export function ComposeDialog({ onClose }: ComposeDialogProps) {
                 {relationships.map((r) => (
                   <SelectItem key={r.id} value={r.id}>
                     {r.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="space-y-2">
+            <Label>Assign To</Label>
+            <Select value={assignedTo} onValueChange={setAssignedTo}>
+              <SelectTrigger>
+                <SelectValue placeholder="Select a team member..." />
+              </SelectTrigger>
+              <SelectContent>
+                {teamMembers.map((tm) => (
+                  <SelectItem key={tm.id} value={tm.name}>
+                    {tm.name}
                   </SelectItem>
                 ))}
               </SelectContent>

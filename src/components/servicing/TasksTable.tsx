@@ -19,7 +19,8 @@ export function TasksTable() {
       action.tasks.map((task) => ({
         ...task,
         actionTitle: action.title,
-        journeyName: journey.relationshipName,
+        journeyName: journey.name,
+        relationshipName: journey.relationshipName,
       })),
     ),
   )
@@ -31,6 +32,7 @@ export function TasksTable() {
           <TableHead className="w-[200px]">Task</TableHead>
           <TableHead>Action</TableHead>
           <TableHead>Journey</TableHead>
+          <TableHead>Relationship</TableHead>
           <TableHead>Status</TableHead>
           <TableHead>Assigned To</TableHead>
         </TableRow>
@@ -41,6 +43,7 @@ export function TasksTable() {
             <TableCell className="font-medium">{row.title}</TableCell>
             <TableCell>{row.actionTitle}</TableCell>
             <TableCell>{row.journeyName}</TableCell>
+            <TableCell>{row.relationshipName}</TableCell>
             <TableCell>
               <StatusBadge status={row.status} />
             </TableCell>

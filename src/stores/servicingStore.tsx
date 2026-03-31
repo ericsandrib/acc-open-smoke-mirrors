@@ -43,7 +43,8 @@ function deriveLiveJourney(state: WorkflowState): Journey | null {
     relationshipName: primaryParty.name ?? 'Current Journey',
     status: allComplete ? 'complete' : anyStarted ? 'in_progress' : 'not_started',
     createdAt: new Date().toISOString().split('T')[0],
-    assignedTo: 'Relationship Manager',
+    assignedTo: state.assignedTo ?? 'Unassigned',
+    createdBy: state.assignedTo ?? 'Unassigned',
     actions: journeyActions,
   }
 }
@@ -54,13 +55,26 @@ interface ServicingContextValue {
   allTasks: JourneyTask[]
   currentLiveJourney: Journey | null
   saveCurrentJourney: (journey: Journey) => void
+  updateJourneyAssignee: (journeyId: string, assignee: string) => void
 }
 
 const ServicingContext = createContext<ServicingContextValue | null>(null)
 
+function applyAssigneeOverride(journey: Journey, assignee: string): Journey {
+  return {
+    ...journey,
+    assignedTo: assignee,
+    actions: journey.actions.map((a) => ({
+      ...a,
+      tasks: a.tasks.map((t) => ({ ...t, assignedTo: assignee })),
+    })),
+  }
+}
+
 export function ServicingProvider({ children }: { children: ReactNode }) {
-  const { state } = useWorkflow()
+  const { state, dispatch } = useWorkflow()
   const [savedJourneys, setSavedJourneys] = useState<Journey[]>([])
+  const [assigneeOverrides, setAssigneeOverrides] = useState<Record<string, string>>({})
 
   const liveJourney = deriveLiveJourney(state)
 
@@ -68,11 +82,24 @@ export function ServicingProvider({ children }: { children: ReactNode }) {
     setSavedJourneys((prev) => [...prev, journey])
   }, [])
 
+  const updateJourneyAssignee = useCallback((journeyId: string, assignee: string) => {
+    // For the live journey, dispatch to workflow store
+    if (liveJourney && journeyId === liveJourney.id) {
+      dispatch({ type: 'SET_JOURNEY_ASSIGNEE', assignee })
+      return
+    }
+    // For seeded/saved journeys, store override
+    setAssigneeOverrides((prev) => ({ ...prev, [journeyId]: assignee }))
+  }, [liveJourney, dispatch])
+
   const journeys = [
     ...savedJourneys,
     ...seededJourneys,
     ...(liveJourney ? [liveJourney] : []),
-  ]
+  ].map((j) => {
+    const override = assigneeOverrides[j.id]
+    return override ? applyAssigneeOverride(j, override) : j
+  })
 
   const allActions = journeys.flatMap((j) =>
     j.actions.map((a) => ({ ...a, journeyId: j.id })),
@@ -85,7 +112,7 @@ export function ServicingProvider({ children }: { children: ReactNode }) {
   )
 
   return (
-    <ServicingContext.Provider value={{ journeys, allActions, allTasks, currentLiveJourney: liveJourney, saveCurrentJourney }}>
+    <ServicingContext.Provider value={{ journeys, allActions, allTasks, currentLiveJourney: liveJourney, saveCurrentJourney, updateJourneyAssignee }}>
       {children}
     </ServicingContext.Provider>
   )

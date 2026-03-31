@@ -244,8 +244,8 @@ The platform tracks the following data points per relationship. Column visibilit
 
 ## Related
 
-- [Households & Organizations](./02-households-and-organizations.md) — how the platform models families, dependents, and organizational structures
-- [Investments, Communications & Documents](./03-investments-communications-documents.md) — the supporting data tabs on each relationship profile
-- [Actions & Tasks](../04-servicing/01-actions-and-tasks.md) — work items tracked per relationship
-- [Meeting Management](../05-meetings/01-meeting-management.md) — meetings linked to relationships
-- [Views, Filters & Column Controls](../06-configurability/02-views-filters-column-controls.md) — detailed documentation on saved views and table configuration
+- [Households & Organizations](./households.md) — how the platform models families, dependents, and organizational structures
+- [Actions & Tasks](./actions-and-tasks.md) — work items tracked per relationship
+- Investments, Communications & Documents — the supporting data tabs on each relationship profile
+- Meeting Management — meetings linked to relationships
+- Views, Filters & Column Controls — detailed documentation on saved views and table configuration

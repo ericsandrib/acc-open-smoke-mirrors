@@ -1,12 +1,20 @@
 import { useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
-import { ArrowLeft, Circle, Loader, CheckCircle2, Ban } from 'lucide-react'
+import { ArrowLeft, Circle, Loader, CheckCircle2, Ban, CheckCheck } from 'lucide-react'
 import { useServicing } from '@/stores/servicingStore'
 import { useWorkflow } from '@/stores/workflowStore'
 import { StatusBadge as ServicingStatusBadge } from '@/components/servicing/StatusBadge'
 import { Button } from '@/components/ui/button'
 import { ThemeToggle } from '@/components/ui/theme-toggle'
+import {
+  Select,
+  SelectTrigger,
+  SelectValue,
+  SelectContent,
+  SelectItem,
+} from '@/components/ui/select'
 import { cn } from '@/lib/utils'
+import { teamMembers } from '@/data/teamMembers'
 import type { TaskStatus } from '@/types/workflow'
 import type { JourneyTask } from '@/types/servicing'
 import {
@@ -62,7 +70,7 @@ function getActionStatus(tasks: JourneyTask[]): TaskStatus {
 
 export function JourneyDetailPage() {
   const { journeyId } = useParams<{ journeyId: string }>()
-  const { journeys } = useServicing()
+  const { journeys, updateJourneyAssignee } = useServicing()
   const { state: workflowState } = useWorkflow()
   const navigate = useNavigate()
 
@@ -121,22 +129,39 @@ export function JourneyDetailPage() {
                   <TaskStatusBadge status={getActionStatus(action.tasks)} />
                 </div>
                 <ul className="space-y-1">
-                  {action.tasks.map((task) => (
-                    <li key={task.id}>
-                      <button
-                        onClick={() => setActiveTaskId(task.id)}
-                        className={cn(
-                          'w-full text-left px-3 py-2 rounded-md text-sm flex items-center justify-between gap-2 transition-colors',
-                          activeTaskId === task.id
-                            ? 'bg-accent text-accent-foreground font-medium'
-                            : 'hover:bg-muted text-foreground',
-                        )}
-                      >
-                        <span className="truncate">{task.title}</span>
-                        <TaskStatusBadge status={task.status} />
-                      </button>
-                    </li>
-                  ))}
+                  {action.tasks.map((task) => {
+                    const isTaskSubmitted = workflowState.submittedTaskIds.includes(
+                      task.id.replace(`${journey.id}-`, '')
+                    ) || workflowState.submittedTaskIds.includes(task.id)
+                    return (
+                      <li key={task.id}>
+                        <button
+                          onClick={() => setActiveTaskId(task.id)}
+                          className={cn(
+                            'w-full text-left px-3 py-2 rounded-md text-sm flex items-center justify-between gap-2 transition-colors',
+                            activeTaskId === task.id
+                              ? 'bg-accent text-accent-foreground font-medium'
+                              : 'hover:bg-muted text-foreground',
+                          )}
+                        >
+                          <span className="truncate">{task.title}</span>
+                          <span className="flex items-center gap-1">
+                            {isTaskSubmitted && task.status !== 'complete' && (
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <CheckCheck className="h-3 w-3 text-blue-500 shrink-0" />
+                                </TooltipTrigger>
+                                <TooltipContent side="right">
+                                  <p>Submitted</p>
+                                </TooltipContent>
+                              </Tooltip>
+                            )}
+                            <TaskStatusBadge status={task.status} />
+                          </span>
+                        </button>
+                      </li>
+                    )
+                  })}
                 </ul>
               </div>
             ))}
@@ -218,7 +243,25 @@ export function JourneyDetailPage() {
                 </div>
                 <div>
                   <span className="text-muted-foreground">Assigned To</span>
-                  <p className="font-medium text-foreground">{journey.assignedTo}</p>
+                  <Select
+                    value={journey.assignedTo}
+                    onValueChange={(value) => updateJourneyAssignee(journey.id, value)}
+                  >
+                    <SelectTrigger className="mt-1 h-8 text-sm">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {teamMembers.map((tm) => (
+                        <SelectItem key={tm.id} value={tm.name}>
+                          {tm.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div>
+                  <span className="text-muted-foreground">Created By</span>
+                  <p className="font-medium text-foreground">{journey.createdBy}</p>
                 </div>
                 <div>
                   <span className="text-muted-foreground">Created</span>
