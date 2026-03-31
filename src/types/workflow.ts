@@ -1,13 +1,21 @@
 export type TaskStatus = 'not_started' | 'in_progress' | 'complete' | 'blocked'
 
-export type RelatedPartyType = 'household_member' | 'related_party'
+export type RelatedPartyType = 'household_member' | 'related_contact' | 'related_organization'
 
 export interface RelatedParty {
   id: string
   name: string
+  firstName?: string
+  lastName?: string
+  organizationName?: string
   type: RelatedPartyType
   relationship?: string
+  relationshipCategory?: string
+  role?: string
+  isPrimary?: boolean
   email?: string
+  phone?: string
+  dob?: string
   kycStatus?: 'verified' | 'needs_kyc'
 }
 
@@ -62,7 +70,8 @@ export type WorkflowAction =
   | { type: 'SPAWN_KYC_CHILD'; parentTaskId: string; childName: string }
   | { type: 'REMOVE_KYC_CHILD'; parentTaskId: string; childId: string }
   | { type: 'ADD_RELATED_PARTY'; party: RelatedParty }
-  | { type: 'UPDATE_RELATED_PARTY'; partyId: string; updates: Partial<Pick<RelatedParty, 'name' | 'relationship' | 'email'>> }
+  | { type: 'UPDATE_RELATED_PARTY'; partyId: string; updates: Partial<Omit<RelatedParty, 'id' | 'type' | 'isPrimary'>> }
+  | { type: 'SET_PRIMARY_MEMBER'; partyId: string }
   | { type: 'REMOVE_RELATED_PARTY'; partyId: string }
   | { type: 'ADD_FINANCIAL_ACCOUNT'; account: FinancialAccount }
   | { type: 'UPDATE_FINANCIAL_ACCOUNT'; accountId: string; updates: Partial<Omit<FinancialAccount, 'id'>> }

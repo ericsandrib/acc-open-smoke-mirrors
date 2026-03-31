@@ -13,9 +13,12 @@ export const relationships: Relationship[] = [
       clientType: 'joint',
     },
     relatedParties: [
-      { id: 'member-1', name: 'John Smith', type: 'household_member', kycStatus: 'verified' },
-      { id: 'member-2', name: 'Jane Smith', type: 'household_member', relationship: 'Spouse', kycStatus: 'needs_kyc' },
-      { id: 'member-3', name: 'Robert Smith', type: 'household_member', relationship: 'Child', kycStatus: 'needs_kyc' },
+      { id: 'member-1', name: 'John Smith', firstName: 'John', lastName: 'Smith', type: 'household_member', role: 'Client', isPrimary: true, email: 'john.smith@example.com', phone: '+1 (555) 123-4567', dob: '1975-03-15', kycStatus: 'verified' },
+      { id: 'member-2', name: 'Jane Smith', firstName: 'Jane', lastName: 'Smith', type: 'household_member', relationship: 'Spouse', role: 'Spouse', email: 'jane.smith@example.com', phone: '+1 (555) 123-4568', dob: '1977-08-22', kycStatus: 'needs_kyc' },
+      { id: 'member-3', name: 'Robert Smith', firstName: 'Robert', lastName: 'Smith', type: 'household_member', relationship: 'Child', role: 'Dependent', dob: '2005-01-10', kycStatus: 'needs_kyc' },
+      { id: 'contact-1', name: 'Margaret Smith', firstName: 'Margaret', lastName: 'Smith', type: 'related_contact', relationship: 'Parent', relationshipCategory: 'Family', dob: '1948-06-15' },
+      { id: 'contact-2', name: 'David Chen', firstName: 'David', lastName: 'Chen', type: 'related_contact', relationship: 'Attorney', relationshipCategory: 'Professional', email: 'dchen@lawfirm.com', phone: '+1 (555) 987-6543' },
+      { id: 'org-1', name: 'Smith Family Trust LLC', organizationName: 'Smith Family Trust LLC', type: 'related_organization', role: 'Trust', relationshipCategory: 'Legal' },
     ],
     financialAccounts: [
       { id: 'acct-1', accountName: 'Smith Family Trust', accountType: 'trust', custodian: 'Fidelity', estimatedValue: '2,500,000' },
@@ -34,8 +37,10 @@ export const relationships: Relationship[] = [
       clientType: 'trust',
     },
     relatedParties: [
-      { id: 'johnson-1', name: 'Michael Johnson', type: 'household_member', kycStatus: 'verified' },
-      { id: 'johnson-2', name: 'Sarah Johnson', type: 'household_member', relationship: 'Spouse', kycStatus: 'verified' },
+      { id: 'johnson-1', name: 'Michael Johnson', firstName: 'Michael', lastName: 'Johnson', type: 'household_member', role: 'Client', isPrimary: true, email: 'michael.johnson@example.com', phone: '+1 (555) 234-5678', dob: '1968-07-22', kycStatus: 'verified' },
+      { id: 'johnson-2', name: 'Sarah Johnson', firstName: 'Sarah', lastName: 'Johnson', type: 'household_member', relationship: 'Spouse', role: 'Spouse', email: 'sarah.johnson@example.com', phone: '+1 (555) 234-5679', dob: '1970-03-14', kycStatus: 'verified' },
+      { id: 'johnson-contact-1', name: 'Patricia Wells', firstName: 'Patricia', lastName: 'Wells', type: 'related_contact', relationship: 'Accountant', relationshipCategory: 'Professional', email: 'pwells@accounting.com', phone: '+1 (555) 345-0001' },
+      { id: 'johnson-org-1', name: 'Johnson Holdings Inc', organizationName: 'Johnson Holdings Inc', type: 'related_organization', role: 'Business Entity', relationshipCategory: 'Business' },
     ],
     financialAccounts: [
       { id: 'johnson-acct-1', accountName: 'Johnson Family Trust', accountType: 'trust', custodian: 'Vanguard', estimatedValue: '4,200,000' },
@@ -54,9 +59,11 @@ export const relationships: Relationship[] = [
       clientType: 'individual',
     },
     relatedParties: [
-      { id: 'davis-1', name: 'Emily Davis', type: 'household_member', kycStatus: 'needs_kyc' },
-      { id: 'davis-2', name: 'James Davis', type: 'household_member', relationship: 'Spouse', kycStatus: 'needs_kyc' },
-      { id: 'davis-3', name: 'Olivia Davis', type: 'household_member', relationship: 'Child', kycStatus: 'needs_kyc' },
+      { id: 'davis-1', name: 'Emily Davis', firstName: 'Emily', lastName: 'Davis', type: 'household_member', role: 'Client', isPrimary: true, email: 'emily.davis@example.com', phone: '+1 (555) 345-6789', dob: '1982-11-08', kycStatus: 'needs_kyc' },
+      { id: 'davis-2', name: 'James Davis', firstName: 'James', lastName: 'Davis', type: 'household_member', relationship: 'Spouse', role: 'Spouse', email: 'james.davis@example.com', phone: '+1 (555) 345-6790', dob: '1980-05-03', kycStatus: 'needs_kyc' },
+      { id: 'davis-3', name: 'Olivia Davis', firstName: 'Olivia', lastName: 'Davis', type: 'household_member', relationship: 'Child', role: 'Dependent', dob: '2012-09-17', kycStatus: 'needs_kyc' },
+      { id: 'davis-contact-1', name: 'Richard Palmer', firstName: 'Richard', lastName: 'Palmer', type: 'related_contact', relationship: 'Financial Advisor', relationshipCategory: 'Professional', email: 'rpalmer@advisory.com' },
+      { id: 'davis-org-1', name: 'Davis & Associates', organizationName: 'Davis & Associates', type: 'related_organization', role: 'Employer', relationshipCategory: 'Business' },
     ],
     financialAccounts: [
       { id: 'davis-acct-1', accountName: 'Davis Brokerage', accountType: 'brokerage', custodian: 'Merrill Lynch', estimatedValue: '1,150,000' },

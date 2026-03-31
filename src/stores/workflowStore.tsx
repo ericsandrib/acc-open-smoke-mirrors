@@ -123,7 +123,22 @@ function workflowReducer(state: WorkflowState, action: WorkflowAction): Workflow
       }
     }
 
+    case 'SET_PRIMARY_MEMBER': {
+      const target = state.relatedParties.find((p) => p.id === action.partyId)
+      if (!target || target.type !== 'household_member') return state
+      return {
+        ...state,
+        relatedParties: state.relatedParties.map((p) =>
+          p.type === 'household_member'
+            ? { ...p, isPrimary: p.id === action.partyId }
+            : p
+        ),
+      }
+    }
+
     case 'REMOVE_RELATED_PARTY': {
+      const party = state.relatedParties.find((p) => p.id === action.partyId)
+      if (party?.isPrimary) return state
       return {
         ...state,
         relatedParties: state.relatedParties.filter((p) => p.id !== action.partyId),

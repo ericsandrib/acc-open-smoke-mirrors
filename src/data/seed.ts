@@ -65,9 +65,12 @@ export const tasks: Task[] = [
 ]
 
 export const initialRelatedParties: RelatedParty[] = [
-  { id: 'member-1', name: 'John Smith', type: 'household_member', kycStatus: 'verified' },
-  { id: 'member-2', name: 'Jane Smith', type: 'household_member', relationship: 'Spouse', kycStatus: 'needs_kyc' },
-  { id: 'member-3', name: 'Robert Smith', type: 'household_member', relationship: 'Child', kycStatus: 'needs_kyc' },
+  { id: 'member-1', name: 'John Smith', firstName: 'John', lastName: 'Smith', type: 'household_member', role: 'Client', isPrimary: true, email: 'john.smith@example.com', phone: '+1 (555) 123-4567', dob: '1975-03-15', kycStatus: 'verified' },
+  { id: 'member-2', name: 'Jane Smith', firstName: 'Jane', lastName: 'Smith', type: 'household_member', relationship: 'Spouse', role: 'Spouse', email: 'jane.smith@example.com', phone: '+1 (555) 123-4568', dob: '1977-08-22', kycStatus: 'needs_kyc' },
+  { id: 'member-3', name: 'Robert Smith', firstName: 'Robert', lastName: 'Smith', type: 'household_member', relationship: 'Child', role: 'Dependent', dob: '2005-01-10', kycStatus: 'needs_kyc' },
+  { id: 'contact-1', name: 'Margaret Smith', firstName: 'Margaret', lastName: 'Smith', type: 'related_contact', relationship: 'Parent', relationshipCategory: 'Family', dob: '1948-06-15' },
+  { id: 'contact-2', name: 'David Chen', firstName: 'David', lastName: 'Chen', type: 'related_contact', relationship: 'Attorney', relationshipCategory: 'Professional', email: 'dchen@lawfirm.com', phone: '+1 (555) 987-6543' },
+  { id: 'org-1', name: 'Smith Family Trust LLC', organizationName: 'Smith Family Trust LLC', type: 'related_organization', role: 'Trust', relationshipCategory: 'Legal' },
 ]
 
 export const initialFinancialAccounts: FinancialAccount[] = [
