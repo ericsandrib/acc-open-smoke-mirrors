@@ -15,11 +15,14 @@ import {
   taskStatusOrder,
 } from '@/lib/sort-comparators'
 
-export function TasksTable() {
+import type { JourneyCategory } from '@/types/servicing'
+
+export function TasksTable({ filterCategory }: { filterCategory?: JourneyCategory }) {
   const { journeys } = useServicing()
   const navigate = useNavigate()
 
-  const rows = journeys.flatMap((journey) =>
+  const filtered = filterCategory ? journeys.filter((j) => j.category === filterCategory) : journeys
+  const rows = filtered.flatMap((journey) =>
     journey.actions.flatMap((action) =>
       action.tasks.map((task) => ({
         ...task,

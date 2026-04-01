@@ -16,11 +16,14 @@ import {
   journeyStatusOrder,
 } from '@/lib/sort-comparators'
 
-export function ActionsTable() {
+import type { JourneyCategory } from '@/types/servicing'
+
+export function ActionsTable({ filterCategory }: { filterCategory?: JourneyCategory }) {
   const { journeys } = useServicing()
   const navigate = useNavigate()
 
-  const rows = journeys.flatMap((journey) =>
+  const filtered = filterCategory ? journeys.filter((j) => j.category === filterCategory) : journeys
+  const rows = filtered.flatMap((journey) =>
     journey.actions.map((action) => {
       const complete = action.tasks.filter((t) => t.status === 'complete').length
       return {

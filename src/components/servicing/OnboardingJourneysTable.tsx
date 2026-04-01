@@ -17,26 +17,27 @@ import {
   journeyStatusOrder,
 } from '@/lib/sort-comparators'
 
-export function JourneysTable() {
+export function OnboardingJourneysTable() {
   const { journeys } = useServicing()
   const { state } = useWorkflow()
   const navigate = useNavigate()
 
-  const rows = journeys.map((journey) => {
-    const totalTasks = journey.actions.reduce((sum, a) => sum + a.tasks.length, 0)
-    const completeTasks = journey.actions.reduce(
-      (sum, a) => sum + a.tasks.filter((t) => t.status === 'complete').length,
-      0,
-    )
-    return { ...journey, totalTasks, completeTasks }
-  })
+  const rows = journeys
+    .filter((journey) => journey.category === 'Onboarding')
+    .map((journey) => {
+      const totalTasks = journey.actions.reduce((sum, a) => sum + a.tasks.length, 0)
+      const completeTasks = journey.actions.reduce(
+        (sum, a) => sum + a.tasks.filter((t) => t.status === 'complete').length,
+        0,
+      )
+      return { ...journey, totalTasks, completeTasks }
+    })
 
   type Row = (typeof rows)[number]
 
   const comparators = useMemo(
     () => ({
       name: compareString<Row>((r) => r.name),
-      category: compareString<Row>((r) => r.category),
       relationshipName: compareString<Row>((r) => r.relationshipName),
       status: compareStatus<Row>((r) => r.status, journeyStatusOrder),
       assignedTo: compareString<Row>((r) => r.assignedTo),
@@ -59,7 +60,6 @@ export function JourneysTable() {
       <thead>
         <tr>
           <DataTableHeader sortable sorted={sorted('name')} onSort={() => onSort('name')} style={{ width: 200 }}>Journey</DataTableHeader>
-          <DataTableHeader sortable sorted={sorted('category')} onSort={() => onSort('category')}>Category</DataTableHeader>
           <DataTableHeader sortable sorted={sorted('relationshipName')} onSort={() => onSort('relationshipName')}>Relationship</DataTableHeader>
           <DataTableHeader sortable sorted={sorted('status')} onSort={() => onSort('status')}>Status</DataTableHeader>
           <DataTableHeader sortable sorted={sorted('assignedTo')} onSort={() => onSort('assignedTo')}>Assigned To</DataTableHeader>
@@ -80,7 +80,6 @@ export function JourneysTable() {
                 row.name
               )}
             </DataTableCell>
-            <DataTableCell>{row.category}</DataTableCell>
             <DataTableCell>{row.relationshipName}</DataTableCell>
             <DataTableCell type="badge">
               <StatusBadge status={row.status} />

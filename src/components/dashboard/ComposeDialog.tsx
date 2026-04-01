@@ -1,6 +1,6 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Minus, X } from 'lucide-react'
+import { X } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -33,7 +33,17 @@ const actionTypes = [
 ]
 
 export function ComposeDialog({ onClose }: ComposeDialogProps) {
-  const [minimized, setMinimized] = useState(false)
+  const [visible, setVisible] = useState(false)
+
+  useEffect(() => {
+    requestAnimationFrame(() => setVisible(true))
+  }, [])
+
+  function handleClose() {
+    setVisible(false)
+    setTimeout(onClose, 250)
+  }
+
   const [journeyName, setJourneyName] = useState('')
   const [actionType, setActionType] = useState('')
   const [relationshipId, setRelationshipId] = useState('')
@@ -74,40 +84,34 @@ export function ComposeDialog({ onClose }: ComposeDialogProps) {
   }
 
   return (
-    <div className="fixed bottom-0 right-6 z-50 flex w-[420px] flex-col rounded-t-lg border border-border bg-card shadow-xl">
-      {/* Title bar */}
-      <button
-        onClick={() => setMinimized((m) => !m)}
-        className="flex items-center justify-between rounded-t-lg bg-primary px-4 py-2.5 text-primary-foreground"
+    <>
+      {/* Backdrop */}
+      <div
+        className="fixed inset-0 z-50 transition-opacity duration-250"
+        style={{ backgroundColor: visible ? 'rgba(0,0,0,0.4)' : 'rgba(0,0,0,0)' }}
+        onClick={handleClose}
+      />
+
+      {/* Slide-out panel */}
+      <div
+        className="fixed inset-y-0 right-0 z-50 w-[460px] bg-card border-l border-border shadow-2xl flex flex-col transition-transform duration-300 ease-out"
+        style={{ transform: visible ? 'translateX(0)' : 'translateX(100%)' }}
       >
-        <span className="text-sm font-medium">New Journey</span>
-        <div className="flex items-center gap-1">
-          <span
-            role="button"
-            onClick={(e) => {
-              e.stopPropagation()
-              setMinimized((m) => !m)
-            }}
-            className="rounded p-0.5 hover:bg-primary-foreground/20"
-          >
-            <Minus className="h-4 w-4" />
-          </span>
-          <span
-            role="button"
-            onClick={(e) => {
-              e.stopPropagation()
-              onClose()
-            }}
-            className="rounded p-0.5 hover:bg-primary-foreground/20"
+        {/* Header */}
+        <div className="flex items-center justify-between px-6 py-5 border-b border-border">
+          <h2 className="text-lg font-semibold text-[var(--text-primary)]">New Journey</h2>
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={handleClose}
+            className="h-8 w-8 text-[var(--text-secondary)] hover:text-[var(--text-primary)]"
           >
             <X className="h-4 w-4" />
-          </span>
+          </Button>
         </div>
-      </button>
 
-      {/* Body */}
-      {!minimized && (
-        <div className="space-y-4 p-4">
+        {/* Body */}
+        <div className="flex-1 overflow-y-auto px-6 py-6 space-y-5">
           <div className="space-y-2">
             <Label>Journey Name</Label>
             <Input
@@ -175,7 +179,10 @@ export function ComposeDialog({ onClose }: ComposeDialogProps) {
               </SelectContent>
             </Select>
           </div>
+        </div>
 
+        {/* Footer */}
+        <div className="border-t border-border px-6 py-4">
           <Button
             onClick={handleSubmit}
             disabled={!canSubmit}
@@ -184,7 +191,7 @@ export function ComposeDialog({ onClose }: ComposeDialogProps) {
             Start Onboarding
           </Button>
         </div>
-      )}
-    </div>
+      </div>
+    </>
   )
 }

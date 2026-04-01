@@ -97,11 +97,10 @@ export function StepSidebar() {
 
             return (
               <div key={action.id} className="mb-6">
-                <div className="flex items-center justify-between mb-2 px-3">
+                <div className="mb-2 px-3">
                   <h3 className="text-xs font-semibold text-muted-foreground">
                     {action.title}
                   </h3>
-                  <StatusBadge status={getActionStatus(state.tasks, action.id)} />
                 </div>
                 <ul className="space-y-1">
                   {actionTasks.map((task) => (

@@ -56,46 +56,42 @@ export function AcctChildDetailsForm() {
 
   return (
     <div className="space-y-5">
-      <div className="grid grid-cols-3 items-center gap-4">
+      <div className="space-y-2">
         <Label htmlFor="accountName">Account Name</Label>
         <Input
           id="accountName"
-          className="col-span-2"
           value={(data.accountName as string) ?? ''}
           onChange={(e) => updateField('accountName', e.target.value)}
         />
       </div>
 
-      <div className="grid grid-cols-3 items-center gap-4">
+      <div className="space-y-2">
         <Label>Account Type</Label>
-        <div className="col-span-2">
-          {data.accountType ? (
-            <Badge variant="secondary" className="text-xs">
-              {accountTypeLabels[data.accountType as AccountType] ?? data.accountType}
-            </Badge>
-          ) : (
-            <Select
-              value={(data.accountType as string) ?? ''}
-              onValueChange={(v) => updateField('accountType', v)}
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="Select type..." />
-              </SelectTrigger>
-              <SelectContent>
-                {Object.entries(accountTypeLabels).map(([value, label]) => (
-                  <SelectItem key={value} value={value}>{label}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          )}
-        </div>
+        {data.accountType ? (
+          <Badge variant="secondary" className="text-xs">
+            {accountTypeLabels[data.accountType as AccountType] ?? data.accountType}
+          </Badge>
+        ) : (
+          <Select
+            value={(data.accountType as string) ?? ''}
+            onValueChange={(v) => updateField('accountType', v)}
+          >
+            <SelectTrigger>
+              <SelectValue placeholder="Select type..." />
+            </SelectTrigger>
+            <SelectContent>
+              {Object.entries(accountTypeLabels).map(([value, label]) => (
+                <SelectItem key={value} value={value}>{label}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        )}
       </div>
 
-      <div className="grid grid-cols-3 items-center gap-4">
+      <div className="space-y-2">
         <Label htmlFor="custodian">Custodian / Platform</Label>
         <Input
           id="custodian"
-          className="col-span-2"
           placeholder="e.g., Fidelity, Schwab"
           value={(data.custodian as string) ?? ''}
           onChange={(e) => updateField('custodian', e.target.value)}
@@ -127,11 +123,10 @@ export function AcctChildDetailsForm() {
         </div>
       </div>
 
-      <div className="grid grid-cols-3 items-center gap-4">
+      <div className="space-y-2">
         <Label htmlFor="beneficiary">Beneficiary</Label>
         <Input
           id="beneficiary"
-          className="col-span-2"
           placeholder="Beneficiary name"
           value={(data.beneficiary as string) ?? ''}
           onChange={(e) => updateField('beneficiary', e.target.value)}

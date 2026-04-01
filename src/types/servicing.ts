@@ -23,9 +23,12 @@ export interface JourneyAction {
   tasks: JourneyTask[]
 }
 
+export type JourneyCategory = 'Onboarding' | 'Account Transfer' | 'Investment Review' | 'Tax Planning' | 'Consolidation' | 'Estate Planning'
+
 export interface Journey {
   id: string
   name: string
+  category: JourneyCategory
   relationshipName: string
   status: JourneyStatus
   createdAt: string

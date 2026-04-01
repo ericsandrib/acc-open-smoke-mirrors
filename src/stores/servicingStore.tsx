@@ -72,6 +72,7 @@ function deriveLiveJourney(state: WorkflowState): Journey | null {
   return {
     id: journeyId,
     name: journeyName,
+    category: 'Onboarding' as const,
     relationshipName: primaryParty.name ?? 'Current Journey',
     status: allComplete ? 'complete' : anyStarted ? 'in_progress' : 'not_started',
     createdAt: new Date().toISOString().split('T')[0],

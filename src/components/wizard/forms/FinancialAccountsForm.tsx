@@ -3,7 +3,8 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui/select'
 import { Button } from '@/components/ui/button'
-import { Plus, Trash2, ChevronRight } from 'lucide-react'
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from '@/components/ui/sheet'
+import { Plus, Trash2 } from 'lucide-react'
 import { useWorkflow } from '@/stores/workflowStore'
 import type { AccountType, FinancialAccount } from '@/types/workflow'
 
@@ -17,13 +18,22 @@ const accountTypeLabels: Record<AccountType, string> = {
   savings: 'Savings',
 }
 
-function AddAccountForm({ onDone }: { onDone: () => void }) {
+function AddAccountSheet({ open, onOpenChange }: { open: boolean; onOpenChange: (open: boolean) => void }) {
   const { dispatch } = useWorkflow()
   const [accountName, setAccountName] = useState('')
   const [accountType, setAccountType] = useState<AccountType | ''>('')
   const [custodian, setCustodian] = useState('')
   const [accountNumber, setAccountNumber] = useState('')
   const [estimatedValue, setEstimatedValue] = useState('')
+
+  const reset = () => {
+    setAccountName('')
+    setAccountType('')
+    setCustodian('')
+    setAccountNumber('')
+    setEstimatedValue('')
+  }
+
   const handleAdd = () => {
     if (!accountName.trim()) return
     dispatch({
@@ -37,72 +47,76 @@ function AddAccountForm({ onDone }: { onDone: () => void }) {
         estimatedValue: estimatedValue || undefined,
       },
     })
-    setAccountName('')
-    setAccountType('')
-    setCustodian('')
-    setAccountNumber('')
-    setEstimatedValue('')
-    onDone()
+    reset()
+    onOpenChange(false)
+  }
+
+  const handleOpenChange = (next: boolean) => {
+    onOpenChange(next)
+    if (!next) reset()
   }
 
   return (
-    <div className="rounded-lg border border-dashed border-border p-4 space-y-4">
-      <div className="grid grid-cols-3 items-center gap-4">
-        <Label>Account name</Label>
-        <Input
-          value={accountName}
-          onChange={(e) => setAccountName(e.target.value)}
-          placeholder="e.g. Smith Family Trust"
-          className="col-span-2"
-        />
-      </div>
-      <div className="grid grid-cols-3 items-center gap-4">
-        <Label>Account type</Label>
-        <div className="col-span-2">
-          <Select value={accountType} onValueChange={(v) => setAccountType(v as AccountType)}>
-            <SelectTrigger>
-              <SelectValue placeholder="Select account type" />
-            </SelectTrigger>
-            <SelectContent>
-              {Object.entries(accountTypeLabels).map(([value, label]) => (
-                <SelectItem key={value} value={value}>{label}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+    <Sheet open={open} onOpenChange={handleOpenChange}>
+      <SheetContent side="right" className="sm:max-w-[488px] flex flex-col gap-0 p-0">
+        <SheetHeader className="px-6 pt-6 pb-4 border-b border-border shrink-0">
+          <SheetTitle>Add Account</SheetTitle>
+          <SheetDescription>Add a new financial account to this relationship.</SheetDescription>
+        </SheetHeader>
+        <div className="flex-1 overflow-y-auto px-6 py-5 space-y-4">
+          <div className="space-y-2">
+            <Label>Account name</Label>
+            <Input
+              value={accountName}
+              onChange={(e) => setAccountName(e.target.value)}
+              placeholder="e.g. Smith Family Trust"
+            />
+          </div>
+          <div className="space-y-2">
+            <Label>Account type</Label>
+            <Select value={accountType} onValueChange={(v) => setAccountType(v as AccountType)}>
+              <SelectTrigger>
+                <SelectValue placeholder="Select account type" />
+              </SelectTrigger>
+              <SelectContent>
+                {Object.entries(accountTypeLabels).map(([value, label]) => (
+                  <SelectItem key={value} value={value}>{label}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="space-y-2">
+            <Label>Current custodian</Label>
+            <Input
+              value={custodian}
+              onChange={(e) => setCustodian(e.target.value)}
+              placeholder="e.g. Fidelity, Schwab"
+            />
+          </div>
+          <div className="space-y-2">
+            <Label>Account number</Label>
+            <Input
+              value={accountNumber}
+              onChange={(e) => setAccountNumber(e.target.value)}
+              placeholder="Account number"
+            />
+          </div>
+          <div className="space-y-2">
+            <Label>Estimated value</Label>
+            <Input
+              value={estimatedValue}
+              onChange={(e) => setEstimatedValue(e.target.value)}
+              placeholder="e.g. 500,000"
+            />
+          </div>
         </div>
-      </div>
-      <div className="grid grid-cols-3 items-center gap-4">
-        <Label>Current custodian</Label>
-        <Input
-          value={custodian}
-          onChange={(e) => setCustodian(e.target.value)}
-          placeholder="e.g. Fidelity, Schwab"
-          className="col-span-2"
-        />
-      </div>
-      <div className="grid grid-cols-3 items-center gap-4">
-        <Label>Account number</Label>
-        <Input
-          value={accountNumber}
-          onChange={(e) => setAccountNumber(e.target.value)}
-          placeholder="Account number"
-          className="col-span-2"
-        />
-      </div>
-      <div className="grid grid-cols-3 items-center gap-4">
-        <Label>Estimated value</Label>
-        <Input
-          value={estimatedValue}
-          onChange={(e) => setEstimatedValue(e.target.value)}
-          placeholder="e.g. 500,000"
-          className="col-span-2"
-        />
-      </div>
-      <div className="flex gap-2 justify-end">
-        <Button variant="outline" size="sm" onClick={onDone}>Cancel</Button>
-        <Button size="sm" onClick={handleAdd} disabled={!accountName.trim()}>Add account</Button>
-      </div>
-    </div>
+        <div className="px-6 py-4 border-t border-border shrink-0 flex justify-end">
+          <Button onClick={handleAdd} disabled={!accountName.trim()}>
+            Add account
+          </Button>
+        </div>
+      </SheetContent>
+    </Sheet>
   )
 }
 
@@ -150,24 +164,15 @@ function DeleteAccountButton({ account }: { account: FinancialAccount }) {
   )
 }
 
-function AccountCard({ account }: { account: FinancialAccount }) {
-  const { dispatch } = useWorkflow()
-  const [open, setOpen] = useState(false)
-
-  const update = (updates: Partial<Omit<FinancialAccount, 'id'>>) => {
-    dispatch({ type: 'UPDATE_FINANCIAL_ACCOUNT', accountId: account.id, updates })
-  }
-
+function AccountCard({ account, onClick }: { account: FinancialAccount; onClick: () => void }) {
   return (
     <div className="rounded-lg border border-border">
       <button
         type="button"
-        onClick={() => setOpen(!open)}
-        className="flex items-center justify-between w-full p-3 hover:bg-muted/50 rounded-t-lg focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
-        aria-expanded={open}
+        onClick={onClick}
+        className="flex items-center justify-between w-full p-3 hover:bg-muted/50 rounded-lg focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
       >
         <div className="flex items-center gap-2">
-          <ChevronRight className={`h-4 w-4 text-muted-foreground shrink-0 transition-transform duration-200 ease-out ${open ? 'rotate-90' : ''}`} />
           <span className="text-sm font-medium">{account.accountName}</span>
           {account.accountType && (
             <span className="text-xs text-muted-foreground">{accountTypeLabels[account.accountType]}</span>
@@ -178,68 +183,148 @@ function AccountCard({ account }: { account: FinancialAccount }) {
         </div>
         <DeleteAccountButton account={account} />
       </button>
-      {open && (
-        <div className="border-t border-border px-3 pb-3 pt-3 space-y-4">
-          <div className="grid grid-cols-3 items-center gap-4">
+    </div>
+  )
+}
+
+interface AccountFields {
+  accountName: string
+  accountType: string
+  custodian: string
+  accountNumber: string
+  estimatedValue: string
+}
+
+function snapshotAccount(account: FinancialAccount): AccountFields {
+  return {
+    accountName: account.accountName ?? '',
+    accountType: account.accountType ?? '',
+    custodian: account.custodian ?? '',
+    accountNumber: account.accountNumber ?? '',
+    estimatedValue: account.estimatedValue ?? '',
+  }
+}
+
+function EditAccountSheet({
+  account,
+  open,
+  onOpenChange,
+}: {
+  account: FinancialAccount | null
+  open: boolean
+  onOpenChange: (open: boolean) => void
+}) {
+  const { dispatch } = useWorkflow()
+  const [fields, setFields] = useState<AccountFields>({
+    accountName: '', accountType: '', custodian: '', accountNumber: '', estimatedValue: '',
+  })
+  const [snapshot, setSnapshot] = useState<AccountFields>(fields)
+
+  useEffect(() => {
+    if (account && open) {
+      const s = snapshotAccount(account)
+      setFields(s)
+      setSnapshot(s)
+    }
+  }, [account?.id, open])
+
+  if (!account) return null
+
+  const isDirty = Object.keys(snapshot).some(
+    (k) => fields[k as keyof AccountFields] !== snapshot[k as keyof AccountFields]
+  )
+
+  const setField = (key: keyof AccountFields, value: string) => {
+    setFields((prev) => ({ ...prev, [key]: value }))
+  }
+
+  const handleSave = () => {
+    dispatch({
+      type: 'UPDATE_FINANCIAL_ACCOUNT',
+      accountId: account.id,
+      updates: {
+        accountName: fields.accountName || account.accountName,
+        accountType: (fields.accountType as AccountType) || undefined,
+        custodian: fields.custodian || undefined,
+        accountNumber: fields.accountNumber || undefined,
+        estimatedValue: fields.estimatedValue || undefined,
+      },
+    })
+    onOpenChange(false)
+  }
+
+  return (
+    <Sheet open={open} onOpenChange={onOpenChange}>
+      <SheetContent side="right" className="sm:max-w-[488px] flex flex-col gap-0 p-0">
+        <SheetHeader className="px-6 pt-6 pb-4 border-b border-border shrink-0">
+          <SheetTitle>{account.accountName}</SheetTitle>
+          <SheetDescription>Edit financial account details.</SheetDescription>
+        </SheetHeader>
+        <div className="flex-1 overflow-y-auto px-6 py-5 space-y-4">
+          <div className="space-y-2">
             <Label>Account name</Label>
             <Input
-              value={account.accountName}
-              onChange={(e) => update({ accountName: e.target.value })}
-              placeholder="Account name"
-              className="col-span-2"
+              value={fields.accountName}
+              onChange={(e) => setField('accountName', e.target.value)}
+              placeholder="e.g. Smith Family Trust"
             />
           </div>
-          <div className="grid grid-cols-3 items-center gap-4">
+          <div className="space-y-2">
             <Label>Account type</Label>
-            <div className="col-span-2">
-              <Select value={account.accountType ?? ''} onValueChange={(v) => update({ accountType: v as AccountType })}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Select account type" />
-                </SelectTrigger>
-                <SelectContent>
-                  {Object.entries(accountTypeLabels).map(([value, label]) => (
-                    <SelectItem key={value} value={value}>{label}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
+            <Select value={fields.accountType} onValueChange={(v) => setField('accountType', v)}>
+              <SelectTrigger>
+                <SelectValue placeholder="Select account type" />
+              </SelectTrigger>
+              <SelectContent>
+                {Object.entries(accountTypeLabels).map(([value, label]) => (
+                  <SelectItem key={value} value={value}>{label}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
-          <div className="grid grid-cols-3 items-center gap-4">
+          <div className="space-y-2">
             <Label>Current custodian</Label>
             <Input
-              value={account.custodian ?? ''}
-              onChange={(e) => update({ custodian: e.target.value })}
+              value={fields.custodian}
+              onChange={(e) => setField('custodian', e.target.value)}
               placeholder="e.g. Fidelity, Schwab"
-              className="col-span-2"
             />
           </div>
-          <div className="grid grid-cols-3 items-center gap-4">
+          <div className="space-y-2">
             <Label>Account number</Label>
             <Input
-              value={account.accountNumber ?? ''}
-              onChange={(e) => update({ accountNumber: e.target.value })}
+              value={fields.accountNumber}
+              onChange={(e) => setField('accountNumber', e.target.value)}
               placeholder="Account number"
-              className="col-span-2"
             />
           </div>
-          <div className="grid grid-cols-3 items-center gap-4">
+          <div className="space-y-2">
             <Label>Estimated value</Label>
             <Input
-              value={account.estimatedValue ?? ''}
-              onChange={(e) => update({ estimatedValue: e.target.value })}
+              value={fields.estimatedValue}
+              onChange={(e) => setField('estimatedValue', e.target.value)}
               placeholder="e.g. 500,000"
-              className="col-span-2"
             />
           </div>
         </div>
-      )}
-    </div>
+        <div className="px-6 py-4 border-t border-border shrink-0 flex justify-end">
+          <Button onClick={handleSave} disabled={!isDirty}>
+            Save
+          </Button>
+        </div>
+      </SheetContent>
+    </Sheet>
   )
 }
 
 export function FinancialAccountsForm() {
   const { state } = useWorkflow()
   const [showAdd, setShowAdd] = useState(false)
+  const [editingAccountId, setEditingAccountId] = useState<string | null>(null)
+
+  const editingAccount = editingAccountId
+    ? state.financialAccounts.find((a) => a.id === editingAccountId) ?? null
+    : null
 
   return (
     <div className="space-y-4">
@@ -250,19 +335,23 @@ export function FinancialAccountsForm() {
           </div>
         ) : (
           state.financialAccounts.map((account) => (
-            <AccountCard key={account.id} account={account} />
+            <AccountCard key={account.id} account={account} onClick={() => setEditingAccountId(account.id)} />
           ))
         )}
       </div>
 
-      {showAdd ? (
-        <AddAccountForm onDone={() => setShowAdd(false)} />
-      ) : (
-        <Button variant="outline" className="w-full" onClick={() => setShowAdd(true)}>
-          <Plus className="h-4 w-4 mr-2" />
-          Add account
-        </Button>
-      )}
+      <Button variant="outline" className="w-full" onClick={() => setShowAdd(true)}>
+        <Plus className="h-4 w-4 mr-2" />
+        Add account
+      </Button>
+
+      <AddAccountSheet open={showAdd} onOpenChange={setShowAdd} />
+
+      <EditAccountSheet
+        account={editingAccount}
+        open={!!editingAccountId}
+        onOpenChange={(open) => { if (!open) setEditingAccountId(null) }}
+      />
     </div>
   )
 }

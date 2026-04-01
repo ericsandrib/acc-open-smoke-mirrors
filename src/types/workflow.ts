@@ -16,7 +16,7 @@ export interface RelatedParty {
   email?: string
   phone?: string
   dob?: string
-  kycStatus?: 'verified' | 'needs_kyc'
+  kycStatus?: 'verified' | 'needs_kyc' | 'pending'
   isHidden?: boolean
 }
 

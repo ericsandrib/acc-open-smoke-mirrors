@@ -6,6 +6,7 @@ import { DashboardPage } from '@/pages/DashboardPage'
 import { WizardPage } from '@/pages/WizardPage'
 import { WorkflowPage } from '@/pages/WorkflowPage'
 import { ServicingPage } from '@/pages/ServicingPage'
+import { OnboardingPage } from '@/pages/OnboardingPage'
 import { JourneyDetailPage } from '@/pages/JourneyDetailPage'
 import { Toaster } from '@/components/ui/sonner'
 import { Agentation } from 'agentation'
@@ -23,6 +24,7 @@ export default function App() {
               <Route path="/servicing" element={<ServicingPage />} />
               <Route path="/servicing/:journeyId" element={<JourneyDetailPage />} />
               <Route path="/servicing/:journeyId/action/:actionId" element={<JourneyDetailPage />} />
+              <Route path="/onboarding" element={<OnboardingPage />} />
               <Route path="*" element={<Navigate to="/" replace />} />
             </Routes>
           </BrowserRouter>
