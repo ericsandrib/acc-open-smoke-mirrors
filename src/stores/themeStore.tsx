@@ -1,30 +1,59 @@
 import { createContext, useContext, useState, useEffect, type ReactNode } from 'react'
 
-type Theme = 'light' | 'dark'
+type ColorScheme = 'light' | 'dark'
+type BrandTheme = 'mercer' | 'guardian' | 'vanguard'
 
 const ThemeContext = createContext<{
-  theme: Theme
+  colorScheme: ColorScheme
+  toggleColorScheme: () => void
+  brandTheme: BrandTheme
+  setBrandTheme: (theme: BrandTheme) => void
+  /** @deprecated Use colorScheme instead */
+  theme: ColorScheme
+  /** @deprecated Use toggleColorScheme instead */
   toggleTheme: () => void
 } | null>(null)
 
-function getInitialTheme(): Theme {
+function getInitialColorScheme(): ColorScheme {
   const stored = localStorage.getItem('theme')
   if (stored === 'light' || stored === 'dark') return stored
   return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'
 }
 
+function getInitialBrandTheme(): BrandTheme {
+  const stored = localStorage.getItem('brand-theme')
+  if (stored === 'mercer' || stored === 'guardian' || stored === 'vanguard') return stored
+  return 'mercer'
+}
+
 export function ThemeProvider({ children }: { children: ReactNode }) {
-  const [theme, setTheme] = useState<Theme>(getInitialTheme)
+  const [colorScheme, setColorScheme] = useState<ColorScheme>(getInitialColorScheme)
+  const [brandTheme, setBrandThemeState] = useState<BrandTheme>(getInitialBrandTheme)
 
   useEffect(() => {
-    document.documentElement.classList.toggle('dark', theme === 'dark')
-    localStorage.setItem('theme', theme)
-  }, [theme])
+    document.documentElement.classList.toggle('dark', colorScheme === 'dark')
+    localStorage.setItem('theme', colorScheme)
+  }, [colorScheme])
 
-  const toggleTheme = () => setTheme((t) => (t === 'light' ? 'dark' : 'light'))
+  useEffect(() => {
+    document.documentElement.setAttribute('data-theme', brandTheme)
+    localStorage.setItem('brand-theme', brandTheme)
+  }, [brandTheme])
+
+  const toggleColorScheme = () => setColorScheme((t) => (t === 'light' ? 'dark' : 'light'))
+
+  const setBrandTheme = (theme: BrandTheme) => setBrandThemeState(theme)
 
   return (
-    <ThemeContext.Provider value={{ theme, toggleTheme }}>
+    <ThemeContext.Provider value={{
+      colorScheme,
+      toggleColorScheme,
+      brandTheme,
+      setBrandTheme,
+      // backwards compat aliases
+      theme: colorScheme,
+      toggleTheme: toggleColorScheme,
+    }}>
       {children}
     </ThemeContext.Provider>
   )
