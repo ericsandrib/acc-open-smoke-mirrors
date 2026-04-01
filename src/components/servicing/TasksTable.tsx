@@ -1,6 +1,5 @@
 import { useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { useServicing } from '@/stores/servicingStore'
 import {
   DataTable,
   DataTableHeader,
@@ -14,33 +13,60 @@ import {
   compareStatus,
   taskStatusOrder,
 } from '@/lib/sort-comparators'
+import type { Journey } from '@/types/servicing'
+import type { TaskStatus } from '@/types/workflow'
 
-export function TasksTable() {
-  const { journeys } = useServicing()
-  const navigate = useNavigate()
+export interface TaskRow {
+  id: string
+  actionId: string
+  journeyId: string
+  title: string
+  status: TaskStatus
+  assignedTo: string
+  isSubTask?: boolean
+  nickname: string | undefined
+  actionTitle: string
+  journeyName: string
+  relationshipName: string
+}
 
-  const rows = journeys.flatMap((journey) =>
+export function deriveTaskRows(journeys: Journey[]): TaskRow[] {
+  return journeys.flatMap((journey) =>
     journey.actions.flatMap((action) =>
       action.tasks.map((task) => ({
-        ...task,
+        id: task.id,
+        actionId: task.actionId,
+        journeyId: task.journeyId,
+        title: task.title,
+        status: task.status,
+        assignedTo: task.assignedTo,
+        isSubTask: task.isSubTask,
+        nickname: task.nickname,
         actionTitle: action.title,
         journeyName: journey.name,
         relationshipName: journey.relationshipName,
       })),
     ),
   )
+}
 
-  type Row = (typeof rows)[number]
+interface TasksTableProps {
+  rows: TaskRow[]
+  visibleColumns: string[]
+}
+
+export function TasksTable({ rows, visibleColumns }: TasksTableProps) {
+  const navigate = useNavigate()
 
   const comparators = useMemo(
     () => ({
-      title: compareString<Row>((r) => r.title),
-      nickname: compareString<Row>((r) => r.nickname ?? ''),
-      actionTitle: compareString<Row>((r) => r.actionTitle),
-      journeyName: compareString<Row>((r) => r.journeyName),
-      relationshipName: compareString<Row>((r) => r.relationshipName),
-      status: compareStatus<Row>((r) => r.status, taskStatusOrder),
-      assignedTo: compareString<Row>((r) => r.assignedTo),
+      title: compareString<TaskRow>((r) => r.title),
+      nickname: compareString<TaskRow>((r) => r.nickname ?? ''),
+      actionTitle: compareString<TaskRow>((r) => r.actionTitle),
+      journeyName: compareString<TaskRow>((r) => r.journeyName),
+      relationshipName: compareString<TaskRow>((r) => r.relationshipName),
+      status: compareStatus<TaskRow>((r) => r.status, taskStatusOrder),
+      assignedTo: compareString<TaskRow>((r) => r.assignedTo),
     }),
     [],
   )
@@ -50,37 +76,39 @@ export function TasksTable() {
   const sorted = (key: string): 'asc' | 'desc' | false =>
     sortKey === key ? (sortDirection as 'asc' | 'desc') : false
 
+  const vis = (key: string) => visibleColumns.includes(key)
+
   return (
     <DataTable>
       <thead>
         <tr>
-          <DataTableHeader sortable sorted={sorted('title')} onSort={() => onSort('title')} style={{ width: 200 }}>Task</DataTableHeader>
-          <DataTableHeader sortable sorted={sorted('nickname')} onSort={() => onSort('nickname')}>Action Nickname</DataTableHeader>
-          <DataTableHeader sortable sorted={sorted('actionTitle')} onSort={() => onSort('actionTitle')}>Action Type</DataTableHeader>
-          <DataTableHeader sortable sorted={sorted('journeyName')} onSort={() => onSort('journeyName')}>Journey</DataTableHeader>
-          <DataTableHeader sortable sorted={sorted('relationshipName')} onSort={() => onSort('relationshipName')}>Relationship</DataTableHeader>
-          <DataTableHeader sortable sorted={sorted('status')} onSort={() => onSort('status')}>Status</DataTableHeader>
-          <DataTableHeader sortable sorted={sorted('assignedTo')} onSort={() => onSort('assignedTo')}>Assigned To</DataTableHeader>
+          {vis('title') && <DataTableHeader sortable sorted={sorted('title')} onSort={() => onSort('title')} style={{ width: 200 }}>Task</DataTableHeader>}
+          {vis('nickname') && <DataTableHeader sortable sorted={sorted('nickname')} onSort={() => onSort('nickname')}>Action Nickname</DataTableHeader>}
+          {vis('actionTitle') && <DataTableHeader sortable sorted={sorted('actionTitle')} onSort={() => onSort('actionTitle')}>Action Type</DataTableHeader>}
+          {vis('journeyName') && <DataTableHeader sortable sorted={sorted('journeyName')} onSort={() => onSort('journeyName')}>Journey</DataTableHeader>}
+          {vis('relationshipName') && <DataTableHeader sortable sorted={sorted('relationshipName')} onSort={() => onSort('relationshipName')}>Relationship</DataTableHeader>}
+          {vis('status') && <DataTableHeader sortable sorted={sorted('status')} onSort={() => onSort('status')}>Status</DataTableHeader>}
+          {vis('assignedTo') && <DataTableHeader sortable sorted={sorted('assignedTo')} onSort={() => onSort('assignedTo')}>Assigned To</DataTableHeader>}
         </tr>
       </thead>
       <tbody>
         {sortedRows.map((row) => (
           <DataTableRow key={row.id} className="cursor-pointer" onClick={() => navigate(`/servicing/${row.journeyId}`)}>
-            <DataTableCell type="primary" className="font-medium">
-              {row.isSubTask ? (
-                <span className="pl-4 text-muted-foreground">{row.title}</span>
-              ) : (
-                row.title
-              )}
-            </DataTableCell>
-            <DataTableCell>{row.nickname}</DataTableCell>
-            <DataTableCell>{row.actionTitle}</DataTableCell>
-            <DataTableCell>{row.journeyName}</DataTableCell>
-            <DataTableCell>{row.relationshipName}</DataTableCell>
-            <DataTableCell type="badge">
-              <StatusBadge status={row.status} />
-            </DataTableCell>
-            <DataTableCell>{row.assignedTo}</DataTableCell>
+            {vis('title') && (
+              <DataTableCell type="primary" className="font-medium">
+                {row.isSubTask ? (
+                  <span className="pl-4 text-muted-foreground">{row.title}</span>
+                ) : (
+                  row.title
+                )}
+              </DataTableCell>
+            )}
+            {vis('nickname') && <DataTableCell>{row.nickname}</DataTableCell>}
+            {vis('actionTitle') && <DataTableCell>{row.actionTitle}</DataTableCell>}
+            {vis('journeyName') && <DataTableCell>{row.journeyName}</DataTableCell>}
+            {vis('relationshipName') && <DataTableCell>{row.relationshipName}</DataTableCell>}
+            {vis('status') && <DataTableCell type="badge"><StatusBadge status={row.status} /></DataTableCell>}
+            {vis('assignedTo') && <DataTableCell>{row.assignedTo}</DataTableCell>}
           </DataTableRow>
         ))}
       </tbody>
