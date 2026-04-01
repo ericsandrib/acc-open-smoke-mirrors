@@ -3,13 +3,11 @@ import { useNavigate } from 'react-router-dom'
 import { useServicing } from '@/stores/servicingStore'
 import { useWorkflow } from '@/stores/workflowStore'
 import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table'
-import { SortableTableHead } from '@/components/ui/sortable-table-head'
+  DataTable,
+  DataTableHeader,
+  DataTableRow,
+  DataTableCell,
+} from '@/components/ui/data-table'
 import { StatusBadge } from './StatusBadge'
 import { useSortableTable } from '@/hooks/useSortableTable'
 import {
@@ -52,22 +50,25 @@ export function JourneysTable() {
 
   const { sortedRows, sortKey, sortDirection, onSort } = useSortableTable(rows, comparators)
 
+  const sorted = (key: string): 'asc' | 'desc' | false =>
+    sortKey === key ? (sortDirection as 'asc' | 'desc') : false
+
   return (
-    <Table>
-      <TableHeader>
-        <TableRow>
-          <SortableTableHead sortKey="name" currentSortKey={sortKey} currentDirection={sortDirection} onSort={onSort} className="w-[200px]">Journey</SortableTableHead>
-          <SortableTableHead sortKey="relationshipName" currentSortKey={sortKey} currentDirection={sortDirection} onSort={onSort}>Relationship</SortableTableHead>
-          <SortableTableHead sortKey="status" currentSortKey={sortKey} currentDirection={sortDirection} onSort={onSort}>Status</SortableTableHead>
-          <SortableTableHead sortKey="assignedTo" currentSortKey={sortKey} currentDirection={sortDirection} onSort={onSort}>Assigned To</SortableTableHead>
-          <SortableTableHead sortKey="createdAt" currentSortKey={sortKey} currentDirection={sortDirection} onSort={onSort}>Created</SortableTableHead>
-          <SortableTableHead sortKey="progress" currentSortKey={sortKey} currentDirection={sortDirection} onSort={onSort} className="text-right">Progress</SortableTableHead>
-        </TableRow>
-      </TableHeader>
-      <TableBody>
+    <DataTable>
+      <thead>
+        <tr>
+          <DataTableHeader sortable sorted={sorted('name')} onSort={() => onSort('name')} style={{ width: 200 }}>Journey</DataTableHeader>
+          <DataTableHeader sortable sorted={sorted('relationshipName')} onSort={() => onSort('relationshipName')}>Relationship</DataTableHeader>
+          <DataTableHeader sortable sorted={sorted('status')} onSort={() => onSort('status')}>Status</DataTableHeader>
+          <DataTableHeader sortable sorted={sorted('assignedTo')} onSort={() => onSort('assignedTo')}>Assigned To</DataTableHeader>
+          <DataTableHeader sortable sorted={sorted('createdAt')} onSort={() => onSort('createdAt')}>Created</DataTableHeader>
+          <DataTableHeader sortable sorted={sorted('progress')} onSort={() => onSort('progress')} align="end">Progress</DataTableHeader>
+        </tr>
+      </thead>
+      <tbody>
         {sortedRows.map((row) => (
-          <TableRow key={row.id} className="cursor-pointer" onClick={() => navigate(`/servicing/${row.id}`)}>
-            <TableCell className="font-medium">
+          <DataTableRow key={row.id} className="cursor-pointer" onClick={() => navigate(`/servicing/${row.id}`)}>
+            <DataTableCell type="primary" className="font-medium">
               {row.id === state.journeyId ? (
                 <span className="flex items-center gap-2">
                   {row.name}
@@ -76,19 +77,19 @@ export function JourneysTable() {
               ) : (
                 row.name
               )}
-            </TableCell>
-            <TableCell>{row.relationshipName}</TableCell>
-            <TableCell>
+            </DataTableCell>
+            <DataTableCell>{row.relationshipName}</DataTableCell>
+            <DataTableCell type="badge">
               <StatusBadge status={row.status} />
-            </TableCell>
-            <TableCell>{row.assignedTo}</TableCell>
-            <TableCell>{row.createdAt}</TableCell>
-            <TableCell className="text-right">
+            </DataTableCell>
+            <DataTableCell>{row.assignedTo}</DataTableCell>
+            <DataTableCell>{row.createdAt}</DataTableCell>
+            <DataTableCell align="end" type="secondary">
               {row.completeTasks}/{row.totalTasks} tasks
-            </TableCell>
-          </TableRow>
+            </DataTableCell>
+          </DataTableRow>
         ))}
-      </TableBody>
-    </Table>
+      </tbody>
+    </DataTable>
   )
 }
