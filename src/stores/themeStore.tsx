@@ -23,7 +23,7 @@ function getInitialColorScheme(): ColorScheme {
 function getInitialBrandTheme(): BrandTheme {
   const stored = localStorage.getItem('brand-theme')
   if (stored === 'mercer' || stored === 'guardian' || stored === 'vanguard') return stored
-  return 'mercer'
+  return 'guardian'
 }
 
 export function ThemeProvider({ children }: { children: ReactNode }) {

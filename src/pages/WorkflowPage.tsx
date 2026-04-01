@@ -13,7 +13,6 @@ import { TaskNode } from '@/components/workflow/TaskNode'
 import { KycChildNode } from '@/components/workflow/KycChildNode'
 import { Button } from '@/components/ui/button'
 import { ThemeToggle } from '@/components/ui/theme-toggle'
-import { BrandThemeSwitcher } from '@/components/ui/brand-theme-switcher'
 import { useNavigate } from 'react-router-dom'
 import { ArrowLeft } from 'lucide-react'
 
@@ -39,7 +38,6 @@ export function WorkflowPage() {
           <h1 className="text-sm font-semibold">Workflow Viewer</h1>
         </div>
         <div className="flex items-center gap-1">
-          <BrandThemeSwitcher />
           <ThemeToggle />
         </div>
       </header>

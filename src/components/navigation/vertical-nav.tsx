@@ -27,7 +27,6 @@ import {
   PopoverTrigger,
   PopoverContent,
 } from "@/components/ui/popover";
-import { BrandThemeSwitcher } from "@/components/ui/brand-theme-switcher";
 import { ThemeToggle } from "@/components/ui/theme-toggle";
 
 // ---------------------------------------------------------------------------
@@ -429,8 +428,7 @@ function NavigationContent({
 
       {/* Footer: brand switcher, theme toggle, create button */}
       <div className="border-t border-sidebar-border p-2 flex flex-col gap-2">
-        <div className="flex items-center justify-between px-1">
-          <BrandThemeSwitcher />
+        <div className="flex items-center justify-center px-1">
           <ThemeToggle />
         </div>
       </div>
