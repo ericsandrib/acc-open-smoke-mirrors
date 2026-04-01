@@ -2,13 +2,11 @@ import { useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useServicing } from '@/stores/servicingStore'
 import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table'
-import { SortableTableHead } from '@/components/ui/sortable-table-head'
+  DataTable,
+  DataTableHeader,
+  DataTableRow,
+  DataTableCell,
+} from '@/components/ui/data-table'
 import { StatusBadge } from './StatusBadge'
 import { useSortableTable } from '@/hooks/useSortableTable'
 import {
@@ -49,40 +47,43 @@ export function TasksTable() {
 
   const { sortedRows, sortKey, sortDirection, onSort } = useSortableTable(rows, comparators)
 
+  const sorted = (key: string): 'asc' | 'desc' | false =>
+    sortKey === key ? (sortDirection as 'asc' | 'desc') : false
+
   return (
-    <Table>
-      <TableHeader>
-        <TableRow>
-          <SortableTableHead sortKey="title" currentSortKey={sortKey} currentDirection={sortDirection} onSort={onSort} className="w-[200px]">Task</SortableTableHead>
-          <SortableTableHead sortKey="nickname" currentSortKey={sortKey} currentDirection={sortDirection} onSort={onSort}>Action Nickname</SortableTableHead>
-          <SortableTableHead sortKey="actionTitle" currentSortKey={sortKey} currentDirection={sortDirection} onSort={onSort}>Action Type</SortableTableHead>
-          <SortableTableHead sortKey="journeyName" currentSortKey={sortKey} currentDirection={sortDirection} onSort={onSort}>Journey</SortableTableHead>
-          <SortableTableHead sortKey="relationshipName" currentSortKey={sortKey} currentDirection={sortDirection} onSort={onSort}>Relationship</SortableTableHead>
-          <SortableTableHead sortKey="status" currentSortKey={sortKey} currentDirection={sortDirection} onSort={onSort}>Status</SortableTableHead>
-          <SortableTableHead sortKey="assignedTo" currentSortKey={sortKey} currentDirection={sortDirection} onSort={onSort}>Assigned To</SortableTableHead>
-        </TableRow>
-      </TableHeader>
-      <TableBody>
+    <DataTable>
+      <thead>
+        <tr>
+          <DataTableHeader sortable sorted={sorted('title')} onSort={() => onSort('title')} style={{ width: 200 }}>Task</DataTableHeader>
+          <DataTableHeader sortable sorted={sorted('nickname')} onSort={() => onSort('nickname')}>Action Nickname</DataTableHeader>
+          <DataTableHeader sortable sorted={sorted('actionTitle')} onSort={() => onSort('actionTitle')}>Action Type</DataTableHeader>
+          <DataTableHeader sortable sorted={sorted('journeyName')} onSort={() => onSort('journeyName')}>Journey</DataTableHeader>
+          <DataTableHeader sortable sorted={sorted('relationshipName')} onSort={() => onSort('relationshipName')}>Relationship</DataTableHeader>
+          <DataTableHeader sortable sorted={sorted('status')} onSort={() => onSort('status')}>Status</DataTableHeader>
+          <DataTableHeader sortable sorted={sorted('assignedTo')} onSort={() => onSort('assignedTo')}>Assigned To</DataTableHeader>
+        </tr>
+      </thead>
+      <tbody>
         {sortedRows.map((row) => (
-          <TableRow key={row.id} className="cursor-pointer" onClick={() => navigate(`/servicing/${row.journeyId}`)}>
-            <TableCell className="font-medium">
+          <DataTableRow key={row.id} className="cursor-pointer" onClick={() => navigate(`/servicing/${row.journeyId}`)}>
+            <DataTableCell type="primary" className="font-medium">
               {row.isSubTask ? (
                 <span className="pl-4 text-muted-foreground">{row.title}</span>
               ) : (
                 row.title
               )}
-            </TableCell>
-            <TableCell>{row.nickname}</TableCell>
-            <TableCell>{row.actionTitle}</TableCell>
-            <TableCell>{row.journeyName}</TableCell>
-            <TableCell>{row.relationshipName}</TableCell>
-            <TableCell>
+            </DataTableCell>
+            <DataTableCell>{row.nickname}</DataTableCell>
+            <DataTableCell>{row.actionTitle}</DataTableCell>
+            <DataTableCell>{row.journeyName}</DataTableCell>
+            <DataTableCell>{row.relationshipName}</DataTableCell>
+            <DataTableCell type="badge">
               <StatusBadge status={row.status} />
-            </TableCell>
-            <TableCell>{row.assignedTo}</TableCell>
-          </TableRow>
+            </DataTableCell>
+            <DataTableCell>{row.assignedTo}</DataTableCell>
+          </DataTableRow>
         ))}
-      </TableBody>
-    </Table>
+      </tbody>
+    </DataTable>
   )
 }
