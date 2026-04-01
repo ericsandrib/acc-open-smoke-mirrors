@@ -1,4 +1,5 @@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { PageTitle } from '@/components/page-title'
 import { JourneysTable } from './JourneysTable'
 import { ActionsTable } from './ActionsTable'
 import { TasksTable } from './TasksTable'
@@ -8,12 +9,10 @@ export function ServicingContent() {
     <div className="max-w-6xl mx-auto">
       <Tabs defaultValue="journeys">
         <div className="flex items-center justify-between mb-6">
-          <div>
-            <h1 className="text-2xl font-semibold text-foreground">Servicing</h1>
-            <p className="text-sm text-muted-foreground mt-1">
-              Track onboarding journeys, actions, and tasks across all relationships.
-            </p>
-          </div>
+          <PageTitle
+            title="Servicing"
+            subHead="Track onboarding journeys, actions, and tasks across all relationships."
+          />
           <TabsList variant="elevated">
             <TabsTrigger value="journeys">Journeys</TabsTrigger>
             <TabsTrigger value="actions">Actions</TabsTrigger>
