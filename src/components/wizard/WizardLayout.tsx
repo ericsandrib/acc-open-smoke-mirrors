@@ -4,6 +4,7 @@ import { DetailSidebar } from './DetailSidebar'
 import { WizardFooter } from './WizardFooter'
 import { Button } from '@/components/ui/button'
 import { ThemeToggle } from '@/components/ui/theme-toggle'
+import { BrandThemeSwitcher } from '@/components/ui/brand-theme-switcher'
 import { useNavigate } from 'react-router-dom'
 import { ArrowLeft, GitBranch } from 'lucide-react'
 
@@ -21,6 +22,7 @@ export function WizardLayout() {
           <h1 className="text-sm font-semibold text-foreground">Account Opening</h1>
         </div>
         <div className="flex items-center gap-1">
+          <BrandThemeSwitcher />
           <ThemeToggle />
           <Button variant="ghost" size="sm" onClick={() => navigate('/workflow')}>
             <GitBranch className="h-4 w-4 mr-1" />

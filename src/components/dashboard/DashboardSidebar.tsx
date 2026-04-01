@@ -2,6 +2,7 @@ import { useNavigate } from 'react-router-dom'
 import { LayoutDashboard, ClipboardList, Plus } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { ThemeToggle } from '@/components/ui/theme-toggle'
+import { BrandThemeSwitcher } from '@/components/ui/brand-theme-switcher'
 
 const navItems = [
   { icon: LayoutDashboard, label: 'Dashboard', path: '/' },
@@ -20,7 +21,10 @@ export function DashboardSidebar({ activeItem = 'Dashboard', onCreateClick }: Da
     <aside className="flex w-60 flex-col border-r border-border bg-muted/30">
       <div className="flex h-14 items-center justify-between border-b border-border px-4">
         <span className="text-sm font-semibold tracking-tight">Wealth Platform</span>
-        <ThemeToggle />
+        <div className="flex items-center gap-1">
+          <BrandThemeSwitcher />
+          <ThemeToggle />
+        </div>
       </div>
 
       <nav className="flex-1 space-y-1 p-2">
