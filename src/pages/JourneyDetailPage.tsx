@@ -4,6 +4,7 @@ import { ArrowLeft, Circle, Loader, CheckCircle2, Ban, CheckCheck } from 'lucide
 import { useServicing } from '@/stores/servicingStore'
 import { useWorkflow } from '@/stores/workflowStore'
 import { StatusBadge as ServicingStatusBadge } from '@/components/servicing/StatusBadge'
+import { AccessoryBar, type BreadcrumbSegment } from '@/components/accessory-bar'
 import { PageTitle } from '@/components/page-title'
 import { AppShell } from '@/components/layout/AppShell'
 import { Button } from '@/components/ui/button'
@@ -166,24 +167,31 @@ export function JourneyDetailPage() {
     <AppShell>
       <TooltipProvider delayDuration={300}>
         <div className="flex flex-col h-full -m-8">
-          {/* Sub-header with back button and journey name */}
-          <header className="border-b border-border px-4 py-2 flex items-center justify-between shrink-0">
-            <div className="flex items-center gap-3">
-              <Button variant="ghost" size="sm" onClick={() => navigate('/servicing')}>
-                <ArrowLeft className="h-4 w-4 mr-1" />
-                Servicing
-              </Button>
-              <h1 className="text-sm font-semibold text-foreground">{focusedAction?.nickname ?? journey.name}</h1>
-              <ServicingStatusBadge status={focusedAction?.status ?? journey.status} />
-            </div>
-            <div className="flex items-center gap-1">
-              {journey.id === workflowState.journeyId && (
-                <Button variant="ghost" size="sm" onClick={() => navigate('/wizard')}>
-                  Continue in Wizard
-                </Button>
-              )}
-            </div>
-          </header>
+          {/* Accessory bar with breadcrumbs */}
+          <AccessoryBar
+            breadcrumbs={(() => {
+              const crumbs: BreadcrumbSegment[] = [
+                { label: 'Home', href: '/' },
+                { label: 'Servicing', href: '/servicing' },
+              ]
+              if (focusedAction) {
+                crumbs.push({ label: journey.name, href: `/servicing/${journeyId}` })
+              }
+              return crumbs
+            })()}
+            currentPage={focusedAction?.nickname ?? journey.name}
+            rightContent={
+              <div className="flex items-center gap-2">
+                <ServicingStatusBadge status={focusedAction?.status ?? journey.status} />
+                {journey.id === workflowState.journeyId && (
+                  <Button variant="ghost" size="sm" onClick={() => navigate('/wizard')}>
+                    Continue in Wizard
+                  </Button>
+                )}
+              </div>
+            }
+            className="shrink-0"
+          />
 
           {/* Three-column layout */}
           <div className="flex flex-1 overflow-hidden">
