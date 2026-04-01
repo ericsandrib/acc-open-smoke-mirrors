@@ -1,12 +1,12 @@
+import { PageTitle } from '@/components/page-title'
+
 export function DashboardContent() {
   return (
     <div className="space-y-8">
-      <div>
-        <h1 className="text-2xl font-semibold tracking-tight">Welcome back</h1>
-        <p className="text-sm text-muted-foreground">
-          Here's an overview of your wealth management activity.
-        </p>
-      </div>
+      <PageTitle
+        title="Welcome back"
+        subHead="Here's an overview of your wealth management activity."
+      />
 
       <div className="grid grid-cols-3 gap-6">
         {Array.from({ length: 3 }).map((_, i) => (

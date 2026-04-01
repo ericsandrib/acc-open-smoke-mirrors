@@ -4,6 +4,7 @@ import { ArrowLeft, Circle, Loader, CheckCircle2, Ban, CheckCheck } from 'lucide
 import { useServicing } from '@/stores/servicingStore'
 import { useWorkflow } from '@/stores/workflowStore'
 import { StatusBadge as ServicingStatusBadge } from '@/components/servicing/StatusBadge'
+import { PageTitle } from '@/components/page-title'
 import { Button } from '@/components/ui/button'
 import { ThemeToggle } from '@/components/ui/theme-toggle'
 import { BrandThemeSwitcher } from '@/components/ui/brand-theme-switcher'
@@ -248,12 +249,13 @@ export function JourneyDetailPage() {
           <div className="flex-1 overflow-y-auto p-8">
             {activeTask && activeAction ? (
               <div className="max-w-2xl mx-auto space-y-6">
-                <h2 className="text-3xl font-semibold">{activeTask.title}</h2>
+                <PageTitle
+                  title={activeTask.title}
+                  subHead={`Part of ${activeAction.title}`}
+                  size="small"
+                />
                 <div className="flex items-center gap-3">
                   <ServicingStatusBadge status={activeTask.status} />
-                  <span className="text-sm text-muted-foreground">
-                    Part of {activeAction.title}
-                  </span>
                 </div>
                 {FormComponent ? (
                   <>
