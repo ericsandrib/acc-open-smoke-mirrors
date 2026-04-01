@@ -6,6 +6,7 @@ import { useWorkflow } from '@/stores/workflowStore'
 import { StatusBadge as ServicingStatusBadge } from '@/components/servicing/StatusBadge'
 import { Button } from '@/components/ui/button'
 import { ThemeToggle } from '@/components/ui/theme-toggle'
+import { BrandThemeSwitcher } from '@/components/ui/brand-theme-switcher'
 import {
   Select,
   SelectTrigger,
@@ -173,6 +174,7 @@ export function JourneyDetailPage() {
             <ServicingStatusBadge status={focusedAction?.status ?? journey.status} />
           </div>
           <div className="flex items-center gap-1">
+            <BrandThemeSwitcher />
             <ThemeToggle />
             {journey.id === workflowState.journeyId && (
               <Button variant="ghost" size="sm" onClick={() => navigate('/wizard')}>
