@@ -71,7 +71,7 @@ export function JourneysTable() {
               {row.id === state.journeyId ? (
                 <span className="flex items-center gap-2">
                   {row.name}
-                  <span className="inline-flex h-2 w-2 rounded-full bg-blue-500 animate-pulse" />
+                  <span className="inline-flex h-2 w-2 rounded-full bg-fill-brand-primary animate-pulse" />
                 </span>
               ) : (
                 row.name

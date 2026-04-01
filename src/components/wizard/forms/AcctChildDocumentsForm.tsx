@@ -43,13 +43,13 @@ export function AcctChildDocumentsForm() {
                 onClick={() => toggleDoc(doc.id)}
                 className={`w-full rounded-lg border-2 border-dashed p-4 text-left transition-colors ${
                   isUploaded
-                    ? 'border-green-300 bg-green-50 dark:border-green-700 dark:bg-green-950/20'
+                    ? 'border-border-success-primary bg-fill-success-tertiary'
                     : 'border-border hover:border-muted-foreground/30 hover:bg-muted/30'
                 }`}
               >
                 <div className="flex items-start gap-3">
                   {isUploaded ? (
-                    <CheckCircle2 className="h-5 w-5 mt-0.5 text-green-600 dark:text-green-400 shrink-0" />
+                    <CheckCircle2 className="h-5 w-5 mt-0.5 text-text-success-primary shrink-0" />
                   ) : (
                     <Upload className="h-5 w-5 mt-0.5 text-muted-foreground shrink-0" />
                   )}
@@ -57,7 +57,7 @@ export function AcctChildDocumentsForm() {
                     <p className="text-sm font-medium">
                       {doc.label}
                       {isUploaded && (
-                        <span className="ml-2 text-xs text-green-700 dark:text-green-400">Uploaded</span>
+                        <span className="ml-2 text-xs text-text-success-primary">Uploaded</span>
                       )}
                     </p>
                     <p className="text-xs text-muted-foreground mt-0.5">{doc.description}</p>
