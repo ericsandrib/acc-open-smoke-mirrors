@@ -317,7 +317,7 @@ export function OpenAccountsForm() {
                   <div>
                     <Label className="flex items-center gap-1.5">
                       {doc.label}
-                      {hasFiles && <CheckCircle2 className="h-3 w-3 text-green-600 dark:text-green-400" />}
+                      {hasFiles && <CheckCircle2 className="h-3 w-3 text-text-success-primary" />}
                     </Label>
                     <p className="text-xs text-muted-foreground mt-0.5">{doc.description}</p>
                   </div>

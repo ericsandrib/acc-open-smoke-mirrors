@@ -183,13 +183,13 @@ export function Placeholder2Form() {
               let statusClass = 'bg-muted text-muted-foreground'
               if (m.kycStatus === 'verified') {
                 statusLabel = 'Verified'
-                statusClass = 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400'
+                statusClass = 'bg-fill-success-tertiary text-text-success-primary'
               } else if (child?.status === 'complete') {
                 statusLabel = 'Verified'
-                statusClass = 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400'
+                statusClass = 'bg-fill-success-tertiary text-text-success-primary'
               } else if (child?.status === 'in_progress') {
                 statusLabel = 'In Progress'
-                statusClass = 'bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-400'
+                statusClass = 'bg-fill-warning-tertiary text-text-warning-primary'
               }
               return (
                 <div key={m.id} className="flex items-center justify-between py-1.5 text-sm">
@@ -215,10 +215,10 @@ export function Placeholder2Form() {
               let statusClass = 'bg-muted text-muted-foreground'
               if (child.status === 'complete') {
                 statusLabel = 'Complete'
-                statusClass = 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400'
+                statusClass = 'bg-fill-success-tertiary text-text-success-primary'
               } else if (child.status === 'in_progress') {
                 statusLabel = 'In Progress'
-                statusClass = 'bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-400'
+                statusClass = 'bg-fill-warning-tertiary text-text-warning-primary'
               }
               return (
                 <div key={child.id} className="flex items-center justify-between py-1.5 text-sm">

@@ -3,10 +3,10 @@ import { Badge } from '@/components/ui/badge'
 import type { TaskStatus } from '@/types/workflow'
 
 const statusColors: Record<TaskStatus, string> = {
-  not_started: 'bg-gray-200 text-gray-700',
-  in_progress: 'bg-blue-100 text-blue-700',
-  complete: 'bg-green-100 text-green-700',
-  blocked: 'bg-red-100 text-red-700',
+  not_started: 'bg-fill-neutral-secondary text-text-secondary',
+  in_progress: 'bg-fill-category1-tertiary text-text-category1-primary',
+  complete: 'bg-fill-success-tertiary text-text-success-primary',
+  blocked: 'bg-fill-danger-tertiary text-text-danger-primary',
 }
 
 const statusLabels: Record<TaskStatus, string> = {

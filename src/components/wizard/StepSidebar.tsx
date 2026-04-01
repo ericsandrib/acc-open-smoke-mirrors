@@ -20,10 +20,10 @@ import {
 } from '@/components/ui/select'
 
 const statusColors: Record<TaskStatus, string> = {
-  not_started: 'text-gray-400',
-  in_progress: 'text-blue-500',
-  complete: 'text-green-500',
-  blocked: 'text-red-500',
+  not_started: 'text-text-tertiary',
+  in_progress: 'text-text-category1-primary',
+  complete: 'text-text-success-primary',
+  blocked: 'text-text-danger-primary',
 }
 
 const statusLabels: Record<TaskStatus, string> = {

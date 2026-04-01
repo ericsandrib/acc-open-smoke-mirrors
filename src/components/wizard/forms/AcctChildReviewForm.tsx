@@ -75,14 +75,14 @@ export function AcctChildReviewForm() {
             )}
           </div>
 
-          <div className="rounded-lg border border-amber-200 bg-amber-50 p-4 dark:border-amber-800 dark:bg-amber-950/30">
+          <div className="rounded-lg border border-border-warning-primary bg-fill-warning-tertiary p-4">
             <div className="flex items-start gap-3">
-              <Clock className="mt-0.5 h-5 w-5 flex-shrink-0 text-amber-600 dark:text-amber-400" />
+              <Clock className="mt-0.5 h-5 w-5 flex-shrink-0 text-icon-warning-primary" />
               <div>
-                <h3 className="text-sm font-semibold text-amber-900 dark:text-amber-100">
+                <h3 className="text-sm font-semibold text-text-warning-primary">
                   Pending Review
                 </h3>
-                <p className="text-sm text-amber-800 dark:text-amber-200">
+                <p className="text-sm text-text-warning-primary">
                   This account opening request is ready for review.
                   Confirm this step to submit the request.
                 </p>

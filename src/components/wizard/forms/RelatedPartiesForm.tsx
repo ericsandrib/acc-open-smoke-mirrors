@@ -314,13 +314,13 @@ function HouseholdMemberCard({ party }: { party: RelatedParty }) {
             </Badge>
           )}
           {party.kycStatus === 'verified' && (
-            <Badge variant="secondary" className="text-[10px] text-green-700 bg-green-100">Verified</Badge>
+            <Badge variant="secondary" className="text-[10px] text-text-success-primary bg-fill-success-tertiary">Verified</Badge>
           )}
           {party.kycStatus === 'needs_kyc' && (
             <TooltipProvider delayDuration={300}>
               <Tooltip>
                 <TooltipTrigger asChild>
-                  <Badge variant="secondary" className="text-[10px] text-amber-700 bg-amber-100">Needs verification</Badge>
+                  <Badge variant="secondary" className="text-[10px] text-text-warning-primary bg-fill-warning-tertiary">Needs verification</Badge>
                 </TooltipTrigger>
                 <TooltipContent><p>Identity verification required</p></TooltipContent>
               </Tooltip>

@@ -63,14 +63,14 @@ export function KycForm() {
   if (hasChildren) {
     return (
       <div className="space-y-6">
-        <div className="rounded-lg border border-blue-200 bg-blue-50 p-4 dark:border-blue-800 dark:bg-blue-950/30">
+        <div className="rounded-lg border border-border-category1-primary bg-fill-category1-tertiary p-4">
           <div className="flex items-start gap-3">
-            <Info className="mt-0.5 h-5 w-5 flex-shrink-0 text-blue-600 dark:text-blue-400" />
+            <Info className="mt-0.5 h-5 w-5 flex-shrink-0 text-icon-category1-primary" />
             <div className="space-y-1">
-              <h3 className="text-sm font-semibold text-blue-900 dark:text-blue-100">
+              <h3 className="text-sm font-semibold text-text-category1-primary">
                 Handed off to compliance
               </h3>
-              <p className="text-sm text-blue-800 dark:text-blue-200">
+              <p className="text-sm text-text-category1-primary">
                 The compliance team will review and complete KYC for the members listed below.
                 There's nothing more you need to do on this step — continue to the next task whenever you're ready.
               </p>
@@ -89,7 +89,7 @@ export function KycForm() {
                 className="flex items-center justify-between rounded-lg border border-border bg-muted/30 p-3"
               >
                 <div className="flex items-center gap-3">
-                  <div className="flex h-8 w-8 items-center justify-center rounded-full bg-green-100 text-green-700">
+                  <div className="flex h-8 w-8 items-center justify-center rounded-full bg-fill-success-tertiary text-text-success-primary">
                     <CheckCircle2 className="h-4 w-4" />
                   </div>
                   <div>
@@ -99,7 +99,7 @@ export function KycForm() {
                     )}
                   </div>
                 </div>
-                <Badge variant="secondary" className="text-xs text-green-700 bg-green-100">
+                <Badge variant="secondary" className="text-xs text-text-success-primary bg-fill-success-tertiary">
                   Verified
                 </Badge>
               </div>
@@ -140,25 +140,25 @@ export function KycForm() {
   if (showConfirmation) {
     return (
       <div className="space-y-6">
-        <div className="rounded-lg border border-amber-300 bg-amber-50 p-6 dark:border-amber-700 dark:bg-amber-950/30">
+        <div className="rounded-lg border border-border-warning-primary bg-fill-warning-tertiary p-6">
           <div className="flex items-start gap-3">
-            <ShieldAlert className="mt-0.5 h-5 w-5 flex-shrink-0 text-amber-600 dark:text-amber-400" />
+            <ShieldAlert className="mt-0.5 h-5 w-5 flex-shrink-0 text-icon-warning-primary" />
             <div className="space-y-3">
-              <h3 className="text-base font-semibold text-amber-900 dark:text-amber-100">
+              <h3 className="text-base font-semibold text-text-warning-primary">
                 Confirm Identity Verification
               </h3>
-              <p className="text-sm text-amber-800 dark:text-amber-200">
+              <p className="text-sm text-text-warning-primary">
                 You are about to initiate identity verification (KYC) for the following
                 individuals. This will trigger a background check through our verification
                 provider. <strong>This action cannot be undone.</strong>
               </p>
               <ul className="space-y-1 pl-1">
                 {selectedMembers.map((member) => (
-                  <li key={member.id} className="flex items-center gap-2 text-sm text-amber-900 dark:text-amber-100">
-                    <span className="h-1.5 w-1.5 rounded-full bg-amber-600 dark:bg-amber-400" />
+                  <li key={member.id} className="flex items-center gap-2 text-sm text-text-warning-primary">
+                    <span className="h-1.5 w-1.5 rounded-full bg-fill-warning-primary" />
                     {member.name}
                     {member.relationship && (
-                      <span className="text-amber-700/70 dark:text-amber-300/70">({member.relationship})</span>
+                      <span className="text-text-warning-secondary">({member.relationship})</span>
                     )}
                   </li>
                 ))}
@@ -198,7 +198,7 @@ export function KycForm() {
               className="flex items-center justify-between rounded-lg border border-border bg-muted/30 p-3"
             >
               <div className="flex items-center gap-3">
-                <div className="flex h-8 w-8 items-center justify-center rounded-full bg-green-100 text-green-700">
+                <div className="flex h-8 w-8 items-center justify-center rounded-full bg-fill-success-tertiary text-text-success-primary">
                   <CheckCircle2 className="h-4 w-4" />
                 </div>
                 <div>
@@ -208,7 +208,7 @@ export function KycForm() {
                   )}
                 </div>
               </div>
-              <Badge variant="secondary" className="text-xs text-green-700 bg-green-100">
+              <Badge variant="secondary" className="text-xs text-text-success-primary bg-fill-success-tertiary">
                 Verified
               </Badge>
             </div>
@@ -218,7 +218,7 @@ export function KycForm() {
 
       {allVerified ? (
         <div className="rounded-lg border border-border bg-muted/30 p-6 text-center">
-          <CheckCircle2 className="mx-auto mb-2 h-8 w-8 text-green-600" />
+          <CheckCircle2 className="mx-auto mb-2 h-8 w-8 text-text-success-primary" />
           <p className="text-sm font-medium">All household members have been previously verified.</p>
           <p className="mt-1 text-xs text-muted-foreground">
             No KYC action is required for this household. You may proceed to the next step.
