@@ -89,17 +89,28 @@ export function OpenAccountsForm() {
     })
   }
 
-  const handlePickerConfirm = (selections: { accountType: AccountType; label: string; count: number }[]) => {
+  const handlePickerConfirm = (selections: { accountType: AccountType; label: string; count: number; withAnnuityCount: number }[]) => {
     for (const sel of selections) {
-      for (let i = 1; i <= sel.count; i++) {
-        const name = sel.count > 1 ? `${sel.label} Account ${i}` : `${sel.label} Account`
+      const totalPlain = sel.count
+      const totalWithAnnuity = sel.withAnnuityCount
+      const totalForType = totalPlain + totalWithAnnuity
+      for (let i = 1; i <= totalForType; i++) {
+        const name = totalForType > 1 ? `${sel.label} Account ${i}` : `${sel.label} Account`
         dispatch({
           type: 'SPAWN_CHILD',
           parentTaskId: openAccountsTask!.id,
           childName: name,
           childType: 'account-opening',
         })
-        // Small delay to ensure unique timestamps
+        // Accounts beyond the plain count get an annuity
+        if (i > totalPlain) {
+          dispatch({
+            type: 'SPAWN_CHILD',
+            parentTaskId: openAccountsTask!.id,
+            childName: `${name} - Annuity 1`,
+            childType: 'account-opening',
+          })
+        }
       }
     }
     setPickerOpen(false)
@@ -222,15 +233,6 @@ export function OpenAccountsForm() {
                       <Badge variant="secondary" className="capitalize text-xs">
                         {child.status.replace('_', ' ')}
                       </Badge>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        className="text-xs h-7"
-                        onClick={() => handleAddAnnuity(child.name)}
-                      >
-                        <Plus className="h-3 w-3 mr-1" />
-                        Add annuity
-                      </Button>
                       <button
                         onClick={() => dispatch({ type: 'SET_ACTIVE_TASK', taskId: `${child.id}-details` })}
                         className="cursor-pointer"
