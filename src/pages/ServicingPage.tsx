@@ -1,5 +1,10 @@
-import { ServicingLayout } from '@/components/servicing/ServicingLayout'
+import { AppShell } from '@/components/layout/AppShell'
+import { ServicingContent } from '@/components/servicing/ServicingContent'
 
 export function ServicingPage() {
-  return <ServicingLayout />
+  return (
+    <AppShell>
+      <ServicingContent />
+    </AppShell>
+  )
 }

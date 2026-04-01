@@ -1,5 +1,10 @@
-import { DashboardLayout } from '@/components/dashboard/DashboardLayout'
+import { AppShell } from '@/components/layout/AppShell'
+import { DashboardContent } from '@/components/dashboard/DashboardContent'
 
 export function DashboardPage() {
-  return <DashboardLayout />
+  return (
+    <AppShell>
+      <DashboardContent />
+    </AppShell>
+  )
 }
