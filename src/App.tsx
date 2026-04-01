@@ -7,6 +7,7 @@ import { WizardPage } from '@/pages/WizardPage'
 import { WorkflowPage } from '@/pages/WorkflowPage'
 import { ServicingPage } from '@/pages/ServicingPage'
 import { JourneyDetailPage } from '@/pages/JourneyDetailPage'
+import { Toaster } from '@/components/ui/sonner'
 import { Agentation } from 'agentation'
 
 export default function App() {
@@ -28,6 +29,7 @@ export default function App() {
           {import.meta.env.DEV && <Agentation />}
         </ServicingProvider>
       </WorkflowProvider>
+      <Toaster />
     </ThemeProvider>
   )
 }
