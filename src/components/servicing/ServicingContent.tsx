@@ -14,7 +14,7 @@ export function ServicingContent() {
               Track onboarding journeys, actions, and tasks across all relationships.
             </p>
           </div>
-          <TabsList>
+          <TabsList variant="elevated">
             <TabsTrigger value="journeys">Journeys</TabsTrigger>
             <TabsTrigger value="actions">Actions</TabsTrigger>
             <TabsTrigger value="tasks">Tasks</TabsTrigger>
