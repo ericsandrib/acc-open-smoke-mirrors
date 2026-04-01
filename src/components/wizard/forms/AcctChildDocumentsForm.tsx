@@ -2,7 +2,8 @@ import { useWorkflow, useTaskData } from '@/stores/workflowStore'
 import { parseChildSubTaskId } from '@/utils/childTaskRegistry'
 import { getRequiredDocuments } from '@/utils/accountDocuments'
 import type { AccountType } from '@/types/workflow'
-import { Upload, CheckCircle2 } from 'lucide-react'
+import { Upload } from 'lucide-react'
+import { FileUpload, type FileWithStatus } from '@/components/ui/file-upload'
 
 export function AcctChildDocumentsForm() {
   const { state } = useWorkflow()
@@ -21,52 +22,29 @@ export function AcctChildDocumentsForm() {
   const { data, updateField } = useTaskData(taskId)
 
   const requiredDocs = accountType ? getRequiredDocuments([accountType]) : []
-  const uploadedDocs = (data.uploadedDocs as string[] | undefined) ?? []
-
-  const toggleDoc = (docId: string) => {
-    const next = uploadedDocs.includes(docId)
-      ? uploadedDocs.filter((id) => id !== docId)
-      : [...uploadedDocs, docId]
-    updateField('uploadedDocs', next)
-  }
 
   return (
     <div className="space-y-4">
       {requiredDocs.length > 0 ? (
-        <div className="space-y-3">
+        <div className="space-y-4">
           {requiredDocs.map((doc) => {
-            const isUploaded = uploadedDocs.includes(doc.id)
+            const storedFiles = (data[`doc-${doc.id}`] as { name: string; size?: number }[] | undefined) ?? []
+
             return (
-              <button
+              <FileUpload
                 key={doc.id}
-                type="button"
-                onClick={() => toggleDoc(doc.id)}
-                className={`w-full rounded-lg border-2 border-dashed p-4 text-left transition-colors ${
-                  isUploaded
-                    ? 'border-border-success-primary bg-fill-success-tertiary'
-                    : 'border-border hover:border-muted-foreground/30 hover:bg-muted/30'
-                }`}
-              >
-                <div className="flex items-start gap-3">
-                  {isUploaded ? (
-                    <CheckCircle2 className="h-5 w-5 mt-0.5 text-text-success-primary shrink-0" />
-                  ) : (
-                    <Upload className="h-5 w-5 mt-0.5 text-muted-foreground shrink-0" />
-                  )}
-                  <div>
-                    <p className="text-sm font-medium">
-                      {doc.label}
-                      {isUploaded && (
-                        <span className="ml-2 text-xs text-text-success-primary">Uploaded</span>
-                      )}
-                    </p>
-                    <p className="text-xs text-muted-foreground mt-0.5">{doc.description}</p>
-                    {!isUploaded && (
-                      <p className="text-xs text-muted-foreground/70 mt-1">Click to mark as uploaded</p>
-                    )}
-                  </div>
-                </div>
-              </button>
+                id={`acct-child-${taskId}-${doc.id}`}
+                label={doc.label}
+                subtitle={doc.description}
+                initialFiles={storedFiles}
+                onFilesChange={(files: FileWithStatus[]) => {
+                  const meta = files.map((f) => ({
+                    name: f.file.name,
+                    size: f.file.size,
+                  }))
+                  updateField(`doc-${doc.id}`, meta)
+                }}
+              />
             )
           })}
         </div>

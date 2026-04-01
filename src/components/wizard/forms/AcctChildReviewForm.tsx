@@ -35,7 +35,9 @@ export function AcctChildReviewForm() {
   const docsData = child ? state.taskData[`${child.id}-documents`] ?? {} : {}
 
   const accountType = detailsData.accountType as AccountType | undefined
-  const uploadedDocs = (docsData.uploadedDocs as string[]) ?? []
+  const uploadedDocCount = Object.keys(docsData).filter(
+    (k) => k.startsWith('doc-') && Array.isArray(docsData[k]) && (docsData[k] as unknown[]).length > 0
+  ).length
   const accountHolders = (detailsData.accountHolders as string[]) ?? []
 
   const holderNames = accountHolders
@@ -66,9 +68,9 @@ export function AcctChildReviewForm() {
 
           <div className="rounded-lg border border-border p-4 bg-muted/50 space-y-3">
             <p className="text-sm font-semibold">Documents</p>
-            {uploadedDocs.length > 0 ? (
+            {uploadedDocCount > 0 ? (
               <p className="text-sm text-muted-foreground">
-                {uploadedDocs.length} document{uploadedDocs.length === 1 ? '' : 's'} uploaded
+                {uploadedDocCount} document{uploadedDocCount === 1 ? '' : 's'} uploaded
               </p>
             ) : (
               <p className="text-sm text-muted-foreground">No documents uploaded yet.</p>

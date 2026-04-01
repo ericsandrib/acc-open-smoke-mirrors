@@ -1,31 +1,50 @@
-import { Upload } from 'lucide-react'
-
-function UploadArea({ title, description }: { title: string; description: string }) {
-  return (
-    <div className="space-y-2">
-      <h3 className="text-sm font-medium text-foreground">{title}</h3>
-      <div className="flex flex-col items-center justify-center rounded-lg border-2 border-dashed border-muted-foreground/25 bg-muted/30 p-8 text-center">
-        <Upload className="mb-3 h-8 w-8 text-muted-foreground/50" />
-        <p className="text-sm font-medium text-muted-foreground">{description}</p>
-        <p className="mt-1 text-xs text-muted-foreground/70">
-          PDF, JPG, or PNG up to 10 MB
-        </p>
-      </div>
-    </div>
-  )
-}
+import { useWorkflow, useTaskData } from '@/stores/workflowStore'
+import { FileUpload, type FileWithStatus } from '@/components/ui/file-upload'
 
 export function KycChildDocumentsForm() {
+  const { state } = useWorkflow()
+  const taskId = state.activeTaskId
+  const { data, updateField } = useTaskData(taskId)
+
+  const docs = [
+    {
+      id: 'gov-id',
+      label: 'Government-Issued ID',
+      description: 'Upload a passport, driver\'s license, or national ID card',
+      hint: 'PDF, JPG, or PNG up to 10 MB',
+    },
+    {
+      id: 'supporting-docs',
+      label: 'Supporting Documents',
+      description: 'Upload proof of address, utility bills, or other supporting documentation',
+      hint: 'PDF, JPG, or PNG up to 10 MB',
+    },
+  ]
+
   return (
-    <div className="space-y-6">
-      <UploadArea
-        title="Government-Issued ID"
-        description="Upload a passport, driver's license, or national ID card"
-      />
-      <UploadArea
-        title="Supporting Documents"
-        description="Upload proof of address, utility bills, or other supporting documentation"
-      />
+    <div className="space-y-4">
+      {docs.map((doc) => {
+        const storedFiles = (data[`doc-${doc.id}`] as { name: string; size?: number }[] | undefined) ?? []
+
+        return (
+          <FileUpload
+            key={doc.id}
+            id={`kyc-${taskId}-${doc.id}`}
+            label={doc.label}
+            subtitle={doc.description}
+            hint={doc.hint}
+            initialFiles={storedFiles}
+            acceptedFileTypes={['.pdf', '.jpg', '.jpeg', '.png']}
+            onFilesChange={(files: FileWithStatus[]) => {
+              const meta = files.map((f) => ({
+                name: f.file.name,
+                size: f.file.size,
+              }))
+              updateField(`doc-${doc.id}`, meta)
+            }}
+          />
+        )
+      })}
     </div>
   )
 }

@@ -6,6 +6,7 @@ import { Label } from '@/components/ui/label'
 import { AccountTypePickerDialog } from './AccountTypePickerDialog'
 import { getRequiredDocuments } from '@/utils/accountDocuments'
 import type { AccountType } from '@/types/workflow'
+import { FileUpload, type FileWithStatus } from '@/components/ui/file-upload'
 import {
   ChevronDown,
   ChevronRight,
@@ -16,9 +17,6 @@ import {
   FileText,
   FileSignature,
   ClipboardList,
-  Upload,
-  CheckCircle2,
-  X,
 } from 'lucide-react'
 
 const accountTypeLabels: Record<AccountType, string> = {
@@ -309,59 +307,23 @@ export function OpenAccountsForm() {
         {children.length > 0 && requiredDocs.length > 0 ? (
           <div className="space-y-4">
             {requiredDocs.map((doc) => {
-              const uploadedFiles = (data[`doc-${doc.id}`] as string[] | undefined) ?? []
-              const hasFiles = uploadedFiles.length > 0
+              const storedFiles = (data[`doc-${doc.id}`] as { name: string; size?: number }[] | undefined) ?? []
 
               return (
-                <div key={doc.id} className="grid grid-cols-3 items-start gap-4">
-                  <div>
-                    <Label className="flex items-center gap-1.5">
-                      {doc.label}
-                      {hasFiles && <CheckCircle2 className="h-3 w-3 text-text-success-primary" />}
-                    </Label>
-                    <p className="text-xs text-muted-foreground mt-0.5">{doc.description}</p>
-                  </div>
-                  <div className="col-span-2 space-y-1.5">
-                    {uploadedFiles.map((fileName, i) => (
-                      <div
-                        key={i}
-                        className="flex items-center justify-between rounded-md border border-border bg-muted/50 px-3 py-2 text-sm"
-                      >
-                        <div className="flex items-center gap-2 min-w-0">
-                          <FileText className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
-                          <span className="truncate">{fileName}</span>
-                        </div>
-                        <button
-                          type="button"
-                          className="text-muted-foreground hover:text-foreground shrink-0 ml-2"
-                          onClick={() => {
-                            const next = uploadedFiles.filter((_, idx) => idx !== i)
-                            updateField(`doc-${doc.id}`, next)
-                          }}
-                        >
-                          <X className="h-3.5 w-3.5" />
-                        </button>
-                      </div>
-                    ))}
-                    <label className="flex cursor-pointer items-center justify-center gap-2 rounded-md border border-dashed border-input px-3 py-2 text-sm transition-colors hover:border-muted-foreground/30 hover:bg-muted/30">
-                      <Upload className="h-3.5 w-3.5 text-muted-foreground" />
-                      <span className="text-muted-foreground">
-                        {hasFiles ? 'Upload another' : 'Choose file'}
-                      </span>
-                      <input
-                        type="file"
-                        className="sr-only"
-                        onChange={(e) => {
-                          const file = e.target.files?.[0]
-                          if (file) {
-                            updateField(`doc-${doc.id}`, [...uploadedFiles, file.name])
-                          }
-                          e.target.value = ''
-                        }}
-                      />
-                    </label>
-                  </div>
-                </div>
+                <FileUpload
+                  key={doc.id}
+                  id={`open-accts-${doc.id}`}
+                  label={doc.label}
+                  subtitle={doc.description}
+                  initialFiles={storedFiles}
+                  onFilesChange={(files: FileWithStatus[]) => {
+                    const meta = files.map((f) => ({
+                      name: f.file.name,
+                      size: f.file.size,
+                    }))
+                    updateField(`doc-${doc.id}`, meta)
+                  }}
+                />
               )
             })}
           </div>
