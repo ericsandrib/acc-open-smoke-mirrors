@@ -12,6 +12,7 @@ import {
   SelectContent,
   SelectItem,
 } from '@/components/ui/select'
+import { toast } from 'sonner'
 import { useWorkflow } from '@/stores/workflowStore'
 import { useServicing } from '@/stores/servicingStore'
 import { relationships } from '@/data/relationships'
@@ -51,6 +52,8 @@ export function ComposeDialog({ onClose }: ComposeDialogProps) {
       saveCurrentJourney(currentLiveJourney)
     }
 
+    const name = journeyName || 'Client Onboarding'
+
     dispatch({
       type: 'INITIALIZE_FROM_RELATIONSHIP',
       relatedParties: relationship.relatedParties,
@@ -63,9 +66,10 @@ export function ComposeDialog({ onClose }: ComposeDialogProps) {
         dob: relationship.primaryContact.dob ?? '',
         clientType: relationship.primaryContact.clientType ?? '',
       },
-      journeyName: journeyName || 'Client Onboarding',
+      journeyName: name,
       assignedTo: assignedTo || undefined,
     })
+    toast.success(`Journey "${name}" created for ${relationship.name}`)
     navigate('/wizard')
   }
 
