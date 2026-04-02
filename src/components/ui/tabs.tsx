@@ -81,7 +81,7 @@ const TabsTrigger = React.forwardRef<
           "rounded-none border-b-2 border-transparent",
           "text-text-secondary",
           "hover:text-text-primary",
-          "data-[state=active]:border-border-brand-primary data-[state=active]:text-text-primary",
+          "data-[state=active]:border-foreground data-[state=active]:text-text-primary",
         ],
 
         // ── Pill variant: rounded background indicator ──

@@ -18,6 +18,13 @@ export interface RelatedParty {
   dob?: string
   kycStatus?: 'verified' | 'needs_kyc'
   isHidden?: boolean
+  accountNumber?: string
+  ssn?: string
+  taxId?: string
+  clientId?: string
+  entityType?: string
+  jurisdiction?: string
+  contactPerson?: string
 }
 
 export type AccountType = 'brokerage' | 'ira' | 'roth_ira' | '401k' | 'trust' | 'checking' | 'savings'
