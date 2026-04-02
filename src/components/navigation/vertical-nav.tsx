@@ -1,14 +1,21 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect } from "react";
 import { Link, useLocation } from "react-router-dom";
 import {
   Home,
+  Search,
+  Bell,
+  CalendarDays,
+  SlidersHorizontal,
+  Users,
+  Star,
+  Globe,
+  TrendingUp,
+  Settings,
+  Wrench,
   PanelRight,
   Menu,
-  GitCompare,
-  Wand2,
-  Workflow,
-  ChevronRight,
   Plus,
+  ChevronRight,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -18,32 +25,16 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
-import {
-  Collapsible,
-  CollapsibleContent,
-} from "@/components/ui/collapsible";
-import {
-  Popover,
-  PopoverTrigger,
-  PopoverContent,
-} from "@/components/ui/popover";
-import { ThemeToggle } from "@/components/ui/theme-toggle";
 
 // ---------------------------------------------------------------------------
 // Types
 // ---------------------------------------------------------------------------
 
-interface NavSubItem {
-  label: string;
-  href: string;
-}
-
 interface NavItem {
   icon: React.ComponentType<{ className?: string }>;
   label: string;
   href: string;
-  shortcut?: string;
-  subItems?: NavSubItem[];
+  badge?: number;
 }
 
 interface NavGroup {
@@ -52,22 +43,43 @@ interface NavGroup {
 }
 
 // ---------------------------------------------------------------------------
-// Nav data
+// Nav data — matches 5178 vertical nav layout
 // ---------------------------------------------------------------------------
 
-const coreGroup: NavItem[] = [
-  { icon: Home, label: "Home", href: "/" },
-  { icon: GitCompare, label: "Servicing", href: "/servicing" },
-];
-
-const toolsGroup: NavItem[] = [
-  { icon: Wand2, label: "Wizard", href: "/wizard" },
-  { icon: Workflow, label: "Workflow", href: "/workflow" },
-];
-
 const navGroups: NavGroup[] = [
-  { items: coreGroup },
-  { label: "Tools", items: toolsGroup },
+  {
+    items: [
+      { icon: Home, label: "Home", href: "/" },
+      { icon: Search, label: "Search", href: "/search" },
+      { icon: Bell, label: "Notifications", href: "/notifications", badge: 8 },
+      { icon: CalendarDays, label: "Meetings", href: "/meetings" },
+      { icon: SlidersHorizontal, label: "My Work", href: "/my-work" },
+    ],
+  },
+  {
+    label: "Favorites",
+    items: [
+      { icon: Users, label: "My Team", href: "/my-team" },
+      { icon: Star, label: "My Favorite View", href: "/my-favorite-view" },
+    ],
+  },
+  {
+    label: "Manage",
+    items: [
+      { icon: Globe, label: "Onboarding", href: "/onboarding" },
+      { icon: TrendingUp, label: "Tax", href: "/tax" },
+      { icon: Settings, label: "Advisor Matching", href: "/advisor-matching" },
+      { icon: Wrench, label: "Active Actions", href: "/active-actions" },
+    ],
+  },
+  {
+    label: "Insights",
+    items: [],
+  },
+  {
+    label: "Records",
+    items: [],
+  },
 ];
 
 // ---------------------------------------------------------------------------
@@ -118,85 +130,6 @@ function useLocalStorage<T>(key: string, initialValue: T) {
 }
 
 // ---------------------------------------------------------------------------
-// NavSubPopover — hover popover for collapsed sidebar sub-items
-// ---------------------------------------------------------------------------
-
-function NavSubPopover({
-  item,
-  onItemClick,
-  children,
-}: {
-  item: NavItem;
-  onItemClick?: () => void;
-  children: React.ReactNode;
-}) {
-  const [open, setOpen] = useState(false);
-  const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-
-  const handleEnter = () => {
-    if (timeoutRef.current) clearTimeout(timeoutRef.current);
-    setOpen(true);
-  };
-
-  const handleLeave = () => {
-    timeoutRef.current = setTimeout(() => setOpen(false), 100);
-  };
-
-  useEffect(() => {
-    return () => {
-      if (timeoutRef.current) clearTimeout(timeoutRef.current);
-    };
-  }, []);
-
-  return (
-    <Popover open={open} onOpenChange={setOpen}>
-      <PopoverTrigger asChild>
-        <div
-          className="w-full"
-          onMouseEnter={handleEnter}
-          onMouseLeave={handleLeave}
-        >
-          {children}
-        </div>
-      </PopoverTrigger>
-      <PopoverContent
-        side="right"
-        align="start"
-        sideOffset={4}
-        className="w-auto min-w-[180px] p-1 shadow-[0_4px_16px_rgba(0,0,0,0.12)]"
-        onMouseEnter={handleEnter}
-        onMouseLeave={handleLeave}
-        onOpenAutoFocus={(e) => e.preventDefault()}
-        onCloseAutoFocus={(e) => e.preventDefault()}
-      >
-        <div className="px-3 py-2 text-sm font-medium">{item.label}</div>
-        <div className="mx-1 h-px bg-border" />
-        <div className="flex flex-col gap-0 py-1">
-          {item.subItems?.map((sub) => {
-            const isSubActive = window.location.pathname === sub.href;
-            return (
-              <Link
-                key={sub.href}
-                to={sub.href}
-                onClick={() => {
-                  setOpen(false);
-                  onItemClick?.();
-                }}
-                className={`flex h-8 items-center rounded-md px-3 text-sm hover:bg-accent ${
-                  isSubActive ? "bg-accent font-medium" : ""
-                }`}
-              >
-                {sub.label}
-              </Link>
-            );
-          })}
-        </div>
-      </PopoverContent>
-    </Popover>
-  );
-}
-
-// ---------------------------------------------------------------------------
 // NavigationContent — shared between desktop & mobile
 // ---------------------------------------------------------------------------
 
@@ -208,229 +141,108 @@ function NavigationContent({
   onItemClick?: () => void;
 }) {
   const { pathname } = useLocation();
-  const [collapsedGroups, setCollapsedGroups] = useState<
-    Record<string, boolean>
-  >({});
-  const toggleGroup = (label: string) => {
-    setCollapsedGroups((prev) => ({ ...prev, [label]: !prev[label] }));
-  };
-
-  const [openCollapsibles, setOpenCollapsibles] = useState<
-    Record<string, boolean>
-  >(() => {
-    const initial: Record<string, boolean> = {};
-    for (const group of navGroups) {
-      for (const item of group.items) {
-        if (item.subItems) {
-          if (
-            pathname === item.href ||
-            pathname.startsWith(item.href + "/")
-          ) {
-            initial[item.href] = true;
-          }
-        }
-      }
-    }
-    return initial;
-  });
 
   return (
     <>
-      {/* Navigation items */}
-      <div className="flex-1 px-2 pt-0 pb-2 overflow-y-auto flex flex-col gap-3">
-        {navGroups.map((group, groupIndex) => {
-          const isGroupCollapsed = group.label
-            ? (collapsedGroups[group.label] ?? false)
-            : false;
-          return (
-            <div key={groupIndex} className="flex flex-col gap-0">
-              {group.label && (
-                <button
-                  type="button"
-                  onClick={() => isExpanded && toggleGroup(group.label!)}
-                  className="flex items-center justify-between px-3 pt-1 pb-1.5 text-[11px] font-medium text-muted-foreground hover:text-foreground transition-colors overflow-hidden"
+      <div className="flex-1 px-3 pt-1 pb-2 overflow-y-auto flex flex-col gap-4">
+        {navGroups.map((group, groupIndex) => (
+          <div key={groupIndex} className="flex flex-col gap-0.5">
+            {group.label && isExpanded && (
+              <span className="px-3 pt-1 pb-1 text-[11px] font-medium text-muted-foreground uppercase tracking-wider">
+                {group.label}
+              </span>
+            )}
+            {group.label && !isExpanded && (
+              <div className="mx-auto w-5 border-t border-border my-1" />
+            )}
+            {group.items.map((item) => {
+              const isActive = pathname === item.href;
+              const showTooltip = !isExpanded;
+
+              const button = (
+                <Button
+                  variant="ghost"
+                  asChild
+                  className={`relative w-full h-10 min-h-10 text-foreground/80 hover:bg-accent hover:text-foreground font-normal focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-primary overflow-hidden ${
+                    isActive
+                      ? "bg-accent text-foreground font-medium"
+                      : ""
+                  }`}
                 >
-                  <span
-                    className={`whitespace-nowrap transition-opacity ${
-                      isExpanded ? "opacity-100" : "opacity-0"
-                    }`}
-                    style={{ transitionDuration: "200ms" }}
-                  >
-                    {group.label}
-                  </span>
-                  <ChevronRight
-                    className={`size-3 transition-all ${
-                      isExpanded ? "opacity-100" : "opacity-0"
-                    }`}
-                    style={{
-                      transform: isGroupCollapsed
-                        ? "rotate(0deg)"
-                        : "rotate(90deg)",
-                      transitionDuration: "200ms",
-                    }}
-                  />
-                </button>
-              )}
-              {!isGroupCollapsed &&
-                group.items.map((item) => {
-                  const isActive = item.subItems
-                    ? false
-                    : pathname === item.href;
-                  const showTooltip = !isExpanded;
-
-                  // Items with sub-items: collapsible group
-                  if (item.subItems) {
-                    const isOpen = openCollapsibles[item.href] ?? false;
-                    const hasActiveChild =
-                      pathname === item.href ||
-                      pathname.startsWith(item.href + "/");
-
-                    const parentButton = (
-                      <Button
-                        variant="ghost"
-                        className={`relative w-full h-9 min-h-9 text-sidebar-foreground hover:bg-accent font-normal focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-primary overflow-hidden ${
-                          !isExpanded && hasActiveChild ? "bg-accent" : ""
-                        }`}
-                        onClick={() => {
-                          if (hasActiveChild && isOpen) return;
-                          setOpenCollapsibles((prev) => ({
-                            ...prev,
-                            [item.href]: !prev[item.href],
-                          }));
-                        }}
-                      >
-                        <item.icon className="size-5 flex-shrink-0 absolute left-2.5" />
-                        <span
-                          className={`absolute left-[38px] text-sm leading-none whitespace-nowrap transition-opacity pointer-events-none ${
-                            isExpanded ? "opacity-100" : "opacity-0"
-                          }`}
-                          style={{ transitionDuration: "200ms" }}
-                        >
-                          {item.label}
-                        </span>
-                        <ChevronRight
-                          className={`size-4 absolute right-2 transition-transform duration-200 text-muted-foreground ${
-                            isExpanded ? "opacity-100" : "opacity-0"
-                          } ${isOpen ? "rotate-90" : ""}`}
-                        />
-                      </Button>
-                    );
-
-                    return (
-                      <Collapsible
-                        key={item.href}
-                        open={isOpen}
-                        onOpenChange={(open) =>
-                          setOpenCollapsibles((prev) => ({
-                            ...prev,
-                            [item.href]: open,
-                          }))
-                        }
-                      >
-                        <div className="h-9 min-h-9 flex leading-none">
-                          {!isExpanded ? (
-                            <NavSubPopover
-                              item={item}
-                              onItemClick={onItemClick}
-                            >
-                              {parentButton}
-                            </NavSubPopover>
-                          ) : (
-                            parentButton
-                          )}
-                        </div>
-                        {isExpanded && (
-                          <CollapsibleContent className="overflow-hidden">
-                            <ul className="flex min-w-0 flex-col gap-0 py-0.5">
-                              {item.subItems.map((sub) => {
-                                const isSubActive = pathname === sub.href;
-                                return (
-                                  <li key={sub.href}>
-                                    <Link
-                                      to={sub.href}
-                                      onClick={onItemClick}
-                                      className={`flex h-9 min-w-0 items-center overflow-hidden rounded-md text-sm text-sidebar-foreground hover:bg-accent ${
-                                        isSubActive
-                                          ? "bg-accent font-medium"
-                                          : ""
-                                      }`}
-                                      style={{ paddingLeft: 38 }}
-                                    >
-                                      <span className="truncate">
-                                        {sub.label}
-                                      </span>
-                                    </Link>
-                                  </li>
-                                );
-                              })}
-                            </ul>
-                          </CollapsibleContent>
-                        )}
-                      </Collapsible>
-                    );
-                  }
-
-                  // Standard nav item
-                  const button = (
-                    <Button
-                      variant="ghost"
-                      asChild
-                      className={`relative w-full h-9 min-h-9 text-sidebar-foreground hover:bg-accent font-normal focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-primary overflow-hidden ${
-                        isActive ? "bg-accent" : ""
+                  <Link to={item.href} onClick={onItemClick}>
+                    <item.icon className="size-[18px] flex-shrink-0 absolute left-3" />
+                    <span
+                      className={`absolute left-10 text-[14px] leading-none whitespace-nowrap transition-opacity pointer-events-none ${
+                        isExpanded ? "opacity-100" : "opacity-0"
                       }`}
+                      style={{ transitionDuration: "200ms" }}
                     >
-                      <Link to={item.href} onClick={onItemClick}>
-                        <item.icon className="size-5 flex-shrink-0 absolute left-2.5" />
-                        <span
-                          className={`absolute left-[38px] text-sm leading-none whitespace-nowrap transition-opacity pointer-events-none ${
-                            isExpanded ? "opacity-100" : "opacity-0"
-                          }`}
-                          style={{ transitionDuration: "200ms" }}
-                        >
-                          {item.label}
+                      {item.label}
+                    </span>
+                    {item.badge && isExpanded && (
+                      <span className="absolute right-3 inline-flex items-center justify-center min-w-[20px] h-5 rounded-md bg-[#E8503A] text-white text-[11px] font-medium px-1.5">
+                        {item.badge}
+                      </span>
+                    )}
+                    {item.badge && !isExpanded && (
+                      <span className="absolute top-1 right-1 inline-flex items-center justify-center w-2 h-2 rounded-full bg-[#E8503A]" />
+                    )}
+                  </Link>
+                </Button>
+              );
+
+              if (!showTooltip) {
+                return (
+                  <div
+                    key={item.href}
+                    className="h-10 min-h-10 flex leading-none"
+                  >
+                    {button}
+                  </div>
+                );
+              }
+
+              return (
+                <div
+                  key={item.href}
+                  className="h-10 min-h-10 flex leading-none"
+                >
+                  <Tooltip>
+                    <TooltipTrigger asChild>{button}</TooltipTrigger>
+                    <TooltipContent
+                      side="right"
+                      className="text-xs flex items-center gap-2"
+                    >
+                      <span>{item.label}</span>
+                      {item.badge && (
+                        <span className="inline-flex items-center justify-center min-w-[18px] h-[18px] rounded-md bg-[#E8503A] text-white text-[10px] font-medium px-1">
+                          {item.badge}
                         </span>
-                      </Link>
-                    </Button>
-                  );
-
-                  if (!showTooltip) {
-                    return (
-                      <div
-                        key={item.href}
-                        className="h-9 min-h-9 flex leading-none"
-                      >
-                        {button}
-                      </div>
-                    );
-                  }
-
-                  return (
-                    <div
-                      key={item.href}
-                      className="h-9 min-h-9 flex leading-none"
-                    >
-                      <Tooltip>
-                        <TooltipTrigger asChild>{button}</TooltipTrigger>
-                        <TooltipContent
-                          side="right"
-                          className="text-xs flex items-center gap-2"
-                        >
-                          <span>{item.label}</span>
-                        </TooltipContent>
-                      </Tooltip>
-                    </div>
-                  );
-                })}
-            </div>
-          );
-        })}
+                      )}
+                    </TooltipContent>
+                  </Tooltip>
+                </div>
+              );
+            })}
+          </div>
+        ))}
       </div>
 
-      {/* Footer: brand switcher, theme toggle, create button */}
-      <div className="border-t border-sidebar-border p-2 flex flex-col gap-2">
-        <div className="flex items-center justify-center px-1">
-          <ThemeToggle />
-        </div>
+      {/* Footer: Settings */}
+      <div className="px-3 pb-1">
+        <Link
+          to="/settings"
+          onClick={onItemClick}
+          className={`flex items-center h-10 px-3 text-[14px] text-foreground/80 hover:text-foreground transition-colors ${
+            pathname === "/settings" ? "font-medium text-foreground" : ""
+          }`}
+        >
+          {isExpanded ? (
+            "Settings"
+          ) : (
+            <Settings className="size-[18px]" />
+          )}
+        </Link>
       </div>
     </>
   );
@@ -454,7 +266,6 @@ export function VerticalNav({ onCreateClick }: VerticalNavProps) {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isCollapsedHovered, setIsCollapsedHovered] = useState(false);
 
-  // Keyboard shortcut: Cmd+. (Mac) or Ctrl+. (Windows) to toggle sidebar
   useEffect(() => {
     if (!mounted || isMobile) return;
 
@@ -471,7 +282,6 @@ export function VerticalNav({ onCreateClick }: VerticalNavProps) {
 
   const navWidth = !mounted ? 256 : isExpanded ? 256 : 56;
 
-  // Placeholder to avoid layout shift before mount
   if (!mounted) {
     return (
       <>
@@ -488,7 +298,6 @@ export function VerticalNav({ onCreateClick }: VerticalNavProps) {
 
   return (
     <TooltipProvider delayDuration={300} skipDelayDuration={300}>
-      {/* Mobile: hamburger + sheet */}
       {isMobile ? (
         <Sheet open={isMobileMenuOpen} onOpenChange={setIsMobileMenuOpen}>
           <SheetTrigger asChild>
@@ -507,11 +316,8 @@ export function VerticalNav({ onCreateClick }: VerticalNavProps) {
               role="navigation"
               aria-label="Main navigation"
             >
-              {/* Header */}
-              <div className="h-16 pt-4 pb-6 pl-4 pr-2 flex items-center shrink-0">
-                <span className="text-sm font-semibold tracking-tight">
-                  Wealth Platform
-                </span>
+              <div className="h-14 px-4 flex items-center shrink-0">
+                <span className="text-lg font-bold tracking-tight">M</span>
               </div>
 
               <NavigationContent
@@ -519,17 +325,15 @@ export function VerticalNav({ onCreateClick }: VerticalNavProps) {
                 onItemClick={() => setIsMobileMenuOpen(false)}
               />
 
-              {/* Create button */}
               {onCreateClick && (
-                <div className="border-t border-sidebar-border p-2">
+                <div className="px-3 pb-3">
                   <Button
                     onClick={() => {
                       setIsMobileMenuOpen(false);
                       onCreateClick();
                     }}
-                    className="w-full gap-2"
+                    className="w-full h-10 gap-2 bg-foreground text-background hover:bg-foreground/90 rounded-lg font-medium"
                   >
-                    <Plus className="h-4 w-4" />
                     Create
                   </Button>
                 </div>
@@ -538,37 +342,34 @@ export function VerticalNav({ onCreateClick }: VerticalNavProps) {
           </SheetContent>
         </Sheet>
       ) : (
-        /* Desktop: collapsible sidebar */
         <>
           <div
             className="shrink-0 transition-[width] duration-200"
             style={{ width: navWidth }}
           />
           <nav
-            className={`flex flex-col h-screen fixed top-0 left-0 transition-[width,background-color] duration-200 bg-sidebar border-r border-sidebar-border`}
+            className="flex flex-col h-screen fixed top-0 left-0 transition-[width,background-color] duration-200 bg-sidebar border-r border-sidebar-border"
             style={{ width: navWidth }}
             role="navigation"
             aria-label="Main navigation"
             onMouseEnter={() => !isExpanded && setIsCollapsedHovered(true)}
             onMouseLeave={() => setIsCollapsedHovered(false)}
           >
-            {/* Header */}
-            <div className="h-16 pt-4 pb-6 pl-4 pr-2 flex items-center shrink-0 relative">
+            {/* Header: M logo + panel toggle */}
+            <div className="h-14 px-4 flex items-center shrink-0 justify-between">
               {isExpanded ? (
                 <>
-                  <span className="text-sm font-semibold tracking-tight">
-                    Wealth Platform
-                  </span>
+                  <span className="text-lg font-bold tracking-tight">M</span>
                   <Tooltip>
                     <TooltipTrigger asChild>
                       <Button
                         variant="ghost"
                         size="icon"
                         onClick={() => setIsExpanded(false)}
-                        className="w-9 h-9 flex-shrink-0 ml-auto"
+                        className="w-8 h-8 flex-shrink-0 text-foreground/60 hover:text-foreground"
                         aria-label="Collapse sidebar"
                       >
-                        <PanelRight className="w-5 h-5" />
+                        <PanelRight className="w-[18px] h-[18px]" />
                       </Button>
                     </TooltipTrigger>
                     <TooltipContent
@@ -584,16 +385,15 @@ export function VerticalNav({ onCreateClick }: VerticalNavProps) {
                 </>
               ) : (
                 <>
-                  {/* Collapsed: show abbreviation or toggle on hover */}
                   <span
-                    className={`text-sm font-semibold tracking-tight pointer-events-none ${
+                    className={`text-lg font-bold tracking-tight mx-auto pointer-events-none ${
                       isCollapsedHovered ? "invisible" : ""
                     }`}
                   >
-                    W
+                    M
                   </span>
                   {isCollapsedHovered && (
-                    <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                    <div className="absolute inset-x-0 top-0 h-14 flex items-center justify-center pointer-events-none">
                       <div className="pointer-events-auto">
                         <Tooltip>
                           <TooltipTrigger asChild>
@@ -601,10 +401,10 @@ export function VerticalNav({ onCreateClick }: VerticalNavProps) {
                               variant="ghost"
                               size="icon"
                               onClick={() => setIsExpanded(true)}
-                              className="w-9 h-9 flex-shrink-0"
+                              className="w-8 h-8 flex-shrink-0 text-foreground/60 hover:text-foreground"
                               aria-label="Expand sidebar"
                             >
-                              <PanelRight className="w-5 h-5" />
+                              <PanelRight className="w-[18px] h-[18px]" />
                             </Button>
                           </TooltipTrigger>
                           <TooltipContent
@@ -626,12 +426,14 @@ export function VerticalNav({ onCreateClick }: VerticalNavProps) {
 
             <NavigationContent isExpanded={isExpanded} />
 
-            {/* Create button (desktop) */}
+            {/* Create button */}
             {onCreateClick && (
-              <div className="border-t border-sidebar-border p-2">
+              <div className="px-3 pb-3">
                 {isExpanded ? (
-                  <Button onClick={onCreateClick} className="w-full gap-2">
-                    <Plus className="h-4 w-4" />
+                  <Button
+                    onClick={onCreateClick}
+                    className="w-full h-10 gap-2 bg-foreground text-background hover:bg-foreground/90 rounded-lg font-medium"
+                  >
                     Create
                   </Button>
                 ) : (
@@ -640,7 +442,7 @@ export function VerticalNav({ onCreateClick }: VerticalNavProps) {
                       <Button
                         onClick={onCreateClick}
                         size="icon"
-                        className="w-full"
+                        className="w-full h-10 bg-foreground text-background hover:bg-foreground/90 rounded-lg"
                       >
                         <Plus className="h-4 w-4" />
                       </Button>
