@@ -10,6 +10,7 @@ import { Plus, Trash2, Users, UserPlus, Building2, ChevronRight, Shield, Info } 
 import { cn } from '@/lib/utils'
 import { useWorkflow } from '@/stores/workflowStore'
 import type { RelatedParty } from '@/types/workflow'
+import { AddHouseholdMemberSheet, AddContactSheet } from './AddPartySheet'
 
 const householdRelationships = ['Spouse', 'Child', 'Parent', 'Sibling']
 const contactRelationships = ['Attorney', 'Accountant', 'Financial Advisor', 'Parent', 'Guardian', 'Power of Attorney']
@@ -17,163 +18,6 @@ const contactCategories = ['Family', 'Professional', 'Other']
 const organizationRoles = ['Trust', 'Employer', 'Business Entity', 'Foundation', 'Partnership']
 const organizationCategories = ['Business', 'Legal', 'Other']
 const householdRoles = ['Client', 'Spouse', 'Dependent', 'Trustee', 'Beneficiary']
-
-// --- Add forms per type ---
-
-function AddHouseholdMemberForm({ onDone }: { onDone: () => void }) {
-  const { dispatch } = useWorkflow()
-  const [firstName, setFirstName] = useState('')
-  const [lastName, setLastName] = useState('')
-  const [relationship, setRelationship] = useState('')
-  const [role, setRole] = useState('')
-  const [email, setEmail] = useState('')
-  const [phone, setPhone] = useState('')
-
-  const handleAdd = () => {
-    if (!firstName.trim() || !lastName.trim()) return
-    const name = `${firstName.trim()} ${lastName.trim()}`
-    dispatch({
-      type: 'ADD_RELATED_PARTY',
-      party: {
-        id: `household-${Date.now()}`,
-        name,
-        firstName: firstName.trim(),
-        lastName: lastName.trim(),
-        type: 'household_member',
-        relationship: relationship || undefined,
-        role: role || undefined,
-        email: email || undefined,
-        phone: phone || undefined,
-        kycStatus: 'needs_kyc',
-      },
-    })
-    onDone()
-  }
-
-  return (
-    <div className="rounded-lg border border-dashed border-border p-4 space-y-4">
-      <div className="grid grid-cols-3 items-center gap-4">
-        <Label>First name</Label>
-        <Input className="col-span-2" value={firstName} onChange={(e) => setFirstName(e.target.value)} placeholder="e.g. Jane" />
-      </div>
-      <div className="grid grid-cols-3 items-center gap-4">
-        <Label>Last name</Label>
-        <Input className="col-span-2" value={lastName} onChange={(e) => setLastName(e.target.value)} placeholder="e.g. Doe" />
-      </div>
-      <div className="grid grid-cols-3 items-center gap-4">
-        <Label>Relationship</Label>
-        <div className="col-span-2">
-          <Select value={relationship} onValueChange={setRelationship}>
-            <SelectTrigger><SelectValue placeholder="Select relationship" /></SelectTrigger>
-            <SelectContent>
-              {householdRelationships.map((r) => <SelectItem key={r} value={r}>{r}</SelectItem>)}
-            </SelectContent>
-          </Select>
-        </div>
-      </div>
-      <div className="grid grid-cols-3 items-center gap-4">
-        <Label>Role</Label>
-        <div className="col-span-2">
-          <Select value={role} onValueChange={setRole}>
-            <SelectTrigger><SelectValue placeholder="Select role" /></SelectTrigger>
-            <SelectContent>
-              {householdRoles.map((r) => <SelectItem key={r} value={r}>{r}</SelectItem>)}
-            </SelectContent>
-          </Select>
-        </div>
-      </div>
-      <div className="grid grid-cols-3 items-center gap-4">
-        <Label>Email</Label>
-        <Input className="col-span-2" value={email} onChange={(e) => setEmail(e.target.value)} type="email" placeholder="name@example.com" />
-      </div>
-      <div className="grid grid-cols-3 items-center gap-4">
-        <Label>Phone</Label>
-        <Input className="col-span-2" value={phone} onChange={(e) => setPhone(e.target.value)} type="tel" placeholder="+1 (555) 000-0000" />
-      </div>
-      <div className="flex gap-2 justify-end">
-        <Button variant="outline" size="sm" onClick={onDone}>Cancel</Button>
-        <Button size="sm" onClick={handleAdd} disabled={!firstName.trim() || !lastName.trim()}>Add member</Button>
-      </div>
-    </div>
-  )
-}
-
-function AddContactForm({ onDone }: { onDone: () => void }) {
-  const { dispatch } = useWorkflow()
-  const [firstName, setFirstName] = useState('')
-  const [lastName, setLastName] = useState('')
-  const [relationship, setRelationship] = useState('')
-  const [category, setCategory] = useState('')
-  const [email, setEmail] = useState('')
-  const [phone, setPhone] = useState('')
-
-  const handleAdd = () => {
-    if (!firstName.trim() || !lastName.trim()) return
-    const name = `${firstName.trim()} ${lastName.trim()}`
-    dispatch({
-      type: 'ADD_RELATED_PARTY',
-      party: {
-        id: `contact-${Date.now()}`,
-        name,
-        firstName: firstName.trim(),
-        lastName: lastName.trim(),
-        type: 'related_contact',
-        relationship: relationship || undefined,
-        relationshipCategory: category || undefined,
-        email: email || undefined,
-        phone: phone || undefined,
-      },
-    })
-    onDone()
-  }
-
-  return (
-    <div className="rounded-lg border border-dashed border-border p-4 space-y-4">
-      <div className="grid grid-cols-3 items-center gap-4">
-        <Label>First name</Label>
-        <Input className="col-span-2" value={firstName} onChange={(e) => setFirstName(e.target.value)} placeholder="e.g. Jane" />
-      </div>
-      <div className="grid grid-cols-3 items-center gap-4">
-        <Label>Last name</Label>
-        <Input className="col-span-2" value={lastName} onChange={(e) => setLastName(e.target.value)} placeholder="e.g. Doe" />
-      </div>
-      <div className="grid grid-cols-3 items-center gap-4">
-        <Label>Relationship</Label>
-        <div className="col-span-2">
-          <Select value={relationship} onValueChange={setRelationship}>
-            <SelectTrigger><SelectValue placeholder="Select relationship" /></SelectTrigger>
-            <SelectContent>
-              {contactRelationships.map((r) => <SelectItem key={r} value={r}>{r}</SelectItem>)}
-            </SelectContent>
-          </Select>
-        </div>
-      </div>
-      <div className="grid grid-cols-3 items-center gap-4">
-        <Label>Category</Label>
-        <div className="col-span-2">
-          <Select value={category} onValueChange={setCategory}>
-            <SelectTrigger><SelectValue placeholder="Select category" /></SelectTrigger>
-            <SelectContent>
-              {contactCategories.map((c) => <SelectItem key={c} value={c}>{c}</SelectItem>)}
-            </SelectContent>
-          </Select>
-        </div>
-      </div>
-      <div className="grid grid-cols-3 items-center gap-4">
-        <Label>Email</Label>
-        <Input className="col-span-2" value={email} onChange={(e) => setEmail(e.target.value)} type="email" placeholder="name@example.com" />
-      </div>
-      <div className="grid grid-cols-3 items-center gap-4">
-        <Label>Phone</Label>
-        <Input className="col-span-2" value={phone} onChange={(e) => setPhone(e.target.value)} type="tel" placeholder="+1 (555) 000-0000" />
-      </div>
-      <div className="flex gap-2 justify-end">
-        <Button variant="outline" size="sm" onClick={onDone}>Cancel</Button>
-        <Button size="sm" onClick={handleAdd} disabled={!firstName.trim() || !lastName.trim()}>Add contact</Button>
-      </div>
-    </div>
-  )
-}
 
 function AddOrganizationForm({ onDone }: { onDone: () => void }) {
   const { dispatch } = useWorkflow()
@@ -693,6 +537,79 @@ function RestorePartiesChecklist({
   )
 }
 
+// --- Compact restore section (inline, no cancel needed) ---
+
+function RestoreSection({
+  hiddenParties,
+  onRestore,
+}: {
+  hiddenParties: RelatedParty[]
+  onRestore: (ids: string[]) => void
+}) {
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
+  const [expanded, setExpanded] = useState(false)
+
+  const toggle = (id: string) => {
+    setSelectedIds((prev) => {
+      const next = new Set(prev)
+      if (next.has(id)) next.delete(id)
+      else next.add(id)
+      return next
+    })
+  }
+
+  if (!expanded) {
+    return (
+      <button
+        type="button"
+        onClick={() => setExpanded(true)}
+        className="text-xs text-primary hover:underline"
+      >
+        Restore previously removed ({hiddenParties.length})
+      </button>
+    )
+  }
+
+  return (
+    <div className="rounded-lg border border-dashed border-border p-3 space-y-3">
+      <p className="text-xs text-muted-foreground">Select to restore:</p>
+      <div className="space-y-1.5">
+        {hiddenParties.map((party) => (
+          <label
+            key={party.id}
+            className="flex cursor-pointer items-center gap-2.5 rounded-md border border-border p-2 text-sm transition-colors hover:bg-muted/50"
+          >
+            <Checkbox
+              checked={selectedIds.has(party.id)}
+              onCheckedChange={() => toggle(party.id)}
+            />
+            <span className="font-medium">{party.name}</span>
+            {party.relationship && (
+              <span className="text-xs text-muted-foreground">{party.relationship}</span>
+            )}
+          </label>
+        ))}
+      </div>
+      <div className="flex gap-2 justify-end">
+        <Button variant="outline" size="sm" onClick={() => { setExpanded(false); setSelectedIds(new Set()) }}>
+          Cancel
+        </Button>
+        <Button
+          size="sm"
+          onClick={() => {
+            onRestore(Array.from(selectedIds))
+            setExpanded(false)
+            setSelectedIds(new Set())
+          }}
+          disabled={selectedIds.size === 0}
+        >
+          Restore {selectedIds.size || ''}
+        </Button>
+      </div>
+    </div>
+  )
+}
+
 // --- Hidden members note ---
 
 function HiddenMembersNote({ count, typeLabel }: { count: number; typeLabel: string }) {
@@ -709,11 +626,9 @@ function HiddenMembersNote({ count, typeLabel }: { count: number; typeLabel: str
 
 export function RelatedPartiesForm() {
   const { state, dispatch } = useWorkflow()
-  const [showAddHousehold, setShowAddHousehold] = useState(false)
-  const [showAddContact, setShowAddContact] = useState(false)
+  const [showAddHouseholdSheet, setShowAddHouseholdSheet] = useState(false)
+  const [showAddContactSheet, setShowAddContactSheet] = useState(false)
   const [showAddOrg, setShowAddOrg] = useState(false)
-  const [householdAddMode, setHouseholdAddMode] = useState<'new' | 'existing'>('new')
-  const [contactAddMode, setContactAddMode] = useState<'new' | 'existing'>('new')
   const [orgAddMode, setOrgAddMode] = useState<'new' | 'existing'>('new')
 
   const householdMembers = state.relatedParties.filter((p) => p.type === 'household_member' && !p.isHidden)
@@ -747,31 +662,19 @@ export function RelatedPartiesForm() {
 
         <HiddenMembersNote count={hiddenHouseholdMembers.length} typeLabel="member" />
 
-        {showAddHousehold ? (
-          <div className="space-y-3">
-            {hiddenHouseholdMembers.length > 0 && (
-              <AddModeToggle mode={householdAddMode} onModeChange={setHouseholdAddMode} />
-            )}
-            {householdAddMode === 'new' || hiddenHouseholdMembers.length === 0 ? (
-              <AddHouseholdMemberForm onDone={() => { setShowAddHousehold(false); setHouseholdAddMode('new') }} />
-            ) : (
-              <RestorePartiesChecklist
-                hiddenParties={hiddenHouseholdMembers}
-                onRestore={(ids) => {
-                  dispatch({ type: 'RESTORE_RELATED_PARTIES', partyIds: ids })
-                  setShowAddHousehold(false)
-                  setHouseholdAddMode('new')
-                }}
-                onCancel={() => { setShowAddHousehold(false); setHouseholdAddMode('new') }}
-              />
-            )}
-          </div>
-        ) : (
-          <Button variant="outline" className="w-full" onClick={() => setShowAddHousehold(true)}>
-            <Plus className="h-4 w-4 mr-2" />
-            Add member
-          </Button>
+        {hiddenHouseholdMembers.length > 0 && (
+          <RestoreSection
+            hiddenParties={hiddenHouseholdMembers}
+            onRestore={(ids) => dispatch({ type: 'RESTORE_RELATED_PARTIES', partyIds: ids })}
+          />
         )}
+
+        <Button variant="outline" className="w-full" onClick={() => setShowAddHouseholdSheet(true)}>
+          <Plus className="h-4 w-4 mr-2" />
+          Add member
+        </Button>
+
+        <AddHouseholdMemberSheet open={showAddHouseholdSheet} onOpenChange={setShowAddHouseholdSheet} />
       </section>
 
       {/* Related Contacts */}
@@ -796,31 +699,19 @@ export function RelatedPartiesForm() {
 
         <HiddenMembersNote count={hiddenContacts.length} typeLabel="contact" />
 
-        {showAddContact ? (
-          <div className="space-y-3">
-            {hiddenContacts.length > 0 && (
-              <AddModeToggle mode={contactAddMode} onModeChange={setContactAddMode} />
-            )}
-            {contactAddMode === 'new' || hiddenContacts.length === 0 ? (
-              <AddContactForm onDone={() => { setShowAddContact(false); setContactAddMode('new') }} />
-            ) : (
-              <RestorePartiesChecklist
-                hiddenParties={hiddenContacts}
-                onRestore={(ids) => {
-                  dispatch({ type: 'RESTORE_RELATED_PARTIES', partyIds: ids })
-                  setShowAddContact(false)
-                  setContactAddMode('new')
-                }}
-                onCancel={() => { setShowAddContact(false); setContactAddMode('new') }}
-              />
-            )}
-          </div>
-        ) : (
-          <Button variant="outline" className="w-full" onClick={() => setShowAddContact(true)}>
-            <Plus className="h-4 w-4 mr-2" />
-            Add contact
-          </Button>
+        {hiddenContacts.length > 0 && (
+          <RestoreSection
+            hiddenParties={hiddenContacts}
+            onRestore={(ids) => dispatch({ type: 'RESTORE_RELATED_PARTIES', partyIds: ids })}
+          />
         )}
+
+        <Button variant="outline" className="w-full" onClick={() => setShowAddContactSheet(true)}>
+          <Plus className="h-4 w-4 mr-2" />
+          Add contact
+        </Button>
+
+        <AddContactSheet open={showAddContactSheet} onOpenChange={setShowAddContactSheet} />
       </section>
 
       {/* Related Organizations */}
