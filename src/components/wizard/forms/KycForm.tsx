@@ -282,35 +282,38 @@ export function KycForm() {
           {children.length > 0 ? 'Previously Verified' : 'Already Verified'}
         </h3>
         {verifiedMembers.map((member) => (
-          <div key={member.id} className="flex items-center gap-2">
-            <button
-              type="button"
-              onClick={() => setReviewMemberId(member.id)}
-              className="flex-1 flex items-center justify-between rounded-lg border border-border bg-muted/30 p-3 text-left hover:bg-muted/50 transition-colors"
-            >
-              <div className="flex items-center gap-3">
-                <div className="flex h-8 w-8 items-center justify-center rounded-full bg-fill-success-tertiary text-text-success-primary">
-                  <CheckCircle2 className="h-4 w-4" />
-                </div>
-                <div>
-                  <span className="text-sm font-medium text-muted-foreground">{member.name}</span>
-                  {member.relationship && (
-                    <span className="ml-2 text-xs text-muted-foreground/70">{member.relationship}</span>
-                  )}
-                </div>
+          <button
+            key={member.id}
+            type="button"
+            onClick={() => setReviewMemberId(member.id)}
+            className="w-full flex items-center justify-between rounded-lg border border-border bg-muted/30 p-3 text-left hover:bg-muted/50 transition-colors"
+          >
+            <div className="flex items-center gap-3">
+              <div className="flex h-8 w-8 items-center justify-center rounded-full bg-fill-success-tertiary text-text-success-primary">
+                <CheckCircle2 className="h-4 w-4" />
               </div>
+              <div>
+                <span className="text-sm font-medium text-muted-foreground">{member.name}</span>
+                {member.relationship && (
+                  <span className="ml-2 text-xs text-muted-foreground/70">{member.relationship}</span>
+                )}
+              </div>
+            </div>
+            <div className="flex items-center gap-2">
               <Badge variant="secondary" className="text-xs text-text-success-primary bg-fill-success-tertiary">
                 Verified
               </Badge>
-            </button>
-            <button
-              type="button"
-              onClick={() => dispatch({ type: 'REMOVE_RELATED_PARTY', partyId: member.id })}
-              className="p-2 text-muted-foreground hover:text-destructive transition-colors shrink-0"
-            >
-              <Trash2 className="h-4 w-4" />
-            </button>
-          </div>
+              <span
+                role="button"
+                tabIndex={0}
+                onClick={(e) => { e.stopPropagation(); dispatch({ type: 'REMOVE_RELATED_PARTY', partyId: member.id }) }}
+                onKeyDown={(e) => { if (e.key === 'Enter') { e.stopPropagation(); dispatch({ type: 'REMOVE_RELATED_PARTY', partyId: member.id }) } }}
+                className="p-1 text-muted-foreground hover:text-destructive transition-colors"
+              >
+                <Trash2 className="h-4 w-4" />
+              </span>
+            </div>
+          </button>
         ))}
       </div>
     )
@@ -324,29 +327,33 @@ export function KycForm() {
         {pendingMembers.map((member) => {
           const child = children.find((c) => c.name === member.name)
           return (
-            <div key={member.id} className="flex items-center gap-2">
-              <button
-                onClick={() => setLockedMemberId(member.id)}
-                className="flex-1 flex items-center justify-between rounded-lg border border-border p-3 text-left cursor-pointer hover:bg-muted/50 transition-colors"
-              >
-                <div className="flex items-center gap-3">
-                  <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary/10 text-primary text-sm font-medium">
-                    {member.name[0]}
-                  </div>
-                  <span className="text-sm font-medium">{member.name}</span>
+            <button
+              key={member.id}
+              type="button"
+              onClick={() => setLockedMemberId(member.id)}
+              className="w-full flex items-center justify-between rounded-lg border border-border p-3 text-left cursor-pointer hover:bg-muted/50 transition-colors"
+            >
+              <div className="flex items-center gap-3">
+                <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary/10 text-primary text-sm font-medium">
+                  {member.name[0]}
                 </div>
+                <span className="text-sm font-medium">{member.name}</span>
+              </div>
+              <div className="flex items-center gap-2">
                 <Badge variant="secondary" className="capitalize text-xs">
                   {child ? child.status.replace('_', ' ') : 'pending'}
                 </Badge>
-              </button>
-              <button
-                type="button"
-                onClick={() => dispatch({ type: 'REMOVE_RELATED_PARTY', partyId: member.id })}
-                className="p-2 text-muted-foreground hover:text-destructive transition-colors shrink-0"
-              >
-                <Trash2 className="h-4 w-4" />
-              </button>
-            </div>
+                <span
+                  role="button"
+                  tabIndex={0}
+                  onClick={(e) => { e.stopPropagation(); dispatch({ type: 'REMOVE_RELATED_PARTY', partyId: member.id }) }}
+                  onKeyDown={(e) => { if (e.key === 'Enter') { e.stopPropagation(); dispatch({ type: 'REMOVE_RELATED_PARTY', partyId: member.id }) } }}
+                  className="p-1 text-muted-foreground hover:text-destructive transition-colors"
+                >
+                  <Trash2 className="h-4 w-4" />
+                </span>
+              </div>
+            </button>
           )
         })}
       </div>
@@ -388,16 +395,20 @@ export function KycForm() {
                     <span className="text-xs text-muted-foreground">{member.relationship}</span>
                   )}
                 </div>
-                <Badge variant="secondary" className="text-[10px] text-text-warning-primary bg-fill-warning-tertiary shrink-0">
-                  Needs verification
-                </Badge>
-              </button>
-              <button
-                type="button"
-                onClick={() => dispatch({ type: 'REMOVE_RELATED_PARTY', partyId: member.id })}
-                className="p-2 text-muted-foreground hover:text-destructive transition-colors shrink-0"
-              >
-                <Trash2 className="h-4 w-4" />
+                <div className="flex items-center gap-2">
+                  <Badge variant="secondary" className="text-[10px] text-text-warning-primary bg-fill-warning-tertiary shrink-0">
+                    Needs verification
+                  </Badge>
+                  <span
+                    role="button"
+                    tabIndex={0}
+                    onClick={(e) => { e.stopPropagation(); dispatch({ type: 'REMOVE_RELATED_PARTY', partyId: member.id }) }}
+                    onKeyDown={(e) => { if (e.key === 'Enter') { e.stopPropagation(); dispatch({ type: 'REMOVE_RELATED_PARTY', partyId: member.id }) } }}
+                    className="p-1 text-muted-foreground hover:text-destructive transition-colors"
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </span>
+                </div>
               </button>
             </div>
           )

@@ -1,6 +1,6 @@
 import type { TaskStatus } from './workflow'
 
-export type JourneyStatus = 'not_started' | 'in_progress' | 'complete' | 'cancelled'
+export type JourneyStatus = 'not_started' | 'in_progress' | 'complete' | 'cancelled' | 'awaiting_review' | 'rejected'
 
 export interface JourneyTask {
   id: string

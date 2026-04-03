@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
-import { ArrowLeft, Circle, Loader, CheckCircle2, Ban, CheckCheck } from 'lucide-react'
+import { ArrowLeft, Circle, Loader, CheckCircle2, Ban, CheckCheck, Clock, XCircle } from 'lucide-react'
 import { useServicing } from '@/stores/servicingStore'
 import { useWorkflow } from '@/stores/workflowStore'
 import { StatusBadge as ServicingStatusBadge } from '@/components/servicing/StatusBadge'
@@ -32,6 +32,8 @@ const statusColors: Record<TaskStatus, string> = {
   in_progress: 'text-text-category1-primary',
   complete: 'text-text-success-primary',
   blocked: 'text-text-danger-primary',
+  awaiting_review: 'text-text-warning-primary',
+  rejected: 'text-text-danger-primary',
 }
 
 const statusLabels: Record<TaskStatus, string> = {
@@ -39,6 +41,8 @@ const statusLabels: Record<TaskStatus, string> = {
   in_progress: 'In Progress',
   complete: 'Complete',
   blocked: 'Blocked',
+  awaiting_review: 'Awaiting Review',
+  rejected: 'Rejected',
 }
 
 const StatusIcon: Record<TaskStatus, React.ComponentType<{ className?: string }>> = {
@@ -46,6 +50,8 @@ const StatusIcon: Record<TaskStatus, React.ComponentType<{ className?: string }>
   in_progress: Loader,
   complete: CheckCircle2,
   blocked: Ban,
+  awaiting_review: Clock,
+  rejected: XCircle,
 }
 
 function TaskStatusBadge({ status }: { status: TaskStatus }) {

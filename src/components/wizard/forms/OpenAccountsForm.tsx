@@ -162,106 +162,106 @@ export function OpenAccountsForm() {
         {householdMembers.length > 0 && (
           <div className="space-y-2 mb-4">
             {verifiedMembers.map((member) => (
-              <div key={member.id} className="flex items-center gap-2">
-                <button
-                  type="button"
-                  onClick={() => setReviewMemberId(member.id)}
-                  className="flex flex-1 items-center justify-between rounded-lg border border-border bg-muted/30 p-3 text-left transition-colors hover:bg-muted/50"
-                >
-                  <div className="flex items-center gap-3">
-                    <div className="flex h-8 w-8 items-center justify-center rounded-full bg-green-100 text-green-700">
-                      <CheckCircle2 className="h-4 w-4" />
-                    </div>
-                    <div>
-                      <span className="text-sm font-medium">{member.name}</span>
-                      {member.relationship && (
-                        <span className="ml-2 text-xs text-muted-foreground">{member.relationship}</span>
-                      )}
-                    </div>
+              <button
+                key={member.id}
+                type="button"
+                onClick={() => setReviewMemberId(member.id)}
+                className="w-full flex items-center justify-between rounded-lg border border-border bg-muted/30 p-3 text-left transition-colors hover:bg-muted/50"
+              >
+                <div className="flex items-center gap-3">
+                  <div className="flex h-8 w-8 items-center justify-center rounded-full bg-green-100 text-green-700">
+                    <CheckCircle2 className="h-4 w-4" />
                   </div>
-                  <div className="flex items-center gap-2">
-                    <Badge className="bg-green-100 text-green-800 border-green-200 text-xs">
-                      Verified
-                    </Badge>
-                    <ChevronRight className="h-4 w-4 text-muted-foreground" />
+                  <div>
+                    <span className="text-sm font-medium">{member.name}</span>
+                    {member.relationship && (
+                      <span className="ml-2 text-xs text-muted-foreground">{member.relationship}</span>
+                    )}
                   </div>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => dispatch({ type: 'REMOVE_RELATED_PARTY', partyId: member.id })}
-                  className="p-2 text-muted-foreground hover:text-destructive transition-colors shrink-0"
-                >
-                  <Trash2 className="h-4 w-4" />
-                </button>
-              </div>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Badge className="bg-green-100 text-green-800 border-green-200 text-xs">
+                    Verified
+                  </Badge>
+                  <span
+                    role="button"
+                    tabIndex={0}
+                    onClick={(e) => { e.stopPropagation(); dispatch({ type: 'REMOVE_RELATED_PARTY', partyId: member.id }) }}
+                    onKeyDown={(e) => { if (e.key === 'Enter') { e.stopPropagation(); dispatch({ type: 'REMOVE_RELATED_PARTY', partyId: member.id }) } }}
+                    className="p-1 text-muted-foreground hover:text-destructive transition-colors"
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </span>
+                </div>
+              </button>
             ))}
             {pendingMembers.map((member) => (
-              <div key={member.id} className="flex items-center gap-2">
-                <button
-                  type="button"
-                  onClick={() => setReviewMemberId(member.id)}
-                  className="flex flex-1 items-center justify-between rounded-lg border border-border p-3 text-left transition-colors hover:bg-muted/50"
-                >
-                  <div className="flex items-center gap-3">
-                    <div className="flex h-8 w-8 items-center justify-center rounded-full bg-yellow-100 text-yellow-700">
-                      <Clock className="h-4 w-4" />
-                    </div>
-                    <div>
-                      <span className="text-sm font-medium">{member.name}</span>
-                      {member.relationship && (
-                        <span className="ml-2 text-xs text-muted-foreground">{member.relationship}</span>
-                      )}
-                    </div>
+              <button
+                key={member.id}
+                type="button"
+                onClick={() => setReviewMemberId(member.id)}
+                className="w-full flex items-center justify-between rounded-lg border border-border p-3 text-left transition-colors hover:bg-muted/50"
+              >
+                <div className="flex items-center gap-3">
+                  <div className="flex h-8 w-8 items-center justify-center rounded-full bg-yellow-100 text-yellow-700">
+                    <Clock className="h-4 w-4" />
                   </div>
-                  <div className="flex items-center gap-2">
-                    <Badge className="bg-yellow-50 text-yellow-700 border-yellow-200 text-xs">
-                      Pending
-                    </Badge>
-                    <ChevronRight className="h-4 w-4 text-muted-foreground" />
+                  <div>
+                    <span className="text-sm font-medium">{member.name}</span>
+                    {member.relationship && (
+                      <span className="ml-2 text-xs text-muted-foreground">{member.relationship}</span>
+                    )}
                   </div>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => dispatch({ type: 'REMOVE_RELATED_PARTY', partyId: member.id })}
-                  className="p-2 text-muted-foreground hover:text-destructive transition-colors shrink-0"
-                >
-                  <Trash2 className="h-4 w-4" />
-                </button>
-              </div>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Badge className="bg-yellow-50 text-yellow-700 border-yellow-200 text-xs">
+                    Pending
+                  </Badge>
+                  <span
+                    role="button"
+                    tabIndex={0}
+                    onClick={(e) => { e.stopPropagation(); dispatch({ type: 'REMOVE_RELATED_PARTY', partyId: member.id }) }}
+                    onKeyDown={(e) => { if (e.key === 'Enter') { e.stopPropagation(); dispatch({ type: 'REMOVE_RELATED_PARTY', partyId: member.id }) } }}
+                    className="p-1 text-muted-foreground hover:text-destructive transition-colors"
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </span>
+                </div>
+              </button>
             ))}
             {needsKycMembers.map((member) => (
-              <div key={member.id} className="flex items-center gap-2">
-                <button
-                  type="button"
-                  onClick={() => setReviewMemberId(member.id)}
-                  className="flex flex-1 items-center justify-between rounded-lg border border-border p-3 text-left transition-colors hover:bg-muted/50"
-                >
-                  <div className="flex items-center gap-3">
-                    <div className="flex h-8 w-8 items-center justify-center rounded-full bg-red-50 text-red-600">
-                      <AlertCircle className="h-4 w-4" />
-                    </div>
-                    <div>
-                      <span className="text-sm font-medium">{member.name}</span>
-                      {member.relationship && (
-                        <span className="ml-2 text-xs text-muted-foreground">{member.relationship}</span>
-                      )}
-                    </div>
+              <button
+                key={member.id}
+                type="button"
+                onClick={() => setReviewMemberId(member.id)}
+                className="w-full flex items-center justify-between rounded-lg border border-border p-3 text-left transition-colors hover:bg-muted/50"
+              >
+                <div className="flex items-center gap-3">
+                  <div className="flex h-8 w-8 items-center justify-center rounded-full bg-red-50 text-red-600">
+                    <AlertCircle className="h-4 w-4" />
                   </div>
-                  <div className="flex items-center gap-2">
-                    <Badge className="bg-red-50 text-red-700 border-red-200 text-xs">
-                      Not Started
-                    </Badge>
-                    <ChevronRight className="h-4 w-4 text-muted-foreground" />
+                  <div>
+                    <span className="text-sm font-medium">{member.name}</span>
+                    {member.relationship && (
+                      <span className="ml-2 text-xs text-muted-foreground">{member.relationship}</span>
+                    )}
                   </div>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => dispatch({ type: 'REMOVE_RELATED_PARTY', partyId: member.id })}
-                  className="p-2 text-muted-foreground hover:text-destructive transition-colors shrink-0"
-                >
-                  <Trash2 className="h-4 w-4" />
-                </button>
-              </div>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Badge className="bg-red-50 text-red-700 border-red-200 text-xs">
+                    Not Started
+                  </Badge>
+                  <span
+                    role="button"
+                    tabIndex={0}
+                    onClick={(e) => { e.stopPropagation(); dispatch({ type: 'REMOVE_RELATED_PARTY', partyId: member.id }) }}
+                    onKeyDown={(e) => { if (e.key === 'Enter') { e.stopPropagation(); dispatch({ type: 'REMOVE_RELATED_PARTY', partyId: member.id }) } }}
+                    className="p-1 text-muted-foreground hover:text-destructive transition-colors"
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </span>
+                </div>
+              </button>
             ))}
           </div>
         )}

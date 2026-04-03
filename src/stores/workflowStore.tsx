@@ -65,40 +65,35 @@ function workflowReducer(state: WorkflowState, action: WorkflowAction): Workflow
         ? state.submittedTaskIds
         : [...state.submittedTaskIds, action.taskId]
 
-      // Collect ALL task IDs (parents + child sub-tasks) regardless of status
-      const allTaskIds: string[] = []
-      for (const t of state.tasks) {
-        allTaskIds.push(t.id)
-        if (t.children) {
-          for (const c of t.children) {
-            allTaskIds.push(...getChildSubTaskIds(c.id, c.childType))
-          }
-        }
-      }
+      // Check if this is the last task in the flat order (Final Review)
+      const lastTaskId = state.flatTaskOrder[state.flatTaskOrder.length - 1]
+      const isFinalTask = action.taskId === lastTaskId
 
-      // Check if every task has been submitted
-      const allSubmitted = allTaskIds.length > 0 && allTaskIds.every((id) => newSubmitted.includes(id))
-
-      if (allSubmitted) {
-        // Final task — flip everything to complete
+      if (isFinalTask) {
+        // Final Review completed — transition all tasks to awaiting_review
         const newTasks = state.tasks.map((t) => {
-          const updatedTask = newSubmitted.includes(t.id)
-            ? { ...t, status: 'complete' as const }
-            : t
+          const updatedTask = { ...t, status: 'awaiting_review' as const }
           if (updatedTask.children) {
-            const newChildren = updatedTask.children.map((c) =>
-              newSubmitted.includes(c.id)
-                ? { ...c, status: 'complete' as const }
-                : c
-            )
+            const newChildren = updatedTask.children.map((c) => ({
+              ...c,
+              status: 'awaiting_review' as const,
+            }))
             return { ...updatedTask, children: newChildren }
           }
           return updatedTask
         })
-        return { ...state, tasks: newTasks, submittedTaskIds: [] }
+        return {
+          ...state,
+          tasks: newTasks,
+          submittedTaskIds: [],
+          reviewState: {
+            reviewStatus: 'pending',
+            assignedTo: 'Home Office Review Team',
+          },
+        }
       }
 
-      // Not the last task — just record the submission, keep status as in_progress
+      // Not the final task — just record the submission
       return { ...state, submittedTaskIds: newSubmitted }
     }
 
@@ -374,6 +369,63 @@ function workflowReducer(state: WorkflowState, action: WorkflowAction): Workflow
         return { ...state, activeChildActionId: undefined, activeChildSubTaskIndex: undefined }
       }
       return { ...state, activeChildSubTaskIndex: state.activeChildSubTaskIndex - 1 }
+    }
+
+    case 'SUBMIT_FOR_REVIEW': {
+      const reviewTasks = state.tasks.map((t) => {
+        const updated = { ...t, status: 'awaiting_review' as const }
+        if (updated.children) {
+          return { ...updated, children: updated.children.map((c) => ({ ...c, status: 'awaiting_review' as const })) }
+        }
+        return updated
+      })
+      return {
+        ...state,
+        tasks: reviewTasks,
+        submittedTaskIds: [],
+        reviewState: {
+          reviewStatus: 'pending',
+          assignedTo: 'Home Office Review Team',
+        },
+      }
+    }
+
+    case 'ACCEPT_REVIEW': {
+      const acceptedTasks = state.tasks.map((t) => {
+        const updated = { ...t, status: 'complete' as const }
+        if (updated.children) {
+          return { ...updated, children: updated.children.map((c) => ({ ...c, status: 'complete' as const })) }
+        }
+        return updated
+      })
+      return {
+        ...state,
+        tasks: acceptedTasks,
+        reviewState: {
+          ...state.reviewState!,
+          reviewStatus: 'accepted',
+        },
+      }
+    }
+
+    case 'REJECT_REVIEW': {
+      const rejectedTasks = state.tasks.map((t) => {
+        const updated = { ...t, status: 'rejected' as const }
+        if (updated.children) {
+          return { ...updated, children: updated.children.map((c) => ({ ...c, status: 'rejected' as const })) }
+        }
+        return updated
+      })
+      return {
+        ...state,
+        tasks: rejectedTasks,
+        reviewState: {
+          ...state.reviewState!,
+          reviewStatus: 'rejected',
+          rejectionReason: action.reason,
+          rejectionFeedback: action.feedback,
+        },
+      }
     }
 
     default:

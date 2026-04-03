@@ -2,6 +2,7 @@ import { StepSidebar } from './StepSidebar'
 import { TaskContent } from './TaskContent'
 import { DetailSidebar } from './DetailSidebar'
 import { WizardFooter } from './WizardFooter'
+import { HomeOfficeReviewFooter } from './HomeOfficeReviewFooter'
 import { ChildActionSidebar } from './ChildActionSidebar'
 import { ChildActionContent } from './ChildActionContent'
 import { ChildActionFooter } from './ChildActionFooter'
@@ -16,6 +17,7 @@ export function WizardLayout() {
   const navigate = useNavigate()
   const { state } = useWorkflow()
   const inChildAction = !!state.activeChildActionId
+  const inReview = state.reviewState?.reviewStatus === 'pending'
 
   return (
     <div className="flex h-screen bg-background">
@@ -32,7 +34,7 @@ export function WizardLayout() {
           {inChildAction ? <ChildActionSidebar /> : <StepSidebar />}
           <div className="flex-1 flex flex-col overflow-hidden">
             {inChildAction ? <ChildActionContent /> : <TaskContent />}
-            {inChildAction ? <ChildActionFooter /> : <WizardFooter />}
+            {inChildAction ? <ChildActionFooter /> : inReview ? <HomeOfficeReviewFooter /> : <WizardFooter />}
           </div>
           {inChildAction ? <ChildActionDetailSidebar /> : <DetailSidebar />}
         </div>

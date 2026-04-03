@@ -1,4 +1,4 @@
-export type TaskStatus = 'not_started' | 'in_progress' | 'complete' | 'blocked'
+export type TaskStatus = 'not_started' | 'in_progress' | 'complete' | 'blocked' | 'awaiting_review' | 'rejected'
 
 export type RelatedPartyType = 'household_member' | 'related_contact' | 'related_organization'
 
@@ -65,6 +65,15 @@ export interface Action {
   order: number
 }
 
+export type ReviewStatus = 'pending' | 'accepted' | 'rejected'
+
+export interface ReviewState {
+  reviewStatus: ReviewStatus
+  assignedTo: string
+  rejectionReason?: string
+  rejectionFeedback?: string
+}
+
 export interface WorkflowState {
   actions: Action[]
   tasks: Task[]
@@ -79,6 +88,7 @@ export interface WorkflowState {
   submittedTaskIds: string[]
   activeChildActionId?: string
   activeChildSubTaskIndex?: number
+  reviewState?: ReviewState
 }
 
 export type WorkflowAction =
@@ -106,3 +116,6 @@ export type WorkflowAction =
   | { type: 'CHILD_GO_NEXT' }
   | { type: 'CHILD_GO_BACK' }
   | { type: 'SET_CHILD_SUB_TASK'; index: number }
+  | { type: 'SUBMIT_FOR_REVIEW' }
+  | { type: 'ACCEPT_REVIEW' }
+  | { type: 'REJECT_REVIEW'; reason: string; feedback?: string }
