@@ -29,9 +29,9 @@ const CHILD_TYPE_CONFIGS: Record<ChildType, ChildTypeConfig> = {
     idPrefix: 'acct-child',
     displayLabel: 'Open Financial Account',
     subTasks: [
-      { suffix: 'details', title: 'Account Details', formKey: 'acct-child-details' },
-      { suffix: 'documents', title: 'Documents', formKey: 'acct-child-documents' },
-      { suffix: 'review', title: 'Review', formKey: 'acct-child-review' },
+      { suffix: 'owner-info', title: 'Owner & Account Info', formKey: 'acct-child-owner-info' },
+      { suffix: 'funding-servicing', title: 'Funding and Servicing', formKey: 'acct-child-funding-servicing' },
+      { suffix: 'annuity', title: 'Annuity', formKey: 'acct-child-annuity' },
     ],
   },
 }

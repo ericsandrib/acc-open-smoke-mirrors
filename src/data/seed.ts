@@ -26,15 +26,6 @@ export const tasks: Task[] = [
     order: 2,
   },
   {
-    id: 'financial-accounts',
-    title: 'Financial Accounts',
-    actionId: 'collect-client-data',
-    status: 'not_started',
-    assignedTo: 'Unassigned',
-    formKey: 'financial-accounts',
-    order: 3,
-  },
-  {
     id: 'kyc-review',
     title: 'KYC Review',
     actionId: 'kyc',

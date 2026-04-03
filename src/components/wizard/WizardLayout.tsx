@@ -2,13 +2,20 @@ import { StepSidebar } from './StepSidebar'
 import { TaskContent } from './TaskContent'
 import { DetailSidebar } from './DetailSidebar'
 import { WizardFooter } from './WizardFooter'
+import { ChildActionSidebar } from './ChildActionSidebar'
+import { ChildActionContent } from './ChildActionContent'
+import { ChildActionFooter } from './ChildActionFooter'
+import { ChildActionDetailSidebar } from './ChildActionDetailSidebar'
 import { Button } from '@/components/ui/button'
 import { useNavigate } from 'react-router-dom'
 import { GitBranch } from 'lucide-react'
 import { VerticalNav } from '@/components/navigation/vertical-nav'
+import { useWorkflow } from '@/stores/workflowStore'
 
 export function WizardLayout() {
   const navigate = useNavigate()
+  const { state } = useWorkflow()
+  const inChildAction = !!state.activeChildActionId
 
   return (
     <div className="flex h-screen bg-background">
@@ -22,12 +29,12 @@ export function WizardLayout() {
           </Button>
         </header>
         <div className="flex flex-1 overflow-hidden">
-          <StepSidebar />
+          {inChildAction ? <ChildActionSidebar /> : <StepSidebar />}
           <div className="flex-1 flex flex-col overflow-hidden">
-            <TaskContent />
-            <WizardFooter />
+            {inChildAction ? <ChildActionContent /> : <TaskContent />}
+            {inChildAction ? <ChildActionFooter /> : <WizardFooter />}
           </div>
-          <DetailSidebar />
+          {inChildAction ? <ChildActionDetailSidebar /> : <DetailSidebar />}
         </div>
       </div>
     </div>

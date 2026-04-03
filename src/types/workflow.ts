@@ -18,6 +18,13 @@ export interface RelatedParty {
   dob?: string
   kycStatus?: 'verified' | 'needs_kyc' | 'pending'
   isHidden?: boolean
+  accountNumber?: string
+  ssn?: string
+  taxId?: string
+  clientId?: string
+  entityType?: string
+  jurisdiction?: string
+  contactPerson?: string
 }
 
 export type AccountType = 'brokerage' | 'ira' | 'roth_ira' | '401k' | 'trust' | 'checking' | 'savings'
@@ -70,6 +77,8 @@ export interface WorkflowState {
   journeyId?: string
   assignedTo?: string
   submittedTaskIds: string[]
+  activeChildActionId?: string
+  activeChildSubTaskIndex?: number
 }
 
 export type WorkflowAction =
@@ -77,7 +86,7 @@ export type WorkflowAction =
   | { type: 'SET_TASK_STATUS'; taskId: string; status: TaskStatus }
   | { type: 'CONFIRM_TASK'; taskId: string }
   | { type: 'REOPEN_TASK'; taskId: string }
-  | { type: 'SPAWN_CHILD'; parentTaskId: string; childName: string; childType: ChildType }
+  | { type: 'SPAWN_CHILD'; parentTaskId: string; childName: string; childType: ChildType; metadata?: Record<string, unknown> }
   | { type: 'REMOVE_CHILD'; parentTaskId: string; childId: string }
   | { type: 'ADD_RELATED_PARTY'; party: RelatedParty }
   | { type: 'UPDATE_RELATED_PARTY'; partyId: string; updates: Partial<Omit<RelatedParty, 'id' | 'type' | 'isPrimary'>> }
@@ -92,3 +101,8 @@ export type WorkflowAction =
   | { type: 'SET_JOURNEY_ASSIGNEE'; assignee: string }
   | { type: 'GO_NEXT' }
   | { type: 'GO_BACK' }
+  | { type: 'ENTER_CHILD_ACTION'; childId: string }
+  | { type: 'EXIT_CHILD_ACTION' }
+  | { type: 'CHILD_GO_NEXT' }
+  | { type: 'CHILD_GO_BACK' }
+  | { type: 'SET_CHILD_SUB_TASK'; index: number }

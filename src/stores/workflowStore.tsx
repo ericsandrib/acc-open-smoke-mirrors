@@ -16,11 +16,6 @@ function computeFlatTaskOrder(allTasks: Task[], allActions: typeof actions): str
 
     for (const task of actionTasks) {
       order.push(task.id)
-      if (task.children) {
-        for (const child of task.children) {
-          order.push(...getChildSubTaskIds(child.id, child.childType))
-        }
-      }
     }
   }
 
@@ -141,9 +136,11 @@ function workflowReducer(state: WorkflowState, action: WorkflowAction): Workflow
 
     case 'SPAWN_CHILD': {
       const config = getChildTypeConfig(action.childType)
+      let spawnedChildId = ''
       const newTasks = state.tasks.map((t) => {
         if (t.id === action.parentTaskId && t.children) {
           const childId = `${config.idPrefix}-${Date.now()}-${++childIdCounter}`
+          spawnedChildId = childId
           return {
             ...t,
             children: [
@@ -161,7 +158,10 @@ function workflowReducer(state: WorkflowState, action: WorkflowAction): Workflow
         return t
       })
       const newOrder = computeFlatTaskOrder(newTasks, state.actions)
-      return { ...state, tasks: newTasks, flatTaskOrder: newOrder }
+      const newTaskData = action.metadata && spawnedChildId
+        ? { ...state.taskData, [spawnedChildId]: { ...(state.taskData[spawnedChildId] ?? {}), ...action.metadata } }
+        : state.taskData
+      return { ...state, tasks: newTasks, flatTaskOrder: newOrder, taskData: newTaskData }
     }
 
     case 'REMOVE_CHILD': {
@@ -336,6 +336,46 @@ function workflowReducer(state: WorkflowState, action: WorkflowAction): Workflow
       return state
     }
 
+    case 'ENTER_CHILD_ACTION': {
+      return {
+        ...state,
+        activeChildActionId: action.childId,
+        activeChildSubTaskIndex: 0,
+      }
+    }
+
+    case 'EXIT_CHILD_ACTION': {
+      return {
+        ...state,
+        activeChildActionId: undefined,
+        activeChildSubTaskIndex: undefined,
+      }
+    }
+
+    case 'SET_CHILD_SUB_TASK': {
+      return { ...state, activeChildSubTaskIndex: action.index }
+    }
+
+    case 'CHILD_GO_NEXT': {
+      if (state.activeChildActionId == null || state.activeChildSubTaskIndex == null) return state
+      const child = state.tasks
+        .flatMap((t) => t.children ?? [])
+        .find((c) => c.id === state.activeChildActionId)
+      if (!child) return state
+      const config = getChildTypeConfig(child.childType)
+      const maxIndex = config.subTasks.length - 1
+      if (state.activeChildSubTaskIndex >= maxIndex) return state
+      return { ...state, activeChildSubTaskIndex: state.activeChildSubTaskIndex + 1 }
+    }
+
+    case 'CHILD_GO_BACK': {
+      if (state.activeChildActionId == null || state.activeChildSubTaskIndex == null) return state
+      if (state.activeChildSubTaskIndex <= 0) {
+        return { ...state, activeChildActionId: undefined, activeChildSubTaskIndex: undefined }
+      }
+      return { ...state, activeChildSubTaskIndex: state.activeChildSubTaskIndex - 1 }
+    }
+
     default:
       return state
   }
@@ -380,4 +420,34 @@ export function useTaskData(taskId: string) {
   )
 
   return { data, updateField, updateFields }
+}
+
+export function useChildActionContext() {
+  const { state } = useWorkflow()
+  if (!state.activeChildActionId || state.activeChildSubTaskIndex == null) return null
+
+  const child = state.tasks
+    .flatMap((t) => t.children ?? [])
+    .find((c) => c.id === state.activeChildActionId)
+  if (!child) return null
+
+  const config = getChildTypeConfig(child.childType)
+  const currentSubTask = config.subTasks[state.activeChildSubTaskIndex]
+  const subTaskId = `${child.id}-${currentSubTask.suffix}`
+
+  const parentTask = state.tasks.find((t) =>
+    t.children?.some((c) => c.id === child.id)
+  )
+
+  return {
+    child,
+    config,
+    currentSubTask,
+    subTaskId,
+    subTaskIndex: state.activeChildSubTaskIndex,
+    totalSubTasks: config.subTasks.length,
+    isFirst: state.activeChildSubTaskIndex === 0,
+    isLast: state.activeChildSubTaskIndex === config.subTasks.length - 1,
+    parentTask,
+  }
 }

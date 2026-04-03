@@ -1,338 +1,19 @@
-import { useState, useEffect, useMemo } from 'react'
+import { useState, useEffect } from 'react'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui/select'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
-import { Checkbox } from '@/components/ui/checkbox'
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from '@/components/ui/sheet'
-import { Plus, Trash2, Users, UserPlus, ChevronRight, Shield, Info, Search, ArrowLeft } from 'lucide-react'
-import { cn } from '@/lib/utils'
+import { Plus, Trash2, Users, UserPlus, Shield, Info } from 'lucide-react'
 import { useWorkflow } from '@/stores/workflowStore'
-import type { RelatedParty, RelatedPartyType } from '@/types/workflow'
-import { relationships } from '@/data/relationships'
+import type { RelatedParty } from '@/types/workflow'
+import { AddHouseholdMemberSheet, AddContactSheet } from './AddPartySheet'
 
 const householdRelationships = ['Spouse', 'Child', 'Parent', 'Sibling']
 const contactRelationships = ['Attorney', 'Accountant', 'Financial Advisor', 'Parent', 'Guardian', 'Power of Attorney']
 const contactCategories = ['Family', 'Professional', 'Other']
 const householdRoles = ['Client', 'Spouse', 'Dependent', 'Trustee', 'Beneficiary']
-
-// --- Add forms per type ---
-
-function AddHouseholdMemberForm({ onDone }: { onDone: () => void }) {
-  const { dispatch } = useWorkflow()
-  const [firstName, setFirstName] = useState('')
-  const [lastName, setLastName] = useState('')
-  const [relationship, setRelationship] = useState('')
-  const [role, setRole] = useState('')
-  const [email, setEmail] = useState('')
-  const [phone, setPhone] = useState('')
-
-  const handleAdd = () => {
-    if (!firstName.trim() || !lastName.trim()) return
-    const name = `${firstName.trim()} ${lastName.trim()}`
-    dispatch({
-      type: 'ADD_RELATED_PARTY',
-      party: {
-        id: `household-${Date.now()}`,
-        name,
-        firstName: firstName.trim(),
-        lastName: lastName.trim(),
-        type: 'household_member',
-        relationship: relationship || undefined,
-        role: role || undefined,
-        email: email || undefined,
-        phone: phone || undefined,
-        kycStatus: 'needs_kyc',
-      },
-    })
-    onDone()
-  }
-
-  return (
-    <div className="space-y-4">
-      <div className="space-y-2">
-        <Label>First name</Label>
-        <Input value={firstName} onChange={(e) => setFirstName(e.target.value)} placeholder="e.g. Jane" />
-      </div>
-      <div className="space-y-2">
-        <Label>Last name</Label>
-        <Input value={lastName} onChange={(e) => setLastName(e.target.value)} placeholder="e.g. Doe" />
-      </div>
-      <div className="space-y-2">
-        <Label>Relationship</Label>
-        <Select value={relationship} onValueChange={setRelationship}>
-          <SelectTrigger><SelectValue placeholder="Select relationship" /></SelectTrigger>
-          <SelectContent>
-            {householdRelationships.map((r) => <SelectItem key={r} value={r}>{r}</SelectItem>)}
-          </SelectContent>
-        </Select>
-      </div>
-      <div className="space-y-2">
-        <Label>Role</Label>
-        <Select value={role} onValueChange={setRole}>
-          <SelectTrigger><SelectValue placeholder="Select role" /></SelectTrigger>
-          <SelectContent>
-            {householdRoles.map((r) => <SelectItem key={r} value={r}>{r}</SelectItem>)}
-          </SelectContent>
-        </Select>
-      </div>
-      <div className="space-y-2">
-        <Label>Email</Label>
-        <Input value={email} onChange={(e) => setEmail(e.target.value)} type="email" placeholder="name@example.com" />
-      </div>
-      <div className="space-y-2">
-        <Label>Phone</Label>
-        <Input value={phone} onChange={(e) => setPhone(e.target.value)} type="tel" placeholder="+1 (555) 000-0000" />
-      </div>
-      <Button className="w-full" onClick={handleAdd} disabled={!firstName.trim() || !lastName.trim()}>Add member</Button>
-    </div>
-  )
-}
-
-function AddContactForm({ onDone }: { onDone: () => void }) {
-  const { dispatch } = useWorkflow()
-  const [firstName, setFirstName] = useState('')
-  const [lastName, setLastName] = useState('')
-  const [relationship, setRelationship] = useState('')
-  const [category, setCategory] = useState('')
-  const [email, setEmail] = useState('')
-  const [phone, setPhone] = useState('')
-
-  const handleAdd = () => {
-    if (!firstName.trim() || !lastName.trim()) return
-    const name = `${firstName.trim()} ${lastName.trim()}`
-    dispatch({
-      type: 'ADD_RELATED_PARTY',
-      party: {
-        id: `contact-${Date.now()}`,
-        name,
-        firstName: firstName.trim(),
-        lastName: lastName.trim(),
-        type: 'related_contact',
-        relationship: relationship || undefined,
-        relationshipCategory: category || undefined,
-        email: email || undefined,
-        phone: phone || undefined,
-      },
-    })
-    onDone()
-  }
-
-  return (
-    <div className="space-y-4">
-      <div className="space-y-2">
-        <Label>First name</Label>
-        <Input value={firstName} onChange={(e) => setFirstName(e.target.value)} placeholder="e.g. Jane" />
-      </div>
-      <div className="space-y-2">
-        <Label>Last name</Label>
-        <Input value={lastName} onChange={(e) => setLastName(e.target.value)} placeholder="e.g. Doe" />
-      </div>
-      <div className="space-y-2">
-        <Label>Relationship</Label>
-        <Select value={relationship} onValueChange={setRelationship}>
-          <SelectTrigger><SelectValue placeholder="Select relationship" /></SelectTrigger>
-          <SelectContent>
-            {contactRelationships.map((r) => <SelectItem key={r} value={r}>{r}</SelectItem>)}
-          </SelectContent>
-        </Select>
-      </div>
-      <div className="space-y-2">
-        <Label>Category</Label>
-        <Select value={category} onValueChange={setCategory}>
-          <SelectTrigger><SelectValue placeholder="Select category" /></SelectTrigger>
-          <SelectContent>
-            {contactCategories.map((c) => <SelectItem key={c} value={c}>{c}</SelectItem>)}
-          </SelectContent>
-        </Select>
-      </div>
-      <div className="space-y-2">
-        <Label>Email</Label>
-        <Input value={email} onChange={(e) => setEmail(e.target.value)} type="email" placeholder="name@example.com" />
-      </div>
-      <div className="space-y-2">
-        <Label>Phone</Label>
-        <Input value={phone} onChange={(e) => setPhone(e.target.value)} type="tel" placeholder="+1 (555) 000-0000" />
-      </div>
-      <Button className="w-full" onClick={handleAdd} disabled={!firstName.trim() || !lastName.trim()}>Add contact</Button>
-    </div>
-  )
-}
-
-// --- Search existing across households ---
-
-function SearchExistingForm({
-  partyTypeFilter,
-  existingPartyIds,
-  onAdd,
-  onCancel,
-}: {
-  partyTypeFilter: RelatedPartyType
-  existingPartyIds: Set<string>
-  onAdd: (parties: RelatedParty[]) => void
-  onCancel: () => void
-}) {
-  const [query, setQuery] = useState('')
-  const [selectedHouseholdId, setSelectedHouseholdId] = useState<string | null>(null)
-  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
-
-  const filteredHouseholds = useMemo(() => {
-    const q = query.toLowerCase().trim()
-    return relationships.filter((r) => {
-      const members = r.relatedParties.filter(
-        (p) => p.type === partyTypeFilter && !existingPartyIds.has(p.id)
-      )
-      if (members.length === 0) return false
-      if (!q) return true
-      return (
-        r.name.toLowerCase().includes(q) ||
-        r.primaryContact.firstName.toLowerCase().includes(q) ||
-        r.primaryContact.lastName.toLowerCase().includes(q) ||
-        members.some((m) => m.name.toLowerCase().includes(q))
-      )
-    })
-  }, [query, partyTypeFilter, existingPartyIds])
-
-  const selectedHousehold = selectedHouseholdId
-    ? relationships.find((r) => r.id === selectedHouseholdId)
-    : null
-
-  const availableMembers = selectedHousehold
-    ? selectedHousehold.relatedParties.filter(
-        (p) => p.type === partyTypeFilter && !existingPartyIds.has(p.id)
-      )
-    : []
-
-  const toggle = (id: string) => {
-    setSelectedIds((prev) => {
-      const next = new Set(prev)
-      if (next.has(id)) next.delete(id)
-      else next.add(id)
-      return next
-    })
-  }
-
-  const handleAddSelected = () => {
-    if (!selectedHousehold) return
-    const parties = availableMembers.filter((m) => selectedIds.has(m.id))
-    onAdd(parties)
-  }
-
-  if (selectedHousehold) {
-    return (
-      <div className="space-y-4">
-        <button
-          type="button"
-          onClick={() => { setSelectedHouseholdId(null); setSelectedIds(new Set()) }}
-          className="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors"
-        >
-          <ArrowLeft className="h-3.5 w-3.5" />
-          Back to search
-        </button>
-        <div className="space-y-1">
-          <p className="text-sm font-medium">{selectedHousehold.name}</p>
-          <p className="text-xs text-muted-foreground">
-            {partyTypeFilter === 'household_member' ? 'Select members' : 'Select contacts'} to add to this journey.
-          </p>
-        </div>
-        {availableMembers.length === 0 ? (
-          <p className="text-sm text-muted-foreground text-center py-2">
-            All {partyTypeFilter === 'household_member' ? 'members' : 'contacts'} from this household are already added.
-          </p>
-        ) : (
-          <div className="space-y-2">
-            {availableMembers.map((member) => (
-              <label
-                key={member.id}
-                className="flex cursor-pointer items-center gap-3 rounded-lg border border-border p-3 transition-colors hover:bg-muted/50"
-              >
-                <Checkbox
-                  checked={selectedIds.has(member.id)}
-                  onCheckedChange={() => toggle(member.id)}
-                />
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2">
-                    <span className="text-sm font-medium">{member.name}</span>
-                    {member.role && (
-                      <span className="text-xs text-muted-foreground">{member.role}</span>
-                    )}
-                    {member.relationship && (
-                      <span className="text-xs text-muted-foreground">{member.relationship}</span>
-                    )}
-                  </div>
-                  {member.email && (
-                    <p className="text-xs text-muted-foreground truncate">{member.email}</p>
-                  )}
-                </div>
-              </label>
-            ))}
-          </div>
-        )}
-        <Button
-          className="w-full"
-          onClick={handleAddSelected}
-          disabled={selectedIds.size === 0}
-        >
-          Add {selectedIds.size > 0 ? selectedIds.size : ''} {selectedIds.size === 1
-            ? (partyTypeFilter === 'household_member' ? 'member' : 'contact')
-            : (partyTypeFilter === 'household_member' ? 'members' : 'contacts')}
-        </Button>
-      </div>
-    )
-  }
-
-  return (
-    <div className="space-y-4">
-      <div className="relative">
-        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-        <Input
-          className="pl-9"
-          placeholder="Search households..."
-          value={query}
-          onChange={(e) => setQuery(e.target.value)}
-          autoFocus
-        />
-      </div>
-      <div className="space-y-2">
-        {filteredHouseholds.length === 0 ? (
-          <p className="text-sm text-muted-foreground text-center py-4">
-            {query ? 'No matching households found.' : 'No households with available members.'}
-          </p>
-        ) : (
-          filteredHouseholds.map((household) => {
-            const members = household.relatedParties.filter(
-              (p) => p.type === partyTypeFilter && !existingPartyIds.has(p.id)
-            )
-            return (
-              <button
-                key={household.id}
-                type="button"
-                onClick={() => setSelectedHouseholdId(household.id)}
-                className="flex items-center justify-between w-full rounded-lg border border-border p-3 text-left transition-colors hover:bg-muted/50"
-              >
-                <div className="min-w-0 flex-1">
-                  <p className="text-sm font-medium truncate">{household.name}</p>
-                  <p className="text-xs text-muted-foreground truncate">
-                    {household.primaryContact.firstName} {household.primaryContact.lastName}
-                    {household.primaryContact.email && ` · ${household.primaryContact.email}`}
-                  </p>
-                </div>
-                <div className="flex items-center gap-2 shrink-0 ml-3">
-                  <Badge variant="secondary" className="text-[10px]">
-                    {members.length} {partyTypeFilter === 'household_member' ? 'member' : 'contact'}{members.length !== 1 ? 's' : ''}
-                  </Badge>
-                  <ChevronRight className="h-4 w-4 text-muted-foreground" />
-                </div>
-              </button>
-            )
-          })
-        )}
-      </div>
-    </div>
-  )
-}
 
 // --- Delete confirmation button ---
 
@@ -635,44 +316,6 @@ function EmptyState({ message }: { message: string }) {
   )
 }
 
-// --- Add mode toggle ---
-
-function AddModeToggle({
-  mode,
-  onModeChange,
-}: {
-  mode: 'new' | 'existing'
-  onModeChange: (mode: 'new' | 'existing') => void
-}) {
-  return (
-    <div className="flex gap-1 rounded-lg border border-border p-1 bg-muted/30">
-      <button
-        type="button"
-        className={cn(
-          'flex-1 rounded-md px-3 py-1.5 text-sm font-medium transition-colors',
-          mode === 'existing'
-            ? 'bg-background text-foreground shadow-sm'
-            : 'text-muted-foreground hover:text-foreground'
-        )}
-        onClick={() => onModeChange('existing')}
-      >
-        Search existing
-      </button>
-      <button
-        type="button"
-        className={cn(
-          'flex-1 rounded-md px-3 py-1.5 text-sm font-medium transition-colors',
-          mode === 'new'
-            ? 'bg-background text-foreground shadow-sm'
-            : 'text-muted-foreground hover:text-foreground'
-        )}
-        onClick={() => onModeChange('new')}
-      >
-        Create new
-      </button>
-    </div>
-  )
-}
 
 // --- Hidden members note ---
 
@@ -686,68 +329,13 @@ function HiddenMembersNote({ count, typeLabel }: { count: number; typeLabel: str
   )
 }
 
-// --- Add party sheet ---
-
-function AddPartySheet({
-  open,
-  onOpenChange,
-  title,
-  description,
-  partyTypeFilter,
-  existingPartyIds,
-  onAddExisting,
-  renderCreateForm,
-}: {
-  open: boolean
-  onOpenChange: (open: boolean) => void
-  title: string
-  description: string
-  partyTypeFilter: RelatedPartyType
-  existingPartyIds: Set<string>
-  onAddExisting: (parties: RelatedParty[]) => void
-  renderCreateForm: (onDone: () => void) => React.ReactNode
-}) {
-  const [mode, setMode] = useState<'new' | 'existing'>('existing')
-
-  const handleOpenChange = (next: boolean) => {
-    onOpenChange(next)
-    if (!next) setMode('existing')
-  }
-
-  return (
-    <Sheet open={open} onOpenChange={handleOpenChange}>
-      <SheetContent side="right" className="sm:max-w-md flex flex-col gap-0 p-0">
-        <SheetHeader className="px-6 pt-6 pb-4 border-b border-border shrink-0">
-          <SheetTitle>{title}</SheetTitle>
-          <SheetDescription>{description}</SheetDescription>
-        </SheetHeader>
-        <div className="flex-1 overflow-y-auto px-6 py-5 space-y-5">
-          <AddModeToggle mode={mode} onModeChange={setMode} />
-          {mode === 'existing' ? (
-            <SearchExistingForm
-              partyTypeFilter={partyTypeFilter}
-              existingPartyIds={existingPartyIds}
-              onAdd={(parties) => {
-                onAddExisting(parties)
-                handleOpenChange(false)
-              }}
-              onCancel={() => handleOpenChange(false)}
-            />
-          ) : (
-            renderCreateForm(() => handleOpenChange(false))
-          )}
-        </div>
-      </SheetContent>
-    </Sheet>
-  )
-}
 
 // --- Main form ---
 
 export function RelatedPartiesForm() {
-  const { state, dispatch } = useWorkflow()
-  const [showAddHousehold, setShowAddHousehold] = useState(false)
-  const [showAddContact, setShowAddContact] = useState(false)
+  const { state } = useWorkflow()
+  const [showAddHouseholdSheet, setShowAddHouseholdSheet] = useState(false)
+  const [showAddContactSheet, setShowAddContactSheet] = useState(false)
   const [editingPartyId, setEditingPartyId] = useState<string | null>(null)
 
   const householdMembers = state.relatedParties.filter((p) => p.type === 'household_member' && !p.isHidden)
@@ -755,15 +343,6 @@ export function RelatedPartiesForm() {
   const relatedContacts = state.relatedParties.filter((p) => p.type === 'related_contact' && !p.isHidden)
   const hiddenContacts = state.relatedParties.filter((p) => p.type === 'related_contact' && p.isHidden)
   const editingParty = editingPartyId ? state.relatedParties.find((p) => p.id === editingPartyId) ?? null : null
-
-  const existingHouseholdIds = useMemo(
-    () => new Set(householdMembers.map((p) => p.id)),
-    [householdMembers]
-  )
-  const existingContactIds = useMemo(
-    () => new Set(relatedContacts.map((p) => p.id)),
-    [relatedContacts]
-  )
 
   return (
     <div className="space-y-8">
@@ -789,10 +368,12 @@ export function RelatedPartiesForm() {
 
         <HiddenMembersNote count={hiddenHouseholdMembers.length} typeLabel="member" />
 
-        <Button variant="outline" className="w-full" onClick={() => setShowAddHousehold(true)}>
+        <Button variant="outline" className="w-full" onClick={() => setShowAddHouseholdSheet(true)}>
           <Plus className="h-4 w-4 mr-2" />
           Add member
         </Button>
+
+        <AddHouseholdMemberSheet open={showAddHouseholdSheet} onOpenChange={setShowAddHouseholdSheet} />
       </section>
 
       {/* Related Contacts */}
@@ -817,39 +398,15 @@ export function RelatedPartiesForm() {
 
         <HiddenMembersNote count={hiddenContacts.length} typeLabel="contact" />
 
-        <Button variant="outline" className="w-full" onClick={() => setShowAddContact(true)}>
+        <Button variant="outline" className="w-full" onClick={() => setShowAddContactSheet(true)}>
           <Plus className="h-4 w-4 mr-2" />
           Add contact
         </Button>
+
+        <AddContactSheet open={showAddContactSheet} onOpenChange={setShowAddContactSheet} />
       </section>
 
-      {/* Side-panel sheets */}
-      <AddPartySheet
-        open={showAddHousehold}
-        onOpenChange={setShowAddHousehold}
-        title="Add Member"
-        description="Search for an existing member across households or create a new one."
-        partyTypeFilter="household_member"
-        existingPartyIds={existingHouseholdIds}
-        onAddExisting={(parties) => {
-          parties.forEach((p) => dispatch({ type: 'ADD_RELATED_PARTY', party: { ...p, id: `imported-${p.id}-${Date.now()}`, isPrimary: false, kycStatus: p.kycStatus ?? 'needs_kyc' } }))
-        }}
-        renderCreateForm={(onDone) => <AddHouseholdMemberForm onDone={onDone} />}
-      />
-
-      <AddPartySheet
-        open={showAddContact}
-        onOpenChange={setShowAddContact}
-        title="Add Contact"
-        description="Search for an existing contact across households or create a new one."
-        partyTypeFilter="related_contact"
-        existingPartyIds={existingContactIds}
-        onAddExisting={(parties) => {
-          parties.forEach((p) => dispatch({ type: 'ADD_RELATED_PARTY', party: { ...p, id: `imported-${p.id}-${Date.now()}` } }))
-        }}
-        renderCreateForm={(onDone) => <AddContactForm onDone={onDone} />}
-      />
-
+      {/* Edit party side-panel */}
       <EditPartySheet
         party={editingParty}
         open={!!editingPartyId}

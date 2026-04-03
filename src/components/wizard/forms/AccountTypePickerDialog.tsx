@@ -1,20 +1,15 @@
 import { useState } from 'react'
-import type { AccountType } from '@/types/workflow'
+import type { RegistrationType } from '@/utils/registrationDocuments'
+import { registrationTypeLabels } from '@/utils/registrationDocuments'
 import { Button } from '@/components/ui/button'
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from '@/components/ui/sheet'
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui/select'
 import { Combobox } from '@/components/ui/combobox'
-import { Plus, Trash2 } from 'lucide-react'
+import { Plus, Trash2, AlertCircle } from 'lucide-react'
 
-const REGISTRATION_TYPES: { value: AccountType; label: string }[] = [
-  { value: 'brokerage', label: 'Brokerage' },
-  { value: 'ira', label: 'Traditional IRA' },
-  { value: 'roth_ira', label: 'Roth IRA' },
-  { value: '401k', label: '401(k)' },
-  { value: 'trust', label: 'Trust' },
-  { value: 'checking', label: 'Checking' },
-  { value: 'savings', label: 'Savings' },
-]
+const REGISTRATION_TYPE_OPTIONS: { value: string; label: string }[] = (
+  Object.entries(registrationTypeLabels) as [RegistrationType, string][]
+).map(([value, label]) => ({ value, label }))
 
 const QUANTITY_OPTIONS = Array.from({ length: 10 }, (_, i) => ({
   value: String(i + 1),
@@ -23,23 +18,26 @@ const QUANTITY_OPTIONS = Array.from({ length: 10 }, (_, i) => ({
 
 interface Row {
   id: string
-  registrationType: AccountType | ''
+  registrationType: RegistrationType | ''
   annuity: 'No' | 'Yes'
   quantity: number
 }
 
+export type Selection = { registrationType: RegistrationType; label: string; count: number; withAnnuityCount: number }
+
 function createRow(): Row {
-  return { id: `row-${Date.now()}-${Math.random()}`, registrationType: '', annuity: 'No', quantity: 1 }
+  return { id: `row-${Date.now()}-${Math.random().toString(36).slice(2)}`, registrationType: '', annuity: 'No', quantity: 1 }
 }
 
 interface AccountTypePickerDialogProps {
   open: boolean
   onOpenChange: (open: boolean) => void
-  onConfirm: (selections: { accountType: AccountType; label: string; count: number; withAnnuityCount: number }[]) => void
+  onConfirm: (selections: Selection[]) => void
 }
 
 export function AccountTypePickerDialog({ open, onOpenChange, onConfirm }: AccountTypePickerDialogProps) {
   const [rows, setRows] = useState<Row[]>(() => [createRow()])
+  const [pendingSelections, setPendingSelections] = useState<Selection[] | null>(null)
 
   const handleReset = () => setRows([createRow()])
 
@@ -65,11 +63,11 @@ export function AccountTypePickerDialog({ open, onOpenChange, onConfirm }: Accou
 
   const totalAccounts = validRows.reduce((sum, r) => sum + r.quantity, 0)
 
-  const handleConfirm = () => {
-    const grouped = new Map<AccountType, { plain: number; annuity: number }>()
+  const buildSelections = (): Selection[] => {
+    const grouped = new Map<RegistrationType, { plain: number; annuity: number }>()
 
     for (const row of validRows) {
-      const type = row.registrationType as AccountType
+      const type = row.registrationType as RegistrationType
       const existing = grouped.get(type) ?? { plain: 0, annuity: 0 }
       if (row.annuity === 'Yes') {
         existing.annuity += row.quantity
@@ -79,21 +77,43 @@ export function AccountTypePickerDialog({ open, onOpenChange, onConfirm }: Accou
       grouped.set(type, existing)
     }
 
-    const selections = Array.from(grouped.entries()).map(([type, counts]) => {
-      const label = REGISTRATION_TYPES.find((r) => r.value === type)?.label ?? type
+    return Array.from(grouped.entries()).map(([type, counts]) => {
+      const label = registrationTypeLabels[type]
       return {
-        accountType: type,
+        registrationType: type,
         label,
         count: counts.plain,
         withAnnuityCount: counts.annuity,
       }
     })
-
-    onConfirm(selections)
-    handleReset()
   }
 
+  const handleRequestConfirm = () => {
+    const selections = buildSelections()
+    setPendingSelections(selections)
+    onOpenChange(false)
+  }
+
+  const handleGoBack = () => {
+    setPendingSelections(null)
+    onOpenChange(true)
+  }
+
+  const handleFinalConfirm = () => {
+    if (pendingSelections) {
+      onConfirm(pendingSelections)
+    }
+    handleReset()
+    setPendingSelections(null)
+    onOpenChange(false)
+  }
+
+  const confirmTotal = pendingSelections
+    ? pendingSelections.reduce((sum, s) => sum + s.count + s.withAnnuityCount, 0)
+    : 0
+
   return (
+    <>
     <Sheet open={open} onOpenChange={handleOpenChange}>
       <SheetContent side="right" className="sm:max-w-[640px] flex flex-col gap-0 p-0">
         <SheetHeader className="px-6 pt-6 pb-4 border-b border-border shrink-0">
@@ -119,9 +139,9 @@ export function AccountTypePickerDialog({ open, onOpenChange, onConfirm }: Accou
               >
                 {/* Registration Type */}
                 <Combobox
-                  options={REGISTRATION_TYPES.map((r) => ({ value: r.value, label: r.label }))}
+                  options={REGISTRATION_TYPE_OPTIONS}
                   value={row.registrationType}
-                  onValueChange={(val) => updateRow(row.id, { registrationType: val as AccountType })}
+                  onValueChange={(val) => updateRow(row.id, { registrationType: val as RegistrationType })}
                   placeholder="Select type"
                   emptyMessage="No types found."
                 />
@@ -177,11 +197,51 @@ export function AccountTypePickerDialog({ open, onOpenChange, onConfirm }: Accou
 
         <div className="px-6 py-4 border-t border-border shrink-0 flex items-center justify-between gap-3">
           <Button variant="outline" onClick={() => handleOpenChange(false)}>Cancel</Button>
-          <Button onClick={handleConfirm} disabled={validRows.length === 0}>
+          <Button onClick={handleRequestConfirm} disabled={validRows.length === 0}>
             Open {totalAccounts} {totalAccounts === 1 ? 'Account' : 'Accounts'}
           </Button>
         </div>
       </SheetContent>
     </Sheet>
+
+    {pendingSelections && !open && (
+      <div className="fixed inset-0 z-[70] flex items-center justify-center">
+        <div className="fixed inset-0 bg-black/50" onClick={handleGoBack} />
+        <div className="relative z-10 bg-background rounded-lg border border-border shadow-lg max-w-md w-full mx-4 p-6 space-y-4">
+          <div className="flex items-start gap-3">
+            <div className="rounded-full bg-primary/10 p-2 shrink-0">
+              <AlertCircle className="h-5 w-5 text-primary" />
+            </div>
+            <div className="space-y-2">
+              <h3 className="text-base font-semibold">Confirm Account Opening</h3>
+              <p className="text-sm text-muted-foreground">
+                Are you sure you want to open <strong>{confirmTotal}</strong> {confirmTotal === 1 ? 'account' : 'accounts'}?
+              </p>
+              <ul className="text-sm text-muted-foreground space-y-1 pt-1">
+                {pendingSelections.map((s) => (
+                  <li key={s.registrationType} className="flex items-center gap-2">
+                    <span className="h-1.5 w-1.5 rounded-full bg-muted-foreground shrink-0" />
+                    {s.label}
+                    {s.count > 0 && <span>× {s.count}</span>}
+                    {s.withAnnuityCount > 0 && (
+                      <span className="text-xs text-muted-foreground/70">
+                        (+{s.withAnnuityCount} w/ annuity)
+                      </span>
+                    )}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          </div>
+          <div className="flex items-center justify-end gap-3 pt-2">
+            <Button variant="outline" onClick={handleGoBack}>Go Back</Button>
+            <Button onClick={handleFinalConfirm}>
+              Yes, Open {confirmTotal === 1 ? 'Account' : 'Accounts'}
+            </Button>
+          </div>
+        </div>
+      </div>
+    )}
+    </>
   )
 }

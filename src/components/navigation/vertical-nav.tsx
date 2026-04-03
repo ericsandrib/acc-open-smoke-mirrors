@@ -10,7 +10,8 @@ import {
   Globe,
   TrendingUp,
   Clock,
-  FileText,
+  BookOpen,
+  ShieldCheck,
   Settings,
   Plus,
   PanelRight,
@@ -65,8 +66,8 @@ const navGroups: NavGroup[] = [
   {
     items: [
       { icon: Clock, label: "Insights", href: "/insights" },
-      { icon: FileText, label: "Advisor Directory", href: "/advisor-directory" },
-      { icon: Settings, label: "Advisor Matching", href: "/advisor-matching" },
+      { icon: BookOpen, label: "Advisor Directory", href: "/advisor-directory" },
+      { icon: ShieldCheck, label: "Advisor Matching", href: "/advisor-matching" },
     ],
   },
 ];
@@ -131,16 +132,11 @@ function NavigationContent({
   return (
     <>
       {/* Navigation items */}
-      <div className="flex-1 px-3 pt-1 pb-2 overflow-y-auto flex flex-col gap-4">
+      <div className="flex-1 px-3 pt-1 pb-2 overflow-y-auto flex flex-col gap-0">
         {navGroups.map((group, groupIndex) => (
           <div key={groupIndex} className="flex flex-col gap-0.5">
-            {group.label && isExpanded && (
-              <span className="px-3 pt-2 pb-1 text-xs font-medium text-[var(--text-tertiary)]">
-                {group.label}
-              </span>
-            )}
-            {!isExpanded && group.label && (
-              <div className="mx-auto my-1 h-px w-6 bg-border" />
+            {groupIndex > 0 && (
+              <div className="my-2 mx-3 h-px bg-border/60" />
             )}
             {group.items.map((item) => {
               const isActive =
@@ -324,7 +320,7 @@ export function VerticalNav({ onCreateClick, defaultCollapsed }: VerticalNavProp
               {/* Header */}
               <div className="h-14 px-4 flex items-center justify-between shrink-0 border-b border-border">
                 <span className="text-lg font-bold tracking-tight text-[var(--text-primary)]">
-                  G<span className="text-[var(--text-tertiary)]">|</span>
+                  M<span className="text-[var(--text-tertiary)]">|</span>
                 </span>
               </div>
               <NavigationContent
@@ -352,7 +348,7 @@ export function VerticalNav({ onCreateClick, defaultCollapsed }: VerticalNavProp
               {isExpanded ? (
                 <>
                   <span className="text-lg font-bold tracking-tight text-[var(--text-primary)]">
-                    G<span className="text-[var(--text-tertiary)]">|</span>
+                    M<span className="text-[var(--text-tertiary)]">|</span>
                   </span>
                   <Tooltip>
                     <TooltipTrigger asChild>
