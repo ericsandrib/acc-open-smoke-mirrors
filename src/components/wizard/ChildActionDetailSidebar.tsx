@@ -2,8 +2,11 @@ import { useWorkflow, useChildActionContext } from '@/stores/workflowStore'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Badge } from '@/components/ui/badge'
 import type { AccountType } from '@/types/workflow'
+import type { RegistrationType } from '@/utils/registrationDocuments'
+import { registrationTypeLabels } from '@/utils/registrationDocuments'
+import { getAccountProductTypeForRegistration } from '@/utils/accountTypeFromRegistration'
 
-const accountTypeLabels: Record<AccountType, string> = {
+const accountProductLabels: Record<AccountType, string> = {
   brokerage: 'Brokerage',
   ira: 'Traditional IRA',
   roth_ira: 'Roth IRA',
@@ -21,10 +24,21 @@ export function ChildActionDetailSidebar() {
 
   const { child, subTaskId, config, subTaskIndex, totalSubTasks } = ctx
 
-  const detailsData = state.taskData[`${child.id}-owner-info`]
-  const accountType = detailsData?.accountType as AccountType | undefined
+  const detailsData = state.taskData[`${child.id}-account-owners`] as Record<string, unknown> | undefined
+  const legacyAccountType = detailsData?.accountType as AccountType | undefined
+  const childMeta = state.taskData[child.id] as Record<string, unknown> | undefined
+  const registrationType = childMeta?.registrationType as RegistrationType | undefined
+  const productOverride = childMeta?.accountProductType as AccountType | undefined
+  const resolvedProduct =
+    productOverride ??
+    (registrationType ? getAccountProductTypeForRegistration(registrationType) : undefined) ??
+    legacyAccountType
+  const productLabel = resolvedProduct ? accountProductLabels[resolvedProduct] : null
+  const registrationLabel = registrationType ? registrationTypeLabels[registrationType] : null
 
-  const ownerIds = (detailsData?.accountHolders as string[] | undefined) ?? []
+  const ownerSlots =
+    (detailsData?.owners as { partyId?: string; type: string }[] | undefined) ?? []
+  const ownerIds = ownerSlots.filter((o) => o.type === 'existing' && o.partyId).map((o) => o.partyId!)
   const owners = state.relatedParties.filter((p) => ownerIds.includes(p.id))
 
   return (
@@ -42,12 +56,16 @@ export function ChildActionDetailSidebar() {
               <span className="text-muted-foreground">Account</span>
               <p className="font-medium text-foreground">{child.name}</p>
             </div>
-            {accountType && (
+            {productLabel && (
               <div>
-                <span className="text-muted-foreground">Type</span>
-                <p className="font-medium text-foreground">
-                  {accountTypeLabels[accountType] ?? accountType}
-                </p>
+                <span className="text-muted-foreground">Account type</span>
+                <p className="font-medium text-foreground">{productLabel}</p>
+              </div>
+            )}
+            {registrationLabel && (
+              <div>
+                <span className="text-muted-foreground">Registration</span>
+                <p className="font-medium text-foreground">{registrationLabel}</p>
               </div>
             )}
             <div>
@@ -110,7 +128,7 @@ export function ChildActionDetailSidebar() {
                 </div>
               ))
             ) : (
-              <p className="text-muted-foreground">No owners assigned yet. Select owners in the Owner Info step.</p>
+              <p className="text-muted-foreground">No owners assigned yet. Add them in Account &amp; owners.</p>
             )}
           </div>
         </TabsContent>

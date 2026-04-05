@@ -8,7 +8,8 @@ import { Placeholder2Form } from './forms/PlaceholderForm'
 import { OpenAccountsForm } from './forms/OpenAccountsForm'
 import { AcctChildOwnerInfoForm } from './forms/AcctChildOwnerInfoForm'
 import { AcctChildFundingServicingForm } from './forms/AcctChildFundingServicingForm'
-import { AcctChildAnnuityForm } from './forms/AcctChildAnnuityForm'
+import { AcctChildFeaturesServicesForm } from './forms/AcctChildFeaturesServicesForm'
+import { AcctChildDocumentsReviewForm } from './forms/AcctChildDocumentsReviewForm'
 
 export const formComponents: Record<string, React.ComponentType> = {
   'client-info': ClientInfoForm,
@@ -18,9 +19,10 @@ export const formComponents: Record<string, React.ComponentType> = {
   'kyc-child-documents': KycChildDocumentsForm,
   'kyc-child-results': KycChildResultsForm,
   'open-accounts': OpenAccountsForm,
-  'acct-child-owner-info': AcctChildOwnerInfoForm,
-  'acct-child-funding-servicing': AcctChildFundingServicingForm,
-  'acct-child-annuity': AcctChildAnnuityForm,
+  'acct-child-account-owners': AcctChildOwnerInfoForm,
+  'acct-child-funding-transfers': AcctChildFundingServicingForm,
+  'acct-child-features-services': AcctChildFeaturesServicesForm,
+  'acct-child-documents-review': AcctChildDocumentsReviewForm,
   'placeholder-2': Placeholder2Form,
 }
 
@@ -38,12 +40,14 @@ export const taskDescriptions: Partial<Record<string, string>> = {
     'View the results of the compliance review for this household member.',
   'open-accounts':
     'Select the types of accounts to open, review documents, and prepare for signature.',
-  'acct-child-owner-info':
-    'Add the owners for this account. Select existing household members or create new individuals.',
-  'acct-child-funding-servicing':
-    'Configure the funding source, servicing model, and distribution preferences for this account.',
-  'acct-child-annuity':
-    'Set up annuity details including type, carrier, payout configuration, and beneficiaries.',
+  'acct-child-account-owners':
+    'Create the account shell and capture owners/participants—fields here drive eligibility and the first pass of document rules.',
+  'acct-child-funding-transfers':
+    'Capture how the account will be funded and any transfer-related items; funding choices often trigger a different document set.',
+  'acct-child-features-services':
+    'Optional features and add-ons (margin, options, cards, statement delivery, beneficiaries / TOD, interested parties). Use the left sub-step list to reach this screen after Account & owners and Funding.',
+  'acct-child-documents-review':
+    'Finalize this account’s paperwork: lists, uploads, exceptions. Documents (right) tracked rule-driven needs since Task 1; the single aggregated eSign envelope is built on the Open Accounts parent step.',
   'placeholder-2':
     'Review the information gathered during onboarding and confirm everything is accurate before submitting.',
 }

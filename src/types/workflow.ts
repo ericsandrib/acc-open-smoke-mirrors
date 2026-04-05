@@ -2,6 +2,45 @@ export type TaskStatus = 'not_started' | 'in_progress' | 'complete' | 'blocked' 
 
 export type RelatedPartyType = 'household_member' | 'related_contact' | 'related_organization'
 
+/** Suitability / regulatory extension for account-owner individuals (wizard). */
+export interface AccountOwnerIndividualProfile {
+  middleName?: string
+  suffix?: string
+  legalStreet?: string
+  legalApt?: string
+  legalCity?: string
+  legalState?: string
+  legalZip?: string
+  legalCountry?: string
+  mailingSameAsLegal?: boolean
+  mailingStreet?: string
+  mailingApt?: string
+  mailingCity?: string
+  mailingState?: string
+  mailingZip?: string
+  mailingCountry?: string
+  employmentStatus?: string
+  employerName?: string
+  occupation?: string
+  industry?: string
+  annualIncomeRange?: string
+  netWorthRange?: string
+  liquidNetWorthRange?: string
+  sourceOfFunds?: string
+  investmentObjective?: string
+  riskTolerance?: string
+  timeHorizon?: string
+  investmentExperience?: string
+  controlPerson?: string
+  bdAffiliation?: string
+  familyAffiliation?: string
+  pep?: string
+  insiderRule144?: string
+  trustedContactName?: string
+  trustedContactRelationship?: string
+  trustedContactPhoneEmail?: string
+}
+
 export interface RelatedParty {
   id: string
   name: string
@@ -25,6 +64,7 @@ export interface RelatedParty {
   entityType?: string
   jurisdiction?: string
   contactPerson?: string
+  accountOwnerIndividual?: AccountOwnerIndividualProfile
 }
 
 export type AccountType = 'brokerage' | 'ira' | 'roth_ira' | '401k' | 'trust' | 'checking' | 'savings'

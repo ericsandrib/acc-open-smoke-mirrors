@@ -2,6 +2,7 @@ import { createContext, useContext, useReducer, useCallback, type ReactNode } fr
 import type { WorkflowState, WorkflowAction, Task } from '@/types/workflow'
 import { actions, tasks, initialRelatedParties, initialFinancialAccounts } from '@/data/seed'
 import { getChildSubTaskIds, getChildTypeConfig, parseChildSubTaskId } from '@/utils/childTaskRegistry'
+import { generateAccountOpenIdentifiers } from '@/utils/accountOpenIdentifiers'
 
 let childIdCounter = 0
 
@@ -153,9 +154,19 @@ function workflowReducer(state: WorkflowState, action: WorkflowAction): Workflow
         return t
       })
       const newOrder = computeFlatTaskOrder(newTasks, state.actions)
-      const newTaskData = action.metadata && spawnedChildId
-        ? { ...state.taskData, [spawnedChildId]: { ...(state.taskData[spawnedChildId] ?? {}), ...action.metadata } }
-        : state.taskData
+      let newTaskData = state.taskData
+      if (spawnedChildId) {
+        const merged = {
+          ...(state.taskData[spawnedChildId] ?? {}),
+          ...(action.metadata ?? {}),
+        }
+        if (action.childType === 'account-opening') {
+          const gen = generateAccountOpenIdentifiers(action.childName, spawnedChildId)
+          merged.accountNumber = (merged.accountNumber as string | undefined) ?? gen.accountNumber
+          merged.shortName = (merged.shortName as string | undefined) ?? gen.shortName
+        }
+        newTaskData = { ...state.taskData, [spawnedChildId]: merged }
+      }
       return { ...state, tasks: newTasks, flatTaskOrder: newOrder, taskData: newTaskData }
     }
 

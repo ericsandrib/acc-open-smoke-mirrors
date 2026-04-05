@@ -21,6 +21,12 @@ import {
 import { Search, User, Building2, Plus, Hash, CreditCard, Fingerprint, Users, FileText } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useWorkflow } from '@/stores/workflowStore'
+import { AccountOwnerIndividualFormFields } from '@/components/wizard/forms/AccountOwnerIndividualFormFields'
+import {
+  createEmptyIndividualAccountOwnerForm,
+  splitFormIntoPartyUpdate,
+  type IndividualAccountOwnerFormState,
+} from '@/types/accountOwnerIndividual'
 import {
   searchPeople,
   searchAll,
@@ -32,11 +38,11 @@ import {
 
 // ─── Constants ───
 
-const householdRelationships = ['Spouse', 'Child', 'Parent', 'Sibling']
-const householdRoles = ['Client', 'Spouse', 'Dependent', 'Trustee', 'Beneficiary']
+export const householdRelationships = ['Spouse', 'Child', 'Parent', 'Sibling']
+export const householdRoles = ['Client', 'Spouse', 'Dependent', 'Trustee', 'Beneficiary']
 const contactRelationships = ['Attorney', 'Accountant', 'Financial Advisor', 'Parent', 'Guardian', 'Power of Attorney']
 const contactCategories = ['Family', 'Professional', 'Other']
-const entityTypes = ['Trust', 'Employer', 'Business Entity', 'Foundation', 'Partnership']
+export const entityTypes = ['Trust', 'Employer', 'Business Entity', 'Foundation', 'Partnership']
 const entityCategories = ['Business', 'Legal', 'Other']
 
 const searchFieldLabels: Record<SearchField, string> = {
@@ -632,6 +638,58 @@ function CreateHouseholdLegalEntityForm({
   )
 }
 
+// ─── Full individual create (account owner: all suitability / regulatory sections) ───
+
+function CreateAccountOwnerIndividualForm({
+  onDone,
+  onPartyAdded,
+}: {
+  onDone: () => void
+  onPartyAdded?: (partyId: string) => void
+}) {
+  const { dispatch } = useWorkflow()
+  const [form, setForm] = useState<IndividualAccountOwnerFormState>(() =>
+    createEmptyIndividualAccountOwnerForm(),
+  )
+
+  const patch = (p: Partial<IndividualAccountOwnerFormState>) => {
+    setForm((prev) => ({ ...prev, ...p }))
+  }
+
+  const handleAdd = () => {
+    if (!form.firstName.trim() || !form.lastName.trim()) return
+    const id = `household-${Date.now()}`
+    const { top, accountOwnerIndividual } = splitFormIntoPartyUpdate(form)
+    dispatch({
+      type: 'ADD_RELATED_PARTY',
+      party: {
+        id,
+        type: 'household_member',
+        ...top,
+        accountOwnerIndividual,
+        kycStatus: 'needs_kyc',
+      },
+    })
+    onPartyAdded?.(id)
+    onDone()
+  }
+
+  return (
+    <div className="space-y-4">
+      <AccountOwnerIndividualFormFields value={form} onChange={patch} />
+      <div className="flex gap-2 justify-end pt-2 border-t border-border">
+        <Button variant="outline" size="sm" onClick={onDone}>
+          Cancel
+        </Button>
+        <Button size="sm" onClick={handleAdd} disabled={!form.firstName.trim() || !form.lastName.trim()}>
+          <Plus className="h-3.5 w-3.5 mr-1.5" />
+          Add individual
+        </Button>
+      </div>
+    </div>
+  )
+}
+
 // ─── Create Household Member form ───
 
 function CreateHouseholdMemberForm({
@@ -676,7 +734,34 @@ function CreateHouseholdMemberForm({
     onDone()
   }
 
-  const individualForm = (
+  if (includeLegalEntityCreate) {
+    return (
+      <Tabs
+        value={createKind}
+        onValueChange={(v) => setCreateKind(v as 'individual' | 'entity')}
+        className="w-full"
+      >
+        <TabsList variant="border" className="w-full border-b border-border mb-1">
+          <TabsTrigger value="individual" className="flex-1 gap-1.5">
+            <User className="h-3.5 w-3.5" />
+            Individual
+          </TabsTrigger>
+          <TabsTrigger value="entity" className="flex-1 gap-1.5">
+            <Building2 className="h-3.5 w-3.5" />
+            Legal entity
+          </TabsTrigger>
+        </TabsList>
+        <TabsContent value="individual" className="mt-0">
+          <CreateAccountOwnerIndividualForm onDone={onDone} onPartyAdded={onPartyAdded} />
+        </TabsContent>
+        <TabsContent value="entity" className="mt-0">
+          <CreateHouseholdLegalEntityForm onDone={onDone} onPartyAdded={onPartyAdded} />
+        </TabsContent>
+      </Tabs>
+    )
+  }
+
+  return (
     <div className="space-y-4">
       <div className="space-y-1.5">
         <Label className="text-xs">First name</Label>
@@ -730,40 +815,11 @@ function CreateHouseholdMemberForm({
         </Button>
         <Button size="sm" onClick={handleAddIndividual} disabled={!firstName.trim() || !lastName.trim()}>
           <Plus className="h-3.5 w-3.5 mr-1.5" />
-          {includeLegalEntityCreate ? 'Add individual' : 'Add Member'}
+          Add Member
         </Button>
       </div>
     </div>
   )
-
-  if (includeLegalEntityCreate) {
-    return (
-      <Tabs
-        value={createKind}
-        onValueChange={(v) => setCreateKind(v as 'individual' | 'entity')}
-        className="w-full"
-      >
-        <TabsList variant="border" className="w-full border-b border-border mb-1">
-          <TabsTrigger value="individual" className="flex-1 gap-1.5">
-            <User className="h-3.5 w-3.5" />
-            Individual
-          </TabsTrigger>
-          <TabsTrigger value="entity" className="flex-1 gap-1.5">
-            <Building2 className="h-3.5 w-3.5" />
-            Legal entity
-          </TabsTrigger>
-        </TabsList>
-        <TabsContent value="individual" className="mt-0">
-          {individualForm}
-        </TabsContent>
-        <TabsContent value="entity" className="mt-0">
-          <CreateHouseholdLegalEntityForm onDone={onDone} onPartyAdded={onPartyAdded} />
-        </TabsContent>
-      </Tabs>
-    )
-  }
-
-  return individualForm
 }
 
 // ═══════════════════════════════════════════════════
@@ -829,7 +885,13 @@ export function AddHouseholdMemberSheet({
 
   return (
     <Sheet open={open} onOpenChange={(v) => { if (!v) resetAndClose(); else onOpenChange(true) }}>
-      <SheetContent side="right" className="sm:max-w-lg w-full flex flex-col gap-0 p-0">
+      <SheetContent
+        side="right"
+        className={cn(
+          'w-full flex flex-col gap-0 p-0',
+          includeLegalEntityCreate ? 'sm:max-w-2xl' : 'sm:max-w-lg',
+        )}
+      >
         <SheetHeader className="px-6 pt-6 pb-3 space-y-1">
           <SheetTitle>{title}</SheetTitle>
           <SheetDescription>{description}</SheetDescription>
@@ -846,7 +908,7 @@ export function AddHouseholdMemberSheet({
           />
         </div>
 
-        <div className="flex-1 overflow-y-auto px-6 pt-1 pb-4">
+        <div className="flex-1 min-h-0 overflow-y-auto px-6 pt-1 pb-4">
           {tab === 'search' ? (
             <PersonSearchPanel onSelect={handleSelectPerson} />
           ) : (

@@ -73,7 +73,7 @@ export function OpenAccountsForm() {
   const allOwnerPartyIds = useMemo(() => {
     const ids = new Set<string>()
     for (const c of children) {
-      const ownerData = (state.taskData[`${c.id}-owner-info`] as Record<string, unknown> | undefined)
+      const ownerData = (state.taskData[`${c.id}-account-owners`] as Record<string, unknown> | undefined)
       const owners = (ownerData?.owners as { partyId?: string; type: string }[] | undefined) ?? []
       for (const o of owners) {
         if (o.type === 'existing' && o.partyId) ids.add(o.partyId)
@@ -90,11 +90,20 @@ export function OpenAccountsForm() {
   const handleAddAnnuity = (parentName: string) => {
     const existing = getAnnuities(parentName)
     const nextNum = existing.length + 1
+    const parentChild = children.find((c) => c.name === parentName && !isAnnuity(c))
+    const reg = parentChild
+      ? ((state.taskData[parentChild.id] as Record<string, unknown> | undefined)?.registrationType as
+          | RegistrationType
+          | undefined)
+      : undefined
     dispatch({
       type: 'SPAWN_CHILD',
       parentTaskId: openAccountsTask!.id,
       childName: `${parentName} - Annuity ${nextNum}`,
       childType: 'account-opening',
+      metadata: {
+        registrationType: reg ?? 'individual',
+      },
     })
   }
 
@@ -121,7 +130,9 @@ export function OpenAccountsForm() {
           parentTaskId: openAccountsTask!.id,
           childName: name,
           childType: 'account-opening',
-          metadata: { registrationType: sel.registrationType },
+          metadata: {
+            registrationType: sel.registrationType,
+          },
         })
 
         if (i > totalPlain) {
@@ -130,7 +141,9 @@ export function OpenAccountsForm() {
             parentTaskId: openAccountsTask!.id,
             childName: `${name} - Annuity 1`,
             childType: 'account-opening',
-            metadata: { registrationType: sel.registrationType },
+            metadata: {
+              registrationType: sel.registrationType,
+            },
           })
         }
       }
@@ -634,21 +647,28 @@ export function OpenAccountsForm() {
         )}
       </section>
 
-      {/* Section 5: DocuSign Placeholder */}
+      {/* Aggregated eSign: single package across all accounts in this application */}
       <section>
-        <div className="flex items-center gap-2 mb-3">
+        <div className="flex items-center gap-2 mb-2">
           <FileSignature className="h-4 w-4 text-muted-foreground" />
           <h3 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
-            DocuSign
+            eSign package (all accounts)
           </h3>
         </div>
+        <p className="text-sm text-muted-foreground mb-4">
+          Forms and agreements from every account you open below are rolled into{' '}
+          <span className="text-foreground font-medium">one</span> signing envelope for this application. Per-account
+          document requirements while you work each account appear in the Documents panel inside that account’s
+          workflow; final send and signature collection happen here.
+        </p>
         <div className="rounded-lg border border-dashed border-border p-6 text-center">
           <FileSignature className="mx-auto mb-2 h-8 w-8 text-muted-foreground/50" />
           <p className="text-sm font-medium text-muted-foreground">
-            DocuSign Integration
+            Envelope preview &amp; send
           </p>
-          <p className="text-xs text-muted-foreground mt-1">
-            Envelope creation and signature collection will be available here.
+          <p className="text-xs text-muted-foreground mt-1 max-w-md mx-auto">
+            DocuSign (or your eSign provider) connects here: build the aggregated package from all open-account child
+            workflows, then route for signature.
           </p>
         </div>
       </section>

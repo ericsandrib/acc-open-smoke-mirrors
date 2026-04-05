@@ -6,7 +6,7 @@ import { HomeOfficeReviewFooter } from './HomeOfficeReviewFooter'
 import { ChildActionSidebar } from './ChildActionSidebar'
 import { ChildActionContent } from './ChildActionContent'
 import { ChildActionFooter } from './ChildActionFooter'
-import { ChildActionDetailSidebar } from './ChildActionDetailSidebar'
+import { ChildActionRightSidebar } from './ChildActionRightSidebar'
 import { Button } from '@/components/ui/button'
 import { useNavigate } from 'react-router-dom'
 import { GitBranch } from 'lucide-react'
@@ -36,7 +36,7 @@ export function WizardLayout() {
             {inChildAction ? <ChildActionContent /> : <TaskContent />}
             {inChildAction ? <ChildActionFooter /> : inReview ? <HomeOfficeReviewFooter /> : <WizardFooter />}
           </div>
-          {inChildAction ? <ChildActionDetailSidebar /> : <DetailSidebar />}
+          {inChildAction ? <ChildActionRightSidebar /> : <DetailSidebar />}
         </div>
       </div>
     </div>

@@ -29,9 +29,10 @@ const CHILD_TYPE_CONFIGS: Record<ChildType, ChildTypeConfig> = {
     idPrefix: 'acct-child',
     displayLabel: 'Open Financial Account',
     subTasks: [
-      { suffix: 'owner-info', title: 'Owner & Account Info', formKey: 'acct-child-owner-info' },
-      { suffix: 'funding-servicing', title: 'Funding and Servicing', formKey: 'acct-child-funding-servicing' },
-      { suffix: 'annuity', title: 'Annuity', formKey: 'acct-child-annuity' },
+      { suffix: 'account-owners', title: 'Account & owners', formKey: 'acct-child-account-owners' },
+      { suffix: 'funding-transfers', title: 'Funding & transfers', formKey: 'acct-child-funding-transfers' },
+      { suffix: 'features-services', title: 'Features & services', formKey: 'acct-child-features-services' },
+      { suffix: 'documents-review', title: 'Documents, signatures & submit', formKey: 'acct-child-documents-review' },
     ],
   },
 }
@@ -48,14 +49,20 @@ export function getChildSubTaskIds(childId: string, childType: ChildType): strin
 export function parseChildSubTaskId(
   id: string,
 ): { childId: string; suffix: string; childType: ChildType; config: ChildTypeConfig } | null {
+  const flattened: { config: ChildTypeConfig; sub: SubTaskDefinition }[] = []
   for (const config of Object.values(CHILD_TYPE_CONFIGS)) {
     for (const sub of config.subTasks) {
-      const ending = `-${sub.suffix}`
-      if (id.endsWith(ending)) {
-        const childId = id.slice(0, -ending.length)
-        if (childId.startsWith(`${config.idPrefix}-`)) {
-          return { childId, suffix: sub.suffix, childType: config.childType, config }
-        }
+      flattened.push({ config, sub })
+    }
+  }
+  flattened.sort((a, b) => b.sub.suffix.length - a.sub.suffix.length)
+
+  for (const { config, sub } of flattened) {
+    const ending = `-${sub.suffix}`
+    if (id.endsWith(ending)) {
+      const childId = id.slice(0, -ending.length)
+      if (childId.startsWith(`${config.idPrefix}-`)) {
+        return { childId, suffix: sub.suffix, childType: config.childType, config }
       }
     }
   }
