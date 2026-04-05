@@ -114,3 +114,42 @@
 ### Phase 5: Cleanup
 - [x] Delete old KycChildForm
 - [x] Verify build passes
+
+## Spec 005: Port Filter Sidebar from claudNav
+
+### Phase 1: Port Core Filter Components
+- [x] Create `src/components/filter/filter-types.ts` with type definitions
+- [x] Port `filter-tag.tsx` (pill tag with × button)
+- [x] Port `filter-trigger.tsx` (collapsible header with chevron + remove)
+- [x] Port `filter-input-row.tsx` (tags container + search input)
+- [x] Port `filter-multi-select.tsx` (searchable option list)
+- [x] Port `filter-date.tsx` (date preset buttons)
+- [x] Port `filter-panel.tsx` (content router for filter types)
+- [x] Port `filter.tsx` (main wrapper component)
+- [x] Create `index.ts` barrel export
+- [x] Map claudNav design tokens to smoke-mirrors theme tokens
+
+### Phase 2: Build Filter Sidebar Container
+- [x] Create `filter-sidebar.tsx` with 380px animated sidebar
+- [x] Add spring-physics slide animation (AnimatePresence)
+- [x] Add header with title and close button
+- [x] Add scrollable filter list area
+- [x] Add "+" dropdown for adding new filters
+- [x] Add clear-all button
+
+### Phase 3: Build Adapter Layer
+- [x] Build adapter to bridge `ColumnDef` → claudNav `FilterProps`
+- [x] Build adapter for onChange → `ViewFilter[]` sync
+
+### Phase 4: Integration
+- [x] Replace `FilterPanel` Sheet in `table-view-wrapper.tsx` with sidebar
+- [x] Update layout for sidebar push (not overlay)
+- [x] Wire `TableControls` filter button to toggle sidebar
+- [x] Verify view presets, dirty tracking, save/reset still work
+- [x] Test all three tabs (Journeys, Actions, Tasks)
+
+### Phase 5: Polish & Cleanup
+- [x] Remove old `filter-panel.tsx`
+- [x] Smooth animation pass
+- [x] Keyboard accessibility check
+- [x] Verify build passes

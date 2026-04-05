@@ -3,7 +3,7 @@ import { useViewManager } from '@/hooks/useViewManager'
 import type { ColumnDef, ViewPreset } from '@/types/view-preset'
 import { ViewTabs } from './view-tabs'
 import { TableControls } from './table-controls'
-import { FilterPanel } from './filter-panel'
+import { FilterSidebar } from './filter-sidebar'
 import { ColumnSettingsPopover } from './column-settings-popover'
 import { SearchX } from 'lucide-react'
 import { Button } from '@/components/ui/button'
@@ -56,16 +56,13 @@ export function TableViewWrapper<T>({
       />
 
       <div className="flex items-center justify-between py-2">
-        <div className="flex items-center gap-1">
-          <TableControls
-            filterCount={vm.activeFilters.length}
-            isDirty={vm.isDirty}
-            onFilterClick={() => setFilterOpen(true)}
-            onColumnSettingsClick={() => {}}
-            onSave={vm.saveChanges}
-            onReset={vm.resetToPreset}
-          />
-        </div>
+        <TableControls
+          filterCount={vm.activeFilters.length}
+          isDirty={vm.isDirty}
+          onFilterClick={() => setFilterOpen(!filterOpen)}
+          onSave={vm.saveChanges}
+          onReset={vm.resetToPreset}
+        />
         <ColumnSettingsPopover
           columns={columns}
           visibleColumns={vm.visibleColumns}
@@ -85,7 +82,8 @@ export function TableViewWrapper<T>({
         children({ rows: filteredRows, visibleColumns: vm.visibleColumns })
       )}
 
-      <FilterPanel
+      {/* Sidebar renders via portal — DOM goes to AppShell level */}
+      <FilterSidebar
         open={filterOpen}
         onOpenChange={setFilterOpen}
         columns={columns}

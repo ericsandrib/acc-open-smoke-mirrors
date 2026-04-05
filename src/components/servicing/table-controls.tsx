@@ -1,12 +1,11 @@
 import { Button } from '@/components/ui/button'
-import { Filter, Settings2, RotateCcw, Save } from 'lucide-react'
+import { Filter, RotateCcw, Save } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
 interface TableControlsProps {
   filterCount: number
   isDirty: boolean
   onFilterClick: () => void
-  onColumnSettingsClick: () => void
   onSave: () => void
   onReset: () => void
 }
@@ -15,7 +14,6 @@ export function TableControls({
   filterCount,
   isDirty,
   onFilterClick,
-  onColumnSettingsClick,
   onSave,
   onReset,
 }: TableControlsProps) {
@@ -30,10 +28,6 @@ export function TableControls({
               {filterCount}
             </span>
           )}
-        </Button>
-        <Button variant="ghost" size="sm" onClick={onColumnSettingsClick} className="gap-1.5">
-          <Settings2 className="h-3.5 w-3.5" />
-          Columns
         </Button>
       </div>
 

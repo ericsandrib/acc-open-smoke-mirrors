@@ -17,6 +17,8 @@ export function AppShell({ children }: AppShellProps) {
         {children}
       </main>
 
+      <div id="filter-sidebar-portal" />
+
       {composeOpen && <ComposeDialog onClose={() => setComposeOpen(false)} />}
     </div>
   )
