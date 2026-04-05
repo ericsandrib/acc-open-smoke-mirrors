@@ -271,7 +271,12 @@ export function OpenAccountsForm() {
           Add Individual for Verification
         </Button>
 
-        <AddHouseholdMemberSheet open={showAddForKyc} onOpenChange={setShowAddForKyc} />
+        <AddHouseholdMemberSheet
+          open={showAddForKyc}
+          onOpenChange={setShowAddForKyc}
+          title="Add individual for verification"
+          description="Search for an existing client or add someone who needs identity verification before accounts can be opened."
+        />
         <KycMemberSheet
           member={reviewMember}
           open={!!reviewMemberId}

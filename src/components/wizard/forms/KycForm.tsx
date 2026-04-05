@@ -431,6 +431,8 @@ export function KycForm() {
       <AddHouseholdMemberSheet
         open={showAddSheet}
         onOpenChange={setShowAddSheet}
+        title="Add individual for verification"
+        description="Search for an existing client or add someone to run identity verification."
       />
 
       <KycMemberSheet

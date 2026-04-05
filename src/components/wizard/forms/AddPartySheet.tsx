@@ -520,10 +520,132 @@ function CreateEntityForm({ onDone }: { onDone: () => void }) {
   )
 }
 
+// ─── Create legal entity (account owner / household sheet) ───
+
+function CreateHouseholdLegalEntityForm({
+  onDone,
+  onPartyAdded,
+}: {
+  onDone: () => void
+  onPartyAdded?: (partyId: string) => void
+}) {
+  const { dispatch } = useWorkflow()
+  const [legalName, setLegalName] = useState('')
+  const [entityType, setEntityType] = useState('')
+  const [taxId, setTaxId] = useState('')
+  const [jurisdiction, setJurisdiction] = useState('')
+  const [authorizedSignatory, setAuthorizedSignatory] = useState('')
+  const [email, setEmail] = useState('')
+  const [phone, setPhone] = useState('')
+
+  const handleAdd = () => {
+    if (!legalName.trim()) return
+    const id = `org-${Date.now()}`
+    dispatch({
+      type: 'ADD_RELATED_PARTY',
+      party: {
+        id,
+        name: legalName.trim(),
+        organizationName: legalName.trim(),
+        type: 'related_organization',
+        entityType: entityType || undefined,
+        taxId: taxId || undefined,
+        jurisdiction: jurisdiction || undefined,
+        contactPerson: authorizedSignatory || undefined,
+        email: email || undefined,
+        phone: phone || undefined,
+        relationshipCategory: 'Legal',
+      },
+    })
+    onPartyAdded?.(id)
+    onDone()
+  }
+
+  return (
+    <div className="space-y-4">
+      <div className="space-y-1.5">
+        <Label className="text-xs">Legal entity name</Label>
+        <Input
+          value={legalName}
+          onChange={(e) => setLegalName(e.target.value)}
+          placeholder="e.g. Smith Family Trust LLC"
+        />
+      </div>
+      <div className="space-y-1.5">
+        <Label className="text-xs">Entity type</Label>
+        <Select value={entityType} onValueChange={setEntityType}>
+          <SelectTrigger>
+            <SelectValue placeholder="Select type" />
+          </SelectTrigger>
+          <SelectContent>
+            {entityTypes.map((t) => (
+              <SelectItem key={t} value={t}>
+                {t}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
+      <div className="space-y-1.5">
+        <Label className="text-xs">Tax ID / EIN</Label>
+        <Input value={taxId} onChange={(e) => setTaxId(e.target.value)} placeholder="XX-XXXXXXX" />
+      </div>
+      <div className="space-y-1.5">
+        <Label className="text-xs">Jurisdiction of formation</Label>
+        <Input
+          value={jurisdiction}
+          onChange={(e) => setJurisdiction(e.target.value)}
+          placeholder="e.g. Delaware, USA"
+        />
+      </div>
+      <div className="space-y-1.5">
+        <Label className="text-xs">Authorized signatory</Label>
+        <Input
+          value={authorizedSignatory}
+          onChange={(e) => setAuthorizedSignatory(e.target.value)}
+          placeholder="Name of person authorized to act for this entity"
+        />
+      </div>
+      <div className="space-y-1.5">
+        <Label className="text-xs">Email</Label>
+        <Input
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
+          type="email"
+          placeholder="entity@example.com"
+        />
+      </div>
+      <div className="space-y-1.5">
+        <Label className="text-xs">Phone</Label>
+        <Input value={phone} onChange={(e) => setPhone(e.target.value)} type="tel" placeholder="+1 (555) 000-0000" />
+      </div>
+      <div className="flex gap-2 justify-end pt-2">
+        <Button variant="outline" size="sm" onClick={onDone}>
+          Cancel
+        </Button>
+        <Button size="sm" onClick={handleAdd} disabled={!legalName.trim()}>
+          <Plus className="h-3.5 w-3.5 mr-1.5" />
+          Add legal entity
+        </Button>
+      </div>
+    </div>
+  )
+}
+
 // ─── Create Household Member form ───
 
-function CreateHouseholdMemberForm({ onDone }: { onDone: () => void }) {
+function CreateHouseholdMemberForm({
+  onDone,
+  onPartyAdded,
+  includeLegalEntityCreate = false,
+}: {
+  onDone: () => void
+  onPartyAdded?: (partyId: string) => void
+  /** When true (e.g. account owner), show Individual vs Legal entity tabs on Create. */
+  includeLegalEntityCreate?: boolean
+}) {
   const { dispatch } = useWorkflow()
+  const [createKind, setCreateKind] = useState<'individual' | 'entity'>('individual')
   const [firstName, setFirstName] = useState('')
   const [lastName, setLastName] = useState('')
   const [relationship, setRelationship] = useState('')
@@ -531,13 +653,14 @@ function CreateHouseholdMemberForm({ onDone }: { onDone: () => void }) {
   const [email, setEmail] = useState('')
   const [phone, setPhone] = useState('')
 
-  const handleAdd = () => {
+  const handleAddIndividual = () => {
     if (!firstName.trim() || !lastName.trim()) return
     const name = `${firstName.trim()} ${lastName.trim()}`
+    const id = `household-${Date.now()}`
     dispatch({
       type: 'ADD_RELATED_PARTY',
       party: {
-        id: `household-${Date.now()}`,
+        id,
         name,
         firstName: firstName.trim(),
         lastName: lastName.trim(),
@@ -549,10 +672,11 @@ function CreateHouseholdMemberForm({ onDone }: { onDone: () => void }) {
         kycStatus: 'needs_kyc',
       },
     })
+    onPartyAdded?.(id)
     onDone()
   }
 
-  return (
+  const individualForm = (
     <div className="space-y-4">
       <div className="space-y-1.5">
         <Label className="text-xs">First name</Label>
@@ -565,18 +689,30 @@ function CreateHouseholdMemberForm({ onDone }: { onDone: () => void }) {
       <div className="space-y-1.5">
         <Label className="text-xs">Relationship</Label>
         <Select value={relationship} onValueChange={setRelationship}>
-          <SelectTrigger><SelectValue placeholder="Select" /></SelectTrigger>
+          <SelectTrigger>
+            <SelectValue placeholder="Select" />
+          </SelectTrigger>
           <SelectContent>
-            {householdRelationships.map((r) => <SelectItem key={r} value={r}>{r}</SelectItem>)}
+            {householdRelationships.map((r) => (
+              <SelectItem key={r} value={r}>
+                {r}
+              </SelectItem>
+            ))}
           </SelectContent>
         </Select>
       </div>
       <div className="space-y-1.5">
         <Label className="text-xs">Role</Label>
         <Select value={role} onValueChange={setRole}>
-          <SelectTrigger><SelectValue placeholder="Select" /></SelectTrigger>
+          <SelectTrigger>
+            <SelectValue placeholder="Select" />
+          </SelectTrigger>
           <SelectContent>
-            {householdRoles.map((r) => <SelectItem key={r} value={r}>{r}</SelectItem>)}
+            {householdRoles.map((r) => (
+              <SelectItem key={r} value={r}>
+                {r}
+              </SelectItem>
+            ))}
           </SelectContent>
         </Select>
       </div>
@@ -589,36 +725,83 @@ function CreateHouseholdMemberForm({ onDone }: { onDone: () => void }) {
         <Input value={phone} onChange={(e) => setPhone(e.target.value)} type="tel" placeholder="+1 (555) 000-0000" />
       </div>
       <div className="flex gap-2 justify-end pt-2">
-        <Button variant="outline" size="sm" onClick={onDone}>Cancel</Button>
-        <Button size="sm" onClick={handleAdd} disabled={!firstName.trim() || !lastName.trim()}>
+        <Button variant="outline" size="sm" onClick={onDone}>
+          Cancel
+        </Button>
+        <Button size="sm" onClick={handleAddIndividual} disabled={!firstName.trim() || !lastName.trim()}>
           <Plus className="h-3.5 w-3.5 mr-1.5" />
-          Add Member
+          {includeLegalEntityCreate ? 'Add individual' : 'Add Member'}
         </Button>
       </div>
     </div>
   )
+
+  if (includeLegalEntityCreate) {
+    return (
+      <Tabs
+        value={createKind}
+        onValueChange={(v) => setCreateKind(v as 'individual' | 'entity')}
+        className="w-full"
+      >
+        <TabsList variant="border" className="w-full border-b border-border mb-1">
+          <TabsTrigger value="individual" className="flex-1 gap-1.5">
+            <User className="h-3.5 w-3.5" />
+            Individual
+          </TabsTrigger>
+          <TabsTrigger value="entity" className="flex-1 gap-1.5">
+            <Building2 className="h-3.5 w-3.5" />
+            Legal entity
+          </TabsTrigger>
+        </TabsList>
+        <TabsContent value="individual" className="mt-0">
+          {individualForm}
+        </TabsContent>
+        <TabsContent value="entity" className="mt-0">
+          <CreateHouseholdLegalEntityForm onDone={onDone} onPartyAdded={onPartyAdded} />
+        </TabsContent>
+      </Tabs>
+    )
+  }
+
+  return individualForm
 }
 
 // ═══════════════════════════════════════════════════
 // AddHouseholdMemberSheet — search existing + create new
 // ═══════════════════════════════════════════════════
 
+const DEFAULT_HOUSEHOLD_MEMBER_SHEET_TITLE = 'Add household member'
+const DEFAULT_HOUSEHOLD_MEMBER_SHEET_DESCRIPTION =
+  'Search for an existing person or create a new household member.'
+
 export function AddHouseholdMemberSheet({
   open,
   onOpenChange,
+  onPartyAdded,
+  title = DEFAULT_HOUSEHOLD_MEMBER_SHEET_TITLE,
+  description = DEFAULT_HOUSEHOLD_MEMBER_SHEET_DESCRIPTION,
+  includeLegalEntityCreate = false,
 }: {
   open: boolean
   onOpenChange: (open: boolean) => void
+  /** Called with the new party id after a member is added from search or create. */
+  onPartyAdded?: (partyId: string) => void
+  /** e.g. household member vs account owner vs KYC — defaults match Related parties / Collect client data */
+  title?: string
+  description?: string
+  /** When true, Create tab offers Individual vs Legal entity (account owner flow). */
+  includeLegalEntityCreate?: boolean
 }) {
   const { dispatch } = useWorkflow()
   const [tab, setTab] = useState<'search' | 'create'>('search')
 
   const handleSelectPerson = useCallback(
     (person: DirectoryPerson) => {
+      const id = `household-${Date.now()}`
       dispatch({
         type: 'ADD_RELATED_PARTY',
         party: {
-          id: `household-${Date.now()}`,
+          id,
           name: `${person.firstName} ${person.lastName}`,
           firstName: person.firstName,
           lastName: person.lastName,
@@ -633,9 +816,10 @@ export function AddHouseholdMemberSheet({
           kycStatus: 'needs_kyc',
         },
       })
+      onPartyAdded?.(id)
       onOpenChange(false)
     },
-    [dispatch, onOpenChange]
+    [dispatch, onOpenChange, onPartyAdded]
   )
 
   const resetAndClose = useCallback(() => {
@@ -647,10 +831,8 @@ export function AddHouseholdMemberSheet({
     <Sheet open={open} onOpenChange={(v) => { if (!v) resetAndClose(); else onOpenChange(true) }}>
       <SheetContent side="right" className="sm:max-w-lg w-full flex flex-col gap-0 p-0">
         <SheetHeader className="px-6 pt-6 pb-3 space-y-1">
-          <SheetTitle>Add Household Member</SheetTitle>
-          <SheetDescription>
-            Search for an existing person or create a new household member.
-          </SheetDescription>
+          <SheetTitle>{title}</SheetTitle>
+          <SheetDescription>{description}</SheetDescription>
         </SheetHeader>
 
         <div className="px-6 pb-4">
@@ -668,7 +850,11 @@ export function AddHouseholdMemberSheet({
           {tab === 'search' ? (
             <PersonSearchPanel onSelect={handleSelectPerson} />
           ) : (
-            <CreateHouseholdMemberForm onDone={resetAndClose} />
+            <CreateHouseholdMemberForm
+              onDone={resetAndClose}
+              onPartyAdded={onPartyAdded}
+              includeLegalEntityCreate={includeLegalEntityCreate}
+            />
           )}
         </div>
       </SheetContent>

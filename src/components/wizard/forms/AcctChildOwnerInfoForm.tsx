@@ -1,20 +1,21 @@
-import { useMemo } from 'react'
+import { useMemo, useState } from 'react'
 import { useWorkflow, useTaskData } from '@/stores/workflowStore'
 import { Label } from '@/components/ui/label'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
 import {
   Select,
   SelectTrigger,
   SelectValue,
   SelectContent,
   SelectItem,
+  SelectSeparator,
 } from '@/components/ui/select'
 import { parseChildSubTaskId } from '@/utils/childTaskRegistry'
 import { getRegistrationDocumentsForType, getDocSubTypes } from '@/utils/registrationDocuments'
 import type { RegistrationType } from '@/utils/registrationDocuments'
 import { Plus, Trash2, UserPlus, FileText, Paperclip, Upload, X } from 'lucide-react'
+import { AddHouseholdMemberSheet } from '@/components/wizard/forms/AddPartySheet'
 
 interface DocInstance {
   id: string
@@ -36,11 +37,16 @@ export function AcctChildOwnerInfoForm() {
 
   const { data: parentData, updateField: updateParentField } = useTaskData('open-accounts')
 
-  const householdMembers = state.relatedParties.filter(
-    (p) => p.type === 'household_member' && !p.isHidden,
+  const accountOwnerCandidates = state.relatedParties.filter(
+    (p) =>
+      !p.isHidden &&
+      (p.type === 'household_member' || p.type === 'related_organization'),
   )
 
-  const owners = (data.owners as { id: string; type: 'existing' | 'new'; partyId?: string; firstName?: string; lastName?: string }[] | undefined) ?? []
+  const owners =
+    (data.owners as { id: string; type: 'existing'; partyId?: string }[] | undefined) ?? []
+
+  const [addMemberSheetOwnerId, setAddMemberSheetOwnerId] = useState<string | null>(null)
 
   const selectedOwnerPartyIds = useMemo(
     () => new Set(owners.filter((o) => o.type === 'existing' && o.partyId).map((o) => o.partyId!)),
@@ -157,7 +163,7 @@ export function AcctChildOwnerInfoForm() {
   }
 
   const addOwnerSlot = () => {
-    updateField('owners', [...owners, { id: `owner-${Date.now()}`, type: 'existing' as const }])
+    updateField('owners', [...owners, { id: `owner-${Date.now()}`, type: 'existing' }])
   }
 
   const removeOwner = (ownerId: string) => {
@@ -175,10 +181,6 @@ export function AcctChildOwnerInfoForm() {
     updateOwner(ownerId, { partyId, type: 'existing' })
   }
 
-  const switchToCreateNew = (ownerId: string) => {
-    updateOwner(ownerId, { type: 'new', partyId: undefined })
-  }
-
   return (
     <div className="space-y-8">
       {/* Owners section */}
@@ -189,7 +191,8 @@ export function AcctChildOwnerInfoForm() {
             Account Owners
           </h3>
           <p className="text-sm text-muted-foreground">
-            Add the owners for this account. You can select existing household members or create new individuals.
+            Add the owners for this account. Open the list to pick a household member, or use the search / add option
+            at the bottom of the same list to find a client or add someone new.
           </p>
         </div>
 
@@ -226,97 +229,124 @@ export function AcctChildOwnerInfoForm() {
               </div>
 
               <div className="space-y-2">
-                <Label>Select Individual</Label>
+                <Label htmlFor={`account-owner-${owner.id}`}>Select account owner</Label>
                 <Select
-                  value={owner.type === 'new' ? '__create_new__' : (owner.partyId ?? '')}
+                  value={owner.partyId ?? ''}
                   onValueChange={(v) => {
-                    if (v === '__create_new__') {
-                      switchToCreateNew(owner.id)
-                    } else {
-                      selectExistingOwner(owner.id, v)
+                    if (v === '__add_member__') {
+                      setAddMemberSheetOwnerId(owner.id)
+                      return
                     }
+                    selectExistingOwner(owner.id, v)
                   }}
                 >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select individual..." />
+                  <SelectTrigger id={`account-owner-${owner.id}`}>
+                    <SelectValue placeholder="Choose an account owner..." />
                   </SelectTrigger>
                   <SelectContent>
-                    {householdMembers.map((member) => (
-                      <SelectItem key={member.id} value={member.id}>
-                        {member.name}
-                      </SelectItem>
-                    ))}
-                    <SelectItem value="__create_new__">
-                      Create New Individual
+                    {accountOwnerCandidates.length > 0 ? (
+                      accountOwnerCandidates.map((party) => (
+                        <SelectItem key={party.id} value={party.id} textValue={party.name}>
+                          <span className="flex items-center gap-2">
+                            <span>{party.name}</span>
+                            {party.type === 'related_organization' && (
+                              <Badge variant="outline" className="text-[10px] font-normal shrink-0">
+                                Entity
+                              </Badge>
+                            )}
+                          </span>
+                        </SelectItem>
+                      ))
+                    ) : (
+                      <div className="px-2 py-3 text-xs text-muted-foreground">
+                        No owners available yet — use the option below to search or add a person or entity.
+                      </div>
+                    )}
+                    <SelectSeparator />
+                    <SelectItem
+                      value="__add_member__"
+                      className="whitespace-normal py-2.5 pl-2 pr-8 [&>span]:items-start"
+                      textValue="Search or add account owner"
+                    >
+                      <span className="flex gap-2 text-left">
+                        <Plus className="h-4 w-4 shrink-0 text-muted-foreground mt-0.5" aria-hidden />
+                        <span>
+                          Search for an existing client or add a new individual or entity
+                        </span>
+                      </span>
                     </SelectItem>
                   </SelectContent>
                 </Select>
               </div>
 
-              {owner.type === 'existing' && matchedParty && (
+              {matchedParty && (
                 <div className="rounded-md bg-muted/50 p-3 space-y-2">
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-2 flex-wrap">
                     <span className="text-sm font-medium">{matchedParty.name}</span>
+                    {matchedParty.type === 'related_organization' && (
+                      <Badge variant="outline" className="text-[10px] px-1.5 py-0">
+                        Legal entity
+                      </Badge>
+                    )}
                     {matchedParty.isPrimary && (
                       <Badge variant="secondary" className="text-[10px] px-1.5 py-0">Primary</Badge>
                     )}
                   </div>
-                  {matchedParty.kycStatus && (
-                    <div className="flex items-center gap-2 text-sm">
-                      <span className="text-muted-foreground">KYC Status:</span>
-                      <Badge
-                        variant={matchedParty.kycStatus === 'verified' ? 'default' : 'outline'}
-                        className={
-                          matchedParty.kycStatus === 'verified'
-                            ? 'bg-green-100 text-green-800 border-green-200'
-                            : matchedParty.kycStatus === 'needs_kyc'
-                              ? 'bg-red-50 text-red-700 border-red-200'
-                              : 'bg-yellow-50 text-yellow-700 border-yellow-200'
-                        }
-                      >
-                        {matchedParty.kycStatus === 'verified'
-                          ? 'Approved'
-                          : matchedParty.kycStatus === 'needs_kyc'
-                            ? 'Not Started'
-                            : 'Pending'}
-                      </Badge>
-                      {matchedParty.kycStatus === 'needs_kyc' && (
-                        <Button variant="outline" size="sm" className="h-6 text-xs">
-                          Start
-                        </Button>
+                  {matchedParty.type === 'related_organization' ? (
+                    <div className="grid gap-1.5 text-xs text-muted-foreground sm:grid-cols-2">
+                      {matchedParty.entityType && (
+                        <div>
+                          <span className="text-foreground font-medium">Entity type: </span>
+                          {matchedParty.entityType}
+                        </div>
+                      )}
+                      {matchedParty.taxId && (
+                        <div>
+                          <span className="text-foreground font-medium">Tax ID: </span>
+                          {matchedParty.taxId}
+                        </div>
+                      )}
+                      {matchedParty.jurisdiction && (
+                        <div>
+                          <span className="text-foreground font-medium">Jurisdiction: </span>
+                          {matchedParty.jurisdiction}
+                        </div>
+                      )}
+                      {matchedParty.contactPerson && (
+                        <div>
+                          <span className="text-foreground font-medium">Authorized signatory: </span>
+                          {matchedParty.contactPerson}
+                        </div>
                       )}
                     </div>
+                  ) : (
+                    matchedParty.kycStatus && (
+                      <div className="flex items-center gap-2 text-sm">
+                        <span className="text-muted-foreground">KYC Status:</span>
+                        <Badge
+                          variant={matchedParty.kycStatus === 'verified' ? 'default' : 'outline'}
+                          className={
+                            matchedParty.kycStatus === 'verified'
+                              ? 'bg-green-100 text-green-800 border-green-200'
+                              : matchedParty.kycStatus === 'needs_kyc'
+                                ? 'bg-red-50 text-red-700 border-red-200'
+                                : 'bg-yellow-50 text-yellow-700 border-yellow-200'
+                          }
+                        >
+                          {matchedParty.kycStatus === 'verified'
+                            ? 'Approved'
+                            : matchedParty.kycStatus === 'needs_kyc'
+                              ? 'Not Started'
+                              : 'Pending'}
+                        </Badge>
+                        {matchedParty.kycStatus === 'needs_kyc' && (
+                          <Button variant="outline" size="sm" className="h-6 text-xs">
+                            Start
+                          </Button>
+                        )}
+                      </div>
+                    )
                   )}
-                </div>
-              )}
-
-              {owner.type === 'new' && (
-                <div className="space-y-3 rounded-md bg-muted/50 p-3">
-                  <div className="space-y-2">
-                    <Label>First Name</Label>
-                    <Input
-                      value={owner.firstName ?? ''}
-                      onChange={(e) => updateOwner(owner.id, { firstName: e.target.value })}
-                      placeholder="First name"
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label>Last Name</Label>
-                    <Input
-                      value={owner.lastName ?? ''}
-                      onChange={(e) => updateOwner(owner.id, { lastName: e.target.value })}
-                      placeholder="Last name"
-                    />
-                  </div>
-                  <Button
-                    size="sm"
-                    disabled={!owner.firstName?.trim() || !owner.lastName?.trim()}
-                    onClick={() => {
-                      updateOwner(owner.id, { type: 'new' })
-                    }}
-                  >
-                    Save
-                  </Button>
                 </div>
               )}
             </div>
@@ -329,6 +359,22 @@ export function AcctChildOwnerInfoForm() {
             Add Another Owner
           </Button>
         )}
+
+        <AddHouseholdMemberSheet
+          open={addMemberSheetOwnerId !== null}
+          onOpenChange={(open) => {
+            if (!open) setAddMemberSheetOwnerId(null)
+          }}
+          onPartyAdded={(partyId) => {
+            if (addMemberSheetOwnerId) {
+              selectExistingOwner(addMemberSheetOwnerId, partyId)
+            }
+            setAddMemberSheetOwnerId(null)
+          }}
+          title="Add account owner"
+          description="Search the directory for an existing client or add a new person or legal entity to assign as an account owner."
+          includeLegalEntityCreate
+        />
       </section>
 
       {/* Documents section */}
