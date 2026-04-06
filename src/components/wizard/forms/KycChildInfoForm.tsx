@@ -2,6 +2,7 @@ import { useEffect, useRef } from 'react'
 import { useWorkflow, useTaskData, useChildActionContext } from '@/stores/workflowStore'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { Lock } from 'lucide-react'
 
 export function KycChildInfoForm() {
   const { state } = useWorkflow()
@@ -32,8 +33,20 @@ export function KycChildInfoForm() {
 
   if (!child) return null
 
+  const isLocked = child.status !== 'not_started'
+
   return (
     <div className="space-y-4">
+      {isLocked && (
+        <div className="rounded-md border border-amber-200 bg-amber-50 dark:border-amber-900/60 dark:bg-amber-950/40 px-3 py-2.5">
+          <div className="flex items-center gap-2">
+            <Lock className="h-4 w-4 text-amber-600 dark:text-amber-400 shrink-0" />
+            <p className="text-xs font-medium text-amber-900 dark:text-amber-100">
+              These fields have been submitted for compliance verification and are locked.
+            </p>
+          </div>
+        </div>
+      )}
       <div className="space-y-2">
         <Label htmlFor="firstName">First name</Label>
         <Input
@@ -41,6 +54,7 @@ export function KycChildInfoForm() {
           placeholder="e.g. Jane"
           value={(data.firstName as string) ?? ''}
           onChange={(e) => updateField('firstName', e.target.value)}
+          disabled={isLocked}
         />
       </div>
       <div className="space-y-2">
@@ -50,6 +64,7 @@ export function KycChildInfoForm() {
           placeholder="e.g. Smith"
           value={(data.lastName as string) ?? ''}
           onChange={(e) => updateField('lastName', e.target.value)}
+          disabled={isLocked}
         />
       </div>
       <div className="space-y-2">
@@ -59,6 +74,7 @@ export function KycChildInfoForm() {
           type="date"
           value={(data.dob as string) ?? ''}
           onChange={(e) => updateField('dob', e.target.value)}
+          disabled={isLocked}
         />
       </div>
       <div className="space-y-2">
@@ -68,6 +84,7 @@ export function KycChildInfoForm() {
           placeholder="e.g. Spouse"
           value={(data.relationship as string) ?? ''}
           onChange={(e) => updateField('relationship', e.target.value)}
+          disabled={isLocked}
         />
       </div>
       <div className="space-y-2">
@@ -78,6 +95,7 @@ export function KycChildInfoForm() {
           placeholder="name@example.com"
           value={(data.email as string) ?? ''}
           onChange={(e) => updateField('email', e.target.value)}
+          disabled={isLocked}
         />
       </div>
       <div className="space-y-2">
@@ -88,6 +106,7 @@ export function KycChildInfoForm() {
           placeholder="+1 (555) 000-0000"
           value={(data.phone as string) ?? ''}
           onChange={(e) => updateField('phone', e.target.value)}
+          disabled={isLocked}
         />
       </div>
     </div>

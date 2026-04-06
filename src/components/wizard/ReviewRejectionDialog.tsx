@@ -24,9 +24,10 @@ const REJECTION_REASONS = [
 interface ReviewRejectionDialogProps {
   open: boolean
   onClose: () => void
+  variant?: 'main' | 'child'
 }
 
-export function ReviewRejectionDialog({ open, onClose }: ReviewRejectionDialogProps) {
+export function ReviewRejectionDialog({ open, onClose, variant = 'main' }: ReviewRejectionDialogProps) {
   const { dispatch } = useWorkflow()
   const [reason, setReason] = useState('')
   const [feedback, setFeedback] = useState('')
@@ -36,7 +37,11 @@ export function ReviewRejectionDialog({ open, onClose }: ReviewRejectionDialogPr
   const handleSubmit = () => {
     if (!reason) return
     const label = REJECTION_REASONS.find((r) => r.value === reason)?.label ?? reason
-    dispatch({ type: 'REJECT_REVIEW', reason: label, feedback: feedback.trim() || undefined })
+    if (variant === 'child') {
+      dispatch({ type: 'REJECT_CHILD_REVIEW', reason: label, feedback: feedback.trim() || undefined })
+    } else {
+      dispatch({ type: 'REJECT_REVIEW', reason: label, feedback: feedback.trim() || undefined })
+    }
     setReason('')
     setFeedback('')
     onClose()

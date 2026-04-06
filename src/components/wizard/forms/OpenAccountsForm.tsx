@@ -18,9 +18,7 @@ import {
 } from '@/components/ui/select'
 import {
   ChevronRight,
-  Minus,
   Plus,
-  Shield,
   Wallet,
   FileText,
   FileSignature,
@@ -80,40 +78,6 @@ export function OpenAccountsForm() {
   }, [accountOpeningChildren, state.taskData])
 
   const isAnnuity = (child: { name: string }) => child.name.includes(' - Annuity')
-  const topLevelChildren = accountOpeningChildren.filter((c) => !isAnnuity(c))
-  const getAnnuities = (parentName: string) =>
-    accountOpeningChildren.filter((c) => c.name.startsWith(`${parentName} - Annuity`))
-
-  const handleAddAnnuity = (parentName: string) => {
-    const existing = getAnnuities(parentName)
-    const nextNum = existing.length + 1
-    const parentChild = accountOpeningChildren.find((c) => c.name === parentName && !isAnnuity(c))
-    const reg = parentChild
-      ? ((state.taskData[parentChild.id] as Record<string, unknown> | undefined)?.registrationType as
-          | RegistrationType
-          | undefined)
-      : undefined
-    dispatch({
-      type: 'SPAWN_CHILD',
-      parentTaskId: openAccountsTask!.id,
-      childName: `${parentName} - Annuity ${nextNum}`,
-      childType: 'account-opening',
-      metadata: {
-        registrationType: reg ?? 'individual',
-      },
-    })
-  }
-
-  const handleRemoveLastAnnuity = (parentName: string) => {
-    const existing = getAnnuities(parentName)
-    if (existing.length === 0) return
-    const last = existing[existing.length - 1]
-    dispatch({
-      type: 'REMOVE_CHILD',
-      parentTaskId: openAccountsTask!.id,
-      childId: last.id,
-    })
-  }
 
   const handlePickerConfirm = (selections: Selection[]) => {
     if (!openAccountsTask) return
@@ -172,66 +136,37 @@ export function OpenAccountsForm() {
 
         {accountOpeningChildren.length > 0 ? (
           <div className="space-y-2">
-            {topLevelChildren.map((child) => {
-              const annuities = getAnnuities(child.name)
+            {accountOpeningChildren.map((child) => {
+              const hasAnnuity = isAnnuity(child)
               return (
-                <div key={child.id} className="space-y-1">
-                  {/* Account row */}
-                  <div className="flex items-center justify-between rounded-lg border border-border p-3 hover:bg-muted/50 transition-colors">
+                <div key={child.id} className="flex items-center justify-between rounded-lg border border-border p-3 hover:bg-muted/50 transition-colors">
+                  <button
+                    onClick={() => dispatch({ type: 'ENTER_CHILD_ACTION', childId: child.id })}
+                    className="flex-1 flex items-center gap-3 text-left cursor-pointer"
+                  >
+                    <div className="flex h-8 w-8 items-center justify-center rounded-full bg-muted text-sm font-medium">
+                      <Wallet className="h-4 w-4" />
+                    </div>
+                    <span className="text-sm font-medium">
+                      {hasAnnuity ? child.name.replace(' - Annuity', '') : child.name}
+                    </span>
+                    {hasAnnuity && (
+                      <Badge variant="outline" className="text-[10px] px-1.5 py-0 shrink-0">
+                        Annuity
+                      </Badge>
+                    )}
+                  </button>
+                  <div className="flex items-center gap-2">
+                    <Badge variant="secondary" className="capitalize text-xs">
+                      {child.status.replace('_', ' ')}
+                    </Badge>
                     <button
                       onClick={() => dispatch({ type: 'ENTER_CHILD_ACTION', childId: child.id })}
-                      className="flex-1 flex items-center gap-3 text-left cursor-pointer"
+                      className="cursor-pointer"
                     >
-                      <div className="flex h-8 w-8 items-center justify-center rounded-full bg-muted text-sm font-medium">
-                        <Wallet className="h-4 w-4" />
-                      </div>
-                      <span className="text-sm font-medium">{child.name}</span>
+                      <ChevronRight className="h-4 w-4 text-muted-foreground" />
                     </button>
-                    <div className="flex items-center gap-2">
-                      <Badge variant="secondary" className="capitalize text-xs">
-                        {child.status.replace('_', ' ')}
-                      </Badge>
-                      <button
-                        onClick={() => dispatch({ type: 'ENTER_CHILD_ACTION', childId: child.id })}
-                        className="cursor-pointer"
-                      >
-                        <ChevronRight className="h-4 w-4 text-muted-foreground" />
-                      </button>
-                    </div>
                   </div>
-
-                  {/* Annuity row with +/- counter */}
-                  {annuities.length > 0 && (
-                    <div className="ml-8 flex items-center justify-between rounded-lg border border-border/50 bg-muted/30 p-3">
-                      <div className="flex items-center gap-3">
-                        <div className="flex h-8 w-8 items-center justify-center rounded-full bg-muted text-sm font-medium">
-                          <Shield className="h-4 w-4" />
-                        </div>
-                        <span className="text-sm font-medium">Annuities</span>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <Button
-                          variant="outline"
-                          size="icon"
-                          className="h-7 w-7"
-                          onClick={() => handleRemoveLastAnnuity(child.name)}
-                        >
-                          <Minus className="h-3 w-3" />
-                        </Button>
-                        <span className="w-6 text-center text-sm tabular-nums font-medium">
-                          {annuities.length}
-                        </span>
-                        <Button
-                          variant="outline"
-                          size="icon"
-                          className="h-7 w-7"
-                          onClick={() => handleAddAnnuity(child.name)}
-                        >
-                          <Plus className="h-3 w-3" />
-                        </Button>
-                      </div>
-                    </div>
-                  )}
                 </div>
               )
             })}

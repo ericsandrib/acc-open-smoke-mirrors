@@ -212,21 +212,27 @@ export function AccountTypePickerDialog({ open, onOpenChange, onConfirm }: Accou
               <div className="space-y-2">
                 <h3 className="text-base font-semibold">Confirm account opening</h3>
                 <p className="text-sm text-muted-foreground">
-                  Open {confirmTotal} {confirmTotal === 1 ? 'account' : 'accounts'} with the types and quantities below?
+                  You're about to create {confirmTotal} {confirmTotal === 1 ? 'account' : 'accounts'}. Each account will have its own workflow to capture owners, funding, and documents.
                 </p>
-                <ul className="text-sm text-muted-foreground space-y-1 pt-1">
-                  {pendingSelections.map((s) => (
-                    <li key={s.registrationType} className="flex items-center gap-2">
-                      <span className="h-1.5 w-1.5 rounded-full bg-muted-foreground shrink-0" />
-                      {s.label}
-                      {s.count > 0 && <span>× {s.count}</span>}
-                      {s.withAnnuityCount > 0 && (
-                        <span className="text-xs text-muted-foreground/70">
-                          (+{s.withAnnuityCount} w/ annuity)
-                        </span>
-                      )}
-                    </li>
-                  ))}
+                <ul className="text-sm space-y-2 pt-2">
+                  {pendingSelections.map((s) => {
+                    const totalForType = s.count + s.withAnnuityCount
+                    return (
+                      <li key={s.registrationType} className="flex items-start gap-2">
+                        <span className="mt-1.5 h-1.5 w-1.5 rounded-full bg-foreground shrink-0" />
+                        <div>
+                          <span className="font-medium text-foreground">
+                            {s.label} × {totalForType}
+                          </span>
+                          {s.withAnnuityCount > 0 && (
+                            <span className="ml-1.5 text-xs text-muted-foreground">
+                              ({s.withAnnuityCount} with Annuity)
+                            </span>
+                          )}
+                        </div>
+                      </li>
+                    )
+                  })}
                 </ul>
               </div>
             </div>

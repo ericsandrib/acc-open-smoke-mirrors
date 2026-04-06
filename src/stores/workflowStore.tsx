@@ -500,6 +500,70 @@ function workflowReducer(state: WorkflowState, action: WorkflowAction): Workflow
       }
     }
 
+    case 'SUBMIT_CHILD_FOR_REVIEW': {
+      if (!state.activeChildActionId) return state
+      const cid = state.activeChildActionId
+      const updTasks = state.tasks.map((t) => {
+        if (!t.children) return t
+        return {
+          ...t,
+          children: t.children.map((c) =>
+            c.id === cid ? { ...c, status: 'awaiting_review' as const } : c,
+          ),
+        }
+      })
+      return { ...state, tasks: updTasks, activeChildSubTaskIndex: 0 }
+    }
+
+    case 'ACCEPT_CHILD_REVIEW': {
+      if (!state.activeChildActionId) return state
+      const acId = state.activeChildActionId
+      const acTasks = state.tasks.map((t) => {
+        if (!t.children) return t
+        return {
+          ...t,
+          children: t.children.map((c) =>
+            c.id === acId ? { ...c, status: 'complete' as const } : c,
+          ),
+        }
+      })
+      return {
+        ...state,
+        tasks: acTasks,
+        activeChildActionId: undefined,
+        activeChildSubTaskIndex: undefined,
+        childActionResume: undefined,
+      }
+    }
+
+    case 'REJECT_CHILD_REVIEW': {
+      if (!state.activeChildActionId) return state
+      const rcId = state.activeChildActionId
+      const rcTasks = state.tasks.map((t) => {
+        if (!t.children) return t
+        return {
+          ...t,
+          children: t.children.map((c) =>
+            c.id === rcId ? { ...c, status: 'rejected' as const } : c,
+          ),
+        }
+      })
+      return {
+        ...state,
+        tasks: rcTasks,
+        taskData: {
+          ...state.taskData,
+          [`${rcId}-review`]: {
+            rejectionReason: action.reason,
+            rejectionFeedback: action.feedback,
+          },
+        },
+        activeChildActionId: undefined,
+        activeChildSubTaskIndex: undefined,
+        childActionResume: undefined,
+      }
+    }
+
     default:
       return state
   }

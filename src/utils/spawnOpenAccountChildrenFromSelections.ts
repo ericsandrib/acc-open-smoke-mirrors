@@ -28,7 +28,7 @@ export function spawnOpenAccountChildrenFromSelections(
         dispatch({
           type: 'SPAWN_CHILD',
           parentTaskId,
-          childName: `${name} - Annuity 1`,
+          childName: `${name} - Annuity`,
           childType: 'account-opening',
           metadata: {
             registrationType: sel.registrationType,

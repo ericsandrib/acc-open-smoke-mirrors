@@ -3,7 +3,7 @@ import { useWorkflow } from '@/stores/workflowStore'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Checkbox } from '@/components/ui/checkbox'
-import { CheckCircle2, ChevronRight, ShieldAlert, Clock } from 'lucide-react'
+import { CheckCircle2, ChevronRight, ShieldAlert, ShieldCheck, Clock } from 'lucide-react'
 
 export function KycForm() {
   const { state, dispatch } = useWorkflow()
@@ -61,6 +61,25 @@ export function KycForm() {
 
   return (
     <div className="space-y-6">
+      {children.length > 0 && (
+        <div className="rounded-lg border border-blue-200 bg-blue-50 dark:border-blue-900/60 dark:bg-blue-950/40 px-4 py-3">
+          <div className="flex items-start gap-3">
+            <ShieldCheck className="h-5 w-5 text-blue-600 dark:text-blue-400 mt-0.5 shrink-0" />
+            <div className="space-y-1">
+              <p className="text-sm font-medium text-blue-900 dark:text-blue-100">
+                Compliance Verification In Progress
+              </p>
+              <p className="text-xs text-blue-800/80 dark:text-blue-200/70">
+                Identity verification has been initiated for {children.length}{' '}
+                {children.length === 1 ? 'individual' : 'individuals'}. Submitted
+                information is locked and has been forwarded to the verification
+                provider. Status updates will appear below as each review completes.
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
+
       {verifiedMembers.length > 0 && (
         <div className="space-y-2">
           <h3 className="text-xs font-medium uppercase tracking-wide text-muted-foreground">

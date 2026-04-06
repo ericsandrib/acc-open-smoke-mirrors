@@ -169,3 +169,6 @@ export type WorkflowAction =
   | { type: 'SUBMIT_FOR_REVIEW' }
   | { type: 'ACCEPT_REVIEW' }
   | { type: 'REJECT_REVIEW'; reason: string; feedback?: string }
+  | { type: 'SUBMIT_CHILD_FOR_REVIEW' }
+  | { type: 'ACCEPT_CHILD_REVIEW' }
+  | { type: 'REJECT_CHILD_REVIEW'; reason: string; feedback?: string }

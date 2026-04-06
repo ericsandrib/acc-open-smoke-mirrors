@@ -37,6 +37,8 @@ export type PartySlotCardProps = {
    */
   previewVariant?: 'account_owner' | 'designation'
   footer?: ReactNode
+  onStartKyc?: (partyId: string) => void
+  onGoToKyc?: (partyId: string) => void
 }
 
 export function PartySlotCard({
@@ -54,6 +56,8 @@ export function PartySlotCard({
   roleLabel,
   previewVariant = 'account_owner',
   footer,
+  onStartKyc,
+  onGoToKyc,
 }: PartySlotCardProps) {
   const matchedParty = partyId ? parties.find((p) => p.id === partyId) ?? null : null
   const ownerPreview = matchedParty
@@ -257,9 +261,26 @@ export function PartySlotCard({
                     ? 'Not Started'
                     : 'Pending'}
               </Badge>
-              {matchedParty.kycStatus === 'needs_kyc' && (
-                <Button variant="outline" size="sm" className="h-6 text-xs" type="button">
+              {matchedParty.kycStatus === 'needs_kyc' && onStartKyc && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="h-6 text-xs"
+                  type="button"
+                  onClick={() => onStartKyc(matchedParty.id)}
+                >
                   Start
+                </Button>
+              )}
+              {matchedParty.kycStatus === 'pending' && onGoToKyc && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="h-6 text-xs"
+                  type="button"
+                  onClick={() => onGoToKyc(matchedParty.id)}
+                >
+                  Go to KYC
                 </Button>
               )}
             </div>

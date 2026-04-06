@@ -19,6 +19,7 @@ import { Plus, Trash2, UserPlus, FileText, Paperclip, Upload, X } from 'lucide-r
 import { AddHouseholdMemberSheet } from '@/components/wizard/forms/AddPartySheet'
 import { AccountOwnerPartySheet } from '@/components/wizard/forms/AccountOwnerPartySheet'
 import { PartySlotCard } from '@/components/wizard/forms/PartySlotCard'
+import { toast } from 'sonner'
 
 interface DocInstance {
   id: string
@@ -110,6 +111,47 @@ export function AcctChildOwnerInfoForm() {
     }
     return results
   }, [selectedOwnerPartyIds, requiredDocs, parentData, data, state.relatedParties])
+
+  const kycTask = state.tasks.find((t) => t.formKey === 'kyc')
+
+  const handleStartKyc = (partyId: string) => {
+    const party = state.relatedParties.find((p) => p.id === partyId)
+    if (!party || !kycTask) return
+
+    dispatch({
+      type: 'SPAWN_CHILD',
+      parentTaskId: kycTask.id,
+      childName: party.name,
+      childType: 'kyc',
+    })
+    dispatch({
+      type: 'UPDATE_RELATED_PARTY',
+      partyId,
+      updates: { kycStatus: 'pending' },
+    })
+
+    toast(`KYC verification started for ${party.name}`, {
+      description: 'Identity verification has been initiated. You can continue here or go to the KYC Review task.',
+      action: {
+        label: 'Go to KYC Review',
+        onClick: () => {
+          dispatch({ type: 'EXIT_CHILD_ACTION' })
+          dispatch({ type: 'SET_ACTIVE_TASK', taskId: kycTask.id })
+        },
+      },
+    })
+  }
+
+  const handleGoToKyc = (partyId: string) => {
+    const party = state.relatedParties.find((p) => p.id === partyId)
+    if (!party || !kycTask) return
+    const kycChild = kycTask.children?.find((c) => c.name === party.name)
+    dispatch({ type: 'EXIT_CHILD_ACTION' })
+    dispatch({ type: 'SET_ACTIVE_TASK', taskId: kycTask.id })
+    if (kycChild) {
+      dispatch({ type: 'ENTER_CHILD_ACTION', childId: kycChild.id })
+    }
+  }
 
   if (!ctx) {
     return (
@@ -250,6 +292,8 @@ export function AcctChildOwnerInfoForm() {
             onEditParty={(id) => setEditingPartyId(id)}
             addPartyItemLabel="Search for an existing client or add a new individual or entity"
             addPartyItemDescription="Adds to this household for use as an account owner."
+            onStartKyc={handleStartKyc}
+            onGoToKyc={handleGoToKyc}
           />
         ))}
 
