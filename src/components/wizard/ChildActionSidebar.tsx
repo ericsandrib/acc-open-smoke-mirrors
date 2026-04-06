@@ -1,3 +1,4 @@
+import { useMemo } from 'react'
 import { useWorkflow, useChildActionContext } from '@/stores/workflowStore'
 import type { TaskStatus } from '@/types/workflow'
 import { cn } from '@/lib/utils'
@@ -9,6 +10,7 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from '@/components/ui/tooltip'
+import { resumeDrillInBackLabel } from '@/utils/childTaskRegistry'
 
 const statusColors: Record<TaskStatus, string> = {
   not_started: 'text-text-tertiary',
@@ -93,17 +95,32 @@ function useChildOverallStatus(_childId: string, subTaskIds: string[]): OverallS
   return 'not_started'
 }
 
+function backLabelForParent(formKey: string | undefined): string {
+  switch (formKey) {
+    case 'open-accounts':
+      return 'Back to Open Accounts'
+    case 'kyc':
+    case 'kyc-review':
+      return 'Back to KYC Review'
+    default:
+      return 'Back to task'
+  }
+}
+
 export function ChildActionSidebar() {
-  const { dispatch } = useWorkflow()
+  const { state, dispatch } = useWorkflow()
   const ctx = useChildActionContext()
+
+  const subTaskIds = useMemo(() => {
+    if (!ctx) return [] as string[]
+    return ctx.config.subTasks.map((st) => `${ctx.child.id}-${st.suffix}`)
+  }, [ctx])
+  const overallStatus = useChildOverallStatus(ctx?.child.id ?? '', subTaskIds)
+  const statusCfg = overallStatusConfig[overallStatus]
 
   if (!ctx) return null
 
-  const { child, config, subTaskIndex } = ctx
-
-  const subTaskIds = config.subTasks.map((st) => `${child.id}-${st.suffix}`)
-  const overallStatus = useChildOverallStatus(child.id, subTaskIds)
-  const statusCfg = overallStatusConfig[overallStatus]
+  const { child, config, subTaskIndex, parentTask } = ctx
 
   return (
     <TooltipProvider delayDuration={300}>
@@ -114,7 +131,9 @@ export function ChildActionSidebar() {
             className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors mb-3"
           >
             <ArrowLeft className="h-3 w-3" />
-            Back to Open Accounts
+            {state.childActionResume
+              ? resumeDrillInBackLabel(state.childActionResume.subTaskIndex)
+              : backLabelForParent(parentTask?.formKey)}
           </button>
           <h2 className="text-sm font-semibold text-foreground">
             {child.name}

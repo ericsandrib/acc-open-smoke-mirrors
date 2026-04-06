@@ -69,7 +69,7 @@ export interface RelatedParty {
 
 export type AccountType = 'brokerage' | 'ira' | 'roth_ira' | '401k' | 'trust' | 'checking' | 'savings'
 
-export type ChildType = 'kyc' | 'account-opening'
+export type ChildType = 'kyc' | 'account-opening' | 'funding-line' | 'feature-service-line'
 
 export interface FinancialAccount {
   id: string
@@ -128,6 +128,8 @@ export interface WorkflowState {
   submittedTaskIds: string[]
   activeChildActionId?: string
   activeChildSubTaskIndex?: number
+  /** When drilling into a funding-line or feature-service-line child, EXIT restores this account child + sub-step. */
+  childActionResume?: { accountChildId: string; subTaskIndex: number }
   reviewState?: ReviewState
 }
 
@@ -151,7 +153,14 @@ export type WorkflowAction =
   | { type: 'SET_JOURNEY_ASSIGNEE'; assignee: string }
   | { type: 'GO_NEXT' }
   | { type: 'GO_BACK' }
-  | { type: 'ENTER_CHILD_ACTION'; childId: string }
+  | {
+      type: 'ENTER_CHILD_ACTION'
+      childId: string
+      /** When set, open this sub-step instead of defaulting to the first. */
+      subTaskIndex?: number
+      /** When set, EXIT_CHILD_ACTION / back from first sub-step returns to this account child + sub-step. */
+      resumeAfterExit?: { accountChildId: string; subTaskIndex: number }
+    }
   | { type: 'EXIT_CHILD_ACTION' }
   | { type: 'CHILD_GO_NEXT' }
   | { type: 'CHILD_GO_BACK' }

@@ -1,4 +1,4 @@
-import { useChildActionContext, useTaskData } from '@/stores/workflowStore'
+import { useChildActionContext, useTaskData, useWorkflow } from '@/stores/workflowStore'
 import { Label } from '@/components/ui/label'
 import { Input } from '@/components/ui/input'
 import {
@@ -8,16 +8,7 @@ import {
   SelectContent,
   SelectItem,
 } from '@/components/ui/select'
-
-const fundingMethods = [
-  { value: 'ach', label: 'ACH' },
-  { value: 'wire', label: 'Wire' },
-  { value: 'check', label: 'Check' },
-  { value: 'journal', label: 'Journal' },
-  { value: 'transfer', label: 'ACAT / transfer' },
-  { value: 'rollover', label: 'Rollover' },
-  { value: 'other', label: 'Other' },
-]
+import { FUNDING_OPTIONS } from '@/data/fundingOptions'
 
 const servicingModels = [
   { value: 'advisory', label: 'Advisory (Fee-based)' },
@@ -32,50 +23,51 @@ const dividendOptions = [
   { value: 'transfer', label: 'Transfer to Another Account' },
 ]
 
-export function AcctChildFundingServicingForm() {
+/** Detail form for a single funding / asset movement workflow line. */
+export function FundingLineSetupForm() {
+  const { state } = useWorkflow()
   const ctx = useChildActionContext()
   const taskId = ctx?.subTaskId ?? ''
   const { data, updateField } = useTaskData(taskId || '__no_child__')
 
-  if (!ctx) {
-    return <p className="text-sm text-muted-foreground">Open this step from account opening.</p>
+  const childRoot = ctx ? ((state.taskData[ctx.child.id] as Record<string, unknown> | undefined) ?? undefined) : undefined
+  const fundingSource =
+    (data.fundingSource as string | undefined) ?? (childRoot?.fundingMethod as string | undefined) ?? ''
+
+  if (!ctx || ctx.child.childType !== 'funding-line') {
+    return (
+      <p className="text-sm text-muted-foreground">Open this step from Funding & asset movement on an account.</p>
+    )
   }
 
-  const fs = data.fundingSource as string | undefined
-  const needsBank = fs === 'ach' || fs === 'wire'
+  const needsBank = fundingSource === 'ach' || fundingSource === 'bank_send_receive' || fundingSource === 'fed_fund_wires'
+  const isCheckMovement = fundingSource === 'check_deposits' || fundingSource === 'check_withdrawals'
 
   return (
     <div className="space-y-8">
-      <p className="text-sm text-muted-foreground rounded-md border border-border bg-muted/30 px-3 py-2">
-        This funding step applies only to <span className="font-medium text-foreground">{ctx.child.name}</span>—the same
-        parent/child pattern as <span className="font-medium text-foreground">Open Accounts</span>, where each spawned
-        account has its own sub-steps. Use <span className="font-medium text-foreground">Back to Open Accounts</span> in
-        the sidebar to work on a different account; add accounts from the parent Open Accounts task.
-      </p>
-
       <section className="space-y-4">
         <div>
           <h3 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
-            Initial funding
+            Funding & asset movement
           </h3>
           <p className="text-sm text-muted-foreground mt-1">
-            How this account will be funded—this often triggers transfer- and funding-specific documents (see smart
-            documents panel).
+            Capture how this workflow initiates, edits, cancels, or tracks a money or asset movement—not account
+            feature setup (use Account features & services for that).
           </p>
         </div>
 
         <div className="space-y-2">
-          <Label>Initial funding method</Label>
+          <Label>Movement type</Label>
           <Select
-            value={(data.fundingSource as string) ?? ''}
+            value={fundingSource || undefined}
             onValueChange={(v) => updateField('fundingSource', v)}
           >
             <SelectTrigger>
-              <SelectValue placeholder="Select method…" />
+              <SelectValue placeholder="Select movement type…" />
             </SelectTrigger>
-            <SelectContent>
-              {fundingMethods.map((src) => (
-                <SelectItem key={src.value} value={src.value}>
+            <SelectContent className="max-h-[min(24rem,70vh)]">
+              {FUNDING_OPTIONS.map((src) => (
+                <SelectItem key={src.value} value={src.value} className="text-left py-2">
                   {src.label}
                 </SelectItem>
               ))}
@@ -85,7 +77,7 @@ export function AcctChildFundingServicingForm() {
 
         <div className="grid gap-4 sm:grid-cols-2">
           <div className="space-y-2">
-            <Label>Initial funding amount</Label>
+            <Label>Amount (if applicable)</Label>
             <Input
               value={(data.fundingAmount as string) ?? ''}
               onChange={(e) => updateField('fundingAmount', e.target.value)}
@@ -93,7 +85,7 @@ export function AcctChildFundingServicingForm() {
             />
           </div>
           <div className="space-y-2">
-            <Label>Transfer type</Label>
+            <Label>Transfer scope</Label>
             <Select
               value={(data.transferScope as string) ?? ''}
               onValueChange={(v) => updateField('transferScope', v)}
@@ -123,10 +115,10 @@ export function AcctChildFundingServicingForm() {
         </div>
       </section>
 
-      {fs === 'transfer' && (
+      {fundingSource === 'account_transfers' && (
         <section className="space-y-4 rounded-lg border border-border p-4 bg-muted/20">
           <h3 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
-            ACAT / external transfer
+            Account transfer
           </h3>
           <div className="space-y-2">
             <Label>Delivering firm</Label>
@@ -144,7 +136,7 @@ export function AcctChildFundingServicingForm() {
             />
           </div>
           <div className="space-y-2">
-            <Label>Asset transfer details / instructions</Label>
+            <Label>Transfer instructions</Label>
             <textarea
               className="flex min-h-[80px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
               value={(data.transferInstructions as string) ?? ''}
@@ -154,10 +146,54 @@ export function AcctChildFundingServicingForm() {
         </section>
       )}
 
+      {isCheckMovement && (
+        <section className="space-y-4 rounded-lg border border-border p-4 bg-muted/20">
+          <h3 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
+            Check details
+          </h3>
+          <div className="space-y-2">
+            <Label>Check / item reference</Label>
+            <Input
+              value={(data.checkReference as string) ?? ''}
+              onChange={(e) => updateField('checkReference', e.target.value)}
+              placeholder="Check #, batch, or control number"
+            />
+          </div>
+          <div className="space-y-2">
+            <Label>Instructions</Label>
+            <textarea
+              className="flex min-h-[64px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+              value={(data.checkMovementNotes as string) ?? ''}
+              onChange={(e) => updateField('checkMovementNotes', e.target.value)}
+            />
+          </div>
+        </section>
+      )}
+
+      {fundingSource === 'mutual_fund_periodic_orders' && (
+        <section className="space-y-4 rounded-lg border border-border p-4 bg-muted/20">
+          <h3 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
+            Recurring mutual fund orders
+          </h3>
+          <p className="text-sm text-muted-foreground">
+            Scheduled investment or liquidation instructions tied to this workflow line.
+          </p>
+          <div className="space-y-2">
+            <Label>Schedule & fund / symbol</Label>
+            <textarea
+              className="flex min-h-[80px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+              value={(data.mutualFundPeriodicSchedule as string) ?? ''}
+              onChange={(e) => updateField('mutualFundPeriodicSchedule', e.target.value)}
+              placeholder="Frequency, amount, funds, start date"
+            />
+          </div>
+        </section>
+      )}
+
       {needsBank && (
         <section className="space-y-4 rounded-lg border border-border p-4 bg-muted/20">
           <h3 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
-            Bank details (ACH / wire)
+            Bank details
           </h3>
           <div className="grid gap-4 sm:grid-cols-2">
             <div className="space-y-2 sm:col-span-2">
@@ -188,15 +224,19 @@ export function AcctChildFundingServicingForm() {
 
       <section className="space-y-4">
         <h3 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
-          Standing instructions & acknowledgments
+          Standing & periodic instructions
         </h3>
+        <p className="text-xs text-muted-foreground">
+          Prerequisite setup for ACH, wires, and recurring movements—use the movement type above when this line is
+          primarily about establishing standing or periodic instructions.
+        </p>
         <div className="space-y-2">
           <Label>Standing money movement instructions</Label>
           <textarea
             className="flex min-h-[72px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
             value={(data.standingMoneyInstructions as string) ?? ''}
             onChange={(e) => updateField('standingMoneyInstructions', e.target.value)}
-            placeholder="Recurring ACH, sweeps, etc."
+            placeholder="Recurring ACH, sweeps, wire templates, journals…"
           />
         </div>
         <div className="space-y-2">

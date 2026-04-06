@@ -7,8 +7,10 @@ import { KycChildResultsForm } from './forms/KycChildResultsForm'
 import { Placeholder2Form } from './forms/PlaceholderForm'
 import { OpenAccountsForm } from './forms/OpenAccountsForm'
 import { AcctChildOwnerInfoForm } from './forms/AcctChildOwnerInfoForm'
-import { AcctChildFundingServicingForm } from './forms/AcctChildFundingServicingForm'
-import { AcctChildFeaturesServicesForm } from './forms/AcctChildFeaturesServicesForm'
+import { FundChildFundingForm } from './forms/FundChildFundingForm'
+import { FundingLineSetupForm } from './forms/FundingLineSetupForm'
+import { FundChildFeaturesForm } from './forms/FundChildFeaturesForm'
+import { FeatureServiceLineSetupForm } from './forms/FeatureServiceLineSetupForm'
 import { AcctChildDocumentsReviewForm } from './forms/AcctChildDocumentsReviewForm'
 
 export const formComponents: Record<string, React.ComponentType> = {
@@ -20,8 +22,10 @@ export const formComponents: Record<string, React.ComponentType> = {
   'kyc-child-results': KycChildResultsForm,
   'open-accounts': OpenAccountsForm,
   'acct-child-account-owners': AcctChildOwnerInfoForm,
-  'acct-child-funding-transfers': AcctChildFundingServicingForm,
-  'acct-child-features-services': AcctChildFeaturesServicesForm,
+  'acct-child-funding-transfers': FundChildFundingForm,
+  'funding-line-child-setup': FundingLineSetupForm,
+  'acct-child-features-services': FundChildFeaturesForm,
+  'feature-service-line-child-setup': FeatureServiceLineSetupForm,
   'acct-child-documents-review': AcctChildDocumentsReviewForm,
   'placeholder-2': Placeholder2Form,
 }
@@ -43,9 +47,13 @@ export const taskDescriptions: Partial<Record<string, string>> = {
   'acct-child-account-owners':
     'Create the account shell and capture owners/participants—fields here drive eligibility and the first pass of document rules.',
   'acct-child-funding-transfers':
-    'Funding and servicing for this account child—same Open Accounts parent/child model: one funding sub-step per spawned account.',
+    'Kick off one or more funding and account transfer workflows for this account—each line opens its own detail flow, similar to Accounts to be Opened on the parent task.',
+  'funding-line-child-setup':
+    'Define funding method, amounts, external account transfers, bank instructions, and servicing for this workflow line.',
   'acct-child-features-services':
-    'Optional features and add-ons (margin, options, cards, statement delivery, beneficiaries / TOD, interested parties). Use the left sub-step list to reach this screen after Account & owners and Funding.',
+    'Kick off one or more account feature and service workflows—administrative, setup, or lifecycle (not money movements). Each line opens its own detail flow, same pattern as Funding & asset movement.',
+  'feature-service-line-child-setup':
+    'Capture status, routing, dates, and notes for this feature or service workflow line.',
   'acct-child-documents-review':
     'Finalize this account’s paperwork: lists, uploads, exceptions. Documents (right) tracked rule-driven needs since Task 1; the single aggregated eSign envelope is built on the Open Accounts parent step.',
   'placeholder-2':

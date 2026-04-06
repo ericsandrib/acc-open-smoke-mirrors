@@ -1,14 +1,26 @@
 import { useWorkflow, useChildActionContext } from '@/stores/workflowStore'
+import { resumeDrillInBackLabel } from '@/utils/childTaskRegistry'
 import { Button } from '@/components/ui/button'
 import { ChevronLeft, ChevronRight, ArrowLeft } from 'lucide-react'
 
+function firstStepBackCta(formKey: string | undefined): string {
+  switch (formKey) {
+    case 'open-accounts':
+      return 'Back to Accounts'
+    case 'kyc':
+      return 'Back to KYC Review'
+    default:
+      return 'Back to task'
+  }
+}
+
 export function ChildActionFooter() {
-  const { dispatch } = useWorkflow()
+  const { state, dispatch } = useWorkflow()
   const ctx = useChildActionContext()
 
   if (!ctx) return null
 
-  const { isFirst, isLast } = ctx
+  const { isFirst, isLast, parentTask } = ctx
 
   return (
     <footer className="border-t border-border bg-background px-6 py-3 flex justify-between items-center shrink-0">
@@ -25,7 +37,9 @@ export function ChildActionFooter() {
         {isFirst ? (
           <>
             <ArrowLeft className="h-4 w-4" />
-            Back to Accounts
+            {state.childActionResume
+              ? `${resumeDrillInBackLabel(state.childActionResume.subTaskIndex)} list`
+              : firstStepBackCta(parentTask?.formKey)}
           </>
         ) : (
           <>

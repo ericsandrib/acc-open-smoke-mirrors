@@ -322,6 +322,9 @@ function workflowReducer(state: WorkflowState, action: WorkflowAction): Workflow
         journeyId: `journey-${Date.now()}`,
         assignedTo: assignee,
         submittedTaskIds: [],
+        activeChildActionId: undefined,
+        activeChildSubTaskIndex: undefined,
+        childActionResume: undefined,
       }
     }
 
@@ -346,15 +349,26 @@ function workflowReducer(state: WorkflowState, action: WorkflowAction): Workflow
       return {
         ...state,
         activeChildActionId: action.childId,
-        activeChildSubTaskIndex: 0,
+        activeChildSubTaskIndex: action.subTaskIndex ?? 0,
+        childActionResume: action.resumeAfterExit,
       }
     }
 
     case 'EXIT_CHILD_ACTION': {
+      if (state.childActionResume) {
+        const { accountChildId, subTaskIndex } = state.childActionResume
+        return {
+          ...state,
+          activeChildActionId: accountChildId,
+          activeChildSubTaskIndex: subTaskIndex,
+          childActionResume: undefined,
+        }
+      }
       return {
         ...state,
         activeChildActionId: undefined,
         activeChildSubTaskIndex: undefined,
+        childActionResume: undefined,
       }
     }
 
@@ -377,7 +391,21 @@ function workflowReducer(state: WorkflowState, action: WorkflowAction): Workflow
     case 'CHILD_GO_BACK': {
       if (state.activeChildActionId == null || state.activeChildSubTaskIndex == null) return state
       if (state.activeChildSubTaskIndex <= 0) {
-        return { ...state, activeChildActionId: undefined, activeChildSubTaskIndex: undefined }
+        if (state.childActionResume) {
+          const { accountChildId, subTaskIndex } = state.childActionResume
+          return {
+            ...state,
+            activeChildActionId: accountChildId,
+            activeChildSubTaskIndex: subTaskIndex,
+            childActionResume: undefined,
+          }
+        }
+        return {
+          ...state,
+          activeChildActionId: undefined,
+          activeChildSubTaskIndex: undefined,
+          childActionResume: undefined,
+        }
       }
       return { ...state, activeChildSubTaskIndex: state.activeChildSubTaskIndex - 1 }
     }

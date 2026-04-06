@@ -7,7 +7,7 @@ import { Sparkles, CheckCircle2, Clock, AlertCircle } from 'lucide-react'
 const bucketLabel: Record<string, string> = {
   account: 'Account',
   owner: 'Owner',
-  funding: 'Funding / transfer',
+  funding: 'Funding / asset movement',
   feature: 'Feature',
 }
 
@@ -58,17 +58,34 @@ export function SmartDocumentsPanel() {
   const { state } = useWorkflow()
   const ctx = useChildActionContext()
 
-  if (!ctx || ctx.child.childType !== 'account-opening') return null
+  if (
+    !ctx ||
+    (ctx.child.childType !== 'account-opening' &&
+      ctx.child.childType !== 'funding-line' &&
+      ctx.child.childType !== 'feature-service-line')
+  )
+    return null
 
   const sd = computeSmartDocuments(state, ctx.child.id)
+  const isFundingLine = ctx.child.childType === 'funding-line'
+  const isFeatureLine = ctx.child.childType === 'feature-service-line'
 
   return (
     <div className="flex h-full min-h-0 flex-col bg-sidebar-background">
       <div className="border-b border-border px-3 py-3 shrink-0">
-        <h2 className="text-sm font-semibold text-foreground">Documents (this account)</h2>
+        <h2 className="text-sm font-semibold text-foreground">
+          {isFundingLine
+            ? 'Documents (this funding / asset movement)'
+            : isFeatureLine
+              ? 'Documents (this feature / service)'
+              : 'Documents (this account)'}
+        </h2>
         <p className="text-[11px] text-muted-foreground mt-0.5">
-          Rule-driven requirements for the account you are editing—updates on every step. Consolidated eSign for all
-          accounts is prepared on the Open Accounts task, not here.
+          {isFundingLine
+            ? 'Requirements driven by this funding or asset movement workflow. Refresh as you save movement type and bank details.'
+            : isFeatureLine
+              ? 'Requirements driven by this account feature or service workflow line.'
+              : 'Rule-driven requirements for the account you are editing—updates on every step. Consolidated eSign for all accounts is prepared on the Open Accounts task, not here.'}
         </p>
         <div className="mt-3 flex flex-wrap gap-2">
           <Badge variant="secondary" className="text-[10px] gap-1">
@@ -95,7 +112,13 @@ export function SmartDocumentsPanel() {
             title="Required now"
             icon={AlertCircle}
             items={sd.requiredNow}
-            emptyHint="Nothing required yet—add registration, owners, or funding choices."
+            emptyHint={
+              isFundingLine
+                ? 'Nothing required yet—pick a movement type to trigger rules.'
+                : isFeatureLine
+                  ? 'Nothing required yet—pick a feature or service type to trigger rules.'
+                  : 'Nothing required yet—add registration, owners, funding lines, or feature workflows.'
+            }
           />
           <SmartDocumentsSection
             title="May be required later"

@@ -5,9 +5,8 @@ import { Badge } from '@/components/ui/badge'
 import { Label } from '@/components/ui/label'
 import { AccountTypePickerDialog } from './AccountTypePickerDialog'
 import type { Selection } from './AccountTypePickerDialog'
+import { spawnOpenAccountChildrenFromSelections } from '@/utils/spawnOpenAccountChildrenFromSelections'
 import { FinancialAccountsForm } from './FinancialAccountsForm'
-import { AddHouseholdMemberSheet } from './AddPartySheet'
-import { KycMemberSheet } from './KycForm'
 import { getRegistrationDocuments, getDocSubTypes } from '@/utils/registrationDocuments'
 import type { RegistrationType } from '@/utils/registrationDocuments'
 import {
@@ -18,19 +17,14 @@ import {
   SelectItem,
 } from '@/components/ui/select'
 import {
-  CheckCircle2,
   ChevronRight,
   Minus,
   Plus,
   Shield,
-  ShieldCheck,
   Wallet,
   FileText,
   FileSignature,
   ClipboardList,
-  AlertCircle,
-  Clock,
-  UserPlus,
   Upload,
   X,
   Paperclip,
@@ -49,20 +43,22 @@ export function OpenAccountsForm() {
   const { state, dispatch } = useWorkflow()
   const { data, updateField } = useTaskData('open-accounts')
   const [pickerOpen, setPickerOpen] = useState(false)
-  const [showAddForKyc, setShowAddForKyc] = useState(false)
-  const [reviewMemberId, setReviewMemberId] = useState<string | null>(null)
 
   const openAccountsTask = state.tasks.find((t) => t.formKey === 'open-accounts')
   const children = openAccountsTask?.children ?? []
+  const accountOpeningChildren = useMemo(
+    () => children.filter((c) => c.childType === 'account-opening'),
+    [children],
+  )
 
   const childRegistrationTypes = useMemo<RegistrationType[]>(() => {
     const types: RegistrationType[] = []
-    for (const c of children) {
+    for (const c of accountOpeningChildren) {
       const rt = (state.taskData[c.id] as Record<string, unknown> | undefined)?.registrationType as RegistrationType | undefined
       if (rt) types.push(rt)
     }
     return types
-  }, [children, state.taskData])
+  }, [accountOpeningChildren, state.taskData])
 
   const requiredDocs = useMemo(
     () => getRegistrationDocuments(childRegistrationTypes),
@@ -72,7 +68,7 @@ export function OpenAccountsForm() {
   // Collect all owner party IDs across all child accounts for smart dedup
   const allOwnerPartyIds = useMemo(() => {
     const ids = new Set<string>()
-    for (const c of children) {
+    for (const c of accountOpeningChildren) {
       const ownerData = (state.taskData[`${c.id}-account-owners`] as Record<string, unknown> | undefined)
       const owners = (ownerData?.owners as { partyId?: string; type: string }[] | undefined) ?? []
       for (const o of owners) {
@@ -80,17 +76,17 @@ export function OpenAccountsForm() {
       }
     }
     return ids
-  }, [children, state.taskData])
+  }, [accountOpeningChildren, state.taskData])
 
   const isAnnuity = (child: { name: string }) => child.name.includes(' - Annuity')
-  const topLevelChildren = children.filter((c) => !isAnnuity(c))
+  const topLevelChildren = accountOpeningChildren.filter((c) => !isAnnuity(c))
   const getAnnuities = (parentName: string) =>
-    children.filter((c) => c.name.startsWith(`${parentName} - Annuity`))
+    accountOpeningChildren.filter((c) => c.name.startsWith(`${parentName} - Annuity`))
 
   const handleAddAnnuity = (parentName: string) => {
     const existing = getAnnuities(parentName)
     const nextNum = existing.length + 1
-    const parentChild = children.find((c) => c.name === parentName && !isAnnuity(c))
+    const parentChild = accountOpeningChildren.find((c) => c.name === parentName && !isAnnuity(c))
     const reg = parentChild
       ? ((state.taskData[parentChild.id] as Record<string, unknown> | undefined)?.registrationType as
           | RegistrationType
@@ -119,199 +115,15 @@ export function OpenAccountsForm() {
   }
 
   const handlePickerConfirm = (selections: Selection[]) => {
-    for (const sel of selections) {
-      const totalPlain = sel.count
-      const totalWithAnnuity = sel.withAnnuityCount
-      const totalForType = totalPlain + totalWithAnnuity
-      for (let i = 1; i <= totalForType; i++) {
-        const name = totalForType > 1 ? `${sel.label} Account ${i}` : `${sel.label} Account`
-        dispatch({
-          type: 'SPAWN_CHILD',
-          parentTaskId: openAccountsTask!.id,
-          childName: name,
-          childType: 'account-opening',
-          metadata: {
-            registrationType: sel.registrationType,
-          },
-        })
-
-        if (i > totalPlain) {
-          dispatch({
-            type: 'SPAWN_CHILD',
-            parentTaskId: openAccountsTask!.id,
-            childName: `${name} - Annuity 1`,
-            childType: 'account-opening',
-            metadata: {
-              registrationType: sel.registrationType,
-            },
-          })
-        }
-      }
-    }
+    if (!openAccountsTask) return
+    spawnOpenAccountChildrenFromSelections(dispatch, openAccountsTask.id, selections)
     setPickerOpen(false)
   }
 
   const householdMembers = state.relatedParties.filter((p) => p.type === 'household_member' && !p.isHidden)
-  const verifiedMembers = householdMembers.filter((m) => m.kycStatus === 'verified')
-  const pendingMembers = householdMembers.filter((m) => m.kycStatus === 'pending')
-  const needsKycMembers = householdMembers.filter((m) => m.kycStatus !== 'verified' && m.kycStatus !== 'pending')
-
-  const reviewMember = reviewMemberId ? state.relatedParties.find((p) => p.id === reviewMemberId) ?? null : null
 
   return (
     <div className="space-y-8">
-      {/* KYC Status */}
-      <section>
-        <div className="flex items-center gap-2 mb-2">
-          <ShieldCheck className="h-4 w-4 text-muted-foreground" />
-          <h3 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
-            KYC Verification Status
-          </h3>
-        </div>
-        <p className="text-sm text-muted-foreground mb-4">
-          Identity verification status for household members. All individuals must be verified before accounts can be opened.
-        </p>
-
-        {householdMembers.length > 0 && (
-          <div className="space-y-2 mb-4">
-            {verifiedMembers.map((member) => (
-              <button
-                key={member.id}
-                type="button"
-                onClick={() => setReviewMemberId(member.id)}
-                className="w-full flex items-center justify-between rounded-lg border border-border bg-muted/30 p-3 text-left transition-colors hover:bg-muted/50"
-              >
-                <div className="flex items-center gap-3">
-                  <div className="flex h-8 w-8 items-center justify-center rounded-full bg-green-100 text-green-700">
-                    <CheckCircle2 className="h-4 w-4" />
-                  </div>
-                  <div>
-                    <span className="text-sm font-medium">{member.name}</span>
-                    {member.relationship && (
-                      <span className="ml-2 text-xs text-muted-foreground">{member.relationship}</span>
-                    )}
-                  </div>
-                </div>
-                <div className="flex items-center gap-2">
-                  <Badge className="bg-green-100 text-green-800 border-green-200 text-xs">
-                    Verified
-                  </Badge>
-                  <span
-                    role="button"
-                    tabIndex={0}
-                    onClick={(e) => { e.stopPropagation(); dispatch({ type: 'REMOVE_RELATED_PARTY', partyId: member.id }) }}
-                    onKeyDown={(e) => { if (e.key === 'Enter') { e.stopPropagation(); dispatch({ type: 'REMOVE_RELATED_PARTY', partyId: member.id }) } }}
-                    className="p-1 text-muted-foreground hover:text-destructive transition-colors"
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </span>
-                </div>
-              </button>
-            ))}
-            {pendingMembers.map((member) => (
-              <button
-                key={member.id}
-                type="button"
-                onClick={() => setReviewMemberId(member.id)}
-                className="w-full flex items-center justify-between rounded-lg border border-border p-3 text-left transition-colors hover:bg-muted/50"
-              >
-                <div className="flex items-center gap-3">
-                  <div className="flex h-8 w-8 items-center justify-center rounded-full bg-yellow-100 text-yellow-700">
-                    <Clock className="h-4 w-4" />
-                  </div>
-                  <div>
-                    <span className="text-sm font-medium">{member.name}</span>
-                    {member.relationship && (
-                      <span className="ml-2 text-xs text-muted-foreground">{member.relationship}</span>
-                    )}
-                  </div>
-                </div>
-                <div className="flex items-center gap-2">
-                  <Badge className="bg-yellow-50 text-yellow-700 border-yellow-200 text-xs">
-                    Pending
-                  </Badge>
-                  <span
-                    role="button"
-                    tabIndex={0}
-                    onClick={(e) => { e.stopPropagation(); dispatch({ type: 'REMOVE_RELATED_PARTY', partyId: member.id }) }}
-                    onKeyDown={(e) => { if (e.key === 'Enter') { e.stopPropagation(); dispatch({ type: 'REMOVE_RELATED_PARTY', partyId: member.id }) } }}
-                    className="p-1 text-muted-foreground hover:text-destructive transition-colors"
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </span>
-                </div>
-              </button>
-            ))}
-            {needsKycMembers.map((member) => (
-              <button
-                key={member.id}
-                type="button"
-                onClick={() => setReviewMemberId(member.id)}
-                className="w-full flex items-center justify-between rounded-lg border border-border p-3 text-left transition-colors hover:bg-muted/50"
-              >
-                <div className="flex items-center gap-3">
-                  <div className="flex h-8 w-8 items-center justify-center rounded-full bg-red-50 text-red-600">
-                    <AlertCircle className="h-4 w-4" />
-                  </div>
-                  <div>
-                    <span className="text-sm font-medium">{member.name}</span>
-                    {member.relationship && (
-                      <span className="ml-2 text-xs text-muted-foreground">{member.relationship}</span>
-                    )}
-                  </div>
-                </div>
-                <div className="flex items-center gap-2">
-                  <Badge className="bg-red-50 text-red-700 border-red-200 text-xs">
-                    Not Started
-                  </Badge>
-                  <span
-                    role="button"
-                    tabIndex={0}
-                    onClick={(e) => { e.stopPropagation(); dispatch({ type: 'REMOVE_RELATED_PARTY', partyId: member.id }) }}
-                    onKeyDown={(e) => { if (e.key === 'Enter') { e.stopPropagation(); dispatch({ type: 'REMOVE_RELATED_PARTY', partyId: member.id }) } }}
-                    className="p-1 text-muted-foreground hover:text-destructive transition-colors"
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </span>
-                </div>
-              </button>
-            ))}
-          </div>
-        )}
-
-        <Button variant="outline" className="w-full" onClick={() => setShowAddForKyc(true)}>
-          <UserPlus className="h-4 w-4 mr-2" />
-          Add Individual for Verification
-        </Button>
-
-        <AddHouseholdMemberSheet
-          open={showAddForKyc}
-          onOpenChange={setShowAddForKyc}
-          title="Add individual for verification"
-          description="Search for an existing client or add someone who needs identity verification before accounts can be opened."
-        />
-        <KycMemberSheet
-          member={reviewMember}
-          open={!!reviewMemberId}
-          onOpenChange={(open) => { if (!open) setReviewMemberId(null) }}
-          onInitiateKyc={(member) => {
-            const kycTask = state.tasks.find((t) => t.formKey === 'kyc')
-            if (kycTask) {
-              dispatch({ type: 'SPAWN_CHILD', parentTaskId: kycTask.id, childName: member.name, childType: 'kyc' })
-              dispatch({ type: 'UPDATE_RELATED_PARTY', partyId: member.id, updates: { kycStatus: 'pending' as const } })
-            }
-            setReviewMemberId(null)
-          }}
-          showInitiateKyc={reviewMember?.kycStatus !== 'pending' && reviewMember?.kycStatus !== 'verified'}
-          locked={reviewMember?.kycStatus === 'pending' || reviewMember?.kycStatus === 'verified'}
-          statusLabel={
-            reviewMember?.kycStatus === 'verified' ? 'verified' :
-            reviewMember?.kycStatus === 'pending' ? 'pending review' :
-            undefined
-          }
-        />
-      </section>
-
       {/* Existing Accounts */}
       <section>
         <div className="flex items-center gap-2 mb-2">
@@ -352,7 +164,7 @@ export function OpenAccountsForm() {
               Accounts to be Opened
             </h3>
           </div>
-          {children.length > 0 && (
+          {accountOpeningChildren.length > 0 && (
             <Button variant="outline" size="sm" onClick={() => setPickerOpen(true)}>
               <Plus className="h-3 w-3 mr-1" />
               Add More
@@ -360,7 +172,7 @@ export function OpenAccountsForm() {
           )}
         </div>
 
-        {children.length > 0 ? (
+        {accountOpeningChildren.length > 0 ? (
           <div className="space-y-2">
             {topLevelChildren.map((child) => {
               const annuities = getAnnuities(child.name)
@@ -457,7 +269,7 @@ export function OpenAccountsForm() {
         <p className="text-sm text-muted-foreground mb-4">
           Documents are required once per person, even if they are owners on multiple accounts. Upload a file for each household member listed below.
         </p>
-        {children.length > 0 && requiredDocs.length > 0 ? (
+        {accountOpeningChildren.length > 0 && requiredDocs.length > 0 ? (
           <div className="space-y-4">
             {requiredDocs.map((doc) => {
               const instances = ((data[`doc-instances-${doc.id}`] as DocInstance[] | undefined) ?? [])
@@ -639,7 +451,7 @@ export function OpenAccountsForm() {
         ) : (
           <div className="rounded-lg border border-dashed border-border p-4 text-center">
             <p className="text-sm text-muted-foreground">
-              {children.length === 0
+              {accountOpeningChildren.length === 0
                 ? 'Add accounts above to see required documents.'
                 : 'No additional documents required.'}
             </p>
