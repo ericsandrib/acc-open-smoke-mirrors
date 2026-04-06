@@ -163,7 +163,18 @@ export function KycForm() {
                   checked={isSelected}
                   onCheckedChange={() => toggleSelect(member.id)}
                 />
-                <div className="flex-1 flex items-center justify-between rounded-lg border border-border p-3">
+                <button
+                  type="button"
+                  onClick={() =>
+                    dispatch({
+                      type: 'SPAWN_AND_ENTER_CHILD',
+                      parentTaskId: kycTask!.id,
+                      childName: member.name,
+                      childType: 'kyc',
+                    })
+                  }
+                  className="flex-1 flex items-center justify-between rounded-lg border border-border p-3 text-left hover:bg-muted/50 transition-colors cursor-pointer"
+                >
                   <div className="flex items-center gap-2">
                     <span className="text-sm font-medium">{member.name}</span>
                     {member.relationship && (
@@ -172,13 +183,16 @@ export function KycForm() {
                       </span>
                     )}
                   </div>
-                  <Badge
-                    variant="secondary"
-                    className="text-[10px] text-text-warning-primary bg-fill-warning-tertiary shrink-0"
-                  >
-                    Needs verification
-                  </Badge>
-                </div>
+                  <div className="flex items-center gap-2">
+                    <Badge
+                      variant="secondary"
+                      className="text-[10px] text-text-warning-primary bg-fill-warning-tertiary shrink-0"
+                    >
+                      Needs verification
+                    </Badge>
+                    <ChevronRight className="h-4 w-4 text-muted-foreground" />
+                  </div>
+                </button>
               </div>
             )
           })}
