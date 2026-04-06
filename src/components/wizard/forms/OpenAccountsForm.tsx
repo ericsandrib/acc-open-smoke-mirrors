@@ -50,6 +50,7 @@ export function OpenAccountsForm() {
     () => children.filter((c) => c.childType === 'account-opening'),
     [children],
   )
+  const householdMembers = state.relatedParties.filter((p) => p.type === 'household_member' && !p.isHidden)
 
   const childRegistrationTypes = useMemo<RegistrationType[]>(() => {
     const types: RegistrationType[] = []
@@ -120,11 +121,8 @@ export function OpenAccountsForm() {
     setPickerOpen(false)
   }
 
-  const householdMembers = state.relatedParties.filter((p) => p.type === 'household_member' && !p.isHidden)
-
   return (
     <div className="space-y-8">
-      {/* Existing Accounts */}
       <section>
         <div className="flex items-center gap-2 mb-2">
           <Wallet className="h-4 w-4 text-muted-foreground" />
@@ -348,7 +346,7 @@ export function OpenAccountsForm() {
                       </thead>
                       <tbody>
                         {instances.map((inst, idx) => {
-                          const memberName = householdMembers.find((m) => m.id === inst.assignedTo)?.name
+                          const memberName = state.relatedParties.find((m) => m.id === inst.assignedTo)?.name
                           const subTypes = getDocSubTypes(doc.id)
                           return (
                             <tr key={inst.id} className={idx < instances.length - 1 ? 'border-b border-border' : ''}>

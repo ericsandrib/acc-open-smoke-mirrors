@@ -34,25 +34,19 @@ export function WizardFooter() {
 
   return (
     <footer className="border-t border-border bg-background px-6 py-3 flex justify-between items-center shrink-0">
-      <Button
-        variant="outline"
-        onClick={() => dispatch({ type: 'GO_BACK' })}
-        disabled={isFirst}
-      >
-        <ChevronLeft className="h-4 w-4" />
-        Back
-      </Button>
-
-      <div className="flex items-center gap-2">
-        {activeStatus === 'in_progress' && !isSubmitted && (
+      <div>
+        {!isFirst && (
           <Button
             variant="outline"
-            onClick={() => dispatch({ type: 'CONFIRM_TASK', taskId: state.activeTaskId })}
+            onClick={() => dispatch({ type: 'GO_BACK' })}
           >
-            <Check className="h-4 w-4" />
-            Confirm
+            <ChevronLeft className="h-4 w-4" />
+            Back
           </Button>
         )}
+      </div>
+
+      <div className="flex items-center gap-2">
         {isSubmitted && activeStatus === 'in_progress' && (
           <Button
             variant="outline"

@@ -139,6 +139,7 @@ export type WorkflowAction =
   | { type: 'CONFIRM_TASK'; taskId: string }
   | { type: 'REOPEN_TASK'; taskId: string }
   | { type: 'SPAWN_CHILD'; parentTaskId: string; childName: string; childType: ChildType; metadata?: Record<string, unknown> }
+  | { type: 'SPAWN_AND_ENTER_CHILD'; parentTaskId: string; childName: string; childType: ChildType }
   | { type: 'REMOVE_CHILD'; parentTaskId: string; childId: string }
   | { type: 'ADD_RELATED_PARTY'; party: RelatedParty }
   | { type: 'UPDATE_RELATED_PARTY'; partyId: string; updates: Partial<Omit<RelatedParty, 'id' | 'type' | 'isPrimary'>> }

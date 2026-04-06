@@ -1,21 +1,17 @@
 import { useEffect, useRef } from 'react'
-import { useWorkflow, useTaskData } from '@/stores/workflowStore'
+import { useWorkflow, useTaskData, useChildActionContext } from '@/stores/workflowStore'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { parseChildSubTaskId } from '@/utils/childTaskRegistry'
 
 export function KycChildInfoForm() {
   const { state } = useWorkflow()
-  const { data, updateFields, updateField } = useTaskData(state.activeTaskId)
+  const ctx = useChildActionContext()
+  const taskId = ctx?.subTaskId ?? ''
+  const { data, updateFields, updateField } = useTaskData(taskId || '__no_child__')
   const prePopulated = useRef(false)
 
-  // Find the child this sub-task belongs to
-  const parsed = parseChildSubTaskId(state.activeTaskId)
-  const child = parsed
-    ? state.tasks.flatMap((t) => t.children ?? []).find((c) => c.id === parsed.childId)
-    : null
+  const child = ctx?.child ?? null
 
-  // Pre-populate from RelatedParty on first render
   const party = child
     ? state.relatedParties.find((p) => p.name === child.name)
     : null

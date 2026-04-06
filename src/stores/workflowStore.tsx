@@ -170,6 +170,39 @@ function workflowReducer(state: WorkflowState, action: WorkflowAction): Workflow
       return { ...state, tasks: newTasks, flatTaskOrder: newOrder, taskData: newTaskData }
     }
 
+    case 'SPAWN_AND_ENTER_CHILD': {
+      const spawnConfig = getChildTypeConfig(action.childType)
+      let newChildId = ''
+      const spawnTasks = state.tasks.map((t) => {
+        if (t.id === action.parentTaskId && t.children) {
+          const childId = `${spawnConfig.idPrefix}-${Date.now()}-${++childIdCounter}`
+          newChildId = childId
+          return {
+            ...t,
+            children: [
+              ...t.children,
+              {
+                id: childId,
+                name: action.childName,
+                status: 'not_started' as const,
+                formKey: spawnConfig.idPrefix,
+                childType: action.childType,
+              },
+            ],
+          }
+        }
+        return t
+      })
+      const spawnOrder = computeFlatTaskOrder(spawnTasks, state.actions)
+      return {
+        ...state,
+        tasks: spawnTasks,
+        flatTaskOrder: spawnOrder,
+        activeChildActionId: newChildId,
+        activeChildSubTaskIndex: 0,
+      }
+    }
+
     case 'REMOVE_CHILD': {
       let removedChildType: import('@/types/workflow').ChildType | null = null
       const newTasks = state.tasks.map((t) => {

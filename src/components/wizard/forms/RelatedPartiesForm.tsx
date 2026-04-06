@@ -5,7 +5,7 @@ import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from '@/components/ui/sheet'
-import { Plus, Trash2, Users, UserPlus, Shield, Info } from 'lucide-react'
+import { Plus, Trash2, Users, UserPlus, Shield } from 'lucide-react'
 import { useWorkflow } from '@/stores/workflowStore'
 import type { RelatedParty } from '@/types/workflow'
 import { AddHouseholdMemberSheet, AddContactSheet } from './AddPartySheet'
@@ -65,6 +65,16 @@ function DeleteButton({ party }: { party: RelatedParty }) {
 
 // --- Card components (click to open side modal) ---
 
+function getInitials(name: string) {
+  return name
+    .split(' ')
+    .filter(Boolean)
+    .map((w) => w[0])
+    .slice(0, 2)
+    .join('')
+    .toUpperCase()
+}
+
 function HouseholdMemberCard({ party, onClick }: { party: RelatedParty; onClick: () => void }) {
   return (
     <div className="rounded-lg border border-border">
@@ -73,7 +83,10 @@ function HouseholdMemberCard({ party, onClick }: { party: RelatedParty; onClick:
         onClick={onClick}
         className="flex items-center justify-between w-full p-3 hover:bg-muted/50 rounded-lg focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
       >
-        <div className="flex items-center gap-2 min-w-0">
+        <div className="flex items-center gap-3 min-w-0">
+          <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary/10 text-primary text-xs font-medium shrink-0">
+            {getInitials(party.name)}
+          </div>
           <span className="text-sm font-medium truncate">{party.name}</span>
           {party.role && (
             <span className="text-xs text-muted-foreground shrink-0">{party.role}</span>
@@ -101,7 +114,10 @@ function ContactCard({ party, onClick }: { party: RelatedParty; onClick: () => v
         onClick={onClick}
         className="flex items-center justify-between w-full p-3 hover:bg-muted/50 rounded-lg focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
       >
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-3">
+          <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary/10 text-primary text-xs font-medium shrink-0">
+            {getInitials(party.name)}
+          </div>
           <span className="text-sm font-medium">{party.name}</span>
           {party.relationship && (
             <span className="text-xs text-muted-foreground">{party.relationship}</span>
@@ -317,19 +333,6 @@ function EmptyState({ message }: { message: string }) {
 }
 
 
-// --- Hidden members note ---
-
-function HiddenMembersNote({ count, typeLabel }: { count: number; typeLabel: string }) {
-  if (count === 0) return null
-  return (
-    <p className="text-xs text-muted-foreground flex items-center gap-1.5">
-      <Info className="h-3.5 w-3.5 shrink-0" />
-      {count} {typeLabel}{count > 1 ? 's' : ''} not included in this journey.
-    </p>
-  )
-}
-
-
 // --- Main form ---
 
 export function RelatedPartiesForm() {
@@ -339,9 +342,7 @@ export function RelatedPartiesForm() {
   const [editingPartyId, setEditingPartyId] = useState<string | null>(null)
 
   const householdMembers = state.relatedParties.filter((p) => p.type === 'household_member' && !p.isHidden)
-  const hiddenHouseholdMembers = state.relatedParties.filter((p) => p.type === 'household_member' && p.isHidden)
   const relatedContacts = state.relatedParties.filter((p) => p.type === 'related_contact' && !p.isHidden)
-  const hiddenContacts = state.relatedParties.filter((p) => p.type === 'related_contact' && p.isHidden)
   const editingParty = editingPartyId ? state.relatedParties.find((p) => p.id === editingPartyId) ?? null : null
 
   return (
@@ -365,8 +366,6 @@ export function RelatedPartiesForm() {
             ))
           )}
         </div>
-
-        <HiddenMembersNote count={hiddenHouseholdMembers.length} typeLabel="member" />
 
         <Button variant="outline" className="w-full" onClick={() => setShowAddHouseholdSheet(true)}>
           <Plus className="h-4 w-4 mr-2" />
@@ -395,8 +394,6 @@ export function RelatedPartiesForm() {
             ))
           )}
         </div>
-
-        <HiddenMembersNote count={hiddenContacts.length} typeLabel="contact" />
 
         <Button variant="outline" className="w-full" onClick={() => setShowAddContactSheet(true)}>
           <Plus className="h-4 w-4 mr-2" />

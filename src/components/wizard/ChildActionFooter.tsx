@@ -1,7 +1,7 @@
 import { useWorkflow, useChildActionContext } from '@/stores/workflowStore'
 import { resumeDrillInBackLabel } from '@/utils/childTaskRegistry'
 import { Button } from '@/components/ui/button'
-import { ChevronLeft, ChevronRight, ArrowLeft } from 'lucide-react'
+import { ArrowLeft, ChevronLeft, ChevronRight } from 'lucide-react'
 
 function firstStepBackCta(formKey: string | undefined): string {
   switch (formKey) {
