@@ -8,7 +8,10 @@ import {
   SelectContent,
   SelectItem,
 } from '@/components/ui/select'
-import { AccountShellSection } from '@/components/wizard/forms/AccountShellSection'
+import {
+  AccountShellSection,
+  AccountAdditionalInformationSection,
+} from '@/components/wizard/forms/AccountShellSection'
 import type { AccountType } from '@/types/workflow'
 import { getRegistrationDocumentsForType, getDocSubTypes } from '@/utils/registrationDocuments'
 import type { RegistrationType } from '@/utils/registrationDocuments'
@@ -204,7 +207,7 @@ export function AcctChildOwnerInfoForm() {
         prefilledAccountNumber={(childMeta?.accountNumber as string) ?? ''}
       />
 
-      {/* Owners section */}
+      {/* Owners section — above additional account fields so parties are picked before schema-style extras */}
       <section className="space-y-6">
         <div>
           <h3 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground flex items-center gap-2 mb-1">
@@ -281,6 +284,8 @@ export function AcctChildOwnerInfoForm() {
           }}
         />
       </section>
+
+      <AccountAdditionalInformationSection data={data} updateField={updateField} />
 
       {/* Documents section */}
       <section className="space-y-4">

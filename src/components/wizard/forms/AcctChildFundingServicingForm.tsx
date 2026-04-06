@@ -46,13 +46,20 @@ export function AcctChildFundingServicingForm() {
 
   return (
     <div className="space-y-8">
+      <p className="text-sm text-muted-foreground rounded-md border border-border bg-muted/30 px-3 py-2">
+        This funding step applies only to <span className="font-medium text-foreground">{ctx.child.name}</span>—the same
+        parent/child pattern as <span className="font-medium text-foreground">Open Accounts</span>, where each spawned
+        account has its own sub-steps. Use <span className="font-medium text-foreground">Back to Open Accounts</span> in
+        the sidebar to work on a different account; add accounts from the parent Open Accounts task.
+      </p>
+
       <section className="space-y-4">
         <div>
           <h3 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
             Initial funding
           </h3>
           <p className="text-sm text-muted-foreground mt-1">
-            How the account will be funded—this often triggers transfer- and funding-specific documents (see smart
+            How this account will be funded—this often triggers transfer- and funding-specific documents (see smart
             documents panel).
           </p>
         </div>

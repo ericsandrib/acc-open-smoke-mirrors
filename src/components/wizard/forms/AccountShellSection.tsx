@@ -67,6 +67,11 @@ interface AccountShellSectionProps {
   prefilledAccountNumber: string
 }
 
+interface AccountAdditionalInformationSectionProps {
+  data: TaskData
+  updateField: UpdateField
+}
+
 export function AccountShellSection({
   data,
   updateField,
@@ -162,7 +167,13 @@ export function AccountShellSection({
           </div>
         </div>
       </section>
+    </div>
+  )
+}
 
+export function AccountAdditionalInformationSection({ data, updateField }: AccountAdditionalInformationSectionProps) {
+  return (
+    <div className="space-y-10">
       <section className="space-y-4">
         <div>
           <h3 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground mb-1">

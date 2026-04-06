@@ -43,7 +43,7 @@ export const taskDescriptions: Partial<Record<string, string>> = {
   'acct-child-account-owners':
     'Create the account shell and capture owners/participants—fields here drive eligibility and the first pass of document rules.',
   'acct-child-funding-transfers':
-    'Capture how the account will be funded and any transfer-related items; funding choices often trigger a different document set.',
+    'Funding and servicing for this account child—same Open Accounts parent/child model: one funding sub-step per spawned account.',
   'acct-child-features-services':
     'Optional features and add-ons (margin, options, cards, statement delivery, beneficiaries / TOD, interested parties). Use the left sub-step list to reach this screen after Account & owners and Funding.',
   'acct-child-documents-review':
