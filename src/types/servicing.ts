@@ -1,6 +1,6 @@
 import type { TaskStatus } from './workflow'
 
-export type JourneyStatus = 'not_started' | 'in_progress' | 'complete' | 'cancelled'
+export type JourneyStatus = 'not_started' | 'in_progress' | 'complete' | 'cancelled' | 'awaiting_review' | 'rejected'
 
 export interface JourneyTask {
   id: string
@@ -23,9 +23,12 @@ export interface JourneyAction {
   tasks: JourneyTask[]
 }
 
+export type JourneyCategory = 'Onboarding' | 'Account Transfer' | 'Investment Review' | 'Tax Planning' | 'Consolidation' | 'Estate Planning'
+
 export interface Journey {
   id: string
   name: string
+  category: JourneyCategory
   relationshipName: string
   status: JourneyStatus
   createdAt: string

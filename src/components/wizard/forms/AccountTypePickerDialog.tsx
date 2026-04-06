@@ -1,170 +1,246 @@
 import { useState } from 'react'
-import type { AccountType } from '@/types/workflow'
+import type { RegistrationType } from '@/utils/registrationDocuments'
+import { registrationTypeLabels } from '@/utils/registrationDocuments'
 import { Button } from '@/components/ui/button'
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
-  DialogFooter,
-} from '@/components/ui/dialog'
-import { Minus, Plus, Shield } from 'lucide-react'
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from '@/components/ui/sheet'
+import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui/select'
+import { Combobox } from '@/components/ui/combobox'
+import { Plus, Trash2, AlertCircle } from 'lucide-react'
 
-const ACCOUNT_TYPES: { value: AccountType; label: string }[] = [
-  { value: 'brokerage', label: 'Brokerage' },
-  { value: 'ira', label: 'Traditional IRA' },
-  { value: 'roth_ira', label: 'Roth IRA' },
-  { value: '401k', label: '401(k)' },
-  { value: 'trust', label: 'Trust' },
-  { value: 'checking', label: 'Checking' },
-  { value: 'savings', label: 'Savings' },
-]
+const REGISTRATION_TYPE_OPTIONS: { value: string; label: string }[] = (
+  Object.entries(registrationTypeLabels) as [RegistrationType, string][]
+).map(([value, label]) => ({ value, label }))
+
+const QUANTITY_OPTIONS = Array.from({ length: 10 }, (_, i) => ({
+  value: String(i + 1),
+  label: String(i + 1),
+}))
+
+interface Row {
+  id: string
+  registrationType: RegistrationType | ''
+  annuity: 'No' | 'Yes'
+  quantity: number
+}
+
+export type Selection = { registrationType: RegistrationType; label: string; count: number; withAnnuityCount: number }
+
+function createRow(): Row {
+  return { id: `row-${Date.now()}-${Math.random().toString(36).slice(2)}`, registrationType: '', annuity: 'No', quantity: 1 }
+}
 
 interface AccountTypePickerDialogProps {
   open: boolean
   onOpenChange: (open: boolean) => void
-  onConfirm: (selections: { accountType: AccountType; label: string; count: number; withAnnuityCount: number }[]) => void
+  onConfirm: (selections: Selection[]) => void
 }
 
 export function AccountTypePickerDialog({ open, onOpenChange, onConfirm }: AccountTypePickerDialogProps) {
-  const zeroCounts = () => Object.fromEntries(ACCOUNT_TYPES.map((t) => [t.value, 0])) as Record<AccountType, number>
-  const [counts, setCounts] = useState<Record<AccountType, number>>(zeroCounts)
-  const [withAnnuityCounts, setWithAnnuityCounts] = useState<Record<AccountType, number>>(zeroCounts)
-  const [annuityRowVisible, setAnnuityRowVisible] = useState<Record<AccountType, boolean>>(
-    () => Object.fromEntries(ACCOUNT_TYPES.map((t) => [t.value, false])) as Record<AccountType, boolean>,
-  )
+  const [rows, setRows] = useState<Row[]>(() => [createRow()])
+  const [pendingSelections, setPendingSelections] = useState<Selection[] | null>(null)
 
-  const updateCount = (type: AccountType, delta: number) => {
-    setCounts((prev) => ({ ...prev, [type]: Math.max(0, (prev[type] ?? 0) + delta) }))
+  const handleReset = () => setRows([createRow()])
+
+  const handleOpenChange = (next: boolean) => {
+    if (!next) handleReset()
+    onOpenChange(next)
   }
 
-  const updateWithAnnuityCount = (type: AccountType, delta: number) => {
-    setWithAnnuityCounts((prev) => {
-      const next = Math.max(0, (prev[type] ?? 0) + delta)
-      if (next === 0) {
-        setAnnuityRowVisible((v) => ({ ...v, [type]: false }))
-      }
-      return { ...prev, [type]: next }
+  const updateRow = (id: string, patch: Partial<Row>) => {
+    setRows((prev) => prev.map((r) => (r.id === id ? { ...r, ...patch } : r)))
+  }
+
+  const removeRow = (id: string) => {
+    setRows((prev) => {
+      const next = prev.filter((r) => r.id !== id)
+      return next.length === 0 ? [createRow()] : next
     })
   }
 
-  const showAnnuityRow = (type: AccountType) => {
-    setAnnuityRowVisible((prev) => ({ ...prev, [type]: true }))
-    setWithAnnuityCounts((prev) => ({ ...prev, [type]: Math.max(1, prev[type] ?? 0) }))
+  const addRow = () => setRows((prev) => [...prev, createRow()])
+
+  const validRows = rows.filter((r) => r.registrationType !== '')
+
+  const totalAccounts = validRows.reduce((sum, r) => sum + r.quantity, 0)
+
+  const buildSelections = (): Selection[] => {
+    const grouped = new Map<RegistrationType, { plain: number; annuity: number }>()
+
+    for (const row of validRows) {
+      const type = row.registrationType as RegistrationType
+      const existing = grouped.get(type) ?? { plain: 0, annuity: 0 }
+      if (row.annuity === 'Yes') {
+        existing.annuity += row.quantity
+      } else {
+        existing.plain += row.quantity
+      }
+      grouped.set(type, existing)
+    }
+
+    return Array.from(grouped.entries()).map(([type, counts]) => {
+      const label = registrationTypeLabels[type]
+      return {
+        registrationType: type,
+        label,
+        count: counts.plain,
+        withAnnuityCount: counts.annuity,
+      }
+    })
   }
 
-  const totalAccounts = Object.values(counts).reduce((sum, n) => sum + n, 0)
-  const totalWithAnnuity = Object.values(withAnnuityCounts).reduce((sum, n) => sum + n, 0)
-  const totalSelected = totalAccounts + totalWithAnnuity
-
-  const handleConfirm = () => {
-    const selections = ACCOUNT_TYPES
-      .filter((t) => counts[t.value] > 0 || withAnnuityCounts[t.value] > 0)
-      .map((t) => ({ accountType: t.value, label: t.label, count: counts[t.value], withAnnuityCount: withAnnuityCounts[t.value] ?? 0 }))
-    onConfirm(selections)
-    setCounts(zeroCounts())
-    setWithAnnuityCounts(zeroCounts())
-    setAnnuityRowVisible(
-      Object.fromEntries(ACCOUNT_TYPES.map((t) => [t.value, false])) as Record<AccountType, boolean>,
-    )
+  const handleRequestConfirm = () => {
+    const selections = buildSelections()
+    setPendingSelections(selections)
+    onOpenChange(false)
   }
+
+  const handleGoBack = () => {
+    setPendingSelections(null)
+    onOpenChange(true)
+  }
+
+  const handleFinalConfirm = () => {
+    if (pendingSelections) {
+      onConfirm(pendingSelections)
+    }
+    handleReset()
+    setPendingSelections(null)
+    onOpenChange(false)
+  }
+
+  const confirmTotal = pendingSelections
+    ? pendingSelections.reduce((sum, s) => sum + s.count + s.withAnnuityCount, 0)
+    : 0
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent>
-        <DialogHeader>
-          <DialogTitle>Select Account Types</DialogTitle>
-          <DialogDescription>
-            Choose the types and quantities of accounts to open.
-          </DialogDescription>
-        </DialogHeader>
+    <>
+      <Sheet open={open} onOpenChange={handleOpenChange}>
+        <SheetContent side="right" className="sm:max-w-[640px] flex flex-col gap-0 p-0">
+          <SheetHeader className="px-6 pt-6 pb-4 border-b border-border shrink-0">
+            <SheetTitle>Add accounts</SheetTitle>
+            <SheetDescription>Select registration types and quantities for accounts to open.</SheetDescription>
+          </SheetHeader>
 
-        <div className="space-y-1 py-2">
-          {ACCOUNT_TYPES.map((type) => (
-            <div key={type.value} className="space-y-1">
-              {/* Plain accounts row */}
-              <div className="flex items-center justify-between rounded-lg px-3 py-2.5 hover:bg-muted/50">
-                <span className="text-sm font-medium">{type.label}</span>
-                <div className="flex items-center gap-2">
-                  <Button
-                    variant="outline"
-                    size="icon"
-                    className="h-7 w-7"
-                    onClick={() => updateCount(type.value, -1)}
-                    disabled={counts[type.value] === 0}
-                  >
-                    <Minus className="h-3 w-3" />
-                  </Button>
-                  <span className="w-6 text-center text-sm tabular-nums font-medium">
-                    {counts[type.value]}
-                  </span>
-                  <Button
-                    variant="outline"
-                    size="icon"
-                    className="h-7 w-7"
-                    onClick={() => updateCount(type.value, 1)}
-                  >
-                    <Plus className="h-3 w-3" />
-                  </Button>
-                  {!annuityRowVisible[type.value] && (
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className="text-xs h-7 ml-1"
-                      onClick={() => showAnnuityRow(type.value)}
-                    >
-                      <Shield className="h-3 w-3 mr-1" />
-                      + Annuity
-                    </Button>
-                  )}
-                </div>
+          <div className="flex-1 overflow-y-auto px-6 py-5">
+            <div className="rounded-lg border border-border overflow-visible">
+              <div className="grid grid-cols-[1fr_100px_90px_40px] gap-3 px-4 py-2.5 bg-muted/50 border-b border-border">
+                <span className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                  Registration type
+                </span>
+                <span className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Annuity</span>
+                <span className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Qty</span>
+                <span />
               </div>
-              {/* With-annuity accounts row */}
-              {annuityRowVisible[type.value] && (
-                <div className="flex items-center justify-between rounded-lg ml-4 pl-3 pr-3 py-2.5 border-l-2 border-border hover:bg-muted/50">
-                  <div className="flex items-center gap-2">
-                    <Shield className="h-3.5 w-3.5 text-muted-foreground" />
-                    <span className="text-sm font-medium text-muted-foreground">{type.label} w/ Annuity</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <Button
-                      variant="outline"
-                      size="icon"
-                      className="h-7 w-7"
-                      onClick={() => updateWithAnnuityCount(type.value, -1)}
-                      disabled={withAnnuityCounts[type.value] === 0}
-                    >
-                      <Minus className="h-3 w-3" />
-                    </Button>
-                    <span className="w-6 text-center text-sm tabular-nums font-medium">
-                      {withAnnuityCounts[type.value]}
-                    </span>
-                    <Button
-                      variant="outline"
-                      size="icon"
-                      className="h-7 w-7"
-                      onClick={() => updateWithAnnuityCount(type.value, 1)}
-                    >
-                      <Plus className="h-3 w-3" />
-                    </Button>
-                  </div>
-                </div>
-              )}
-            </div>
-          ))}
-        </div>
 
-        <DialogFooter>
-          <Button variant="outline" onClick={() => onOpenChange(false)}>
-            Cancel
-          </Button>
-          <Button onClick={handleConfirm} disabled={totalSelected === 0}>
-            Open {totalSelected} {totalSelected === 1 ? 'Account' : 'Accounts'}
-            {totalWithAnnuity > 0 && ` (${totalWithAnnuity} w/ annuity)`}
-          </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+              {rows.map((row) => (
+                <div
+                  key={row.id}
+                  className="grid grid-cols-[1fr_100px_90px_40px] gap-3 items-center px-4 py-3 border-b border-border last:border-b-0"
+                >
+                  <Combobox
+                    options={REGISTRATION_TYPE_OPTIONS}
+                    value={row.registrationType}
+                    onValueChange={(val) => updateRow(row.id, { registrationType: val as RegistrationType })}
+                    placeholder="Select type"
+                    emptyMessage="No types found."
+                  />
+
+                  <Select
+                    value={row.annuity}
+                    onValueChange={(val) => updateRow(row.id, { annuity: val as 'No' | 'Yes' })}
+                  >
+                    <SelectTrigger className="h-9">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="No">No</SelectItem>
+                      <SelectItem value="Yes">Yes</SelectItem>
+                    </SelectContent>
+                  </Select>
+
+                  <Combobox
+                    options={QUANTITY_OPTIONS}
+                    value={String(row.quantity)}
+                    onValueChange={(val) => {
+                      const num = parseInt(val, 10)
+                      if (!isNaN(num)) updateRow(row.id, { quantity: num })
+                    }}
+                    placeholder="Qty"
+                    emptyMessage="No match."
+                  />
+
+                  <button
+                    type="button"
+                    onClick={() => removeRow(row.id)}
+                    className="flex items-center justify-center h-9 w-9 rounded-md text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors"
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </button>
+                </div>
+              ))}
+
+              <button
+                type="button"
+                onClick={addRow}
+                className="w-full flex items-center gap-2 px-4 py-3 text-sm text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors"
+              >
+                <Plus className="h-4 w-4" />
+                Add row
+              </button>
+            </div>
+          </div>
+
+          <div className="px-6 py-4 border-t border-border shrink-0 flex items-center justify-between gap-3">
+            <Button variant="outline" onClick={() => handleOpenChange(false)}>
+              Cancel
+            </Button>
+            <Button onClick={handleRequestConfirm} disabled={validRows.length === 0}>
+              {totalAccounts === 1 ? 'Open 1 account' : `Open ${totalAccounts} accounts`}
+            </Button>
+          </div>
+        </SheetContent>
+      </Sheet>
+
+      {pendingSelections && !open && (
+        <div className="fixed inset-0 z-[70] flex items-center justify-center">
+          <div className="fixed inset-0 bg-black/50" onClick={handleGoBack} />
+          <div className="relative z-10 bg-background rounded-lg border border-border shadow-lg max-w-md w-full mx-4 p-6 space-y-4">
+            <div className="flex items-start gap-3">
+              <div className="rounded-full bg-primary/10 p-2 shrink-0">
+                <AlertCircle className="h-5 w-5 text-primary" />
+              </div>
+              <div className="space-y-2">
+                <h3 className="text-base font-semibold">Confirm account opening</h3>
+                <p className="text-sm text-muted-foreground">
+                  Open {confirmTotal} {confirmTotal === 1 ? 'account' : 'accounts'} with the types and quantities below?
+                </p>
+                <ul className="text-sm text-muted-foreground space-y-1 pt-1">
+                  {pendingSelections.map((s) => (
+                    <li key={s.registrationType} className="flex items-center gap-2">
+                      <span className="h-1.5 w-1.5 rounded-full bg-muted-foreground shrink-0" />
+                      {s.label}
+                      {s.count > 0 && <span>× {s.count}</span>}
+                      {s.withAnnuityCount > 0 && (
+                        <span className="text-xs text-muted-foreground/70">
+                          (+{s.withAnnuityCount} w/ annuity)
+                        </span>
+                      )}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            </div>
+            <div className="flex items-center justify-end gap-3 pt-2">
+              <Button variant="outline" onClick={handleGoBack}>
+                Go Back
+              </Button>
+              <Button onClick={handleFinalConfirm}>
+                {confirmTotal === 1 ? 'Yes, open account' : 'Yes, open accounts'}
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+    </>
   )
 }

@@ -1,10 +1,9 @@
 import { useWorkflow } from '@/stores/workflowStore'
 import type { TaskStatus } from '@/types/workflow'
 import { cn } from '@/lib/utils'
-import { getActionStatus } from '@/utils/getActionStatus'
 import { teamMembers } from '@/data/teamMembers'
 import { parseChildSubTaskId } from '@/utils/childTaskRegistry'
-import { Circle, Loader, CheckCircle2, Ban, User } from 'lucide-react'
+import { Circle, Loader, CheckCircle2, Ban, User, Clock, XCircle } from 'lucide-react'
 import {
   Tooltip,
   TooltipContent,
@@ -24,6 +23,8 @@ const statusColors: Record<TaskStatus, string> = {
   in_progress: 'text-text-category1-primary',
   complete: 'text-text-success-primary',
   blocked: 'text-text-danger-primary',
+  awaiting_review: 'text-text-warning-primary',
+  rejected: 'text-text-danger-primary',
 }
 
 const statusLabels: Record<TaskStatus, string> = {
@@ -31,6 +32,8 @@ const statusLabels: Record<TaskStatus, string> = {
   in_progress: 'In Progress',
   complete: 'Complete',
   blocked: 'Blocked',
+  awaiting_review: 'Awaiting Review',
+  rejected: 'Rejected',
 }
 
 const StatusIcon: Record<TaskStatus, React.ComponentType<{ className?: string }>> = {
@@ -38,6 +41,8 @@ const StatusIcon: Record<TaskStatus, React.ComponentType<{ className?: string }>
   in_progress: Loader,
   complete: CheckCircle2,
   blocked: Ban,
+  awaiting_review: Clock,
+  rejected: XCircle,
 }
 
 function StatusBadge({ status, className }: { status: TaskStatus; className?: string }) {
@@ -97,11 +102,10 @@ export function StepSidebar() {
 
             return (
               <div key={action.id} className="mb-6">
-                <div className="flex items-center justify-between mb-2 px-3">
+                <div className="mb-2 px-3">
                   <h3 className="text-xs font-semibold text-muted-foreground">
                     {action.title}
                   </h3>
-                  <StatusBadge status={getActionStatus(state.tasks, action.id)} />
                 </div>
                 <ul className="space-y-1">
                   {actionTasks.map((task) => (

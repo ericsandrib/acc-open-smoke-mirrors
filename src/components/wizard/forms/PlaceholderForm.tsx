@@ -70,6 +70,8 @@ export function Placeholder2Form() {
   const { state } = useWorkflow()
   const { data, updateField } = useTaskData('placeholder-2')
   const clientInfo = state.taskData['client-info'] ?? {}
+  const review = state.reviewState
+  const isReadOnly = review?.reviewStatus === 'pending' || review?.reviewStatus === 'accepted'
   const openAccountsData = state.taskData['open-accounts'] ?? {}
 
   const clientName = [clientInfo.firstName, clientInfo.lastName].filter(Boolean).join(' ')
@@ -92,6 +94,25 @@ export function Placeholder2Form() {
 
   return (
     <div className="space-y-5">
+      {review?.reviewStatus === 'rejected' && (
+        <div className="rounded-lg border border-red-200 bg-red-50 p-4 space-y-2">
+          <p className="text-sm font-semibold text-red-800">Submission Rejected by Home Office</p>
+          {review.rejectionReason && (
+            <p className="text-sm text-red-700">
+              <span className="font-medium">Reason:</span> {review.rejectionReason}
+            </p>
+          )}
+          {review.rejectionFeedback && (
+            <p className="text-sm text-red-700">
+              <span className="font-medium">Feedback:</span> {review.rejectionFeedback}
+            </p>
+          )}
+          <p className="text-xs text-red-600 mt-1">
+            Please address the issues above and resubmit for review.
+          </p>
+        </div>
+      )}
+
       {/* Client Information */}
       <ReviewSection title="Client Information">
         {clientName ? (
@@ -243,35 +264,32 @@ export function Placeholder2Form() {
       {/* Confirmations */}
       <div className="border-t border-border pt-4 space-y-4">
         <p className="text-sm font-semibold">Confirmations</p>
-        <div className="grid grid-cols-3 items-center gap-4">
+        <div className="flex items-center gap-3">
+          <Checkbox
+            id="termsAccepted"
+            checked={!!data.termsAccepted}
+            onCheckedChange={(v) => updateField('termsAccepted', v)}
+            disabled={isReadOnly}
+          />
           <Label htmlFor="termsAccepted">Information Accurate</Label>
-          <div className="col-span-2">
-            <Checkbox
-              id="termsAccepted"
-              checked={!!data.termsAccepted}
-              onCheckedChange={(v) => updateField('termsAccepted', v)}
-            />
-          </div>
         </div>
-        <div className="grid grid-cols-3 items-center gap-4">
+        <div className="flex items-center gap-3">
+          <Checkbox
+            id="regulatoryAccepted"
+            checked={!!data.regulatoryAccepted}
+            onCheckedChange={(v) => updateField('regulatoryAccepted', v)}
+            disabled={isReadOnly}
+          />
           <Label htmlFor="regulatoryAccepted">Regulatory Disclosures</Label>
-          <div className="col-span-2">
-            <Checkbox
-              id="regulatoryAccepted"
-              checked={!!data.regulatoryAccepted}
-              onCheckedChange={(v) => updateField('regulatoryAccepted', v)}
-            />
-          </div>
         </div>
-        <div className="grid grid-cols-3 items-center gap-4">
+        <div className="flex items-center gap-3">
+          <Checkbox
+            id="dataConsent"
+            checked={!!data.dataConsent}
+            onCheckedChange={(v) => updateField('dataConsent', v)}
+            disabled={isReadOnly}
+          />
           <Label htmlFor="dataConsent">Data Processing Consent</Label>
-          <div className="col-span-2">
-            <Checkbox
-              id="dataConsent"
-              checked={!!data.dataConsent}
-              onCheckedChange={(v) => updateField('dataConsent', v)}
-            />
-          </div>
         </div>
       </div>
     </div>

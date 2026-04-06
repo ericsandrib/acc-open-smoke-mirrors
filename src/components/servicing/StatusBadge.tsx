@@ -24,6 +24,14 @@ const statusConfig: Record<string, { label: string; className: string }> = {
     label: 'Cancelled',
     className: 'bg-fill-neutral-secondary text-text-tertiary border-border-primary',
   },
+  awaiting_review: {
+    label: 'Awaiting Review',
+    className: 'bg-yellow-50 text-yellow-800 border-yellow-300',
+  },
+  rejected: {
+    label: 'Rejected',
+    className: 'bg-fill-danger-tertiary text-text-danger-primary border-border-danger-primary',
+  },
 }
 
 export function StatusBadge({ status }: { status: TaskStatus | JourneyStatus }) {

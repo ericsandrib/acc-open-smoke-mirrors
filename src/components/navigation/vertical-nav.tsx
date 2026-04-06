@@ -6,6 +6,7 @@ import {
   Bell,
   CalendarDays,
   SlidersHorizontal,
+  Handshake,
   Users,
   Star,
   Globe,
@@ -65,6 +66,7 @@ const navGroups: NavGroup[] = [
   {
     label: "Manage",
     items: [
+      { icon: Handshake, label: "Servicing", href: "/servicing" },
       { icon: Globe, label: "Onboarding", href: "/onboarding" },
       { icon: TrendingUp, label: "Tax", href: "/tax" },
       { icon: Settings, label: "Advisor Matching", href: "/advisor-matching" },
@@ -155,7 +157,10 @@ function NavigationContent({
               <div className="mx-auto w-5 border-t border-border my-1" />
             )}
             {group.items.map((item) => {
-              const isActive = pathname === item.href;
+              const isActive =
+                pathname === item.href ||
+                (item.href === "/onboarding" && pathname.startsWith("/wizard")) ||
+                (item.href === "/servicing" && pathname.startsWith("/servicing"));
               const showTooltip = !isExpanded;
 
               const button = (

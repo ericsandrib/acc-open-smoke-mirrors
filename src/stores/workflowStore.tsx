@@ -2,6 +2,7 @@ import { createContext, useContext, useReducer, useCallback, type ReactNode } fr
 import type { WorkflowState, WorkflowAction, Task } from '@/types/workflow'
 import { actions, tasks, initialRelatedParties, initialFinancialAccounts } from '@/data/seed'
 import { getChildSubTaskIds, getChildTypeConfig, parseChildSubTaskId } from '@/utils/childTaskRegistry'
+import { generateAccountOpenIdentifiers } from '@/utils/accountOpenIdentifiers'
 
 let childIdCounter = 0
 
@@ -16,11 +17,6 @@ function computeFlatTaskOrder(allTasks: Task[], allActions: typeof actions): str
 
     for (const task of actionTasks) {
       order.push(task.id)
-      if (task.children) {
-        for (const child of task.children) {
-          order.push(...getChildSubTaskIds(child.id, child.childType))
-        }
-      }
     }
   }
 
@@ -70,40 +66,35 @@ function workflowReducer(state: WorkflowState, action: WorkflowAction): Workflow
         ? state.submittedTaskIds
         : [...state.submittedTaskIds, action.taskId]
 
-      // Collect ALL task IDs (parents + child sub-tasks) regardless of status
-      const allTaskIds: string[] = []
-      for (const t of state.tasks) {
-        allTaskIds.push(t.id)
-        if (t.children) {
-          for (const c of t.children) {
-            allTaskIds.push(...getChildSubTaskIds(c.id, c.childType))
-          }
-        }
-      }
+      // Check if this is the last task in the flat order (Final Review)
+      const lastTaskId = state.flatTaskOrder[state.flatTaskOrder.length - 1]
+      const isFinalTask = action.taskId === lastTaskId
 
-      // Check if every task has been submitted
-      const allSubmitted = allTaskIds.length > 0 && allTaskIds.every((id) => newSubmitted.includes(id))
-
-      if (allSubmitted) {
-        // Final task — flip everything to complete
+      if (isFinalTask) {
+        // Final Review completed — transition all tasks to awaiting_review
         const newTasks = state.tasks.map((t) => {
-          const updatedTask = newSubmitted.includes(t.id)
-            ? { ...t, status: 'complete' as const }
-            : t
+          const updatedTask = { ...t, status: 'awaiting_review' as const }
           if (updatedTask.children) {
-            const newChildren = updatedTask.children.map((c) =>
-              newSubmitted.includes(c.id)
-                ? { ...c, status: 'complete' as const }
-                : c
-            )
+            const newChildren = updatedTask.children.map((c) => ({
+              ...c,
+              status: 'awaiting_review' as const,
+            }))
             return { ...updatedTask, children: newChildren }
           }
           return updatedTask
         })
-        return { ...state, tasks: newTasks, submittedTaskIds: [] }
+        return {
+          ...state,
+          tasks: newTasks,
+          submittedTaskIds: [],
+          reviewState: {
+            reviewStatus: 'pending',
+            assignedTo: 'Home Office Review Team',
+          },
+        }
       }
 
-      // Not the last task — just record the submission, keep status as in_progress
+      // Not the final task — just record the submission
       return { ...state, submittedTaskIds: newSubmitted }
     }
 
@@ -141,9 +132,11 @@ function workflowReducer(state: WorkflowState, action: WorkflowAction): Workflow
 
     case 'SPAWN_CHILD': {
       const config = getChildTypeConfig(action.childType)
+      let spawnedChildId = ''
       const newTasks = state.tasks.map((t) => {
         if (t.id === action.parentTaskId && t.children) {
           const childId = `${config.idPrefix}-${Date.now()}-${++childIdCounter}`
+          spawnedChildId = childId
           return {
             ...t,
             children: [
@@ -161,7 +154,20 @@ function workflowReducer(state: WorkflowState, action: WorkflowAction): Workflow
         return t
       })
       const newOrder = computeFlatTaskOrder(newTasks, state.actions)
-      return { ...state, tasks: newTasks, flatTaskOrder: newOrder }
+      let newTaskData = state.taskData
+      if (spawnedChildId) {
+        const merged = {
+          ...(state.taskData[spawnedChildId] ?? {}),
+          ...(action.metadata ?? {}),
+        }
+        if (action.childType === 'account-opening') {
+          const gen = generateAccountOpenIdentifiers(action.childName, spawnedChildId)
+          merged.accountNumber = (merged.accountNumber as string | undefined) ?? gen.accountNumber
+          merged.shortName = (merged.shortName as string | undefined) ?? gen.shortName
+        }
+        newTaskData = { ...state.taskData, [spawnedChildId]: merged }
+      }
+      return { ...state, tasks: newTasks, flatTaskOrder: newOrder, taskData: newTaskData }
     }
 
     case 'REMOVE_CHILD': {
@@ -316,6 +322,9 @@ function workflowReducer(state: WorkflowState, action: WorkflowAction): Workflow
         journeyId: `journey-${Date.now()}`,
         assignedTo: assignee,
         submittedTaskIds: [],
+        activeChildActionId: undefined,
+        activeChildSubTaskIndex: undefined,
+        childActionResume: undefined,
       }
     }
 
@@ -334,6 +343,128 @@ function workflowReducer(state: WorkflowState, action: WorkflowAction): Workflow
         return { ...state, activeTaskId: prevId }
       }
       return state
+    }
+
+    case 'ENTER_CHILD_ACTION': {
+      return {
+        ...state,
+        activeChildActionId: action.childId,
+        activeChildSubTaskIndex: action.subTaskIndex ?? 0,
+        childActionResume: action.resumeAfterExit,
+      }
+    }
+
+    case 'EXIT_CHILD_ACTION': {
+      if (state.childActionResume) {
+        const { accountChildId, subTaskIndex } = state.childActionResume
+        return {
+          ...state,
+          activeChildActionId: accountChildId,
+          activeChildSubTaskIndex: subTaskIndex,
+          childActionResume: undefined,
+        }
+      }
+      return {
+        ...state,
+        activeChildActionId: undefined,
+        activeChildSubTaskIndex: undefined,
+        childActionResume: undefined,
+      }
+    }
+
+    case 'SET_CHILD_SUB_TASK': {
+      return { ...state, activeChildSubTaskIndex: action.index }
+    }
+
+    case 'CHILD_GO_NEXT': {
+      if (state.activeChildActionId == null || state.activeChildSubTaskIndex == null) return state
+      const child = state.tasks
+        .flatMap((t) => t.children ?? [])
+        .find((c) => c.id === state.activeChildActionId)
+      if (!child) return state
+      const config = getChildTypeConfig(child.childType)
+      const maxIndex = config.subTasks.length - 1
+      if (state.activeChildSubTaskIndex >= maxIndex) return state
+      return { ...state, activeChildSubTaskIndex: state.activeChildSubTaskIndex + 1 }
+    }
+
+    case 'CHILD_GO_BACK': {
+      if (state.activeChildActionId == null || state.activeChildSubTaskIndex == null) return state
+      if (state.activeChildSubTaskIndex <= 0) {
+        if (state.childActionResume) {
+          const { accountChildId, subTaskIndex } = state.childActionResume
+          return {
+            ...state,
+            activeChildActionId: accountChildId,
+            activeChildSubTaskIndex: subTaskIndex,
+            childActionResume: undefined,
+          }
+        }
+        return {
+          ...state,
+          activeChildActionId: undefined,
+          activeChildSubTaskIndex: undefined,
+          childActionResume: undefined,
+        }
+      }
+      return { ...state, activeChildSubTaskIndex: state.activeChildSubTaskIndex - 1 }
+    }
+
+    case 'SUBMIT_FOR_REVIEW': {
+      const reviewTasks = state.tasks.map((t) => {
+        const updated = { ...t, status: 'awaiting_review' as const }
+        if (updated.children) {
+          return { ...updated, children: updated.children.map((c) => ({ ...c, status: 'awaiting_review' as const })) }
+        }
+        return updated
+      })
+      return {
+        ...state,
+        tasks: reviewTasks,
+        submittedTaskIds: [],
+        reviewState: {
+          reviewStatus: 'pending',
+          assignedTo: 'Home Office Review Team',
+        },
+      }
+    }
+
+    case 'ACCEPT_REVIEW': {
+      const acceptedTasks = state.tasks.map((t) => {
+        const updated = { ...t, status: 'complete' as const }
+        if (updated.children) {
+          return { ...updated, children: updated.children.map((c) => ({ ...c, status: 'complete' as const })) }
+        }
+        return updated
+      })
+      return {
+        ...state,
+        tasks: acceptedTasks,
+        reviewState: {
+          ...state.reviewState!,
+          reviewStatus: 'accepted',
+        },
+      }
+    }
+
+    case 'REJECT_REVIEW': {
+      const rejectedTasks = state.tasks.map((t) => {
+        const updated = { ...t, status: 'rejected' as const }
+        if (updated.children) {
+          return { ...updated, children: updated.children.map((c) => ({ ...c, status: 'rejected' as const })) }
+        }
+        return updated
+      })
+      return {
+        ...state,
+        tasks: rejectedTasks,
+        reviewState: {
+          ...state.reviewState!,
+          reviewStatus: 'rejected',
+          rejectionReason: action.reason,
+          rejectionFeedback: action.feedback,
+        },
+      }
     }
 
     default:
@@ -380,4 +511,34 @@ export function useTaskData(taskId: string) {
   )
 
   return { data, updateField, updateFields }
+}
+
+export function useChildActionContext() {
+  const { state } = useWorkflow()
+  if (!state.activeChildActionId || state.activeChildSubTaskIndex == null) return null
+
+  const child = state.tasks
+    .flatMap((t) => t.children ?? [])
+    .find((c) => c.id === state.activeChildActionId)
+  if (!child) return null
+
+  const config = getChildTypeConfig(child.childType)
+  const currentSubTask = config.subTasks[state.activeChildSubTaskIndex]
+  const subTaskId = `${child.id}-${currentSubTask.suffix}`
+
+  const parentTask = state.tasks.find((t) =>
+    t.children?.some((c) => c.id === child.id)
+  )
+
+  return {
+    child,
+    config,
+    currentSubTask,
+    subTaskId,
+    subTaskIndex: state.activeChildSubTaskIndex,
+    totalSubTasks: config.subTasks.length,
+    isFirst: state.activeChildSubTaskIndex === 0,
+    isLast: state.activeChildSubTaskIndex === config.subTasks.length - 1,
+    parentTask,
+  }
 }

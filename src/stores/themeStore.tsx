@@ -5,6 +5,7 @@ type BrandTheme = 'mercer' | 'guardian' | 'vanguard'
 
 const ThemeContext = createContext<{
   colorScheme: ColorScheme
+  setColorScheme: (scheme: ColorScheme) => void
   toggleColorScheme: () => void
   brandTheme: BrandTheme
   setBrandTheme: (theme: BrandTheme) => void
@@ -47,6 +48,7 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
   return (
     <ThemeContext.Provider value={{
       colorScheme,
+      setColorScheme,
       toggleColorScheme,
       brandTheme,
       setBrandTheme,

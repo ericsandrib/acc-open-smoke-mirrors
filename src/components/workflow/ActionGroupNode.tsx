@@ -7,6 +7,8 @@ const statusColors: Record<TaskStatus, string> = {
   in_progress: 'bg-fill-category1-tertiary text-text-category1-primary',
   complete: 'bg-fill-success-tertiary text-text-success-primary',
   blocked: 'bg-fill-danger-tertiary text-text-danger-primary',
+  awaiting_review: 'bg-yellow-100 text-yellow-800',
+  rejected: 'bg-fill-danger-tertiary text-text-danger-primary',
 }
 
 const statusLabels: Record<TaskStatus, string> = {
@@ -14,6 +16,8 @@ const statusLabels: Record<TaskStatus, string> = {
   in_progress: 'In Progress',
   complete: 'Complete',
   blocked: 'Blocked',
+  awaiting_review: 'Awaiting Review',
+  rejected: 'Rejected',
 }
 
 export function ActionGroupNode({ data }: NodeProps) {

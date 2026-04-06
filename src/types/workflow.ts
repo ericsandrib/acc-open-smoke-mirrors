@@ -1,6 +1,45 @@
-export type TaskStatus = 'not_started' | 'in_progress' | 'complete' | 'blocked'
+export type TaskStatus = 'not_started' | 'in_progress' | 'complete' | 'blocked' | 'awaiting_review' | 'rejected'
 
 export type RelatedPartyType = 'household_member' | 'related_contact' | 'related_organization'
+
+/** Suitability / regulatory extension for account-owner individuals (wizard). */
+export interface AccountOwnerIndividualProfile {
+  middleName?: string
+  suffix?: string
+  legalStreet?: string
+  legalApt?: string
+  legalCity?: string
+  legalState?: string
+  legalZip?: string
+  legalCountry?: string
+  mailingSameAsLegal?: boolean
+  mailingStreet?: string
+  mailingApt?: string
+  mailingCity?: string
+  mailingState?: string
+  mailingZip?: string
+  mailingCountry?: string
+  employmentStatus?: string
+  employerName?: string
+  occupation?: string
+  industry?: string
+  annualIncomeRange?: string
+  netWorthRange?: string
+  liquidNetWorthRange?: string
+  sourceOfFunds?: string
+  investmentObjective?: string
+  riskTolerance?: string
+  timeHorizon?: string
+  investmentExperience?: string
+  controlPerson?: string
+  bdAffiliation?: string
+  familyAffiliation?: string
+  pep?: string
+  insiderRule144?: string
+  trustedContactName?: string
+  trustedContactRelationship?: string
+  trustedContactPhoneEmail?: string
+}
 
 export interface RelatedParty {
   id: string
@@ -16,7 +55,7 @@ export interface RelatedParty {
   email?: string
   phone?: string
   dob?: string
-  kycStatus?: 'verified' | 'needs_kyc'
+  kycStatus?: 'verified' | 'needs_kyc' | 'pending'
   isHidden?: boolean
   accountNumber?: string
   ssn?: string
@@ -25,11 +64,12 @@ export interface RelatedParty {
   entityType?: string
   jurisdiction?: string
   contactPerson?: string
+  accountOwnerIndividual?: AccountOwnerIndividualProfile
 }
 
 export type AccountType = 'brokerage' | 'ira' | 'roth_ira' | '401k' | 'trust' | 'checking' | 'savings'
 
-export type ChildType = 'kyc' | 'account-opening'
+export type ChildType = 'kyc' | 'account-opening' | 'funding-line' | 'feature-service-line'
 
 export interface FinancialAccount {
   id: string
@@ -65,6 +105,15 @@ export interface Action {
   order: number
 }
 
+export type ReviewStatus = 'pending' | 'accepted' | 'rejected'
+
+export interface ReviewState {
+  reviewStatus: ReviewStatus
+  assignedTo: string
+  rejectionReason?: string
+  rejectionFeedback?: string
+}
+
 export interface WorkflowState {
   actions: Action[]
   tasks: Task[]
@@ -77,6 +126,11 @@ export interface WorkflowState {
   journeyId?: string
   assignedTo?: string
   submittedTaskIds: string[]
+  activeChildActionId?: string
+  activeChildSubTaskIndex?: number
+  /** When drilling into a funding-line or feature-service-line child, EXIT restores this account child + sub-step. */
+  childActionResume?: { accountChildId: string; subTaskIndex: number }
+  reviewState?: ReviewState
 }
 
 export type WorkflowAction =
@@ -84,7 +138,7 @@ export type WorkflowAction =
   | { type: 'SET_TASK_STATUS'; taskId: string; status: TaskStatus }
   | { type: 'CONFIRM_TASK'; taskId: string }
   | { type: 'REOPEN_TASK'; taskId: string }
-  | { type: 'SPAWN_CHILD'; parentTaskId: string; childName: string; childType: ChildType }
+  | { type: 'SPAWN_CHILD'; parentTaskId: string; childName: string; childType: ChildType; metadata?: Record<string, unknown> }
   | { type: 'REMOVE_CHILD'; parentTaskId: string; childId: string }
   | { type: 'ADD_RELATED_PARTY'; party: RelatedParty }
   | { type: 'UPDATE_RELATED_PARTY'; partyId: string; updates: Partial<Omit<RelatedParty, 'id' | 'type' | 'isPrimary'>> }
@@ -99,3 +153,18 @@ export type WorkflowAction =
   | { type: 'SET_JOURNEY_ASSIGNEE'; assignee: string }
   | { type: 'GO_NEXT' }
   | { type: 'GO_BACK' }
+  | {
+      type: 'ENTER_CHILD_ACTION'
+      childId: string
+      /** When set, open this sub-step instead of defaulting to the first. */
+      subTaskIndex?: number
+      /** When set, EXIT_CHILD_ACTION / back from first sub-step returns to this account child + sub-step. */
+      resumeAfterExit?: { accountChildId: string; subTaskIndex: number }
+    }
+  | { type: 'EXIT_CHILD_ACTION' }
+  | { type: 'CHILD_GO_NEXT' }
+  | { type: 'CHILD_GO_BACK' }
+  | { type: 'SET_CHILD_SUB_TASK'; index: number }
+  | { type: 'SUBMIT_FOR_REVIEW' }
+  | { type: 'ACCEPT_REVIEW' }
+  | { type: 'REJECT_REVIEW'; reason: string; feedback?: string }

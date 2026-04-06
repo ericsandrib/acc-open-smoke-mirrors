@@ -1,28 +1,32 @@
 import { ClientInfoForm } from './forms/ClientInfoForm'
 import { RelatedPartiesForm } from './forms/RelatedPartiesForm'
-import { FinancialAccountsForm } from './forms/FinancialAccountsForm'
 import { KycForm } from './forms/KycForm'
 import { KycChildInfoForm } from './forms/KycChildInfoForm'
 import { KycChildDocumentsForm } from './forms/KycChildDocumentsForm'
 import { KycChildResultsForm } from './forms/KycChildResultsForm'
 import { Placeholder2Form } from './forms/PlaceholderForm'
 import { OpenAccountsForm } from './forms/OpenAccountsForm'
-import { AcctChildDetailsForm } from './forms/AcctChildDetailsForm'
-import { AcctChildDocumentsForm } from './forms/AcctChildDocumentsForm'
-import { AcctChildReviewForm } from './forms/AcctChildReviewForm'
+import { AcctChildOwnerInfoForm } from './forms/AcctChildOwnerInfoForm'
+import { FundChildFundingForm } from './forms/FundChildFundingForm'
+import { FundingLineSetupForm } from './forms/FundingLineSetupForm'
+import { FundChildFeaturesForm } from './forms/FundChildFeaturesForm'
+import { FeatureServiceLineSetupForm } from './forms/FeatureServiceLineSetupForm'
+import { AcctChildDocumentsReviewForm } from './forms/AcctChildDocumentsReviewForm'
 
 export const formComponents: Record<string, React.ComponentType> = {
   'client-info': ClientInfoForm,
   'related-parties': RelatedPartiesForm,
-  'financial-accounts': FinancialAccountsForm,
   'kyc': KycForm,
   'kyc-child-info': KycChildInfoForm,
   'kyc-child-documents': KycChildDocumentsForm,
   'kyc-child-results': KycChildResultsForm,
   'open-accounts': OpenAccountsForm,
-  'acct-child-details': AcctChildDetailsForm,
-  'acct-child-documents': AcctChildDocumentsForm,
-  'acct-child-review': AcctChildReviewForm,
+  'acct-child-account-owners': AcctChildOwnerInfoForm,
+  'acct-child-funding-transfers': FundChildFundingForm,
+  'funding-line-child-setup': FundingLineSetupForm,
+  'acct-child-features-services': FundChildFeaturesForm,
+  'feature-service-line-child-setup': FeatureServiceLineSetupForm,
+  'acct-child-documents-review': AcctChildDocumentsReviewForm,
   'placeholder-2': Placeholder2Form,
 }
 
@@ -31,8 +35,6 @@ export const taskDescriptions: Partial<Record<string, string>> = {
     'Capture the primary contact\'s details and account type. This information is referenced throughout the onboarding process.',
   'related-parties':
     'Identify household members, related contacts, and organizations connected to this client. Members added here can be selected for KYC verification in a later step.',
-  'financial-accounts':
-    'List the financial accounts that will be managed under this relationship.',
   // 'kyc' intentionally omitted — KycForm has context-sensitive phase intros
   'kyc-child-info':
     'Review and confirm the personal information for this household member.',
@@ -42,12 +44,18 @@ export const taskDescriptions: Partial<Record<string, string>> = {
     'View the results of the compliance review for this household member.',
   'open-accounts':
     'Select the types of accounts to open, review documents, and prepare for signature.',
-  'acct-child-details':
-    'Review and confirm the details for this financial account.',
-  'acct-child-documents':
-    'Upload required documents for the account opening application.',
-  'acct-child-review':
-    'Review all account opening details before submission.',
+  'acct-child-account-owners':
+    'Create the account shell and capture owners/participants—fields here drive eligibility and the first pass of document rules.',
+  'acct-child-funding-transfers':
+    'Kick off one or more funding and account transfer workflows for this account—each line opens its own detail flow, similar to Accounts to be Opened on the parent task.',
+  'funding-line-child-setup':
+    'Define funding method, amounts, external account transfers, bank instructions, and servicing for this workflow line.',
+  'acct-child-features-services':
+    'Kick off one or more account feature and service workflows—administrative, setup, or lifecycle (not money movements). Each line opens its own detail flow, same pattern as Funding & asset movement.',
+  'feature-service-line-child-setup':
+    'Capture status, routing, dates, and notes for this feature or service workflow line.',
+  'acct-child-documents-review':
+    'Finalize this account’s paperwork: lists, uploads, exceptions. Documents (right) tracked rule-driven needs since Task 1; the single aggregated eSign envelope is built on the Open Accounts parent step.',
   'placeholder-2':
     'Review the information gathered during onboarding and confirm everything is accurate before submitting.',
 }

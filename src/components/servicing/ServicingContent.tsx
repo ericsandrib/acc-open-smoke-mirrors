@@ -36,7 +36,7 @@ export function ServicingContent() {
         <div className="flex items-center justify-between mb-6">
           <PageTitle
             title="Servicing"
-            subHead="Track onboarding journeys, actions, and tasks across all relationships."
+            subHead="Track all journeys, actions, and tasks across all relationships and categories."
           />
           <TabsList variant="elevated">
             <TabsTrigger value="journeys">Journeys</TabsTrigger>

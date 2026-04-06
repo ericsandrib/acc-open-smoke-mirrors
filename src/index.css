@@ -4,6 +4,8 @@
 @import "./styles/themes/guardian.css";
 @import "./styles/themes/vanguard.css";
 
+@plugin "tailwindcss-animate";
+
 @custom-variant dark (&:where(.dark, .dark *));
 
 @theme {

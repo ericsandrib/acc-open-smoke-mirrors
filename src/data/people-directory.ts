@@ -334,6 +334,63 @@ export function searchPeople(query: string, field: SearchField = 'all'): Directo
   })
 }
 
+export type CombinedSearchField = 'all' | 'name' | 'accountNumber' | 'taxId' | 'clientId'
+
+export function searchAll(query: string, field: CombinedSearchField = 'all'): DirectoryEntry[] {
+  if (!query.trim()) return []
+  const q = query.toLowerCase().trim()
+
+  const people = peopleDirectory.filter((person) => {
+    const fullName = `${person.firstName} ${person.lastName}`.toLowerCase()
+    switch (field) {
+      case 'name':
+        return fullName.includes(q)
+      case 'accountNumber':
+        return person.accountNumber?.toLowerCase().includes(q) ?? false
+      case 'taxId':
+        return person.taxId?.toLowerCase().includes(q) ?? false
+      case 'clientId':
+        return person.clientId?.toLowerCase().includes(q) ?? false
+      case 'all':
+      default:
+        return (
+          fullName.includes(q) ||
+          (person.accountNumber?.toLowerCase().includes(q) ?? false) ||
+          (person.ssn?.includes(q) ?? false) ||
+          (person.taxId?.toLowerCase().includes(q) ?? false) ||
+          (person.clientId?.toLowerCase().includes(q) ?? false) ||
+          (person.household?.toLowerCase().includes(q) ?? false) ||
+          (person.email?.toLowerCase().includes(q) ?? false)
+        )
+    }
+  })
+
+  const entities = entityDirectory.filter((entity) => {
+    switch (field) {
+      case 'name':
+        return entity.entityName.toLowerCase().includes(q)
+      case 'accountNumber':
+        return false
+      case 'taxId':
+        return entity.taxId?.toLowerCase().includes(q) ?? false
+      case 'clientId':
+        return entity.clientId?.toLowerCase().includes(q) ?? false
+      case 'all':
+      default:
+        return (
+          entity.entityName.toLowerCase().includes(q) ||
+          (entity.taxId?.toLowerCase().includes(q) ?? false) ||
+          (entity.clientId?.toLowerCase().includes(q) ?? false) ||
+          (entity.contactPerson?.toLowerCase().includes(q) ?? false) ||
+          (entity.entityType?.toLowerCase().includes(q) ?? false) ||
+          (entity.email?.toLowerCase().includes(q) ?? false)
+        )
+    }
+  })
+
+  return [...people, ...entities]
+}
+
 export type EntitySearchField = 'all' | 'entityName' | 'taxId' | 'clientId' | 'contactPerson'
 
 export function searchEntities(query: string, field: EntitySearchField = 'all'): DirectoryEntity[] {
