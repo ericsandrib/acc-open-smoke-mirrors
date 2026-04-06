@@ -58,45 +58,16 @@ export const relationships: Relationship[] = [
           trustedContactPhoneEmail: '+1 (555) 123-4568 · jane.smith@example.com',
         },
       },
+      { id: 'member-2', name: 'Jane Smith', firstName: 'Jane', lastName: 'Smith', type: 'household_member', relationship: 'Spouse', role: 'Spouse', email: 'jane.smith@example.com', phone: '+1 (555) 123-4568', dob: '1977-08-22', kycStatus: 'needs_kyc' },
+      { id: 'member-3', name: 'Robert Smith', firstName: 'Robert', lastName: 'Smith', type: 'household_member', relationship: 'Child', role: 'Dependent', dob: '2005-01-10', kycStatus: 'needs_kyc' },
       { id: 'contact-1', name: 'Margaret Smith', firstName: 'Margaret', lastName: 'Smith', type: 'related_contact', relationship: 'Parent', relationshipCategory: 'Family', dob: '1948-06-15' },
       { id: 'contact-2', name: 'David Chen', firstName: 'David', lastName: 'Chen', type: 'related_contact', relationship: 'Attorney', relationshipCategory: 'Professional', email: 'dchen@lawfirm.com', phone: '+1 (555) 987-6543' },
+      { id: 'org-1', name: 'Smith Family Trust LLC', organizationName: 'Smith Family Trust LLC', type: 'related_organization', role: 'Trust', relationshipCategory: 'Legal' },
     ],
     financialAccounts: [
       { id: 'acct-1', accountName: 'Smith Family Trust', accountType: 'trust', custodian: 'Fidelity', estimatedValue: '2,500,000' },
       { id: 'acct-2', accountName: 'John IRA', accountType: 'ira', custodian: 'Charles Schwab', accountNumber: '****4521', estimatedValue: '850,000' },
     ],
-  },
-  {
-    id: 'jane-smith-household',
-    name: 'Jane Smith Household',
-    primaryContact: {
-      firstName: 'Jane',
-      lastName: 'Smith',
-      email: 'jane.smith@example.com',
-      phone: '+1 (555) 123-4568',
-      dob: '1977-08-22',
-      clientType: 'individual',
-    },
-    relatedParties: [
-      { id: 'member-2', name: 'Jane Smith', firstName: 'Jane', lastName: 'Smith', type: 'household_member', role: 'Client', isPrimary: true, email: 'jane.smith@example.com', phone: '+1 (555) 123-4568', dob: '1977-08-22', kycStatus: 'needs_kyc' },
-    ],
-    financialAccounts: [],
-  },
-  {
-    id: 'robert-smith-household',
-    name: 'Robert Smith Household',
-    primaryContact: {
-      firstName: 'Robert',
-      lastName: 'Smith',
-      email: '',
-      phone: '',
-      dob: '2005-01-10',
-      clientType: 'individual',
-    },
-    relatedParties: [
-      { id: 'member-3', name: 'Robert Smith', firstName: 'Robert', lastName: 'Smith', type: 'household_member', role: 'Client', isPrimary: true, dob: '2005-01-10', kycStatus: 'needs_kyc' },
-    ],
-    financialAccounts: [],
   },
   {
     id: 'michael-johnson-household',
