@@ -295,21 +295,6 @@ export function DashboardContent() {
 
   return (
     <div className="min-h-full bg-[var(--bg-secondary)] -m-8">
-      {/* Decorative wavy background */}
-      <div className="pointer-events-none absolute inset-x-0 top-14 h-56 overflow-hidden opacity-[0.04]">
-        <svg viewBox="0 0 1440 200" className="w-full h-full" preserveAspectRatio="none">
-          {Array.from({ length: 8 }).map((_, i) => (
-            <path
-              key={i}
-              d={`M0,${20 + i * 24} C360,${60 + i * 24} 720,${-10 + i * 24} 1440,${30 + i * 24}`}
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="1.5"
-            />
-          ))}
-        </svg>
-      </div>
-
       <div className="relative mx-auto max-w-[1280px] px-8 py-8">
         {/* Greeting header */}
         <div className="flex items-start justify-between mb-8">

@@ -80,7 +80,7 @@ export function ComposeDialog({ onClose }: ComposeDialogProps) {
       assignedTo: assignedTo || undefined,
     })
     toast.success(`Journey "${name}" created for ${relationship.name}`)
-    navigate('/wizard')
+    navigate('/wizard', { state: { collapseMainNav: true } })
   }
 
   return (

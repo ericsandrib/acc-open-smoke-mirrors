@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Link, useLocation } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import {
   Home,
   Search,
@@ -258,17 +258,35 @@ function NavigationContent({
 
 export interface VerticalNavProps {
   onCreateClick?: () => void;
+  /** When true, persist expand state separately and default to collapsed (e.g. wizard). */
+  defaultCollapsed?: boolean;
 }
 
-export function VerticalNav({ onCreateClick }: VerticalNavProps) {
+export function VerticalNav({
+  onCreateClick,
+  defaultCollapsed = false,
+}: VerticalNavProps) {
   const mounted = useMounted();
+  const location = useLocation();
+  const navigate = useNavigate();
+  const storageKey = defaultCollapsed
+    ? "vertical-nav-expanded-wizard"
+    : "vertical-nav-expanded";
   const [isExpanded, setIsExpanded] = useLocalStorage(
-    "vertical-nav-expanded",
-    true
+    storageKey,
+    !defaultCollapsed
   );
   const isMobile = useMediaQuery("(max-width: 640px)");
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isCollapsedHovered, setIsCollapsedHovered] = useState(false);
+
+  useEffect(() => {
+    if (location.pathname !== "/wizard") return;
+    const st = location.state as { collapseMainNav?: boolean } | null;
+    if (!st?.collapseMainNav) return;
+    setIsExpanded(false);
+    navigate(".", { replace: true, state: {} });
+  }, [location.pathname, location.state, navigate, setIsExpanded]);
 
   useEffect(() => {
     if (!mounted || isMobile) return;
