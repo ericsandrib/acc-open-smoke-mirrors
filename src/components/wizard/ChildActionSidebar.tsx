@@ -114,7 +114,7 @@ export function ChildActionSidebar() {
             className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors mb-3"
           >
             <ArrowLeft className="h-3 w-3" />
-            Back to Open Accounts
+            Back to {ctx.parentTask?.title ?? 'parent task'}
           </button>
           <h2 className="text-sm font-semibold text-foreground">
             {child.name}

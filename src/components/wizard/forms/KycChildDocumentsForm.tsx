@@ -1,10 +1,10 @@
-import { useWorkflow, useTaskData } from '@/stores/workflowStore'
+import { useTaskData, useChildActionContext } from '@/stores/workflowStore'
 import { FileUpload, type FileWithStatus } from '@/components/ui/file-upload'
 
 export function KycChildDocumentsForm() {
-  const { state } = useWorkflow()
-  const taskId = state.activeTaskId
-  const { data, updateField } = useTaskData(taskId)
+  const ctx = useChildActionContext()
+  const taskId = ctx?.subTaskId ?? ''
+  const { data, updateField } = useTaskData(taskId || '__no_child__')
 
   const docs = [
     {

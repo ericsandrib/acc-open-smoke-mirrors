@@ -69,12 +69,19 @@ function PartyRow({ party }: { party: RelatedParty }) {
 export function Placeholder2Form() {
   const { state } = useWorkflow()
   const { data, updateField } = useTaskData('placeholder-2')
-  const clientInfo = state.taskData['client-info'] ?? {}
+  const journeyClientMeta = state.taskData['client-info'] as Record<string, unknown> | undefined
   const review = state.reviewState
   const isReadOnly = review?.reviewStatus === 'pending' || review?.reviewStatus === 'accepted'
   const openAccountsData = state.taskData['open-accounts'] ?? {}
 
-  const clientName = [clientInfo.firstName, clientInfo.lastName].filter(Boolean).join(' ')
+  const primaryMember =
+    state.relatedParties.find((p) => p.type === 'household_member' && p.isPrimary && !p.isHidden)
+    ?? state.relatedParties.find((p) => p.type === 'household_member' && !p.isHidden)
+
+  const clientName =
+    primaryMember?.name
+    ?? [primaryMember?.firstName, primaryMember?.lastName].filter(Boolean).join(' ')
+    ?? [journeyClientMeta?.firstName, journeyClientMeta?.lastName].filter(Boolean).join(' ')
 
   const visibleParties = state.relatedParties.filter((p) => !p.isHidden)
   const householdMembers = visibleParties.filter((p) => p.type === 'household_member')
@@ -118,18 +125,29 @@ export function Placeholder2Form() {
         {clientName ? (
           <dl className="space-y-1">
             <ReviewRow label="Name" value={clientName} />
-            <ReviewRow label="Email" value={clientInfo.email as string} />
-            <ReviewRow label="Phone" value={clientInfo.phone as string} />
-            <ReviewRow label="Date of Birth" value={clientInfo.dob ? formatDate(clientInfo.dob as string) : undefined} />
-            <ReviewRow label="Client Type" value={clientTypeLabels[clientInfo.clientType as string]} />
+            <ReviewRow label="Email" value={(primaryMember?.email ?? journeyClientMeta?.email) as string} />
+            <ReviewRow label="Phone" value={(primaryMember?.phone ?? journeyClientMeta?.phone) as string} />
+            <ReviewRow
+              label="Date of Birth"
+              value={
+                primaryMember?.dob
+                  ? formatDate(primaryMember.dob)
+                  : journeyClientMeta?.dob
+                    ? formatDate(journeyClientMeta.dob as string)
+                    : undefined
+              }
+            />
+            <ReviewRow
+              label="Client Type"
+              value={clientTypeLabels[(journeyClientMeta?.clientType as string) ?? '']}
+            />
           </dl>
         ) : (
           <p className="text-sm text-muted-foreground">No client information provided yet.</p>
         )}
       </ReviewSection>
 
-      {/* Related Parties */}
-      <ReviewSection title={`Related Parties${visibleParties.length ? ` (${visibleParties.length})` : ''}`}>
+      <ReviewSection title={`Client Info${visibleParties.length ? ` (${visibleParties.length})` : ''}`}>
         {visibleParties.length > 0 ? (
           <div className="space-y-3">
             {householdMembers.length > 0 && (
@@ -162,8 +180,7 @@ export function Placeholder2Form() {
         )}
       </ReviewSection>
 
-      {/* Financial Accounts */}
-      <ReviewSection title={`Financial Accounts${state.financialAccounts.length ? ` (${state.financialAccounts.length})` : ''}`}>
+      <ReviewSection title={`Existing Accounts${state.financialAccounts.length ? ` (${state.financialAccounts.length})` : ''}`}>
         {state.financialAccounts.length > 0 ? (
           <div className="space-y-2">
             {state.financialAccounts.map((a) => (

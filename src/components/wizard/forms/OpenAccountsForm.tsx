@@ -6,8 +6,6 @@ import { Label } from '@/components/ui/label'
 import { AccountTypePickerDialog } from './AccountTypePickerDialog'
 import type { Selection } from './AccountTypePickerDialog'
 import { FinancialAccountsForm } from './FinancialAccountsForm'
-import { AddHouseholdMemberSheet } from './AddPartySheet'
-import { KycMemberSheet } from './KycForm'
 import { getRegistrationDocuments, getDocSubTypes } from '@/utils/registrationDocuments'
 import type { RegistrationType } from '@/utils/registrationDocuments'
 import {
@@ -18,19 +16,14 @@ import {
   SelectItem,
 } from '@/components/ui/select'
 import {
-  CheckCircle2,
   ChevronRight,
   Minus,
   Plus,
   Shield,
-  ShieldCheck,
   Wallet,
   FileText,
   FileSignature,
   ClipboardList,
-  AlertCircle,
-  Clock,
-  UserPlus,
   Upload,
   X,
   Paperclip,
@@ -49,11 +42,10 @@ export function OpenAccountsForm() {
   const { state, dispatch } = useWorkflow()
   const { data, updateField } = useTaskData('open-accounts')
   const [pickerOpen, setPickerOpen] = useState(false)
-  const [showAddForKyc, setShowAddForKyc] = useState(false)
-  const [reviewMemberId, setReviewMemberId] = useState<string | null>(null)
 
   const openAccountsTask = state.tasks.find((t) => t.formKey === 'open-accounts')
   const children = openAccountsTask?.children ?? []
+  const householdMembers = state.relatedParties.filter((p) => p.type === 'household_member' && !p.isHidden)
 
   const childRegistrationTypes = useMemo<RegistrationType[]>(() => {
     const types: RegistrationType[] = []
@@ -151,168 +143,8 @@ export function OpenAccountsForm() {
     setPickerOpen(false)
   }
 
-  const householdMembers = state.relatedParties.filter((p) => p.type === 'household_member' && !p.isHidden)
-  const verifiedMembers = householdMembers.filter((m) => m.kycStatus === 'verified')
-  const pendingMembers = householdMembers.filter((m) => m.kycStatus === 'pending')
-  const needsKycMembers = householdMembers.filter((m) => m.kycStatus !== 'verified' && m.kycStatus !== 'pending')
-
-  const reviewMember = reviewMemberId ? state.relatedParties.find((p) => p.id === reviewMemberId) ?? null : null
-
   return (
     <div className="space-y-8">
-      {/* KYC Status */}
-      <section>
-        <div className="flex items-center gap-2 mb-2">
-          <ShieldCheck className="h-4 w-4 text-muted-foreground" />
-          <h3 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
-            KYC Verification Status
-          </h3>
-        </div>
-        <p className="text-sm text-muted-foreground mb-4">
-          Identity verification status for household members. All individuals must be verified before accounts can be opened.
-        </p>
-
-        {householdMembers.length > 0 && (
-          <div className="space-y-2 mb-4">
-            {verifiedMembers.map((member) => (
-              <button
-                key={member.id}
-                type="button"
-                onClick={() => setReviewMemberId(member.id)}
-                className="w-full flex items-center justify-between rounded-lg border border-border bg-muted/30 p-3 text-left transition-colors hover:bg-muted/50"
-              >
-                <div className="flex items-center gap-3">
-                  <div className="flex h-8 w-8 items-center justify-center rounded-full bg-green-100 text-green-700">
-                    <CheckCircle2 className="h-4 w-4" />
-                  </div>
-                  <div>
-                    <span className="text-sm font-medium">{member.name}</span>
-                    {member.relationship && (
-                      <span className="ml-2 text-xs text-muted-foreground">{member.relationship}</span>
-                    )}
-                  </div>
-                </div>
-                <div className="flex items-center gap-2">
-                  <Badge className="bg-green-100 text-green-800 border-green-200 text-xs">
-                    Verified
-                  </Badge>
-                  <span
-                    role="button"
-                    tabIndex={0}
-                    onClick={(e) => { e.stopPropagation(); dispatch({ type: 'REMOVE_RELATED_PARTY', partyId: member.id }) }}
-                    onKeyDown={(e) => { if (e.key === 'Enter') { e.stopPropagation(); dispatch({ type: 'REMOVE_RELATED_PARTY', partyId: member.id }) } }}
-                    className="p-1 text-muted-foreground hover:text-destructive transition-colors"
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </span>
-                </div>
-              </button>
-            ))}
-            {pendingMembers.map((member) => (
-              <button
-                key={member.id}
-                type="button"
-                onClick={() => setReviewMemberId(member.id)}
-                className="w-full flex items-center justify-between rounded-lg border border-border p-3 text-left transition-colors hover:bg-muted/50"
-              >
-                <div className="flex items-center gap-3">
-                  <div className="flex h-8 w-8 items-center justify-center rounded-full bg-yellow-100 text-yellow-700">
-                    <Clock className="h-4 w-4" />
-                  </div>
-                  <div>
-                    <span className="text-sm font-medium">{member.name}</span>
-                    {member.relationship && (
-                      <span className="ml-2 text-xs text-muted-foreground">{member.relationship}</span>
-                    )}
-                  </div>
-                </div>
-                <div className="flex items-center gap-2">
-                  <Badge className="bg-yellow-50 text-yellow-700 border-yellow-200 text-xs">
-                    Pending
-                  </Badge>
-                  <span
-                    role="button"
-                    tabIndex={0}
-                    onClick={(e) => { e.stopPropagation(); dispatch({ type: 'REMOVE_RELATED_PARTY', partyId: member.id }) }}
-                    onKeyDown={(e) => { if (e.key === 'Enter') { e.stopPropagation(); dispatch({ type: 'REMOVE_RELATED_PARTY', partyId: member.id }) } }}
-                    className="p-1 text-muted-foreground hover:text-destructive transition-colors"
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </span>
-                </div>
-              </button>
-            ))}
-            {needsKycMembers.map((member) => (
-              <button
-                key={member.id}
-                type="button"
-                onClick={() => setReviewMemberId(member.id)}
-                className="w-full flex items-center justify-between rounded-lg border border-border p-3 text-left transition-colors hover:bg-muted/50"
-              >
-                <div className="flex items-center gap-3">
-                  <div className="flex h-8 w-8 items-center justify-center rounded-full bg-red-50 text-red-600">
-                    <AlertCircle className="h-4 w-4" />
-                  </div>
-                  <div>
-                    <span className="text-sm font-medium">{member.name}</span>
-                    {member.relationship && (
-                      <span className="ml-2 text-xs text-muted-foreground">{member.relationship}</span>
-                    )}
-                  </div>
-                </div>
-                <div className="flex items-center gap-2">
-                  <Badge className="bg-red-50 text-red-700 border-red-200 text-xs">
-                    Not Started
-                  </Badge>
-                  <span
-                    role="button"
-                    tabIndex={0}
-                    onClick={(e) => { e.stopPropagation(); dispatch({ type: 'REMOVE_RELATED_PARTY', partyId: member.id }) }}
-                    onKeyDown={(e) => { if (e.key === 'Enter') { e.stopPropagation(); dispatch({ type: 'REMOVE_RELATED_PARTY', partyId: member.id }) } }}
-                    className="p-1 text-muted-foreground hover:text-destructive transition-colors"
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </span>
-                </div>
-              </button>
-            ))}
-          </div>
-        )}
-
-        <Button variant="outline" className="w-full" onClick={() => setShowAddForKyc(true)}>
-          <UserPlus className="h-4 w-4 mr-2" />
-          Add Individual for Verification
-        </Button>
-
-        <AddHouseholdMemberSheet
-          open={showAddForKyc}
-          onOpenChange={setShowAddForKyc}
-          title="Add individual for verification"
-          description="Search for an existing client or add someone who needs identity verification before accounts can be opened."
-        />
-        <KycMemberSheet
-          member={reviewMember}
-          open={!!reviewMemberId}
-          onOpenChange={(open) => { if (!open) setReviewMemberId(null) }}
-          onInitiateKyc={(member) => {
-            const kycTask = state.tasks.find((t) => t.formKey === 'kyc')
-            if (kycTask) {
-              dispatch({ type: 'SPAWN_CHILD', parentTaskId: kycTask.id, childName: member.name, childType: 'kyc' })
-              dispatch({ type: 'UPDATE_RELATED_PARTY', partyId: member.id, updates: { kycStatus: 'pending' as const } })
-            }
-            setReviewMemberId(null)
-          }}
-          showInitiateKyc={reviewMember?.kycStatus !== 'pending' && reviewMember?.kycStatus !== 'verified'}
-          locked={reviewMember?.kycStatus === 'pending' || reviewMember?.kycStatus === 'verified'}
-          statusLabel={
-            reviewMember?.kycStatus === 'verified' ? 'verified' :
-            reviewMember?.kycStatus === 'pending' ? 'pending review' :
-            undefined
-          }
-        />
-      </section>
-
-      {/* Existing Accounts */}
       <section>
         <div className="flex items-center gap-2 mb-2">
           <Wallet className="h-4 w-4 text-muted-foreground" />
@@ -536,7 +368,7 @@ export function OpenAccountsForm() {
                       </thead>
                       <tbody>
                         {instances.map((inst, idx) => {
-                          const memberName = householdMembers.find((m) => m.id === inst.assignedTo)?.name
+                          const memberName = state.relatedParties.find((m) => m.id === inst.assignedTo)?.name
                           const subTypes = getDocSubTypes(doc.id)
                           return (
                             <tr key={inst.id} className={idx < instances.length - 1 ? 'border-b border-border' : ''}>

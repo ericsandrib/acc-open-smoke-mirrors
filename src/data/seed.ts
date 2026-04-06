@@ -8,21 +8,21 @@ export const actions: Action[] = [
 
 export const tasks: Task[] = [
   {
-    id: 'client-info',
+    id: 'related-parties',
     title: 'Client Info',
     actionId: 'collect-client-data',
     status: 'not_started',
     assignedTo: 'Unassigned',
-    formKey: 'client-info',
+    formKey: 'related-parties',
     order: 1,
   },
   {
-    id: 'related-parties',
-    title: 'Related Parties',
+    id: 'existing-accounts',
+    title: 'Existing Accounts',
     actionId: 'collect-client-data',
     status: 'not_started',
     assignedTo: 'Unassigned',
-    formKey: 'related-parties',
+    formKey: 'existing-accounts',
     order: 2,
   },
   {

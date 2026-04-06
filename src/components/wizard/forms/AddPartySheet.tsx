@@ -125,6 +125,83 @@ function TabToggle<T extends string>({
   )
 }
 
+// ─── Related contact create: Individual vs Entity (radio cards) ───
+
+function ContactCreateKindRadioCards({
+  value,
+  onChange,
+}: {
+  value: 'individual' | 'entity'
+  onChange: (v: 'individual' | 'entity') => void
+}) {
+  return (
+    <div role="radiogroup" aria-label="Contact type" className="grid grid-cols-2 gap-3">
+      <button
+        type="button"
+        role="radio"
+        aria-checked={value === 'individual'}
+        onClick={() => onChange('individual')}
+        className={cn(
+          'rounded-lg border p-3.5 text-left transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2',
+          value === 'individual'
+            ? 'border-primary bg-primary/5 ring-2 ring-primary/20 shadow-sm'
+            : 'border-border bg-background hover:bg-muted/40 hover:border-primary/25'
+        )}
+      >
+        <div className="flex items-start gap-3">
+          <span
+            className={cn(
+              'mt-0.5 flex h-4 w-4 shrink-0 rounded-full border-2 items-center justify-center',
+              value === 'individual' ? 'border-primary' : 'border-muted-foreground/35'
+            )}
+            aria-hidden
+          >
+            {value === 'individual' ? <span className="h-2 w-2 rounded-full bg-primary" /> : null}
+          </span>
+          <div className="min-w-0 space-y-1">
+            <div className="flex items-center gap-2">
+              <User className="h-4 w-4 shrink-0 text-muted-foreground" />
+              <p className="text-sm font-semibold leading-tight">Individual</p>
+            </div>
+            <p className="text-xs text-muted-foreground leading-snug">Add a person as a related contact.</p>
+          </div>
+        </div>
+      </button>
+      <button
+        type="button"
+        role="radio"
+        aria-checked={value === 'entity'}
+        onClick={() => onChange('entity')}
+        className={cn(
+          'rounded-lg border p-3.5 text-left transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2',
+          value === 'entity'
+            ? 'border-primary bg-primary/5 ring-2 ring-primary/20 shadow-sm'
+            : 'border-border bg-background hover:bg-muted/40 hover:border-primary/25'
+        )}
+      >
+        <div className="flex items-start gap-3">
+          <span
+            className={cn(
+              'mt-0.5 flex h-4 w-4 shrink-0 rounded-full border-2 items-center justify-center',
+              value === 'entity' ? 'border-primary' : 'border-muted-foreground/35'
+            )}
+            aria-hidden
+          >
+            {value === 'entity' ? <span className="h-2 w-2 rounded-full bg-primary" /> : null}
+          </span>
+          <div className="min-w-0 space-y-1">
+            <div className="flex items-center gap-2">
+              <Building2 className="h-4 w-4 shrink-0 text-muted-foreground" />
+              <p className="text-sm font-semibold leading-tight">Entity</p>
+            </div>
+            <p className="text-xs text-muted-foreground leading-snug">Company, trust, or other organization.</p>
+          </div>
+        </div>
+      </button>
+    </div>
+  )
+}
+
 // ─── Person search result card ───
 
 function PersonResultCard({
@@ -994,7 +1071,7 @@ export function AddContactSheet({
 
   return (
     <Sheet open={open} onOpenChange={(v) => { if (!v) resetAndClose(); else onOpenChange(true) }}>
-      <SheetContent side="right" className="sm:max-w-lg w-full flex flex-col gap-0 p-0">
+      <SheetContent side="right" className={cn('w-full flex flex-col gap-0 p-0', tab === 'create' ? 'sm:max-w-xl' : 'sm:max-w-lg')}>
         <SheetHeader className="px-6 pt-6 pb-3 space-y-1">
           <SheetTitle>Add Related Contact</SheetTitle>
           <SheetDescription>
@@ -1021,31 +1098,18 @@ export function AddContactSheet({
             />
           </div>
         ) : (
-          <Tabs
-            value={contactKind}
-            onValueChange={(v) => setContactKind(v as 'individual' | 'entity')}
-            className="flex flex-col flex-1 min-h-0"
-          >
-            <TabsList variant="border" className="w-full border-b border-border px-6">
-              <TabsTrigger value="individual" className="flex-1 gap-1.5">
-                <User className="h-3.5 w-3.5" />
-                Individual
-              </TabsTrigger>
-              <TabsTrigger value="entity" className="flex-1 gap-1.5">
-                <Building2 className="h-3.5 w-3.5" />
-                Entity
-              </TabsTrigger>
-            </TabsList>
-
-            <div className="flex-1 overflow-y-auto px-6 pt-4 pb-4">
-              <TabsContent value="individual" className="mt-0">
-                <CreateIndividualForm onDone={resetAndClose} />
-              </TabsContent>
-              <TabsContent value="entity" className="mt-0">
-                <CreateEntityForm onDone={resetAndClose} />
-              </TabsContent>
+          <div className="flex flex-col flex-1 min-h-0">
+            <div className="px-6 pb-4">
+              <ContactCreateKindRadioCards value={contactKind} onChange={setContactKind} />
             </div>
-          </Tabs>
+            <div className="flex-1 overflow-y-auto px-6 pt-4 pb-4 border-t border-border">
+              {contactKind === 'individual' ? (
+                <CreateIndividualForm onDone={resetAndClose} />
+              ) : (
+                <CreateEntityForm onDone={resetAndClose} />
+              )}
+            </div>
+          </div>
         )}
       </SheetContent>
     </Sheet>
