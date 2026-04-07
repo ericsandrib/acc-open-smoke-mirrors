@@ -166,7 +166,7 @@ function DeleteAccountButton({ account }: { account: FinancialAccount }) {
 
 function AccountCard({ account, onClick }: { account: FinancialAccount; onClick: () => void }) {
   return (
-    <div className="rounded-lg border border-border">
+    <div>
       <button
         type="button"
         onClick={onClick}
@@ -328,22 +328,25 @@ export function FinancialAccountsForm() {
 
   return (
     <div className="space-y-4">
-      <div className="space-y-2">
-        {state.financialAccounts.length === 0 ? (
-          <div className="rounded-lg border border-dashed border-border p-4 text-center">
-            <p className="text-sm text-muted-foreground">No financial accounts added yet. Add accounts you'd like to transfer or manage.</p>
-          </div>
-        ) : (
-          state.financialAccounts.map((account) => (
-            <AccountCard key={account.id} account={account} onClick={() => setEditingAccountId(account.id)} />
-          ))
-        )}
+      <div className="rounded-lg border border-border">
+        <div>
+          {state.financialAccounts.length === 0 ? (
+            <div className="p-4 text-center">
+              <p className="text-sm text-muted-foreground">No financial accounts added yet. Add accounts you'd like to transfer or manage.</p>
+            </div>
+          ) : (
+            state.financialAccounts.map((account) => (
+              <AccountCard key={account.id} account={account} onClick={() => setEditingAccountId(account.id)} />
+            ))
+          )}
+        </div>
+        <div className="border-t border-border">
+          <Button variant="ghost" className="w-full rounded-none rounded-b-lg" onClick={() => setShowAdd(true)}>
+            <Plus className="h-4 w-4 mr-2" />
+            Add account
+          </Button>
+        </div>
       </div>
-
-      <Button variant="outline" className="w-full" onClick={() => setShowAdd(true)}>
-        <Plus className="h-4 w-4 mr-2" />
-        Add account
-      </Button>
 
       <AddAccountSheet open={showAdd} onOpenChange={setShowAdd} />
 

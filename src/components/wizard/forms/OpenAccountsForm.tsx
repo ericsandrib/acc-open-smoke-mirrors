@@ -202,9 +202,8 @@ export function OpenAccountsForm() {
   return (
     <div className="space-y-8">
       <section>
-        <div className="flex items-center gap-2 mb-2">
-          <Wallet className="h-4 w-4 text-muted-foreground" />
-          <h3 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
+        <div className="mb-2">
+          <h3 className="text-sm font-semibold">
             Existing Accounts
           </h3>
         </div>
@@ -233,29 +232,20 @@ export function OpenAccountsForm() {
 
       {/* Section 3: Accounts to be Opened */}
       <section>
-        <div className="flex items-center justify-between mb-3">
-          <div className="flex items-center gap-2">
-            <Plus className="h-4 w-4 text-muted-foreground" />
-            <h3 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
-              Accounts to be Opened
-            </h3>
-          </div>
-          {accountOpeningChildren.length > 0 && (
-            <Button variant="outline" size="sm" onClick={() => setPickerOpen(true)}>
-              <Plus className="h-3 w-3 mr-1" />
-              Add More
-            </Button>
-          )}
+        <div className="mb-3">
+          <h3 className="text-sm font-semibold">
+            Accounts to be Opened
+          </h3>
         </div>
 
         {accountOpeningChildren.length > 0 ? (
-          <div className="space-y-2">
+          <div className="rounded-lg border border-border">
             {topLevelChildren.map((child) => {
               const annuities = getAnnuities(child.name)
               return (
-                <div key={child.id} className="space-y-1">
+                <div key={child.id}>
                   {/* Account row */}
-                  <div className="group flex items-center justify-between rounded-lg border border-border p-3 hover:bg-muted/50 transition-colors">
+                  <div className="group flex items-center justify-between p-3 hover:bg-muted/50 transition-colors">
                     <button
                       onClick={() => dispatch({ type: 'ENTER_CHILD_ACTION', childId: child.id })}
                       className="flex-1 flex items-center gap-3 text-left cursor-pointer"
@@ -323,16 +313,22 @@ export function OpenAccountsForm() {
                 </div>
               )
             })}
+            <div className="border-t border-border">
+              <Button variant="ghost" className="w-full rounded-none rounded-b-lg" onClick={() => setPickerOpen(true)}>
+                <Plus className="h-4 w-4 mr-2" />
+                Add accounts
+              </Button>
+            </div>
           </div>
         ) : (
-          <div className="rounded-lg border border-dashed border-border p-6 text-center">
+          <div className="rounded-lg border border-border p-6 text-center">
             <Wallet className="mx-auto mb-2 h-8 w-8 text-muted-foreground/50" />
             <p className="text-sm text-muted-foreground mb-3">
               No accounts to open yet. Add the types of accounts you want to open.
             </p>
-            <Button onClick={() => setPickerOpen(true)}>
+            <Button variant="ghost" onClick={() => setPickerOpen(true)}>
               <Plus className="h-4 w-4 mr-1" />
-              Add Accounts
+              Add accounts
             </Button>
           </div>
         )}
@@ -352,9 +348,8 @@ export function OpenAccountsForm() {
 
       {/* Section 4: Required Documents */}
       <section>
-        <div className="flex items-center gap-2 mb-2">
-          <FileText className="h-4 w-4 text-muted-foreground" />
-          <h3 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
+        <div className="mb-2">
+          <h3 className="text-sm font-semibold">
             Required Documents
           </h3>
         </div>
@@ -567,12 +562,9 @@ export function OpenAccountsForm() {
       {/* eSign envelopes */}
       <section>
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between mb-2">
-          <div className="flex items-center gap-2">
-            <FileSignature className="h-4 w-4 text-muted-foreground" />
-            <h3 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
-              eSign envelopes
-            </h3>
-          </div>
+          <h3 className="text-sm font-semibold">
+            eSign Envelopes
+          </h3>
           <Button type="button" variant="outline" size="sm" className="gap-1 shrink-0" onClick={openNewEnvelopeDrawer}>
             <Plus className="h-3.5 w-3.5" />
             New envelope
