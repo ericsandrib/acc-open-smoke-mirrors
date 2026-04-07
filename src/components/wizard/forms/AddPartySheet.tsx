@@ -46,7 +46,7 @@ export const entityTypes = ['Trust', 'Employer', 'Business Entity', 'Foundation'
 const entityCategories = ['Business', 'Legal', 'Other']
 
 const searchFieldLabels: Record<SearchField, string> = {
-  all: 'All Fields',
+  all: 'Search All Fields',
   name: 'Name',
   accountNumber: 'Account #',
   ssn: 'Social Security #',
@@ -66,7 +66,7 @@ const searchFieldIcons: Record<SearchField, typeof Search> = {
 }
 
 const combinedSearchFieldLabels: Record<CombinedSearchField, string> = {
-  all: 'All Fields',
+  all: 'Search All Fields',
   name: 'Name',
   accountNumber: 'Account #',
   taxId: 'Tax ID / EIN',
@@ -309,45 +309,43 @@ function PersonSearchPanel({ onSelect }: { onSelect: (p: DirectoryPerson) => voi
 
   return (
     <div className="space-y-3">
-      <div className="flex gap-2">
-        <div className="relative flex-1">
-          <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-          <Input
-            placeholder="Search by name, account #, SSN..."
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-            className="pl-9"
-            autoFocus
-          />
-        </div>
-        <Select value={field} onValueChange={(v) => setField(v as SearchField)}>
-          <SelectTrigger className="w-[140px]">
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            {(Object.keys(searchFieldLabels) as SearchField[]).map((f) => {
-              const Icon = searchFieldIcons[f]
-              return (
-                <SelectItem key={f} value={f}>
-                  <span className="flex items-center gap-1.5">
-                    <Icon className="h-3.5 w-3.5" />
-                    {searchFieldLabels[f]}
-                  </span>
-                </SelectItem>
-              )
-            })}
-          </SelectContent>
-        </Select>
+      <div className="relative">
+        <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+        <Input
+          placeholder="Search by name, account number, or SSN"
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+          className="pl-9"
+          autoFocus
+        />
       </div>
+      <Select value={field} onValueChange={(v) => setField(v as SearchField)}>
+        <SelectTrigger className="w-full">
+          <SelectValue />
+        </SelectTrigger>
+        <SelectContent>
+          {(Object.keys(searchFieldLabels) as SearchField[]).map((f) => {
+            const Icon = searchFieldIcons[f]
+            return (
+              <SelectItem key={f} value={f}>
+                <span className="flex items-center gap-1.5">
+                  <Icon className="h-3.5 w-3.5" />
+                  {searchFieldLabels[f]}
+                </span>
+              </SelectItem>
+            )
+          })}
+        </SelectContent>
+      </Select>
 
       <div className="space-y-2 max-h-[calc(100vh-280px)] overflow-y-auto">
         {debouncedQuery.trim() === '' ? (
           <div className="text-center py-8 text-sm text-muted-foreground">
-            Type to search for existing people
+            Search for people already in your directory
           </div>
         ) : results.length === 0 ? (
           <div className="text-center py-8 text-sm text-muted-foreground">
-            No results found for "{debouncedQuery}"
+            No results for &ldquo;{debouncedQuery}&rdquo;. Try a different search or create a new member.
           </div>
         ) : (
           results.map((person) => (
@@ -468,11 +466,11 @@ function CreateIndividualForm({ onDone }: { onDone: () => void }) {
     <div className="space-y-4">
       <div className="space-y-1.5">
         <Label className="text-xs">First name</Label>
-        <Input value={firstName} onChange={(e) => setFirstName(e.target.value)} placeholder="e.g. Jane" />
+        <Input value={firstName} onChange={(e) => setFirstName(e.target.value)} placeholder="Jane" />
       </div>
       <div className="space-y-1.5">
         <Label className="text-xs">Last name</Label>
-        <Input value={lastName} onChange={(e) => setLastName(e.target.value)} placeholder="e.g. Doe" />
+        <Input value={lastName} onChange={(e) => setLastName(e.target.value)} placeholder="Doe" />
       </div>
       <div className="space-y-1.5">
         <Label className="text-xs">Relationship</Label>
@@ -512,7 +510,7 @@ function CreateIndividualForm({ onDone }: { onDone: () => void }) {
         <Button variant="outline" size="sm" onClick={onDone}>Cancel</Button>
         <Button size="sm" onClick={handleAdd} disabled={!firstName.trim() || !lastName.trim()}>
           <Plus className="h-3.5 w-3.5 mr-1.5" />
-          Add Individual
+          Add individual
         </Button>
       </div>
     </div>
@@ -557,7 +555,7 @@ function CreateEntityForm({ onDone }: { onDone: () => void }) {
     <div className="space-y-4">
       <div className="space-y-1.5">
         <Label className="text-xs">Entity name</Label>
-        <Input value={entityName} onChange={(e) => setEntityName(e.target.value)} placeholder="e.g. Smith Family Trust LLC" />
+        <Input value={entityName} onChange={(e) => setEntityName(e.target.value)} placeholder="Smith Family Trust LLC" />
       </div>
       <div className="space-y-1.5">
         <Label className="text-xs">Entity type</Label>
@@ -583,11 +581,11 @@ function CreateEntityForm({ onDone }: { onDone: () => void }) {
       </div>
       <div className="space-y-1.5">
         <Label className="text-xs">Jurisdiction</Label>
-        <Input value={jurisdiction} onChange={(e) => setJurisdiction(e.target.value)} placeholder="e.g. Delaware" />
+        <Input value={jurisdiction} onChange={(e) => setJurisdiction(e.target.value)} placeholder="Delaware" />
       </div>
       <div className="space-y-1.5">
         <Label className="text-xs">Contact person</Label>
-        <Input value={contactPerson} onChange={(e) => setContactPerson(e.target.value)} placeholder="e.g. John Smith" />
+        <Input value={contactPerson} onChange={(e) => setContactPerson(e.target.value)} placeholder="John Smith" />
       </div>
       <div className="space-y-1.5">
         <Label className="text-xs">Email</Label>
@@ -656,7 +654,7 @@ function CreateHouseholdLegalEntityForm({
         <Input
           value={legalName}
           onChange={(e) => setLegalName(e.target.value)}
-          placeholder="e.g. Smith Family Trust LLC"
+          placeholder="Smith Family Trust LLC"
         />
       </div>
       <div className="space-y-1.5">
@@ -683,7 +681,7 @@ function CreateHouseholdLegalEntityForm({
         <Input
           value={jurisdiction}
           onChange={(e) => setJurisdiction(e.target.value)}
-          placeholder="e.g. Delaware, USA"
+          placeholder="Delaware, USA"
         />
       </div>
       <div className="space-y-1.5">
@@ -847,17 +845,17 @@ function CreateHouseholdMemberForm({
     <div className="space-y-4">
       <div className="space-y-1.5">
         <Label className="text-xs">First name</Label>
-        <Input value={firstName} onChange={(e) => setFirstName(e.target.value)} placeholder="e.g. Jane" />
+        <Input value={firstName} onChange={(e) => setFirstName(e.target.value)} placeholder="Jane" />
       </div>
       <div className="space-y-1.5">
         <Label className="text-xs">Last name</Label>
-        <Input value={lastName} onChange={(e) => setLastName(e.target.value)} placeholder="e.g. Doe" />
+        <Input value={lastName} onChange={(e) => setLastName(e.target.value)} placeholder="Doe" />
       </div>
       <div className="space-y-1.5">
         <Label className="text-xs">Relationship</Label>
         <Select value={relationship} onValueChange={setRelationship}>
           <SelectTrigger>
-            <SelectValue placeholder="Select" />
+            <SelectValue placeholder="Select relationship" />
           </SelectTrigger>
           <SelectContent>
             {householdRelationships.map((r) => (
@@ -872,7 +870,7 @@ function CreateHouseholdMemberForm({
         <Label className="text-xs">Role</Label>
         <Select value={role} onValueChange={setRole}>
           <SelectTrigger>
-            <SelectValue placeholder="Select" />
+            <SelectValue placeholder="Select role" />
           </SelectTrigger>
           <SelectContent>
             {householdRoles.map((r) => (
@@ -897,7 +895,7 @@ function CreateHouseholdMemberForm({
         </Button>
         <Button size="sm" onClick={handleAddIndividual} disabled={!firstName.trim() || !lastName.trim()}>
           <Plus className="h-3.5 w-3.5 mr-1.5" />
-          Add Member
+          Add member
         </Button>
       </div>
     </div>
@@ -910,7 +908,7 @@ function CreateHouseholdMemberForm({
 
 const DEFAULT_HOUSEHOLD_MEMBER_SHEET_TITLE = 'Add household member'
 const DEFAULT_HOUSEHOLD_MEMBER_SHEET_DESCRIPTION =
-  'Search for an existing person or create a new household member.'
+  'Find someone in your directory or add a new person to this household.'
 
 export function AddHouseholdMemberSheet({
   open,
