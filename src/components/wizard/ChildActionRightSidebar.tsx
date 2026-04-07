@@ -1,10 +1,11 @@
-import { useChildActionContext } from '@/stores/workflowStore'
+import { useChildActionContext, useWorkflow } from '@/stores/workflowStore'
 import { SmartDocumentsPanel } from '@/components/wizard/SmartDocumentsPanel'
 import { ChildActionDetailSidebar } from '@/components/wizard/ChildActionDetailSidebar'
 import { ChildActionTimeline } from '@/components/wizard/ChildActionTimelineSheet'
 
 export function ChildActionRightSidebar() {
   const ctx = useChildActionContext()
+  const { state } = useWorkflow()
 
   if (!ctx) return null
 
@@ -17,6 +18,7 @@ export function ChildActionRightSidebar() {
         childType={ctx.child.childType}
         status={ctx.child.status}
         compact
+        reviewState={state.childReviewState}
       />
     </div>
   )

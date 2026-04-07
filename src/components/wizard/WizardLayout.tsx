@@ -7,10 +7,11 @@ import { ChildActionSidebar } from './ChildActionSidebar'
 import { ChildActionContent } from './ChildActionContent'
 import { ChildActionFooter } from './ChildActionFooter'
 import { ChildActionRightSidebar } from './ChildActionRightSidebar'
-import { ChildHomeOfficeViewContent } from './ChildHomeOfficeViewContent'
+import { ChildHoDocumentViewContent } from './ChildHoDocumentViewContent'
+import { ChildHoPrincipalViewContent } from './ChildHoPrincipalViewContent'
 import { Button } from '@/components/ui/button'
 import { useNavigate } from 'react-router-dom'
-import { GitBranch, Eye } from 'lucide-react'
+import { GitBranch, Eye, FileSearch, ShieldCheck } from 'lucide-react'
 import { VerticalNav } from '@/components/navigation/vertical-nav'
 import { useWorkflow } from '@/stores/workflowStore'
 import { cn } from '@/lib/utils'
@@ -23,7 +24,9 @@ export function WizardLayout() {
   const isSubmitted = !!state.submittedAt
 
   const isAdvisorView = viewMode === 'advisor'
-  const isHomeOfficeView = viewMode === 'home-office'
+  const isHoDocView = viewMode === 'ho-documents'
+  const isHoPrincipalView = viewMode === 'ho-principal'
+  const isHomeOfficeView = isHoDocView || isHoPrincipalView
 
   const showViewToggle = inChildAction && isSubmitted
 
@@ -47,20 +50,33 @@ export function WizardLayout() {
                   )}
                 >
                   <Eye className="h-3.5 w-3.5" />
-                  Advisor View
+                  Advisor
                 </button>
                 <button
                   type="button"
-                  onClick={() => dispatch({ type: 'SET_DEMO_VIEW', mode: 'home-office' })}
+                  onClick={() => dispatch({ type: 'SET_DEMO_VIEW', mode: 'ho-documents' })}
                   className={cn(
                     'flex items-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-medium transition-colors',
-                    isHomeOfficeView
+                    isHoDocView
                       ? 'bg-primary text-primary-foreground shadow-sm'
                       : 'text-muted-foreground hover:text-foreground hover:bg-muted/50',
                   )}
                 >
-                  <Eye className="h-3.5 w-3.5" />
-                  Home Office View
+                  <FileSearch className="h-3.5 w-3.5" />
+                  HO Document Team
+                </button>
+                <button
+                  type="button"
+                  onClick={() => dispatch({ type: 'SET_DEMO_VIEW', mode: 'ho-principal' })}
+                  className={cn(
+                    'flex items-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-medium transition-colors',
+                    isHoPrincipalView
+                      ? 'bg-primary text-primary-foreground shadow-sm'
+                      : 'text-muted-foreground hover:text-foreground hover:bg-muted/50',
+                  )}
+                >
+                  <ShieldCheck className="h-3.5 w-3.5" />
+                  HO Principal Team
                 </button>
               </div>
             )}
@@ -75,7 +91,7 @@ export function WizardLayout() {
             isHomeOfficeView ? (
               <>
                 <div className="flex-1 flex flex-col overflow-hidden">
-                  <ChildHomeOfficeViewContent />
+                  {isHoDocView ? <ChildHoDocumentViewContent /> : <ChildHoPrincipalViewContent />}
                   <HomeOfficeReviewFooter />
                 </div>
                 <ChildActionRightSidebar />

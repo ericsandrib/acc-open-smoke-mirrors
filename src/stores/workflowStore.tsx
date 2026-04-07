@@ -415,6 +415,7 @@ function workflowReducer(state: WorkflowState, action: WorkflowAction): Workflow
         demoViewMode: undefined,
         submittedAt: undefined,
         childReviewDecision: undefined,
+        childReviewState: undefined,
       }
     }
 
@@ -525,7 +526,16 @@ function workflowReducer(state: WorkflowState, action: WorkflowAction): Workflow
           ),
         }
       })
-      return { ...state, tasks: updTasks, activeChildSubTaskIndex: 0 }
+      return {
+        ...state,
+        tasks: updTasks,
+        activeChildSubTaskIndex: 0,
+        childReviewState: {
+          ...state.childReviewState,
+          documentReview: { status: 'pending' },
+          principalReview: { status: 'pending' },
+        },
+      }
     }
 
     case 'ACCEPT_CHILD_REVIEW': {
@@ -575,6 +585,117 @@ function workflowReducer(state: WorkflowState, action: WorkflowAction): Workflow
         childReviewDecision: {
           outcome: 'rejected',
           decidedAt: new Date().toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' }),
+        },
+      }
+    }
+
+    case 'SET_AML_FLAG': {
+      return {
+        ...state,
+        childReviewState: {
+          ...state.childReviewState,
+          amlFlagged: action.flagged,
+          amlNotes: action.notes,
+        },
+      }
+    }
+
+    case 'DOCUMENT_REVIEW_IGO': {
+      const ts = new Date().toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })
+      return {
+        ...state,
+        childReviewState: {
+          ...state.childReviewState,
+          documentReview: { status: 'igo', decidedAt: ts },
+        },
+      }
+    }
+
+    case 'DOCUMENT_REVIEW_NIGO': {
+      if (!state.activeChildActionId) return state
+      const dnigoId = state.activeChildActionId
+      const ts = new Date().toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })
+      const dnigoTasks = state.tasks.map((t) => {
+        if (!t.children) return t
+        return {
+          ...t,
+          children: t.children.map((c) =>
+            c.id === dnigoId ? { ...c, status: 'rejected' as const } : c,
+          ),
+        }
+      })
+      return {
+        ...state,
+        tasks: dnigoTasks,
+        childReviewState: {
+          ...state.childReviewState,
+          documentReview: { status: 'nigo', decidedAt: ts, nigoReason: action.reason, nigoFeedback: action.feedback },
+        },
+        childReviewDecision: { outcome: 'rejected', decidedAt: ts },
+        taskData: {
+          ...state.taskData,
+          [`${dnigoId}-review`]: {
+            rejectionReason: action.reason,
+            rejectionFeedback: action.feedback,
+            rejectedBy: 'Document Review Team',
+          },
+        },
+      }
+    }
+
+    case 'PRINCIPAL_REVIEW_IGO': {
+      if (!state.activeChildActionId) return state
+      const pigoId = state.activeChildActionId
+      const ts = new Date().toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })
+      const docIgo = state.childReviewState?.documentReview?.status === 'igo'
+      const pigoTasks = state.tasks.map((t) => {
+        if (!t.children) return t
+        return {
+          ...t,
+          children: t.children.map((c) =>
+            c.id === pigoId && docIgo ? { ...c, status: 'complete' as const } : c,
+          ),
+        }
+      })
+      return {
+        ...state,
+        tasks: pigoTasks,
+        childReviewState: {
+          ...state.childReviewState,
+          principalReview: { status: 'igo', decidedAt: ts },
+        },
+        childReviewDecision: docIgo ? { outcome: 'approved', decidedAt: ts } : state.childReviewDecision,
+      }
+    }
+
+    case 'PRINCIPAL_REVIEW_NIGO': {
+      if (!state.activeChildActionId) return state
+      const pnigoId = state.activeChildActionId
+      const ts = new Date().toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })
+      const pnigoTasks = state.tasks.map((t) => {
+        if (!t.children) return t
+        return {
+          ...t,
+          children: t.children.map((c) =>
+            c.id === pnigoId ? { ...c, status: 'rejected' as const } : c,
+          ),
+        }
+      })
+      return {
+        ...state,
+        tasks: pnigoTasks,
+        childReviewState: {
+          ...state.childReviewState,
+          principalReview: { status: 'nigo', decidedAt: ts, nigoReason: action.reason, nigoFeedback: action.feedback },
+        },
+        childReviewDecision: { outcome: 'rejected', decidedAt: ts },
+        taskData: {
+          ...state.taskData,
+          [`${pnigoId}-review`]: {
+            rejectionReason: action.reason,
+            rejectionFeedback: action.feedback,
+            rejectedBy: 'Principal Review Team',
+          },
         },
       }
     }
