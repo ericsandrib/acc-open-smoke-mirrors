@@ -9,7 +9,6 @@ import { spawnOpenAccountChildrenFromSelections } from '@/utils/spawnOpenAccount
 import { FinancialAccountsForm } from './FinancialAccountsForm'
 import {
   getRegistrationDocuments,
-  getRegistrationDocumentsForType,
   getDocSubTypes,
   partitionRegistrationDocumentsByFulfillment,
 } from '@/utils/registrationDocuments'
@@ -41,6 +40,7 @@ import type { EsignEnvelope, EsignEnvelopeSigner } from '@/types/esignEnvelope'
 import { createNewEnvelope } from '@/utils/createEsignEnvelope'
 import { buildRequiredEsignFormRows } from '@/utils/buildEsignEnvelopeFormRows'
 import { downloadEnvelopeManifest } from '@/utils/downloadEsignEnvelopeManifest'
+import { getEnvelopeDisplayName } from '@/utils/deriveEnvelopeDisplayName'
 import { EsignEnvelopeDrawer } from '@/components/wizard/forms/EsignEnvelopeDrawer'
 
 interface DocInstance {
@@ -82,32 +82,6 @@ export function OpenAccountsForm() {
     () => partitionRegistrationDocumentsByFulfillment(getRegistrationDocuments(childRegistrationTypes)),
     [childRegistrationTypes],
   )
-
-  /** E-sign forms listed per open-account child so each account number / line stays distinct. */
-  const esignDocsByAccount = useMemo(() => {
-    const out: {
-      accountChildId: string
-      accountOpeningName: string
-      accountNumberLabel: string
-      docs: ReturnType<typeof partitionRegistrationDocumentsByFulfillment>['esign']
-    }[] = []
-    for (const child of accountOpeningChildren) {
-      const meta = state.taskData[child.id] as Record<string, unknown> | undefined
-      const rt = meta?.registrationType as RegistrationType | undefined
-      if (!rt) continue
-      const { esign } = partitionRegistrationDocumentsByFulfillment(getRegistrationDocumentsForType(rt))
-      if (esign.length === 0) continue
-      const acct = String(meta?.accountNumber ?? '').trim()
-      const short = String(meta?.shortName ?? '').trim()
-      out.push({
-        accountChildId: child.id,
-        accountOpeningName: child.name,
-        accountNumberLabel: acct || short || 'Not assigned',
-        docs: esign,
-      })
-    }
-    return out
-  }, [accountOpeningChildren, state.taskData])
 
   // Collect all owner party IDs across all child accounts for smart dedup
   const allOwnerPartyIds = useMemo(() => {
@@ -364,67 +338,22 @@ export function OpenAccountsForm() {
           </h3>
         </div>
         <p className="text-sm text-muted-foreground mb-4">
-          Firm and custodian forms are completed in the e-sign flow—data you enter is mapped onto those documents automatically. Only items that need a file from the client (for example ID or trust pages) are uploaded below, once per person where applicable.
+          Firm and custodian forms are configured only under <span className="font-medium text-foreground">eSign envelopes</span>{' '}
+          below. Use this section for items that need a file from the client (for example ID or trust pages), once per person
+          where applicable.
         </p>
-        {accountOpeningChildren.length > 0 && (uploadDocs.length > 0 || esignDocsByAccount.length > 0) ? (
-          <div className="space-y-6">
-            {esignDocsByAccount.length > 0 ? (
-              <div className="space-y-2">
-                <div className="flex items-center gap-2">
-                  <FileSignature className="h-4 w-4 text-muted-foreground" />
-                  <h4 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                    Firm &amp; custodian forms (e-sign)
-                  </h4>
-                </div>
-                <p className="text-xs text-muted-foreground">
-                  These are not uploaded here. They appear in the signing envelope and are prefilled from this application.
-                  Forms are grouped by account number (one card per account you are opening).
-                </p>
-                <div className="space-y-3">
-                  {esignDocsByAccount.map((group) => (
-                    <div
-                      key={group.accountChildId}
-                      className="rounded-lg border border-border bg-card overflow-hidden"
-                    >
-                      <div className="bg-muted/50 px-4 py-2.5 border-b border-border space-y-0.5">
-                        <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Account</p>
-                        <p className="text-sm font-medium text-foreground leading-snug">{group.accountOpeningName}</p>
-                        <p className="text-xs text-muted-foreground tabular-nums">
-                          Account #{' '}
-                          <span className="text-foreground font-medium">{group.accountNumberLabel}</span>
-                        </p>
-                      </div>
-                      <ul className="divide-y divide-border">
-                        {group.docs.map((doc) => (
-                          <li key={`${group.accountChildId}-${doc.id}`} className="px-4 py-3 flex items-start justify-between gap-3">
-                            <div>
-                              <p className="text-sm font-medium text-foreground">{doc.label}</p>
-                              <p className="text-xs text-muted-foreground mt-0.5">{doc.description}</p>
-                            </div>
-                            <Badge variant="secondary" className="shrink-0 text-[10px] uppercase">
-                              eSign
-                            </Badge>
-                          </li>
-                        ))}
-                      </ul>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            ) : null}
-
-            {uploadDocs.length > 0 ? (
-              <div className="space-y-2">
-                <div className="flex items-center gap-2">
-                  <Upload className="h-4 w-4 text-muted-foreground" />
-                  <h4 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                    Uploads (client documents)
-                  </h4>
-                </div>
-                <p className="text-xs text-muted-foreground mb-2">
-                  Required once per person, even if they are owners on multiple accounts. For government ID, choose the ID type before uploading.
-                </p>
-                <div className="space-y-4">
+        {accountOpeningChildren.length > 0 && uploadDocs.length > 0 ? (
+          <div className="space-y-2">
+            <div className="flex items-center gap-2">
+              <Upload className="h-4 w-4 text-muted-foreground" />
+              <h4 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                Uploads (client documents)
+              </h4>
+            </div>
+            <p className="text-xs text-muted-foreground mb-2">
+              Required once per person, even if they are owners on multiple accounts. For government ID, choose the ID type before uploading.
+            </p>
+            <div className="space-y-4">
             {uploadDocs.map((doc) => {
               const instances = ((data[`doc-instances-${doc.id}`] as DocInstance[] | undefined) ?? [])
 
@@ -601,16 +530,14 @@ export function OpenAccountsForm() {
                 </div>
               )
             })}
-                </div>
-              </div>
-            ) : null}
+            </div>
           </div>
         ) : (
           <div className="rounded-lg border border-dashed border-border p-4 text-center">
             <p className="text-sm text-muted-foreground">
               {accountOpeningChildren.length === 0
                 ? 'Add accounts above to see required documents.'
-                : 'No additional documents required.'}
+                : 'No client uploads required for these accounts. Firm and custodian forms are configured under eSign envelopes below.'}
             </p>
           </div>
         )}
@@ -655,7 +582,7 @@ export function OpenAccountsForm() {
                 className="flex flex-col gap-3 rounded-lg border border-border bg-card p-4 sm:flex-row sm:items-center sm:justify-between"
               >
                 <div className="min-w-0">
-                  <p className="text-sm font-medium text-foreground truncate">{env.name || 'Untitled envelope'}</p>
+                  <p className="text-sm font-medium text-foreground truncate">{getEnvelopeDisplayName(env)}</p>
                   <p className="text-xs text-muted-foreground mt-1">
                     {env.formSelections.length} generated form{env.formSelections.length === 1 ? '' : 's'}
                     {env.optionalFormIdsIncluded.length > 0

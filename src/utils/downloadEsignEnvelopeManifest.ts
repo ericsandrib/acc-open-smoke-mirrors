@@ -4,6 +4,7 @@ import {
   PAPERWORK_DELIVERY_OPTIONS,
 } from '@/data/esignEnvelopeOptions'
 import { groupFormSelectionsByAccountChild } from '@/utils/buildEsignEnvelopeFormRows'
+import { getEnvelopeDisplayName } from '@/utils/deriveEnvelopeDisplayName'
 
 function deliveryLabel(v: EsignEnvelope['deliveryMethod']): string {
   return PAPERWORK_DELIVERY_OPTIONS.find((o) => o.value === v)?.label ?? v
@@ -11,7 +12,7 @@ function deliveryLabel(v: EsignEnvelope['deliveryMethod']): string {
 
 export function buildEnvelopeManifestText(envelope: EsignEnvelope): string {
   const lines: string[] = []
-  lines.push(`Envelope: ${envelope.name || '(unnamed)'}`)
+  lines.push(`Envelope: ${getEnvelopeDisplayName(envelope)}`)
   lines.push(`Delivery: ${deliveryLabel(envelope.deliveryMethod)}`)
   if (envelope.templateId) lines.push(`Template: ${envelope.templateId}`)
   lines.push('')

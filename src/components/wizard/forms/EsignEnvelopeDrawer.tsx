@@ -26,6 +26,7 @@ import {
 } from '@/data/esignEnvelopeOptions'
 import type { EsignEnvelope } from '@/types/esignEnvelope'
 import { groupFormSelectionsByAccountChild } from '@/utils/buildEsignEnvelopeFormRows'
+import { deriveDefaultEnvelopeName } from '@/utils/deriveEnvelopeDisplayName'
 import { downloadEnvelopeManifest } from '@/utils/downloadEsignEnvelopeManifest'
 import { Download, Plus, Trash2, Upload } from 'lucide-react'
 
@@ -131,8 +132,13 @@ export function EsignEnvelopeDrawer({
   }
 
   const handleSave = () => {
-    onSave(local)
+    const trimmed = local.name.trim()
+    const resolvedName = trimmed || deriveDefaultEnvelopeName(local)
+    onSave({ ...local, name: resolvedName })
   }
+
+  const previewDefaultName =
+    !local.name.trim() ? deriveDefaultEnvelopeName(local) : null
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
@@ -149,15 +155,19 @@ export function EsignEnvelopeDrawer({
 
         <div className="min-h-0 flex-1 overflow-y-auto px-6 py-4 space-y-6">
           <div className="space-y-2">
-            <Label htmlFor="env-name">
-              Give this envelope a name <span className="text-destructive">*</span>
-            </Label>
+            <Label htmlFor="env-name">Envelope name</Label>
             <Input
               id="env-name"
               value={local.name}
               onChange={(e) => setLocal((p) => ({ ...p, name: e.target.value }))}
-              placeholder="e.g. Smith — brokerage & IRA — April 2026"
+              placeholder="e.g. Smith household — new accounts"
             />
+            {previewDefaultName ? (
+              <p className="text-xs text-muted-foreground leading-snug">
+                If left blank, this envelope will be saved as:{' '}
+                <span className="font-medium text-foreground">{previewDefaultName}</span>
+              </p>
+            ) : null}
           </div>
 
           <div className="space-y-2">
@@ -374,7 +384,12 @@ export function EsignEnvelopeDrawer({
             type="button"
             variant="outline"
             className="gap-1.5"
-            onClick={() => downloadEnvelopeManifest(local)}
+            onClick={() =>
+              downloadEnvelopeManifest({
+                ...local,
+                name: local.name.trim() || deriveDefaultEnvelopeName(local),
+              })
+            }
           >
             <Download className="h-4 w-4" />
             Download form list
@@ -383,7 +398,7 @@ export function EsignEnvelopeDrawer({
             <Button type="button" variant="ghost" onClick={() => onOpenChange(false)}>
               Cancel
             </Button>
-            <Button type="button" onClick={handleSave} disabled={!local.name.trim()}>
+            <Button type="button" onClick={handleSave}>
               {isCreate ? 'Create envelope' : 'Save envelope'}
             </Button>
           </div>

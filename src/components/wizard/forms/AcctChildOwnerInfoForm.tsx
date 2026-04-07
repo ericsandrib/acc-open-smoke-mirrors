@@ -1,7 +1,6 @@
 import { useMemo, useState } from 'react'
 import { useWorkflow, useTaskData, useChildActionContext } from '@/stores/workflowStore'
 import { Button } from '@/components/ui/button'
-import { Badge } from '@/components/ui/badge'
 import {
   Select,
   SelectTrigger,
@@ -20,7 +19,7 @@ import {
   partitionRegistrationDocumentsByFulfillment,
 } from '@/utils/registrationDocuments'
 import type { RegistrationType } from '@/utils/registrationDocuments'
-import { Plus, Trash2, UserPlus, FileText, FileSignature, Paperclip, Upload, X } from 'lucide-react'
+import { Plus, Trash2, UserPlus, FileText, Paperclip, Upload, X } from 'lucide-react'
 import { AddHouseholdMemberSheet } from '@/components/wizard/forms/AddPartySheet'
 import { AccountOwnerPartySheet } from '@/components/wizard/forms/AccountOwnerPartySheet'
 import { PartySlotCard } from '@/components/wizard/forms/PartySlotCard'
@@ -74,7 +73,7 @@ export function AcctChildOwnerInfoForm() {
     [childRegType],
   )
 
-  const { upload: uploadRequiredDocs, esign: esignRequiredDocs } = useMemo(
+  const { upload: uploadRequiredDocs } = useMemo(
     () => partitionRegistrationDocumentsByFulfillment(registrationDocs),
     [registrationDocs],
   )
@@ -305,44 +304,18 @@ export function AcctChildOwnerInfoForm() {
             Documents
           </h3>
           <p className="text-sm text-muted-foreground">
-            Firm and custodian forms are completed in e-sign—data maps onto those documents automatically. Only items
-            that need a client file (for example government ID) use the upload rows below. Requirements from Open
-            Accounts carry in; files on the client record show when present.
+            Firm and custodian forms are configured in <span className="font-medium text-foreground">eSign envelopes</span>{' '}
+            on the Open Accounts task. Only items that need a client file (for example government ID) use the upload rows
+            below. Requirements from Open Accounts carry in; files on the client record show when present.
           </p>
         </div>
 
-        {esignRequiredDocs.length > 0 ? (
-          <div className="space-y-2">
-            <div className="flex items-center gap-2">
-              <FileSignature className="h-4 w-4 text-muted-foreground" />
-              <h4 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                Firm &amp; custodian forms (e-sign)
-              </h4>
-            </div>
-            <p className="text-xs text-muted-foreground">
-              Not uploaded here. These appear in the signing envelope and are prefilled from application data.
-            </p>
-            <ul className="rounded-lg border border-border divide-y divide-border bg-card">
-              {esignRequiredDocs.map((doc) => (
-                <li key={doc.id} className="px-4 py-3 flex items-start justify-between gap-3">
-                  <div>
-                    <p className="text-sm font-medium text-foreground">{doc.label}</p>
-                    <p className="text-xs text-muted-foreground mt-0.5">{doc.description}</p>
-                  </div>
-                  <Badge variant="secondary" className="shrink-0 text-[10px] uppercase">
-                    eSign
-                  </Badge>
-                </li>
-              ))}
-            </ul>
-          </div>
-        ) : null}
-
-        {uploadRequiredDocs.length === 0 && esignRequiredDocs.length === 0 ? (
+        {uploadRequiredDocs.length === 0 ? (
           <div className="rounded-lg border border-dashed border-border p-6 text-center">
             <FileText className="mx-auto mb-2 h-8 w-8 text-muted-foreground/50" />
             <p className="text-sm text-muted-foreground">
-              No required documents for this registration type.
+              No file uploads required for this registration. Firm and custodian forms are configured in eSign envelopes on
+              Open Accounts.
             </p>
           </div>
         ) : uploadRequiredDocs.length > 0 && selectedOwnerPartyIds.size === 0 ? (
@@ -350,13 +323,6 @@ export function AcctChildOwnerInfoForm() {
             <FileText className="mx-auto mb-2 h-8 w-8 text-muted-foreground/50" />
             <p className="text-sm text-muted-foreground">
               Add owners above to manage upload items (for example government ID) for each person.
-            </p>
-          </div>
-        ) : uploadRequiredDocs.length === 0 ? (
-          <div className="rounded-lg border border-dashed border-border p-6 text-center">
-            <FileText className="mx-auto mb-2 h-8 w-8 text-muted-foreground/50" />
-            <p className="text-sm text-muted-foreground">
-              No file uploads for this registration; firm forms are handled in e-sign above.
             </p>
           </div>
         ) : (
