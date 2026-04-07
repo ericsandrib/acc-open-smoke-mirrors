@@ -93,7 +93,7 @@ export function KycForm() {
 
       {verifiedMembers.length > 0 && (
         <div className="space-y-2">
-          <h3 className="text-sm font-semibold">
+          <h3 className="text-base font-semibold">
             Previously Verified
           </h3>
           {verifiedMembers.map((member) => {
@@ -164,7 +164,7 @@ export function KycForm() {
 
       {children.length > 0 && (
         <div className="space-y-2">
-          <h3 className="text-sm font-semibold">
+          <h3 className="text-base font-semibold">
             Pending Verification
           </h3>
           <div className="rounded-lg border border-blue-200 bg-blue-50 dark:border-blue-900/60 dark:bg-blue-950/40 px-4 py-3">
@@ -234,7 +234,7 @@ export function KycForm() {
                 onCheckedChange={toggleSelectAll}
               />
             )}
-            <h3 className="text-sm font-semibold">
+            <h3 className="text-base font-semibold">
               Requires Verification
             </h3>
           </div>

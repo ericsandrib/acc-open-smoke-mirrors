@@ -328,7 +328,7 @@ export function FinancialAccountsForm() {
 
   return (
     <div className="space-y-4">
-      <div className="rounded-lg border border-border">
+      <div className="rounded-lg border border-border p-1">
         <div>
           {state.financialAccounts.length === 0 ? (
             <div className="p-4 text-center">
@@ -340,12 +340,10 @@ export function FinancialAccountsForm() {
             ))
           )}
         </div>
-        <div className="border-t border-border">
-          <Button variant="ghost" className="w-full rounded-none rounded-b-lg" onClick={() => setShowAdd(true)}>
-            <Plus className="h-4 w-4 mr-2" />
-            Add account
-          </Button>
-        </div>
+        <Button variant="ghost" className="w-full" onClick={() => setShowAdd(true)}>
+          <Plus className="h-4 w-4 mr-2" />
+          Add account
+        </Button>
       </div>
 
       <AddAccountSheet open={showAdd} onOpenChange={setShowAdd} />

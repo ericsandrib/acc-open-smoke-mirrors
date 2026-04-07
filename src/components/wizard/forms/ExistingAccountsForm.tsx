@@ -8,20 +8,20 @@ export function ExistingAccountsForm() {
   return (
     <div className="space-y-8">
       <section>
-        <div className="mb-2">
-          <h3 className="text-sm font-semibold">
+        <div className="mb-4">
+          <h3 className="text-base font-semibold">
             Existing Accounts
           </h3>
+          <p className="text-base text-muted-foreground">
+            These are the financial accounts currently held by the client, including brokerage, retirement, and trust accounts.
+          </p>
         </div>
-        <p className="text-sm text-muted-foreground mb-4">
-          These are the financial accounts currently held by the client, including brokerage, retirement, and trust accounts.
-        </p>
         <FinancialAccountsForm />
       </section>
 
       <section>
         <div className="mb-3">
-          <Label htmlFor="additionalInstructions" className="text-sm font-semibold">
+          <Label htmlFor="additionalInstructions" className="text-base font-semibold">
             Additional Instructions
           </Label>
         </div>
