@@ -294,7 +294,7 @@ export function DashboardContent() {
   );
 
   return (
-    <div className="min-h-full bg-[var(--bg-secondary)] -m-8">
+    <div className="min-h-full bg-white -m-8">
       <div className="relative mx-auto max-w-[1280px] px-8 py-8">
         {/* Greeting header */}
         <div className="flex items-start justify-between mb-8">
@@ -312,11 +312,11 @@ export function DashboardContent() {
         </div>
 
         {/* Main grid: left (Actions + Tasks) / right (Meetings + Growth) */}
-        <div className="grid grid-cols-1 lg:grid-cols-[1fr_420px] gap-6">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           {/* Left column */}
           <div className="flex flex-col gap-6">
             {/* Actions card */}
-            <div className="rounded-xl border border-border bg-white shadow-sm">
+            <div className="rounded-xl bg-[var(--bg-secondary)]">
               <CardHeader title="Actions" count={13287}>
                 <DropdownButton label="Default" />
               </CardHeader>
@@ -352,7 +352,7 @@ export function DashboardContent() {
             </div>
 
             {/* Tasks card */}
-            <div className="rounded-xl border border-border bg-white shadow-sm">
+            <div className="rounded-xl bg-[var(--bg-secondary)]">
               <CardHeader title="Tasks" count={0}>
                 <DropdownButton label="All Actions" />
               </CardHeader>
@@ -366,7 +366,7 @@ export function DashboardContent() {
           {/* Right column */}
           <div className="flex flex-col gap-6">
             {/* Meetings card */}
-            <div className="rounded-xl border border-border bg-white shadow-sm">
+            <div className="rounded-xl bg-[var(--bg-secondary)]">
               <CardHeader title="Meetings" count={0}>
                 <div className="flex items-center gap-1">
                   <button className="rounded-md p-1 hover:bg-[var(--bg-secondary)]">
@@ -394,7 +394,7 @@ export function DashboardContent() {
             </div>
 
             {/* Growth card */}
-            <div className="rounded-xl border border-border bg-white shadow-sm">
+            <div className="rounded-xl bg-[var(--bg-secondary)]">
               <CardHeader title="Growth" count={14}>
                 <DropdownButton label="All" />
               </CardHeader>
@@ -464,7 +464,7 @@ export function DashboardContent() {
         </div>
 
         {/* Insights card — full width */}
-        <div className="mt-6 rounded-xl border border-border bg-white shadow-sm">
+        <div className="mt-6 rounded-xl bg-[var(--bg-secondary)]">
           <CardHeader title="Insights">
             <button className="inline-flex items-center gap-1.5 text-xs font-medium text-[var(--text-secondary)] hover:text-[var(--text-primary)]">
               <svg
