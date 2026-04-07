@@ -6,8 +6,9 @@ export function generateAccountOpenIdentifiers(childName: string, childId: strin
   shortName: string
 } {
   const idPart = childId.replace(/[^0-9a-z]/gi, '').slice(-8).toUpperCase() || 'NEWACCT'
-  // Numeric-looking account number (prototype)
-  const accountNumber = `38${Date.now().toString().slice(-10)}`
+  // Numeric-looking account number (prototype) — include child id tail so rapid multi-spawn never collides
+  const uniqTail = idPart.replace(/\D/g, '').slice(-4).padStart(4, '0')
+  const accountNumber = `38${Date.now().toString().slice(-8)}${uniqTail.slice(-4)}`
   const words = childName
     .replace(/[^a-zA-Z0-9\s]/g, '')
     .trim()

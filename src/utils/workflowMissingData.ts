@@ -1,0 +1,152 @@
+import type { WorkflowState } from '@/types/workflow'
+import { computeSmartDocuments } from '@/utils/smartDocuments'
+
+export type MissingDataEntry = {
+  taskId: string
+  taskTitle: string
+  actionTitle: string
+  issues: string[]
+}
+
+function actionTitle(state: WorkflowState, taskId: string): string {
+  const task = state.tasks.find((t) => t.id === taskId)
+  if (!task) return ''
+  return state.actions.find((a) => a.id === task.actionId)?.title ?? ''
+}
+
+function uniqueStrings(items: string[]): string[] {
+  return [...new Set(items)]
+}
+
+/**
+ * Heuristic gaps across wizard tasks so advisors can see what still needs attention.
+ * Rules are aligned with demo forms, not a full production validation engine.
+ */
+export function computeWorkflowMissingData(state: WorkflowState): MissingDataEntry[] {
+  const entries: MissingDataEntry[] = []
+
+  const relatedTask = state.tasks.find((t) => t.formKey === 'related-parties')
+  if (relatedTask) {
+    const issues: string[] = []
+    for (const m of state.relatedParties.filter((p) => p.type === 'household_member' && !p.isHidden)) {
+      if (!m.email?.trim()) issues.push(`${m.name}: add an email address`)
+      if (!m.phone?.trim()) issues.push(`${m.name}: add a phone number`)
+    }
+    if (issues.length) {
+      entries.push({
+        taskId: relatedTask.id,
+        taskTitle: relatedTask.title,
+        actionTitle: actionTitle(state, relatedTask.id),
+        issues: uniqueStrings(issues),
+      })
+    }
+  }
+
+  const existingTask = state.tasks.find((t) => t.formKey === 'existing-accounts')
+  if (existingTask && state.financialAccounts.length === 0) {
+    entries.push({
+      taskId: existingTask.id,
+      taskTitle: existingTask.title,
+      actionTitle: actionTitle(state, existingTask.id),
+      issues: ['Add held-away accounts, or confirm none need to be reported for this household.'],
+    })
+  }
+
+  const kycTask = state.tasks.find((t) => t.formKey === 'kyc')
+  if (kycTask) {
+    const children = kycTask.children ?? []
+    const householdMembers = state.relatedParties.filter((p) => p.type === 'household_member' && !p.isHidden)
+    const spawnedNames = new Set(children.map((c) => c.name))
+    const needsKycMembers = householdMembers.filter(
+      (m) => m.kycStatus !== 'verified' && !spawnedNames.has(m.name),
+    )
+    const issues: string[] = []
+    if (needsKycMembers.length > 0) {
+      issues.push(`Start KYC workflows for: ${needsKycMembers.map((m) => m.name).join(', ')}`)
+    }
+    for (const c of children) {
+      if (c.status === 'complete') continue
+      const short = c.name
+      const infoId = `${c.id}-info`
+      const info = state.taskData[infoId] ?? {}
+      const first = (info.firstName as string | undefined)?.trim()
+      const last = (info.lastName as string | undefined)?.trim()
+      const dob = (info.dob as string | undefined)?.trim()
+      const email = (info.email as string | undefined)?.trim()
+      if (!first || !last || !dob || !email) {
+        issues.push(`${short}: complete identity fields (name, date of birth, email)`)
+      }
+      const docData = state.taskData[`${c.id}-documents`] ?? {}
+      const govFiles = (docData['doc-gov-id'] as unknown[] | undefined) ?? []
+      const supportFiles = (docData['doc-supporting-docs'] as unknown[] | undefined) ?? []
+      if (!govFiles.length) issues.push(`${short}: upload government-issued ID`)
+      if (!supportFiles.length) issues.push(`${short}: upload supporting documents`)
+    }
+    if (issues.length) {
+      entries.push({
+        taskId: kycTask.id,
+        taskTitle: kycTask.title,
+        actionTitle: actionTitle(state, kycTask.id),
+        issues: uniqueStrings(issues),
+      })
+    }
+  }
+
+  const openTask = state.tasks.find((t) => t.formKey === 'open-accounts')
+  if (openTask) {
+    const issues: string[] = []
+    const accountChildren = (openTask.children ?? []).filter((c) => c.childType === 'account-opening')
+    if (accountChildren.length === 0) {
+      issues.push('Select at least one account registration to open.')
+    }
+    for (const c of accountChildren) {
+      if (c.status === 'complete') continue
+      const meta = state.taskData[c.id] as Record<string, unknown> | undefined
+      if (!meta?.registrationType) {
+        issues.push(`${c.name}: set registration type`)
+      }
+      const ownersData = state.taskData[`${c.id}-account-owners`] as Record<string, unknown> | undefined
+      const owners = (ownersData?.owners as { partyId?: string; type: string }[] | undefined) ?? []
+      if (owners.length === 0) {
+        issues.push(`${c.name}: add at least one account owner`)
+      } else if (owners.some((o) => o.type === 'existing' && !o.partyId)) {
+        issues.push(`${c.name}: finish assigning each owner slot`)
+      }
+      const sd = computeSmartDocuments(state, c.id)
+      if (sd.counts.missing > 0) {
+        issues.push(
+          `${c.name}: ${sd.counts.missing} required document package(s) still open (see Documents while editing this account)`,
+        )
+      }
+    }
+    if (issues.length) {
+      entries.push({
+        taskId: openTask.id,
+        taskTitle: openTask.title,
+        actionTitle: actionTitle(state, openTask.id),
+        issues: uniqueStrings(issues),
+      })
+    }
+  }
+
+  const finalTask = state.tasks.find((t) => t.formKey === 'placeholder-2')
+  const reviewBlocksFinalEdits =
+    state.reviewState?.reviewStatus === 'pending' || state.reviewState?.reviewStatus === 'accepted'
+  if (finalTask && !reviewBlocksFinalEdits) {
+    const data = state.taskData['placeholder-2'] ?? {}
+    const issues: string[] = []
+    if (!data.termsAccepted) issues.push('Confirm that information is accurate')
+    if (!data.regulatoryAccepted) issues.push('Confirm regulatory disclosures')
+    if (!data.dataConsent) issues.push('Confirm data processing consent')
+    if (issues.length) {
+      entries.push({
+        taskId: finalTask.id,
+        taskTitle: finalTask.title,
+        actionTitle: actionTitle(state, finalTask.id),
+        issues,
+      })
+    }
+  }
+
+  return entries
+}

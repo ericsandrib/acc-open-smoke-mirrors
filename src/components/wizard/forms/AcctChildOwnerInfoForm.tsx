@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react'
 import { useWorkflow, useTaskData, useChildActionContext } from '@/stores/workflowStore'
 import { Button } from '@/components/ui/button'
+import { Badge } from '@/components/ui/badge'
 import {
   Select,
   SelectTrigger,
@@ -9,13 +10,17 @@ import {
   SelectItem,
 } from '@/components/ui/select'
 import {
-  AccountShellSection,
+  AccountProfileSection,
   AccountAdditionalInformationSection,
-} from '@/components/wizard/forms/AccountShellSection'
+} from '@/components/wizard/forms/AccountProfileSection'
 import type { AccountType } from '@/types/workflow'
-import { getRegistrationDocumentsForType, getDocSubTypes } from '@/utils/registrationDocuments'
+import {
+  getRegistrationDocumentsForType,
+  getDocSubTypes,
+  partitionRegistrationDocumentsByFulfillment,
+} from '@/utils/registrationDocuments'
 import type { RegistrationType } from '@/utils/registrationDocuments'
-import { Plus, Trash2, UserPlus, FileText, Paperclip, Upload, X } from 'lucide-react'
+import { Plus, Trash2, UserPlus, FileText, FileSignature, Paperclip, Upload, X } from 'lucide-react'
 import { AddHouseholdMemberSheet } from '@/components/wizard/forms/AddPartySheet'
 import { AccountOwnerPartySheet } from '@/components/wizard/forms/AccountOwnerPartySheet'
 import { PartySlotCard } from '@/components/wizard/forms/PartySlotCard'
@@ -64,17 +69,22 @@ export function AcctChildOwnerInfoForm() {
   const childRegType = (childMeta?.registrationType as RegistrationType | undefined) ?? null
   const productAccountTypeOverride = (childMeta?.accountProductType as AccountType | undefined) ?? null
 
-  const requiredDocs = useMemo(
+  const registrationDocs = useMemo(
     () => (childRegType ? getRegistrationDocumentsForType(childRegType) : []),
     [childRegType],
   )
 
+  const { upload: uploadRequiredDocs, esign: esignRequiredDocs } = useMemo(
+    () => partitionRegistrationDocumentsByFulfillment(registrationDocs),
+    [registrationDocs],
+  )
+
   const allDocInstances = useMemo(() => {
-    if (selectedOwnerPartyIds.size === 0 || requiredDocs.length === 0) return []
+    if (selectedOwnerPartyIds.size === 0 || uploadRequiredDocs.length === 0) return []
     const results: (DocInstance & { docLabel: string; ownerName: string })[] = []
     const ownerIds = Array.from(selectedOwnerPartyIds)
 
-    for (const doc of requiredDocs) {
+    for (const doc of uploadRequiredDocs) {
       const parentInstances = (parentData[`doc-instances-${doc.id}`] as DocInstance[] | undefined) ?? []
 
       for (const ownerId of ownerIds) {
@@ -99,7 +109,7 @@ export function AcctChildOwnerInfoForm() {
 
     const local = (data['child-local-docs'] as (DocInstance & { docLabel?: string })[] | undefined) ?? []
     for (const inst of local) {
-      const docDef = requiredDocs.find((d) => d.id === inst.docTypeId)
+      const docDef = uploadRequiredDocs.find((d) => d.id === inst.docTypeId)
       const member = inst.assignedTo ? state.relatedParties.find((p) => p.id === inst.assignedTo) : null
       results.push({
         ...inst,
@@ -109,12 +119,12 @@ export function AcctChildOwnerInfoForm() {
       })
     }
     return results
-  }, [selectedOwnerPartyIds, requiredDocs, parentData, data, state.relatedParties])
+  }, [selectedOwnerPartyIds, uploadRequiredDocs, parentData, data, state.relatedParties])
 
   if (!ctx) {
     return (
       <p className="text-sm text-muted-foreground">
-        Open this step from the Open Accounts workflow to edit account and owner details.
+        Open this task from Open Accounts to edit account information and owners.
       </p>
     )
   }
@@ -198,7 +208,7 @@ export function AcctChildOwnerInfoForm() {
 
   return (
     <div className="space-y-8">
-      <AccountShellSection
+      <AccountProfileSection
         data={data}
         updateField={updateField}
         registrationType={childRegType}
@@ -215,10 +225,10 @@ export function AcctChildOwnerInfoForm() {
             Owners & participants
           </h3>
           <p className="text-sm text-muted-foreground">
-            Add each owner or participant. These fields drive KYC scope and owner-level document rules. Open the list to
-            pick a household member, or use search / add at the bottom of the list. Beneficiaries and duplicate-statement
-            interested parties are on sub-step 3,{' '}
-            <span className="font-medium text-foreground">Features &amp; services</span>—not here.
+            Add everyone who will appear on the account registration. Ownership here sets verification scope and which
+            documents each person must provide. Choose an existing household member from the list, or search and add someone new.{' '}
+            Beneficiaries and duplicate-statement contacts belong in{' '}
+            <span className="font-medium text-foreground">Account features &amp; services</span>, not on this step.
           </p>
         </div>
 
@@ -295,29 +305,63 @@ export function AcctChildOwnerInfoForm() {
             Documents
           </h3>
           <p className="text-sm text-muted-foreground">
-            {selectedOwnerPartyIds.size === 0
-              ? 'Documents will appear here once account owners are selected above.'
-              : 'Documents from Open Accounts are pre-filled below. Files already on record are shown automatically.'}
+            Firm and custodian forms are completed in e-sign—data maps onto those documents automatically. Only items
+            that need a client file (for example government ID) use the upload rows below. Requirements from Open
+            Accounts carry in; files on the client record show when present.
           </p>
         </div>
 
-        {selectedOwnerPartyIds.size === 0 ? (
-          <div className="rounded-lg border border-dashed border-border p-6 text-center">
-            <FileText className="mx-auto mb-2 h-8 w-8 text-muted-foreground/50" />
-            <p className="text-sm text-muted-foreground">
-              Select account owners to see pre-filled documents.
+        {esignRequiredDocs.length > 0 ? (
+          <div className="space-y-2">
+            <div className="flex items-center gap-2">
+              <FileSignature className="h-4 w-4 text-muted-foreground" />
+              <h4 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                Firm &amp; custodian forms (e-sign)
+              </h4>
+            </div>
+            <p className="text-xs text-muted-foreground">
+              Not uploaded here. These appear in the signing envelope and are prefilled from application data.
             </p>
+            <ul className="rounded-lg border border-border divide-y divide-border bg-card">
+              {esignRequiredDocs.map((doc) => (
+                <li key={doc.id} className="px-4 py-3 flex items-start justify-between gap-3">
+                  <div>
+                    <p className="text-sm font-medium text-foreground">{doc.label}</p>
+                    <p className="text-xs text-muted-foreground mt-0.5">{doc.description}</p>
+                  </div>
+                  <Badge variant="secondary" className="shrink-0 text-[10px] uppercase">
+                    eSign
+                  </Badge>
+                </li>
+              ))}
+            </ul>
           </div>
-        ) : requiredDocs.length === 0 ? (
+        ) : null}
+
+        {uploadRequiredDocs.length === 0 && esignRequiredDocs.length === 0 ? (
           <div className="rounded-lg border border-dashed border-border p-6 text-center">
             <FileText className="mx-auto mb-2 h-8 w-8 text-muted-foreground/50" />
             <p className="text-sm text-muted-foreground">
               No required documents for this registration type.
             </p>
           </div>
+        ) : uploadRequiredDocs.length > 0 && selectedOwnerPartyIds.size === 0 ? (
+          <div className="rounded-lg border border-dashed border-border p-6 text-center">
+            <FileText className="mx-auto mb-2 h-8 w-8 text-muted-foreground/50" />
+            <p className="text-sm text-muted-foreground">
+              Add owners above to manage upload items (for example government ID) for each person.
+            </p>
+          </div>
+        ) : uploadRequiredDocs.length === 0 ? (
+          <div className="rounded-lg border border-dashed border-border p-6 text-center">
+            <FileText className="mx-auto mb-2 h-8 w-8 text-muted-foreground/50" />
+            <p className="text-sm text-muted-foreground">
+              No file uploads for this registration; firm forms are handled in e-sign above.
+            </p>
+          </div>
         ) : (
           <div className="space-y-4">
-            {requiredDocs.map((doc) => {
+            {uploadRequiredDocs.map((doc) => {
               const instancesForDoc = allDocInstances.filter((inst) => inst.docTypeId === doc.id)
               const subTypes = getDocSubTypes(doc.id)
 

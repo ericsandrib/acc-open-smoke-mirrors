@@ -43,6 +43,17 @@ function workflowReducer(state: WorkflowState, action: WorkflowAction): Workflow
       return { ...state, activeTaskId: action.taskId }
     }
 
+    case 'GO_TO_TASK': {
+      if (!state.flatTaskOrder.includes(action.taskId)) return state
+      return {
+        ...state,
+        activeTaskId: action.taskId,
+        activeChildActionId: undefined,
+        activeChildSubTaskIndex: undefined,
+        childActionResume: undefined,
+      }
+    }
+
     case 'SET_TASK_STATUS': {
       const parsed = parseChildSubTaskId(action.taskId)
       const childId = parsed?.childId ?? action.taskId

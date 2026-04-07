@@ -1,5 +1,5 @@
 import type { WorkflowState } from '@/types/workflow'
-import { getRegistrationDocumentsForType } from '@/utils/registrationDocuments'
+import { getRegistrationDocumentsForType, partitionRegistrationDocumentsByFulfillment } from '@/utils/registrationDocuments'
 import type { RegistrationType } from '@/utils/registrationDocuments'
 
 export type SmartDocItem = {
@@ -85,9 +85,20 @@ export function computeSmartDocuments(state: WorkflowState, childId: string): Sm
   if (!fundingLineOnly && !featureLineOnly) {
     if (regType) {
       const regDocs = getRegistrationDocumentsForType(regType)
-      for (const d of regDocs.slice(0, 4)) {
+      const { upload: uploadRegDocs, esign: esignRegDocs } = partitionRegistrationDocumentsByFulfillment(regDocs)
+      for (const d of uploadRegDocs.slice(0, 4)) {
         requiredNow.push(
           doc(`reg-${d.id}`, d.label, 'account', `Account-level: registration type is ${regType}.`),
+        )
+      }
+      if (esignRegDocs.length > 0) {
+        requiredNow.push(
+          doc(
+            'reg-esign-package',
+            'Firm & custodian forms (e-sign)',
+            'account',
+            `${esignRegDocs.length} form(s) generated from application data and sent in the signing envelope.`,
+          ),
         )
       }
     } else {

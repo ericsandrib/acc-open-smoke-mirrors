@@ -1,11 +1,29 @@
+import { useMemo } from 'react'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { PageTitle } from '@/components/page-title'
 import { AccessoryBar } from '@/components/accessory-bar'
+import { useServicing } from '@/stores/servicingStore'
 import { OnboardingJourneysTable } from './OnboardingJourneysTable'
-import { ActionsTable } from './ActionsTable'
-import { TasksTable } from './TasksTable'
+import { ActionsTable, deriveActionRows } from './ActionsTable'
+import { TasksTable, deriveTaskRows } from './TasksTable'
+import { TableViewWrapper } from './table-view-wrapper'
+import {
+  actionColumns,
+  actionPresets,
+  taskColumns,
+  taskPresets,
+} from '@/data/servicing-view-presets'
 
 export function OnboardingContent() {
+  const { journeys } = useServicing()
+
+  const onboardingJourneys = useMemo(
+    () => journeys.filter((j) => j.category === 'Onboarding'),
+    [journeys],
+  )
+  const actionRows = useMemo(() => deriveActionRows(onboardingJourneys), [onboardingJourneys])
+  const taskRows = useMemo(() => deriveTaskRows(onboardingJourneys), [onboardingJourneys])
+
   return (
     <div className="max-w-6xl mx-auto">
       <AccessoryBar
@@ -32,10 +50,18 @@ export function OnboardingContent() {
           <OnboardingJourneysTable />
         </TabsContent>
         <TabsContent value="actions">
-          <ActionsTable filterCategory="Onboarding" />
+          <TableViewWrapper tableId="onboarding-actions" presets={actionPresets} columns={actionColumns} allRows={actionRows}>
+            {({ rows, visibleColumns }) => (
+              <ActionsTable rows={rows} visibleColumns={visibleColumns} />
+            )}
+          </TableViewWrapper>
         </TabsContent>
         <TabsContent value="tasks">
-          <TasksTable filterCategory="Onboarding" />
+          <TableViewWrapper tableId="onboarding-tasks" presets={taskPresets} columns={taskColumns} allRows={taskRows}>
+            {({ rows, visibleColumns }) => (
+              <TasksTable rows={rows} visibleColumns={visibleColumns} />
+            )}
+          </TableViewWrapper>
         </TabsContent>
       </Tabs>
     </div>

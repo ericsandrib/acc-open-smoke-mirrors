@@ -1,6 +1,7 @@
 import { useWorkflow, useChildActionContext } from '@/stores/workflowStore'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Badge } from '@/components/ui/badge'
+import { cn } from '@/lib/utils'
 import type { AccountType } from '@/types/workflow'
 import type { RegistrationType } from '@/utils/registrationDocuments'
 import { registrationTypeLabels } from '@/utils/registrationDocuments'
@@ -16,11 +17,25 @@ const accountProductLabels: Record<AccountType, string> = {
   savings: 'Savings',
 }
 
-export function ChildActionDetailSidebar() {
+export interface ChildActionDetailSidebarProps {
+  /** Stack inside the documents rail (no side border; capped height so docs stay visible). */
+  variant?: 'default' | 'embedded'
+  /** When `embedded`: capped block above documents (`docsRail`) or grow with the right panel (`fill`). */
+  embeddedLayout?: 'docsRail' | 'fill'
+}
+
+export function ChildActionDetailSidebar({
+  variant = 'default',
+  embeddedLayout = 'docsRail',
+}: ChildActionDetailSidebarProps) {
   const { state } = useWorkflow()
   const ctx = useChildActionContext()
 
   if (!ctx) return null
+
+  const embedded = variant === 'embedded'
+  const fill = embedded && embeddedLayout === 'fill'
+  const Root = embedded ? 'div' : 'aside'
 
   const { child, subTaskId, config, subTaskIndex, totalSubTasks } = ctx
 
@@ -42,15 +57,27 @@ export function ChildActionDetailSidebar() {
   const owners = state.relatedParties.filter((p) => ownerIds.includes(p.id))
 
   return (
-    <aside className="w-64 border-l border-border bg-sidebar-background text-sm">
-      <Tabs defaultValue="details" className="h-full flex flex-col">
+    <Root
+      className={cn(
+        'bg-sidebar-background text-sm flex flex-col min-h-0',
+        embedded && !fill
+          ? 'w-full shrink-0 border-b border-border max-h-[min(48vh,400px)] min-h-[200px]'
+          : embedded && fill
+            ? 'w-full flex-1 min-h-0 border-b-0'
+            : 'w-64 border-l border-border h-full',
+      )}
+    >
+      <Tabs
+        defaultValue="details"
+        className={cn('flex flex-col min-h-0', embedded ? 'flex-1' : 'h-full')}
+      >
         <TabsList variant="border" className="w-full border-b border-border px-2 shrink-0">
           <TabsTrigger value="details" className="flex-1 text-xs">Details</TabsTrigger>
           <TabsTrigger value="context" className="flex-1 text-xs">Context</TabsTrigger>
           <TabsTrigger value="relationship" className="flex-1 text-xs">Owners</TabsTrigger>
         </TabsList>
 
-        <TabsContent value="details" className="flex-1 overflow-y-auto p-4 mt-0">
+        <TabsContent value="details" className="flex-1 min-h-0 overflow-y-auto p-4 mt-0">
           <div className="space-y-3">
             <div>
               <span className="text-muted-foreground">Account</span>
@@ -83,7 +110,7 @@ export function ChildActionDetailSidebar() {
           </div>
         </TabsContent>
 
-        <TabsContent value="context" className="flex-1 overflow-y-auto p-4 mt-0">
+        <TabsContent value="context" className="flex-1 min-h-0 overflow-y-auto p-4 mt-0">
           <div className="space-y-3">
             <div>
               <span className="text-muted-foreground">Child Action</span>
@@ -100,7 +127,7 @@ export function ChildActionDetailSidebar() {
           </div>
         </TabsContent>
 
-        <TabsContent value="relationship" className="flex-1 overflow-y-auto p-4 mt-0">
+        <TabsContent value="relationship" className="flex-1 min-h-0 overflow-y-auto p-4 mt-0">
           <div className="space-y-3">
             {owners.length > 0 ? (
               owners.map((owner) => (
@@ -133,6 +160,6 @@ export function ChildActionDetailSidebar() {
           </div>
         </TabsContent>
       </Tabs>
-    </aside>
+    </Root>
   )
 }

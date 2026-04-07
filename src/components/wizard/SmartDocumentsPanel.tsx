@@ -54,7 +54,12 @@ function SmartDocumentsSection({
   )
 }
 
-export function SmartDocumentsPanel() {
+export function SmartDocumentsPanel({
+  showStepFooter = true,
+}: {
+  /** When false, hide the sticky step summary (used when {@link ChildActionDetailSidebar} is stacked above). */
+  showStepFooter?: boolean
+} = {}) {
   const { state } = useWorkflow()
   const ctx = useChildActionContext()
 
@@ -141,12 +146,14 @@ export function SmartDocumentsPanel() {
         </div>
       </div>
 
-      <div className="shrink-0 border-t border-border px-3 py-2.5 text-[11px] text-muted-foreground">
-        <p className="font-medium text-foreground truncate">{ctx.child.name}</p>
-        <p>
-          Step {ctx.subTaskIndex + 1} of {ctx.totalSubTasks}: {ctx.currentSubTask.title}
-        </p>
-      </div>
+      {showStepFooter && (
+        <div className="shrink-0 border-t border-border px-3 py-2.5 text-[11px] text-muted-foreground">
+          <p className="font-medium text-foreground truncate">{ctx.child.name}</p>
+          <p>
+            Step {ctx.subTaskIndex + 1} of {ctx.totalSubTasks}: {ctx.currentSubTask.title}
+          </p>
+        </div>
+      )}
     </div>
   )
 }

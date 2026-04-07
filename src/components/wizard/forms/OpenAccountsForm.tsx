@@ -7,7 +7,12 @@ import { AccountTypePickerDialog } from './AccountTypePickerDialog'
 import type { Selection } from './AccountTypePickerDialog'
 import { spawnOpenAccountChildrenFromSelections } from '@/utils/spawnOpenAccountChildrenFromSelections'
 import { FinancialAccountsForm } from './FinancialAccountsForm'
-import { getRegistrationDocuments, getDocSubTypes } from '@/utils/registrationDocuments'
+import {
+  getRegistrationDocuments,
+  getRegistrationDocumentsForType,
+  getDocSubTypes,
+  partitionRegistrationDocumentsByFulfillment,
+} from '@/utils/registrationDocuments'
 import type { RegistrationType } from '@/utils/registrationDocuments'
 import {
   Select,
@@ -29,7 +34,14 @@ import {
   X,
   Paperclip,
   Trash2,
+  Download,
+  Pencil,
 } from 'lucide-react'
+import type { EsignEnvelope, EsignEnvelopeSigner } from '@/types/esignEnvelope'
+import { createNewEnvelope } from '@/utils/createEsignEnvelope'
+import { buildRequiredEsignFormRows } from '@/utils/buildEsignEnvelopeFormRows'
+import { downloadEnvelopeManifest } from '@/utils/downloadEsignEnvelopeManifest'
+import { EsignEnvelopeDrawer } from '@/components/wizard/forms/EsignEnvelopeDrawer'
 
 interface DocInstance {
   id: string
@@ -43,6 +55,11 @@ export function OpenAccountsForm() {
   const { state, dispatch } = useWorkflow()
   const { data, updateField } = useTaskData('open-accounts')
   const [pickerOpen, setPickerOpen] = useState(false)
+  const [envelopeDrawerOpen, setEnvelopeDrawerOpen] = useState(false)
+  const [envelopeDraft, setEnvelopeDraft] = useState<EsignEnvelope | null>(null)
+  const [envelopeDrawerCreate, setEnvelopeDrawerCreate] = useState(true)
+  /** Bumps when the drawer opens so the sheet remounts with fresh local state from `envelopeDraft`. */
+  const [envelopeDrawerMountKey, setEnvelopeDrawerMountKey] = useState(0)
 
   const openAccountsTask = state.tasks.find((t) => t.formKey === 'open-accounts')
   const children = openAccountsTask?.children ?? []
@@ -61,10 +78,36 @@ export function OpenAccountsForm() {
     return types
   }, [accountOpeningChildren, state.taskData])
 
-  const requiredDocs = useMemo(
-    () => getRegistrationDocuments(childRegistrationTypes),
+  const { upload: uploadDocs } = useMemo(
+    () => partitionRegistrationDocumentsByFulfillment(getRegistrationDocuments(childRegistrationTypes)),
     [childRegistrationTypes],
   )
+
+  /** E-sign forms listed per open-account child so each account number / line stays distinct. */
+  const esignDocsByAccount = useMemo(() => {
+    const out: {
+      accountChildId: string
+      accountOpeningName: string
+      accountNumberLabel: string
+      docs: ReturnType<typeof partitionRegistrationDocumentsByFulfillment>['esign']
+    }[] = []
+    for (const child of accountOpeningChildren) {
+      const meta = state.taskData[child.id] as Record<string, unknown> | undefined
+      const rt = meta?.registrationType as RegistrationType | undefined
+      if (!rt) continue
+      const { esign } = partitionRegistrationDocumentsByFulfillment(getRegistrationDocumentsForType(rt))
+      if (esign.length === 0) continue
+      const acct = String(meta?.accountNumber ?? '').trim()
+      const short = String(meta?.shortName ?? '').trim()
+      out.push({
+        accountChildId: child.id,
+        accountOpeningName: child.name,
+        accountNumberLabel: acct || short || 'Not assigned',
+        docs: esign,
+      })
+    }
+    return out
+  }, [accountOpeningChildren, state.taskData])
 
   // Collect all owner party IDs across all child accounts for smart dedup
   const allOwnerPartyIds = useMemo(() => {
@@ -78,6 +121,62 @@ export function OpenAccountsForm() {
     }
     return ids
   }, [accountOpeningChildren, state.taskData])
+
+  const defaultEnvelopeSigners = useMemo((): EsignEnvelopeSigner[] => {
+    const rows: EsignEnvelopeSigner[] = []
+    for (const id of allOwnerPartyIds) {
+      const p = state.relatedParties.find((x) => x.id === id)
+      if (p) rows.push({ id: `sig-${p.id}`, name: p.name, email: p.email ?? '' })
+    }
+    if (rows.length === 0) {
+      for (const p of state.relatedParties) {
+        if (p.type === 'household_member' && !p.isHidden) {
+          rows.push({ id: `sig-${p.id}`, name: p.name, email: p.email ?? '' })
+        }
+      }
+    }
+    return rows
+  }, [allOwnerPartyIds, state.relatedParties])
+
+  const requiredEsignFormRows = useMemo(
+    () => buildRequiredEsignFormRows(accountOpeningChildren, state.taskData),
+    [accountOpeningChildren, state.taskData],
+  )
+
+  const esignEnvelopes = (data.esignEnvelopes as EsignEnvelope[] | undefined) ?? []
+
+  const openNewEnvelopeDrawer = () => {
+    setEnvelopeDraft(createNewEnvelope(requiredEsignFormRows, defaultEnvelopeSigners))
+    setEnvelopeDrawerCreate(true)
+    setEnvelopeDrawerMountKey((k) => k + 1)
+    setEnvelopeDrawerOpen(true)
+  }
+
+  const openEditEnvelopeDrawer = (env: EsignEnvelope) => {
+    setEnvelopeDraft({
+      ...env,
+      formSelections: env.formSelections.map((r) => ({ ...r })),
+      signers: env.signers.map((s) => ({ ...s })),
+      uploadedFiles: env.uploadedFiles.map((f) => ({ ...f })),
+      optionalFormIdsIncluded: [...env.optionalFormIdsIncluded],
+    })
+    setEnvelopeDrawerCreate(false)
+    setEnvelopeDrawerMountKey((k) => k + 1)
+    setEnvelopeDrawerOpen(true)
+  }
+
+  const saveEnvelopeFromDrawer = (env: EsignEnvelope) => {
+    if (envelopeDrawerCreate) {
+      updateField('esignEnvelopes', [...esignEnvelopes, env])
+    } else {
+      updateField(
+        'esignEnvelopes',
+        esignEnvelopes.map((e) => (e.id === env.id ? env : e)),
+      )
+    }
+    setEnvelopeDraft(null)
+    setEnvelopeDrawerOpen(false)
+  }
 
   const isAnnuity = (child: { name: string }) => child.name.includes(' - Annuity')
   const topLevelChildren = accountOpeningChildren.filter((c) => !isAnnuity(c))
@@ -99,7 +198,7 @@ export function OpenAccountsForm() {
       childName: `${parentName} - Annuity ${nextNum}`,
       childType: 'account-opening',
       metadata: {
-        registrationType: reg ?? 'individual',
+        registrationType: reg ?? 'IND',
       },
     })
   }
@@ -265,11 +364,68 @@ export function OpenAccountsForm() {
           </h3>
         </div>
         <p className="text-sm text-muted-foreground mb-4">
-          Documents are required once per person, even if they are owners on multiple accounts. Upload a file for each household member listed below.
+          Firm and custodian forms are completed in the e-sign flow—data you enter is mapped onto those documents automatically. Only items that need a file from the client (for example ID or trust pages) are uploaded below, once per person where applicable.
         </p>
-        {accountOpeningChildren.length > 0 && requiredDocs.length > 0 ? (
-          <div className="space-y-4">
-            {requiredDocs.map((doc) => {
+        {accountOpeningChildren.length > 0 && (uploadDocs.length > 0 || esignDocsByAccount.length > 0) ? (
+          <div className="space-y-6">
+            {esignDocsByAccount.length > 0 ? (
+              <div className="space-y-2">
+                <div className="flex items-center gap-2">
+                  <FileSignature className="h-4 w-4 text-muted-foreground" />
+                  <h4 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                    Firm &amp; custodian forms (e-sign)
+                  </h4>
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  These are not uploaded here. They appear in the signing envelope and are prefilled from this application.
+                  Forms are grouped by account number (one card per account you are opening).
+                </p>
+                <div className="space-y-3">
+                  {esignDocsByAccount.map((group) => (
+                    <div
+                      key={group.accountChildId}
+                      className="rounded-lg border border-border bg-card overflow-hidden"
+                    >
+                      <div className="bg-muted/50 px-4 py-2.5 border-b border-border space-y-0.5">
+                        <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Account</p>
+                        <p className="text-sm font-medium text-foreground leading-snug">{group.accountOpeningName}</p>
+                        <p className="text-xs text-muted-foreground tabular-nums">
+                          Account #{' '}
+                          <span className="text-foreground font-medium">{group.accountNumberLabel}</span>
+                        </p>
+                      </div>
+                      <ul className="divide-y divide-border">
+                        {group.docs.map((doc) => (
+                          <li key={`${group.accountChildId}-${doc.id}`} className="px-4 py-3 flex items-start justify-between gap-3">
+                            <div>
+                              <p className="text-sm font-medium text-foreground">{doc.label}</p>
+                              <p className="text-xs text-muted-foreground mt-0.5">{doc.description}</p>
+                            </div>
+                            <Badge variant="secondary" className="shrink-0 text-[10px] uppercase">
+                              eSign
+                            </Badge>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ) : null}
+
+            {uploadDocs.length > 0 ? (
+              <div className="space-y-2">
+                <div className="flex items-center gap-2">
+                  <Upload className="h-4 w-4 text-muted-foreground" />
+                  <h4 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                    Uploads (client documents)
+                  </h4>
+                </div>
+                <p className="text-xs text-muted-foreground mb-2">
+                  Required once per person, even if they are owners on multiple accounts. For government ID, choose the ID type before uploading.
+                </p>
+                <div className="space-y-4">
+            {uploadDocs.map((doc) => {
               const instances = ((data[`doc-instances-${doc.id}`] as DocInstance[] | undefined) ?? [])
 
               const updateInstances = (next: DocInstance[]) => {
@@ -445,6 +601,9 @@ export function OpenAccountsForm() {
                 </div>
               )
             })}
+                </div>
+              </div>
+            ) : null}
           </div>
         ) : (
           <div className="rounded-lg border border-dashed border-border p-4 text-center">
@@ -457,31 +616,96 @@ export function OpenAccountsForm() {
         )}
       </section>
 
-      {/* Aggregated eSign: single package across all accounts in this application */}
+      {/* eSign envelopes */}
       <section>
-        <div className="flex items-center gap-2 mb-2">
-          <FileSignature className="h-4 w-4 text-muted-foreground" />
-          <h3 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
-            eSign package (all accounts)
-          </h3>
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between mb-2">
+          <div className="flex items-center gap-2">
+            <FileSignature className="h-4 w-4 text-muted-foreground" />
+            <h3 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
+              eSign envelopes
+            </h3>
+          </div>
+          <Button type="button" variant="outline" size="sm" className="gap-1 shrink-0" onClick={openNewEnvelopeDrawer}>
+            <Plus className="h-3.5 w-3.5" />
+            New envelope
+          </Button>
         </div>
         <p className="text-sm text-muted-foreground mb-4">
-          Forms and agreements from every account you open below are rolled into{' '}
-          <span className="text-foreground font-medium">one</span> signing envelope for this application. Per-account
-          document requirements while you work each account appear in the Documents panel inside that account’s
-          workflow; final send and signature collection happen here.
+          Create one or more signing envelopes for this application. Required firm and custodian forms are grouped by
+          account number; add optional forms, signers, and extra files. Data captured in the wizard maps onto generated
+          forms automatically—those forms are not uploaded as attachments.
         </p>
-        <div className="rounded-lg border border-dashed border-border p-6 text-center">
-          <FileSignature className="mx-auto mb-2 h-8 w-8 text-muted-foreground/50" />
-          <p className="text-sm font-medium text-muted-foreground">
-            Envelope preview &amp; send
-          </p>
-          <p className="text-xs text-muted-foreground mt-1 max-w-md mx-auto">
-            DocuSign (or your eSign provider) connects here: build the aggregated package from all open-account child
-            workflows, then route for signature.
-          </p>
-        </div>
+        {esignEnvelopes.length === 0 ? (
+          <div className="rounded-lg border border-dashed border-border p-6 text-center">
+            <FileSignature className="mx-auto mb-2 h-8 w-8 text-muted-foreground/50" />
+            <p className="text-sm font-medium text-muted-foreground mb-1">No envelopes yet</p>
+            <p className="text-xs text-muted-foreground mb-4 max-w-md mx-auto">
+              Add an envelope to choose delivery method, template, and which generated forms to include.
+            </p>
+            <Button type="button" size="sm" onClick={openNewEnvelopeDrawer}>
+              <Plus className="h-3.5 w-3.5 mr-1" />
+              New envelope
+            </Button>
+          </div>
+        ) : (
+          <ul className="space-y-2">
+            {esignEnvelopes.map((env) => (
+              <li
+                key={env.id}
+                className="flex flex-col gap-3 rounded-lg border border-border bg-card p-4 sm:flex-row sm:items-center sm:justify-between"
+              >
+                <div className="min-w-0">
+                  <p className="text-sm font-medium text-foreground truncate">{env.name || 'Untitled envelope'}</p>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    {env.formSelections.length} generated form{env.formSelections.length === 1 ? '' : 's'}
+                    {env.optionalFormIdsIncluded.length > 0
+                      ? ` · ${env.optionalFormIdsIncluded.length} optional`
+                      : ''}
+                    {env.uploadedFiles.length > 0 ? ` · ${env.uploadedFiles.length} uploaded` : ''} ·{' '}
+                    {env.signers.length} signer{env.signers.length === 1 ? '' : 's'}
+                  </p>
+                </div>
+                <div className="flex flex-wrap items-center gap-2 shrink-0">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    className="gap-1"
+                    onClick={() => downloadEnvelopeManifest(env)}
+                  >
+                    <Download className="h-3.5 w-3.5" />
+                    Download
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    size="sm"
+                    className="gap-1"
+                    onClick={() => openEditEnvelopeDrawer(env)}
+                  >
+                    <Pencil className="h-3.5 w-3.5" />
+                    Edit
+                  </Button>
+                </div>
+              </li>
+            ))}
+          </ul>
+        )}
       </section>
+
+      {envelopeDraft ? (
+        <EsignEnvelopeDrawer
+          key={`${envelopeDraft.id}-${envelopeDrawerMountKey}`}
+          open={envelopeDrawerOpen}
+          onOpenChange={(o) => {
+            setEnvelopeDrawerOpen(o)
+            if (!o) setEnvelopeDraft(null)
+          }}
+          envelope={envelopeDraft}
+          onSave={saveEnvelopeFromDrawer}
+          isCreate={envelopeDrawerCreate}
+        />
+      ) : null}
     </div>
   )
 }

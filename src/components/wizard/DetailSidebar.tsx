@@ -1,5 +1,6 @@
 import { useWorkflow } from '@/stores/workflowStore'
 import { parseChildSubTaskId } from '@/utils/childTaskRegistry'
+import { MissingDataSection } from '@/components/wizard/MissingDataSection'
 
 export function DetailSidebar() {
   const { state } = useWorkflow()
@@ -22,60 +23,65 @@ export function DetailSidebar() {
   const assignedTo = activeTask?.assignedTo ?? ''
 
   return (
-    <aside className="w-64 border-l border-border bg-sidebar-background p-4 text-sm">
-      <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-4">
-        Details
-      </h3>
-      {activeTask && (
-        <div className="space-y-3">
-          <div>
-            <span className="text-muted-foreground">Task</span>
-            <p className="font-medium text-foreground">{title}</p>
+    <aside className="w-64 shrink-0 border-l border-border bg-sidebar-background flex flex-col min-h-0 h-full text-sm">
+      <div className="flex-1 min-h-0 overflow-y-auto p-4">
+        <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-4">
+          Details
+        </h3>
+        {activeTask && (
+          <div className="space-y-3">
+            <div>
+              <span className="text-muted-foreground">Task</span>
+              <p className="font-medium text-foreground">{title}</p>
+            </div>
+            <div>
+              <span className="text-muted-foreground">Owner</span>
+              <p className="font-medium text-foreground">{assignedTo}</p>
+            </div>
+            <div>
+              <span className="text-muted-foreground">Status</span>
+              <p className="font-medium text-foreground capitalize">
+                {activeTask.status.replace('_', ' ')}
+              </p>
+            </div>
           </div>
-          <div>
-            <span className="text-muted-foreground">Owner</span>
-            <p className="font-medium text-foreground">{assignedTo}</p>
+        )}
+        {!activeTask && activeChild && (
+          <div className="space-y-3">
+            <div>
+              <span className="text-muted-foreground">Child Action</span>
+              <p className="font-medium text-foreground">{activeChild.name}</p>
+            </div>
+            <div>
+              <span className="text-muted-foreground">Status</span>
+              <p className="font-medium text-foreground capitalize">
+                {activeChild.status.replace('_', ' ')}
+              </p>
+            </div>
           </div>
-          <div>
-            <span className="text-muted-foreground">Status</span>
-            <p className="font-medium text-foreground capitalize">
-              {activeTask.status.replace('_', ' ')}
-            </p>
+        )}
+        {!activeTask && !activeChild && subTaskChild && subTaskDef && parsed && (
+          <div className="space-y-3">
+            <div>
+              <span className="text-muted-foreground">{parsed.config.displayLabel}</span>
+              <p className="font-medium text-foreground">{subTaskChild.name}</p>
+            </div>
+            <div>
+              <span className="text-muted-foreground">Task</span>
+              <p className="font-medium text-foreground">{subTaskDef.title}</p>
+            </div>
+            <div>
+              <span className="text-muted-foreground">Status</span>
+              <p className="font-medium text-foreground capitalize">
+                {subTaskChild.status.replace('_', ' ')}
+              </p>
+            </div>
           </div>
-        </div>
-      )}
-      {!activeTask && activeChild && (
-        <div className="space-y-3">
-          <div>
-            <span className="text-muted-foreground">Child Action</span>
-            <p className="font-medium text-foreground">{activeChild.name}</p>
-          </div>
-          <div>
-            <span className="text-muted-foreground">Status</span>
-            <p className="font-medium text-foreground capitalize">
-              {activeChild.status.replace('_', ' ')}
-            </p>
-          </div>
-        </div>
-      )}
-      {!activeTask && !activeChild && subTaskChild && subTaskDef && parsed && (
-        <div className="space-y-3">
-          <div>
-            <span className="text-muted-foreground">{parsed.config.displayLabel}</span>
-            <p className="font-medium text-foreground">{subTaskChild.name}</p>
-          </div>
-          <div>
-            <span className="text-muted-foreground">Task</span>
-            <p className="font-medium text-foreground">{subTaskDef.title}</p>
-          </div>
-          <div>
-            <span className="text-muted-foreground">Status</span>
-            <p className="font-medium text-foreground capitalize">
-              {subTaskChild.status.replace('_', ' ')}
-            </p>
-          </div>
-        </div>
-      )}
+        )}
+      </div>
+      <div className="shrink-0 p-4 pt-3 border-t border-border">
+        <MissingDataSection variant="compact" />
+      </div>
     </aside>
   )
 }

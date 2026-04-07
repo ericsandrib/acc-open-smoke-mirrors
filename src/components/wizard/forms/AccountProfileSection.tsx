@@ -55,7 +55,7 @@ const initialFundsOptions = [
   'Unknown',
 ] as const
 
-interface AccountShellSectionProps {
+interface AccountProfileSectionProps {
   data: TaskData
   updateField: UpdateField
   /** Legal/registration structure — drives default product account type when not overridden. */
@@ -72,14 +72,14 @@ interface AccountAdditionalInformationSectionProps {
   updateField: UpdateField
 }
 
-export function AccountShellSection({
+export function AccountProfileSection({
   data,
   updateField,
   registrationType,
   productAccountTypeOverride,
   prefilledShortName,
   prefilledAccountNumber,
-}: AccountShellSectionProps) {
+}: AccountProfileSectionProps) {
   const resolvedProduct =
     productAccountTypeOverride ?? getAccountProductTypeForRegistration(registrationType)
   const accountTypeLabel = accountProductLabels[resolvedProduct]
@@ -89,10 +89,11 @@ export function AccountShellSection({
       <section className="space-y-6">
         <div>
           <h3 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground mb-1">
-            Account shell
+            Account details
           </h3>
           <p className="text-sm text-muted-foreground">
-            Account-level context aligned to custody intake. Per-owner tax ID and addresses are captured in{' '}
+            Registration, product type, and firm servicing codes for this account. Tax IDs, addresses, and KYC details are
+            captured under{' '}
             <span className="font-medium text-foreground">View / edit details</span> on each owner card.
           </p>
         </div>
@@ -105,8 +106,8 @@ export function AccountShellSection({
             </div>
             <p className="text-xs text-muted-foreground">
               {productAccountTypeOverride
-                ? 'Explicit product type on this account.'
-                : 'Derived from registration type (e.g. brokerage for most registrations, trust for trust or estate).'}
+                ? 'Product type set explicitly on this account.'
+                : 'Based on the registration you chose when this account was added (for example, brokerage for most individual registrations, or trust for trust and estate structures).'}
             </p>
           </div>
 
@@ -137,7 +138,7 @@ export function AccountShellSection({
               {PROTOTYPE_AGENT_CODES.advisorCode}
             </div>
             <p className="text-xs text-muted-foreground">
-              Prototype values from agent profile ({PROTOTYPE_AGENT_CODES.agentName}).
+              From the assigned advisor profile ({PROTOTYPE_AGENT_CODES.agentName}).
             </p>
           </div>
 
@@ -146,7 +147,7 @@ export function AccountShellSection({
             <div className="rounded-md border border-border bg-muted/30 px-3 py-2 text-sm text-foreground font-mono">
               {prefilledShortName || '—'}
             </div>
-            <p className="text-xs text-muted-foreground">Assigned when this account was added.</p>
+            <p className="text-xs text-muted-foreground">Generated when this account was added to the household.</p>
           </div>
 
           <div className="space-y-2">
@@ -154,7 +155,7 @@ export function AccountShellSection({
             <div className="rounded-md border border-border bg-muted/30 px-3 py-2 text-sm text-foreground tabular-nums font-medium">
               {prefilledAccountNumber || '—'}
             </div>
-            <p className="text-xs text-muted-foreground">Assigned when this account was added.</p>
+            <p className="text-xs text-muted-foreground">Assigned by custody when the new account is set up.</p>
           </div>
 
           <div className="space-y-2">
@@ -162,7 +163,7 @@ export function AccountShellSection({
             <Input
               value={(data.displayTitle as string) ?? ''}
               onChange={(e) => updateField('displayTitle', e.target.value)}
-              placeholder="As it should appear on statements"
+              placeholder="As it should appear on statements and tax forms"
             />
           </div>
         </div>
@@ -180,7 +181,7 @@ export function AccountAdditionalInformationSection({ data, updateField }: Accou
             Additional account information
           </h3>
           <p className="text-sm text-muted-foreground">
-            Fields commonly collected at account open (schema-style names for integration).
+            Supplemental fields usually gathered at account opening for books and records, risk, and regulatory questionnaires.
           </p>
         </div>
 

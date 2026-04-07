@@ -1,0 +1,1213 @@
+{
+  "source": "Park Avenue Securities – Account Opening: Required Documents, Index Codes & Identification Requirements",
+  "version": "8.9.2025",
+  "notes": [
+    "Additional identification requirements may be requested if the client cannot be identified by the listed methods.",
+    "Failure to upload/complete required forms and CIP requirements will delay account opening.",
+    "NetX360+ offers integrated e-Signature solutions via DocuSign and SIGNiX. Alternatively, the PAS e-Sign tool on GOL can be utilized.",
+    "Pershing form required for on-platform accounts only. Off-platform accounts only require sponsor paperwork."
+  ],
+  "global_requirements": {
+    "description": "All Personal Accounts (applied in addition to registration-specific documents)",
+    "forms": [
+      {
+        "name": "PAS Client Application",
+        "index_code": "NAW9",
+        "esignature_platform": "NetX360+",
+        "pershing_form": false,
+        "conditional": null
+      }
+    ]
+  },
+  "registration_types": {
+    "personal_accounts": [
+      {
+        "id": "IND",
+        "label": "Individual",
+        "category": "personal",
+        "required_forms": [],
+        "cip_requirements": [
+          "Government Issued ID"
+        ],
+        "notes": null
+      },
+      {
+        "id": "JT",
+        "label": "Joint",
+        "category": "personal",
+        "required_forms": [
+          {
+            "name": "Joint Account Agreement",
+            "index_code": "JNTN",
+            "esignature_platform": "NetX360+",
+            "pershing_form": true,
+            "conditional": null
+          }
+        ],
+        "cip_requirements": [
+          "Government Issued ID"
+        ],
+        "notes": null
+      },
+      {
+        "id": "TOD_IND",
+        "label": "Transfer on Death — Individual",
+        "category": "personal",
+        "required_forms": [
+          {
+            "name": "Individual Transfer on Death Account Agreement",
+            "index_code": "TODI",
+            "esignature_platform": "NetX360+",
+            "pershing_form": true,
+            "conditional": null
+          }
+        ],
+        "cip_requirements": [
+          "Government Issued ID"
+        ],
+        "notes": null
+      },
+      {
+        "id": "TOD_JT",
+        "label": "Transfer on Death — Joint",
+        "category": "personal",
+        "required_forms": [
+          {
+            "name": "Joint Transfer on Death Account Agreement",
+            "index_code": "TODJ",
+            "esignature_platform": "NetX360+",
+            "pershing_form": true,
+            "conditional": null
+          }
+        ],
+        "cip_requirements": [
+          "Government Issued ID"
+        ],
+        "notes": null
+      },
+      {
+        "id": "IRA",
+        "label": "Traditional IRA",
+        "category": "personal",
+        "required_forms": [
+          {
+            "name": "IRA Adoption Agreement",
+            "index_code": "ADOP",
+            "esignature_platform": "NetX360+",
+            "pershing_form": true,
+            "conditional": null
+          }
+        ],
+        "cip_requirements": [
+          "Government Issued ID"
+        ],
+        "notes": null
+      },
+      {
+        "id": "ROTH_IRA",
+        "label": "Roth IRA",
+        "category": "personal",
+        "required_forms": [
+          {
+            "name": "IRA Adoption Agreement",
+            "index_code": "ADOP",
+            "esignature_platform": "NetX360+",
+            "pershing_form": true,
+            "conditional": null
+          }
+        ],
+        "cip_requirements": [
+          "Government Issued ID"
+        ],
+        "notes": null
+      },
+      {
+        "id": "SEP_IRA",
+        "label": "SEP IRA",
+        "category": "personal",
+        "required_forms": [
+          {
+            "name": "IRA Adoption Agreement",
+            "index_code": "ADOP",
+            "esignature_platform": "NetX360+",
+            "pershing_form": true,
+            "conditional": null
+          }
+        ],
+        "cip_requirements": [
+          "Government Issued ID"
+        ],
+        "notes": null
+      },
+      {
+        "id": "SIMPLE_5304_IRA",
+        "label": "SIMPLE 5304 IRA",
+        "category": "personal",
+        "required_forms": [
+          {
+            "name": "IRA Adoption Agreement",
+            "index_code": "ADOP",
+            "esignature_platform": "NetX360+",
+            "pershing_form": true,
+            "conditional": null
+          },
+          {
+            "name": "IRS 5304 SIMPLE Form",
+            "index_code": "5304",
+            "esignature_platform": "NA",
+            "pershing_form": false,
+            "conditional": null
+          }
+        ],
+        "cip_requirements": [
+          "Government Issued ID"
+        ],
+        "notes": "Not eligible for e-Sign. IRS 5304 SIMPLE Form not available on GOL."
+      },
+      {
+        "id": "INHERITED_IRA",
+        "label": "Inherited IRA",
+        "category": "personal",
+        "required_forms": [
+          {
+            "name": "IRA Adoption Agreement",
+            "index_code": "ADOP",
+            "esignature_platform": "NetX360+",
+            "pershing_form": true,
+            "conditional": null
+          },
+          {
+            "name": "Death Certificate",
+            "index_code": "DEAC",
+            "esignature_platform": "NA",
+            "pershing_form": false,
+            "conditional": null
+          }
+        ],
+        "cip_requirements": [
+          "Government Issued ID"
+        ],
+        "notes": "Death Certificate required when transferring assets from the decedent."
+      },
+      {
+        "id": "INHERITED_ROTH_IRA",
+        "label": "Inherited Roth IRA",
+        "category": "personal",
+        "required_forms": [
+          {
+            "name": "IRA Adoption Agreement",
+            "index_code": "ADOP",
+            "esignature_platform": "NetX360+",
+            "pershing_form": true,
+            "conditional": null
+          },
+          {
+            "name": "Death Certificate",
+            "index_code": "DEAC",
+            "esignature_platform": "NA",
+            "pershing_form": false,
+            "conditional": null
+          }
+        ],
+        "cip_requirements": [
+          "Government Issued ID"
+        ],
+        "notes": "Death Certificate required when transferring assets from the decedent."
+      },
+      {
+        "id": "GUARDIAN_IRA",
+        "label": "Guardian IRA",
+        "category": "personal",
+        "required_forms": [
+          {
+            "name": "IRA Adoption Agreement",
+            "index_code": "ADOP",
+            "esignature_platform": "NetX360+",
+            "pershing_form": true,
+            "conditional": null
+          },
+          {
+            "name": "Court Documents Establishing Guardianship",
+            "index_code": "COUR",
+            "esignature_platform": "NA",
+            "pershing_form": false,
+            "conditional": null
+          }
+        ],
+        "cip_requirements": [
+          "Government Issued ID"
+        ],
+        "notes": "Court documents required when guardian is not the parent. Identification documentation for the guardian is required."
+      },
+      {
+        "id": "UTMA_UGMA",
+        "label": "UTMA / UGMA",
+        "category": "personal",
+        "required_forms": [],
+        "cip_requirements": [
+          "Government Issued ID"
+        ],
+        "notes": "Government Issued ID required for former minor once they reach the age of maturity."
+      },
+      {
+        "id": "GUARDIAN",
+        "label": "Guardian",
+        "category": "personal",
+        "required_forms": [
+          {
+            "name": "Court Documents Establishing Guardianship",
+            "index_code": "COUR",
+            "esignature_platform": "NA",
+            "pershing_form": false,
+            "conditional": null
+          }
+        ],
+        "cip_requirements": [
+          "Government Issued ID"
+        ],
+        "notes": "Identification information required for both the Guardian and the ward (if not a minor)."
+      },
+      {
+        "id": "529_ON_PLATFORM",
+        "label": "529 Account — On Platform",
+        "category": "personal",
+        "required_forms": [
+          {
+            "name": "Pershing 529 Application",
+            "index_code": "529A",
+            "esignature_platform": "NetX360+",
+            "pershing_form": false,
+            "conditional": null
+          },
+          {
+            "name": "Explanation of Investment — 529 Plans",
+            "index_code": "BDEOI529",
+            "esignature_platform": "NetX360+",
+            "pershing_form": false,
+            "conditional": null
+          }
+        ],
+        "cip_requirements": [
+          "Government Issued ID"
+        ],
+        "notes": "Identification information required for all participants on the 529 account."
+      },
+      {
+        "id": "529_OFF_PLATFORM",
+        "label": "529 Account — Off Platform",
+        "category": "personal",
+        "required_forms": [
+          {
+            "name": "Sponsor Paperwork — Direct",
+            "index_code": "BDSPNDIR",
+            "esignature_platform": "NA",
+            "pershing_form": false,
+            "conditional": null
+          },
+          {
+            "name": "Explanation of Investment — 529 Plans",
+            "index_code": "BDEOI529",
+            "esignature_platform": "NetX360+",
+            "pershing_form": false,
+            "conditional": null
+          }
+        ],
+        "cip_requirements": [
+          "Government Issued ID"
+        ],
+        "notes": "Identification information required for all participants on the 529 account."
+      },
+      {
+        "id": "ADVISORY_ON_PLATFORM_PERSONAL",
+        "label": "Advisory — On Platform",
+        "category": "personal",
+        "required_forms": [
+          {
+            "name": "Statement of Investment Selection (SIS)",
+            "index_code": "BDSIS",
+            "esignature_platform": "NetX360+",
+            "pershing_form": false,
+            "conditional": null
+          },
+          {
+            "name": "Quarterly Confirmation Enrollment Report",
+            "index_code": "CSUP",
+            "esignature_platform": "NetX360+",
+            "pershing_form": false,
+            "conditional": null
+          }
+        ],
+        "cip_requirements": [
+          "Government Issued ID"
+        ],
+        "notes": "NetX360+ e-Sign eligible when using Envestnet integration."
+      },
+      {
+        "id": "ADVISORY_OFF_PLATFORM_PERSONAL",
+        "label": "Advisory — Off Platform",
+        "category": "personal",
+        "required_forms": [
+          {
+            "name": "Client Acknowledgement and Receipt Form",
+            "index_code": "BDCLIACK",
+            "esignature_platform": "PAS_ESIGN",
+            "pershing_form": false,
+            "conditional": null
+          },
+          {
+            "name": "Sponsor Paperwork — Third Party (TAMP)",
+            "index_code": "BDSPN3RD",
+            "esignature_platform": "NA",
+            "pershing_form": false,
+            "conditional": null
+          }
+        ],
+        "cip_requirements": [
+          "Government Issued ID"
+        ],
+        "notes": null
+      },
+      {
+        "id": "BROKERAGE_OFF_PLATFORM",
+        "label": "Brokerage — Off Platform",
+        "category": "personal",
+        "required_forms": [
+          {
+            "name": "Sponsor Paperwork — Direct",
+            "index_code": "BDSPNDIR",
+            "esignature_platform": "NA",
+            "pershing_form": false,
+            "conditional": null
+          }
+        ],
+        "cip_requirements": [
+          "Government Issued ID"
+        ],
+        "notes": null
+      },
+      {
+        "id": "VUL_OFF_PLATFORM",
+        "label": "VUL — Off Platform",
+        "category": "personal",
+        "required_forms": [
+          {
+            "name": "Variable Life Explanation of Investment",
+            "index_code": "BDEOIVL",
+            "esignature_platform": "PAS_ESIGN",
+            "pershing_form": false,
+            "conditional": null
+          },
+          {
+            "name": "Sponsor Paperwork — Direct",
+            "index_code": "BDSPNDIR",
+            "esignature_platform": "NA",
+            "pershing_form": false,
+            "conditional": null
+          }
+        ],
+        "cip_requirements": [
+          "Government Issued ID"
+        ],
+        "notes": null
+      },
+      {
+        "id": "OFF_PLATFORM_COB_PERSONAL",
+        "label": "Off-Platform Change of Broker Dealer",
+        "category": "personal",
+        "required_forms": [
+          {
+            "name": "Change of Dealer Authorization",
+            "index_code": "BDCGDL",
+            "esignature_platform": "NA",
+            "pershing_form": false,
+            "conditional": null
+          },
+          {
+            "name": "Client Statement (dated within last 12 months)",
+            "index_code": null,
+            "esignature_platform": "NA",
+            "pershing_form": false,
+            "conditional": null
+          }
+        ],
+        "cip_requirements": [],
+        "notes": "Letter of Authorization (LOA) is acceptable in place of Change of Dealer Authorization."
+      }
+    ],
+    "entity_accounts": [
+      {
+        "id": "TRUST",
+        "label": "Trust",
+        "category": "entity",
+        "required_forms": [
+          {
+            "name": "Trustee Certificate of Investment Powers",
+            "index_code": "TCIP",
+            "esignature_platform": "NetX360+",
+            "pershing_form": true,
+            "conditional": null
+          },
+          {
+            "name": "Executed Trust Agreement",
+            "index_code": "TRST",
+            "esignature_platform": "NA",
+            "pershing_form": false,
+            "conditional": null
+          },
+          {
+            "name": "Certification of Testamentary Trust",
+            "index_code": "BDCRTT",
+            "esignature_platform": "PAS_ESIGN",
+            "pershing_form": false,
+            "conditional": "Required for Testamentary Trust accounts only"
+          }
+        ],
+        "cip_requirements": [
+          "Trust Instrument (Title and Signature Page)",
+          "Government Issued ID",
+          "Government Issued ID required for all Trustees."
+        ],
+        "notes": null
+      },
+      {
+        "id": "ESTATE",
+        "label": "Estate",
+        "category": "entity",
+        "required_forms": [
+          {
+            "name": "Death Certificate",
+            "index_code": "DEAC",
+            "esignature_platform": "NA",
+            "pershing_form": false,
+            "conditional": null
+          },
+          {
+            "name": "Affidavit of Domicile",
+            "index_code": "AFDD",
+            "esignature_platform": "NA",
+            "pershing_form": false,
+            "conditional": null
+          }
+        ],
+        "cip_requirements": [
+          "Satisfy ONE of the following: COPY_OF_WILL; LETTERS_OF_ADMINISTRATION; LETTERS_OF_TESTAMENTARY",
+          "Government Issued ID of Executor/Administrator required. Affidavit of Domicile must be notarized. Not eligible for e-Sign."
+        ],
+        "notes": null
+      },
+      {
+        "id": "LLC",
+        "label": "Limited Liability Corporation (LLC)",
+        "category": "entity",
+        "required_forms": [
+          {
+            "name": "LLC Resolution",
+            "index_code": "LLCA",
+            "esignature_platform": "NetX360+",
+            "pershing_form": true,
+            "conditional": null
+          }
+        ],
+        "cip_requirements": [
+          "ONE of the following entity formation documents required: Certificate of Formation; Articles of Organization; Certificate of Good Standing; Commercial Register Extract; Extract From a Government Website",
+          "Government Issued ID required for Controlling Person, Authorized Party, and all Beneficial Owners with 25% or more ownership. Review AML Customer Due Diligence Requirements QRC."
+        ],
+        "notes": null
+      },
+      {
+        "id": "CAPTIVE_INSURANCE",
+        "label": "Captive Insurance",
+        "category": "entity",
+        "required_forms": [
+          {
+            "name": "LLC Resolution",
+            "index_code": "LLCA",
+            "esignature_platform": "NetX360+",
+            "pershing_form": true,
+            "conditional": null
+          },
+          {
+            "name": "Captive Insurance Company Series Investment Account Certification & Indemnification",
+            "index_code": null,
+            "esignature_platform": "NA",
+            "pershing_form": false,
+            "conditional": null
+          }
+        ],
+        "cip_requirements": [
+          "ONE of the following entity formation documents required: Certificate of Formation; Articles of Organization; Certificate of Good Standing; Commercial Register Extract; Extract From a Government Website",
+          "Government Issued ID required for Controlling Person, Authorized Party, and all Beneficial Owners with 25% or more ownership. Review AML Customer Due Diligence Requirements QRC."
+        ],
+        "notes": null
+      },
+      {
+        "id": "CORPORATION",
+        "label": "Corporation",
+        "category": "entity",
+        "required_forms": [
+          {
+            "name": "Corporate Resolution Certification",
+            "index_code": "CORP",
+            "esignature_platform": "NetX360+",
+            "pershing_form": true,
+            "conditional": null
+          }
+        ],
+        "cip_requirements": [
+          "ONE of the following entity formation documents required: Certificate of Formation; Articles of Incorporation; Certificate of Good Standing; Commercial Register Extract; Extract From Government Website",
+          "Government Issued ID required for Controlling Person, Authorized Party, and all Beneficial Owners with 25% or more ownership. Review AML Customer Due Diligence Requirements QRC."
+        ],
+        "notes": null
+      },
+      {
+        "id": "PARTNERSHIP",
+        "label": "Partnership",
+        "category": "entity",
+        "required_forms": [
+          {
+            "name": "Partnership Account Form",
+            "index_code": "PART",
+            "esignature_platform": "NetX360+",
+            "pershing_form": true,
+            "conditional": null
+          }
+        ],
+        "cip_requirements": [
+          "ONE of the following entity formation documents required: Partnership Agreement; Commercial Register Extract; Extract from Government Website",
+          "Government Issued ID required for Controlling Person, Authorized Party, and all Beneficial Owners with 25% or more ownership. Review AML Customer Due Diligence Requirements QRC."
+        ],
+        "notes": null
+      },
+      {
+        "id": "NON_PROFIT",
+        "label": "Non-Profit Organization and Religious Organization",
+        "category": "entity",
+        "required_forms": [
+          {
+            "name": "Non-Corporate Resolution Certification",
+            "index_code": "CORN",
+            "esignature_platform": "NetX360+",
+            "pershing_form": true,
+            "conditional": null
+          }
+        ],
+        "cip_requirements": [
+          "ONE of the following entity formation documents required: Certificate of Formation; Articles of Incorporation; Organization Document; Extract From Government Website (e.g., IRS)",
+          "Government Issued ID required for Controlling Person and Authorized Party. Review AML Customer Due Diligence Requirements QRC."
+        ],
+        "notes": null
+      },
+      {
+        "id": "SOLE_PROPRIETORSHIP",
+        "label": "Sole Proprietorship",
+        "category": "entity",
+        "required_forms": [
+          {
+            "name": "Certificate of Sole Proprietorship",
+            "index_code": "SCORP",
+            "esignature_platform": "NetX360+",
+            "pershing_form": true,
+            "conditional": null
+          }
+        ],
+        "cip_requirements": [
+          "ONE of the following entity formation documents required: Business License/Registration; Commercial Register Extract; Extract from a Government Website; Other Formation Documents (varies by state)",
+          "Government Issued ID required for Controlling Person and Authorized Party. Review AML Customer Due Diligence Requirements QRC."
+        ],
+        "notes": null
+      },
+      {
+        "id": "CORP_PENSION_PROFIT_SHARING_401K",
+        "label": "Corporate Pension / Profit Sharing / Outside Custodian — Qualified Plan",
+        "category": "entity",
+        "required_forms": [
+          {
+            "name": "Executed Plan Documents / Adoption Agreements",
+            "index_code": "RPSD",
+            "esignature_platform": "NA",
+            "pershing_form": false,
+            "conditional": null
+          }
+        ],
+        "cip_requirements": [
+          "Executed Plan Documents / Adoption Agreements",
+          "Government Issued ID",
+          "Government Issued ID required for all individuals with authority/control (e.g., plan Trustee). Executed Plan Document required."
+        ],
+        "notes": null
+      },
+      {
+        "id": "NON_QUALIFIED_DEFERRED_COMP",
+        "label": "Non-Qualified Deferred Compensation Plan / 403(b) / 457",
+        "category": "entity",
+        "required_forms": [
+          {
+            "name": "Executed Plan Documents / Adoption Agreements",
+            "index_code": "RPSD",
+            "esignature_platform": "NA",
+            "pershing_form": false,
+            "conditional": null
+          }
+        ],
+        "cip_requirements": [
+          "Executed Plan Documents / Adoption Agreements",
+          "Government Issued ID",
+          "Government Issued ID required for all individuals with authority/control (e.g., plan Trustee). Review AML Customer Due Diligence Requirements QRC."
+        ],
+        "notes": null
+      },
+      {
+        "id": "INDIVIDUAL_401K_ASCENSUS",
+        "label": "Individual 401(K) / Super Simplified Money Purchase / Super Simplified Profit Sharing (Ascensus as TPA)",
+        "category": "entity",
+        "required_forms": [
+          {
+            "name": "Employee Data Form for Qualified Plans",
+            "index_code": "QRPA",
+            "esignature_platform": "NetX360+",
+            "pershing_form": false,
+            "conditional": null
+          },
+          {
+            "name": "Single Participant Retirement Plan Certification",
+            "index_code": "SPRP",
+            "esignature_platform": "NetX360+",
+            "pershing_form": false,
+            "conditional": null
+          },
+          {
+            "name": "CID Document Amendment (Revised Client Information Disclosures Document Amendment)",
+            "index_code": "RETPLNAMD",
+            "esignature_platform": "NetX360+",
+            "pershing_form": false,
+            "conditional": null
+          }
+        ],
+        "cip_requirements": [
+          "Government Issued ID",
+          "Government Issued ID required for all individuals with authority/control (e.g., plan Trustee)."
+        ],
+        "notes": "SPRP required for Advisory accounts only."
+      },
+      {
+        "id": "THIRD_PARTY_CUSTODIAN_ERISA_QRP",
+        "label": "Third Party Custodian ERISA / QRP",
+        "category": "entity",
+        "required_forms": [
+          {
+            "name": "Executed Plan Documents / Adoption Agreements",
+            "index_code": "RPSD",
+            "esignature_platform": "NA",
+            "pershing_form": false,
+            "conditional": null
+          },
+          {
+            "name": "Client Acknowledgement and Receipt Form",
+            "index_code": "BDCLIACK",
+            "esignature_platform": "PAS_ESIGN",
+            "pershing_form": false,
+            "conditional": null
+          },
+          {
+            "name": "CID Document Amendment (Revised Client Information Disclosures Document Amendment)",
+            "index_code": "RETPLNAMD",
+            "esignature_platform": "NetX360+",
+            "pershing_form": false,
+            "conditional": null
+          },
+          {
+            "name": "Sponsor Paperwork — Third Party (TAMP)",
+            "index_code": "BDSPN3RD",
+            "esignature_platform": "NA",
+            "pershing_form": false,
+            "conditional": "TAMP accounts"
+          },
+          {
+            "name": "Sponsor Paperwork — Direct",
+            "index_code": "BDSPNDIR",
+            "esignature_platform": "NA",
+            "pershing_form": false,
+            "conditional": "Direct accounts"
+          },
+          {
+            "name": "Single Participant Retirement Plan Certification",
+            "index_code": "SPRP",
+            "esignature_platform": "NetX360+",
+            "pershing_form": false,
+            "conditional": "Matson TAMP accounts only"
+          }
+        ],
+        "cip_requirements": [
+          "Government Issued ID",
+          "Government Issued ID required for all individuals with authority/control (e.g., plan Trustee)."
+        ],
+        "notes": null
+      },
+      {
+        "id": "ADVISORY_ON_PLATFORM_ENTITY",
+        "label": "Advisory — On Platform (Entity)",
+        "category": "entity",
+        "required_forms": [
+          {
+            "name": "Statement of Investment Selection (SIS)",
+            "index_code": "BDSIS",
+            "esignature_platform": "NetX360+",
+            "pershing_form": false,
+            "conditional": null
+          },
+          {
+            "name": "Quarterly Confirmation Enrollment Report",
+            "index_code": "CSUP",
+            "esignature_platform": "NetX360+",
+            "pershing_form": false,
+            "conditional": null
+          }
+        ],
+        "cip_requirements": [
+          "Government Issued ID"
+        ],
+        "notes": "NetX360+ e-Sign eligible when using Envestnet integration."
+      },
+      {
+        "id": "ADVISORY_OFF_PLATFORM_ENTITY",
+        "label": "Advisory — Off Platform (Entity)",
+        "category": "entity",
+        "required_forms": [
+          {
+            "name": "Client Acknowledgement and Receipt Form",
+            "index_code": "BDCLIACK",
+            "esignature_platform": "PAS_ESIGN",
+            "pershing_form": false,
+            "conditional": null
+          },
+          {
+            "name": "Sponsor Paperwork — Third Party (TAMP)",
+            "index_code": "BDSPN3RD",
+            "esignature_platform": "NA",
+            "pershing_form": false,
+            "conditional": null
+          }
+        ],
+        "cip_requirements": [
+          "Government Issued ID"
+        ],
+        "notes": null
+      },
+      {
+        "id": "OFF_PLATFORM_COB_ENTITY",
+        "label": "Off-Platform Change of Broker Dealer (Entity)",
+        "category": "entity",
+        "required_forms": [
+          {
+            "name": "Change of Dealer Authorization",
+            "index_code": "BDCGDL",
+            "esignature_platform": "NA",
+            "pershing_form": false,
+            "conditional": null
+          },
+          {
+            "name": "Client Statement (dated within last 12 months)",
+            "index_code": null,
+            "esignature_platform": "NA",
+            "pershing_form": false,
+            "conditional": null
+          }
+        ],
+        "cip_requirements": [],
+        "notes": "Letter of Authorization (LOA) is acceptable in place of Change of Dealer Authorization."
+      }
+    ],
+    "asset_movements": [
+      {
+        "id": "ACCOUNT_TRANSFERS",
+        "label": "Account Transfers (ACAT)",
+        "category": "asset_movement",
+        "required_forms": [
+          {
+            "name": "Account Transfer Form",
+            "index_code": "TFRR",
+            "esignature_platform": "NetX360+",
+            "pershing_form": false,
+            "conditional": null
+          }
+        ],
+        "notes": "Initiates a full or partial account transfer into Park Avenue Securities from an outside firm. Client Statement not needed for ACAT transfers. Review Transfers resources on GOL."
+      },
+      {
+        "id": "STANDING_ACH",
+        "label": "Standing ACH Instructions",
+        "category": "asset_movement",
+        "required_forms": [
+          {
+            "name": "ACH Authorization Form",
+            "index_code": "ACHA",
+            "esignature_platform": "NetX360+",
+            "pershing_form": false,
+            "conditional": null
+          },
+          {
+            "name": "Bank Documentation",
+            "index_code": null,
+            "esignature_platform": "NA",
+            "pershing_form": false,
+            "conditional": "Bank documentation may be required at Pershing's discretion"
+          }
+        ],
+        "notes": "Must be completed before ACH deposit or withdrawal transactions can be initiated."
+      },
+      {
+        "id": "ADHOC_1ST_PARTY_WIRES",
+        "label": "Ad Hoc 1st Party Wires",
+        "category": "asset_movement",
+        "required_forms": [
+          {
+            "name": "Letter of Authorization",
+            "index_code": "LOAS",
+            "esignature_platform": "NA",
+            "pershing_form": false,
+            "conditional": null
+          }
+        ],
+        "notes": null
+      },
+      {
+        "id": "3RD_PARTY_WIRES",
+        "label": "3rd Party Wires",
+        "category": "asset_movement",
+        "required_forms": [
+          {
+            "name": "Letter of Authorization",
+            "index_code": "LOAS",
+            "esignature_platform": "NA",
+            "pershing_form": false,
+            "conditional": null
+          }
+        ],
+        "notes": null
+      },
+      {
+        "id": "JOURNALS_DIFF_TAX",
+        "label": "Journals to Different Tax ID / Registrations",
+        "category": "asset_movement",
+        "required_forms": [
+          {
+            "name": "Letter of Authorization",
+            "index_code": "LOAS",
+            "esignature_platform": "NA",
+            "pershing_form": false,
+            "conditional": null
+          }
+        ],
+        "notes": null
+      },
+      {
+        "id": "STANDING_PERIODIC_WIRES",
+        "label": "Standing & Periodic Instructions for Wires",
+        "category": "asset_movement",
+        "required_forms": [
+          {
+            "name": "Letter of Authorization",
+            "index_code": "LOAS",
+            "esignature_platform": "NA",
+            "pershing_form": false,
+            "conditional": null
+          }
+        ],
+        "notes": null
+      },
+      {
+        "id": "IRA_DISTRIBUTIONS",
+        "label": "IRA Distributions",
+        "category": "asset_movement",
+        "required_forms": [
+          {
+            "name": "IRA Distribution Form",
+            "index_code": "DIST",
+            "esignature_platform": "NetX360+",
+            "pershing_form": false,
+            "conditional": null
+          }
+        ],
+        "notes": null
+      },
+      {
+        "id": "QUALIFIED_PLAN_DISTRIBUTIONS",
+        "label": "Qualified Plan Distributions",
+        "category": "asset_movement",
+        "required_forms": [
+          {
+            "name": "Qualified Plan Distribution Form",
+            "index_code": "DIST",
+            "esignature_platform": "NetX360+",
+            "pershing_form": false,
+            "conditional": null
+          }
+        ],
+        "notes": null
+      }
+    ],
+    "account_features_services": [
+      {
+        "id": "CORESTONE_CHECKING",
+        "label": "Corestone Agreement — Checking Accounts",
+        "category": "feature",
+        "required_forms": [
+          {
+            "name": "Corestone Agreement",
+            "index_code": "PROC",
+            "esignature_platform": "NetX360+",
+            "pershing_form": false,
+            "conditional": null
+          }
+        ],
+        "notes": "Allows enhanced cash management features (checks and debit cards) on an account."
+      },
+      {
+        "id": "EDELIVERY",
+        "label": "eDelivery",
+        "category": "feature",
+        "required_forms": [
+          {
+            "name": "User ID and eDelivery Request",
+            "index_code": "BDUIEDR",
+            "esignature_platform": "NetX360+",
+            "pershing_form": false,
+            "conditional": null
+          }
+        ],
+        "notes": null
+      },
+      {
+        "id": "MARGIN",
+        "label": "Margin",
+        "category": "feature",
+        "required_forms": [
+          {
+            "name": "Margin Agreement Form",
+            "index_code": "MARG",
+            "esignature_platform": "NetX360+",
+            "pershing_form": false,
+            "conditional": null
+          }
+        ],
+        "notes": "Allows the use of margin on an account."
+      },
+      {
+        "id": "OPTIONS",
+        "label": "Options",
+        "category": "feature",
+        "required_forms": [
+          {
+            "name": "Options Agreement",
+            "index_code": "OPT",
+            "esignature_platform": "NetX360+",
+            "pershing_form": false,
+            "conditional": null
+          }
+        ],
+        "notes": "Allows the trading of options in an account."
+      },
+      {
+        "id": "SELECTLINK",
+        "label": "SelectLink Statement Consolidation",
+        "category": "feature",
+        "required_forms": [
+          {
+            "name": "SelectLink Combined Mail Application",
+            "index_code": "LOAC",
+            "esignature_platform": "NetX360+",
+            "pershing_form": false,
+            "conditional": null
+          }
+        ],
+        "notes": null
+      },
+      {
+        "id": "ALTERNATIVE_STRATEGY",
+        "label": "Alternative Strategy Selection",
+        "category": "feature",
+        "required_forms": [
+          {
+            "name": "Model Portfolio Deviation Form",
+            "index_code": "BDMPDEV",
+            "esignature_platform": "NetX360+",
+            "pershing_form": false,
+            "conditional": null
+          }
+        ],
+        "notes": null
+      }
+    ],
+    "optional_forms": [
+      {
+        "id": "ADVISORY_ON_PLATFORM_OPTIONAL",
+        "label": "Advisory On-Platform Optional Forms",
+        "category": "optional",
+        "required_forms": [
+          {
+            "name": "Advisory Program Source of Funds Form",
+            "index_code": "BDADVSOF",
+            "esignature_platform": "NetX360+",
+            "pershing_form": false,
+            "conditional": null
+          },
+          {
+            "name": "Household Billing Form",
+            "index_code": "BDADVHBL",
+            "esignature_platform": "NetX360+",
+            "pershing_form": false,
+            "conditional": null
+          }
+        ],
+        "notes": null
+      },
+      {
+        "id": "ADVISORY_OFF_PLATFORM_OPTIONAL",
+        "label": "Advisory Off-Platform Optional Forms",
+        "category": "optional",
+        "required_forms": [
+          {
+            "name": "Advisory Program Source of Funds Form",
+            "index_code": "BDADVSOF",
+            "esignature_platform": "NetX360+",
+            "pershing_form": false,
+            "conditional": null
+          },
+          {
+            "name": "Alternate Strategy Selection Form",
+            "index_code": "BD3RDDEV",
+            "esignature_platform": "NetX360+",
+            "pershing_form": false,
+            "conditional": null
+          }
+        ],
+        "notes": null
+      },
+      {
+        "id": "POWER_OF_ATTORNEY",
+        "label": "Power of Attorney",
+        "category": "optional",
+        "required_forms": [],
+        "cip_requirements": [
+          "Government Issued ID"
+        ],
+        "notes": "A new POA Affidavit is required every 3 years. Government Issued ID must be uploaded along with required forms."
+      },
+      {
+        "id": "CHECK_IMAGE",
+        "label": "Check Image",
+        "category": "optional",
+        "required_forms": [
+          {
+            "name": "Direct & Third Party Check Image",
+            "index_code": "BDEXTCHK",
+            "esignature_platform": "NA",
+            "pershing_form": false,
+            "conditional": null
+          }
+        ],
+        "notes": null
+      },
+      {
+        "id": "NAME_CHANGE",
+        "label": "Name Change",
+        "category": "optional",
+        "required_forms": [
+          {
+            "name": "Proof of Name Change",
+            "index_code": "NAME",
+            "esignature_platform": "NA",
+            "pershing_form": false,
+            "conditional": null
+          },
+          {
+            "name": "Client Letter of Authorization — Name Change",
+            "index_code": "NAME",
+            "esignature_platform": "NetX360+",
+            "pershing_form": false,
+            "conditional": null
+          }
+        ],
+        "cip_requirements": [
+          "Government Issued ID"
+        ],
+        "notes": null
+      },
+      {
+        "id": "CHANGE_OF_RR_IAR",
+        "label": "Change of RR / IAR",
+        "category": "optional",
+        "required_forms": [
+          {
+            "name": "Change of RR — Block Transfer Request",
+            "index_code": "CGBLK",
+            "esignature_platform": "NA",
+            "pershing_form": false,
+            "conditional": null
+          },
+          {
+            "name": "PAS Client Application",
+            "index_code": "NAW9",
+            "esignature_platform": "NetX360+",
+            "pershing_form": false,
+            "conditional": null
+          }
+        ],
+        "notes": "CGBLK only required for single change via edit Profile screen. Bulk updates done through Account Services by ACO do not require CGBLK."
+      },
+      {
+        "id": "ANNUITY_APPLICATION",
+        "label": "Annuity Application and Supporting Docs",
+        "category": "optional",
+        "required_forms": [
+          {
+            "name": "Annuity Application and Supporting Docs",
+            "index_code": "ANCFRM",
+            "esignature_platform": "NetX360+",
+            "pershing_form": false,
+            "conditional": null
+          }
+        ],
+        "notes": "Refer to Annuity Carrier Electronic Signature Availability resource for e-Sign eligibility by carrier."
+      },
+      {
+        "id": "EOI_SUITABILITY",
+        "label": "EOI and Suitability Questionnaire",
+        "category": "optional",
+        "required_forms": [
+          {
+            "name": "IBD Suitability Forms — EOI and Suitability Questionnaire",
+            "index_code": "ANBDSFM",
+            "esignature_platform": "PAS_ESIGN",
+            "pershing_form": false,
+            "conditional": null
+          }
+        ],
+        "notes": null
+      },
+      {
+        "id": "REQUEST_TO_EXCHANGE",
+        "label": "Request to Exchange Investments (Switch Letters)",
+        "category": "optional",
+        "required_forms": [
+          {
+            "name": "Request to Exchange Investments (Switch Letters)",
+            "index_code": "BDRQTEXC",
+            "esignature_platform": "PAS_ESIGN",
+            "pershing_form": false,
+            "conditional": null
+          }
+        ],
+        "notes": "Does not go for approval but required to be on file. When scanning, select 'Submit for Review'."
+      }
+    ]
+  },
+  "esignature_platform_legend": {
+    "NetX360+": "Pershing NetX360+ integrated e-Signature (DocuSign or SIGNiX)",
+    "PAS_ESIGN": "PAS e-Sign tool on GOL",
+    "NA": "No e-Signature platform; physical/manual processing required",
+    "NOT_ELIGIBLE": "Not eligible for e-Signature",
+    "NetX360+_ACAT_ONLY": "NetX360+ e-Sign for ACAT transfers only",
+    "NetX360+_ELECTRONIC_CHECKS_ONLY": "NetX360+ e-Sign for electronic checks only"
+  }
+}
