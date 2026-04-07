@@ -1,6 +1,6 @@
 import { StepSidebar } from './StepSidebar'
 import { TaskContent } from './TaskContent'
-import { DetailSidebar } from './DetailSidebar'
+
 import { WizardFooter } from './WizardFooter'
 import { HomeOfficeReviewFooter } from './HomeOfficeReviewFooter'
 import { ChildActionSidebar } from './ChildActionSidebar'
@@ -103,7 +103,6 @@ export function WizardLayout() {
                 <TaskContent />
                 <WizardFooter />
               </div>
-              <DetailSidebar />
             </>
           )}
         </div>

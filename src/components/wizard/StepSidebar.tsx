@@ -1,9 +1,9 @@
 import { useWorkflow } from '@/stores/workflowStore'
-import type { TaskStatus } from '@/types/workflow'
+import type { TaskStatus, Task, WorkflowState } from '@/types/workflow'
 import { cn } from '@/lib/utils'
 import { teamMembers } from '@/data/teamMembers'
 import { parseChildSubTaskId } from '@/utils/childTaskRegistry'
-import { Circle, Loader, CheckCircle2, Ban, User, Clock, XCircle } from 'lucide-react'
+import { Circle, Loader, CheckCircle2, Ban, User, Clock, XCircle, Pencil } from 'lucide-react'
 import {
   Tooltip,
   TooltipContent,
@@ -61,6 +61,106 @@ function StatusBadge({ status, className }: { status: TaskStatus; className?: st
   )
 }
 
+function getTaskFieldProgress(state: WorkflowState, task: Task): { filled: number; total: number } {
+  switch (task.formKey) {
+    case 'related-parties': {
+      const members = state.relatedParties.filter(
+        (p) => p.type === 'household_member' && !p.isHidden,
+      )
+      const total = members.length * 2
+      let filled = 0
+      for (const m of members) {
+        if (m.email?.trim()) filled++
+        if (m.phone?.trim()) filled++
+      }
+      return { filled, total }
+    }
+    case 'existing-accounts':
+      return {
+        filled: state.financialAccounts.length > 0 ? 1 : 0,
+        total: 1,
+      }
+    case 'kyc': {
+      const members = state.relatedParties.filter(
+        (p) => p.type === 'household_member' && !p.isHidden,
+      )
+      const needsKyc = members.filter((m) => m.kycStatus !== 'verified')
+      const children = task.children ?? []
+      const total = Math.max(needsKyc.length, 1)
+      const filled = Math.min(
+        children.filter((c) => c.status === 'complete').length,
+        total,
+      )
+      return { filled, total }
+    }
+    case 'open-accounts': {
+      const children = (task.children ?? []).filter(
+        (c) => c.childType === 'account-opening',
+      )
+      if (children.length === 0) return { filled: 0, total: 1 }
+      return {
+        filled: children.filter((c) => c.status === 'complete').length,
+        total: children.length,
+      }
+    }
+    case 'placeholder-2': {
+      const data = state.taskData['placeholder-2'] ?? {}
+      const total = 3
+      let filled = 0
+      if (data.termsAccepted) filled++
+      if (data.regulatoryAccepted) filled++
+      if (data.dataConsent) filled++
+      return { filled, total }
+    }
+    default:
+      return { filled: 0, total: 0 }
+  }
+}
+
+const DONUT_R = 7
+const DONUT_CIRCUMFERENCE = 2 * Math.PI * DONUT_R
+
+function DonutProgress({ progress, edited }: { progress: number; edited: boolean }) {
+  const filled = Math.min(1, Math.max(0, progress)) * DONUT_CIRCUMFERENCE
+  return (
+    <Tooltip>
+      <TooltipTrigger asChild>
+        <span className="relative shrink-0 flex items-center justify-center h-3.5 w-3.5">
+          <svg className="h-3.5 w-3.5" viewBox="0 0 20 20">
+            <circle
+              cx="10"
+              cy="10"
+              r={DONUT_R}
+              fill="none"
+              strokeWidth="3"
+              stroke="var(--color-border-secondary)"
+            />
+            {progress > 0 && (
+              <circle
+                cx="10"
+                cy="10"
+                r={DONUT_R}
+                fill="none"
+                strokeWidth="3"
+                stroke="var(--color-fill-category1-primary)"
+                strokeDasharray={`${filled} ${DONUT_CIRCUMFERENCE}`}
+                strokeLinecap="round"
+                transform="rotate(-90 10 10)"
+              />
+            )}
+          </svg>
+          {edited && (
+            <Pencil className="absolute h-2 w-2 text-text-category1-primary" />
+          )}
+        </span>
+      </TooltipTrigger>
+      <TooltipContent side="right">
+        <p>{Math.round(progress * 100)}% complete{edited ? ' · Edited' : ''}</p>
+      </TooltipContent>
+    </Tooltip>
+  )
+}
+
 export function StepSidebar() {
   const { state, dispatch } = useWorkflow()
 
@@ -108,27 +208,36 @@ export function StepSidebar() {
                   </h3>
                 </div>
                 <ul className="space-y-1">
-                  {actionTasks.map((task) => (
-                    <li key={task.id}>
-                      <button
-                        onClick={() => dispatch({ type: 'SET_ACTIVE_TASK', taskId: task.id })}
-                        className={cn(
-                          'w-full text-left px-3 py-2 rounded-md text-sm flex items-center justify-between gap-2 transition-colors',
-                          state.activeTaskId === task.id ||
-                          (task.children?.some((c) => {
-                            if (c.id === state.activeTaskId) return true
-                            const parsed = parseChildSubTaskId(state.activeTaskId)
-                            return parsed ? c.id === parsed.childId : false
-                          }) ?? false)
-                            ? 'bg-accent text-accent-foreground font-medium'
-                            : 'hover:bg-muted text-foreground'
-                        )}
-                      >
-                        <span className="truncate">{task.title}</span>
-                        <StatusBadge status={task.status} />
-                      </button>
-                    </li>
-                  ))}
+                  {actionTasks.map((task) => {
+                    const progress = getTaskFieldProgress(state, task)
+                    const pct = progress.total > 0 ? progress.filled / progress.total : 0
+                    return (
+                      <li key={task.id}>
+                        <button
+                          onClick={() => dispatch({ type: 'SET_ACTIVE_TASK', taskId: task.id })}
+                          className={cn(
+                            'w-full text-left px-3 py-2 rounded-md text-sm flex items-center justify-between gap-2 transition-colors',
+                            state.activeTaskId === task.id ||
+                            (task.children?.some((c) => {
+                              if (c.id === state.activeTaskId) return true
+                              const parsed = parseChildSubTaskId(state.activeTaskId)
+                              return parsed ? c.id === parsed.childId : false
+                            }) ?? false)
+                              ? 'bg-accent text-accent-foreground font-medium'
+                              : 'hover:bg-muted text-foreground'
+                          )}
+                        >
+                          <span className="flex items-center gap-2 truncate min-w-0">
+                            {task.unread && (
+                              <span className="shrink-0 h-2 w-2 rounded-full bg-fill-category1-primary" />
+                            )}
+                            <span className="truncate">{task.title}</span>
+                          </span>
+                          <DonutProgress progress={pct} edited={!!task.edited} />
+                        </button>
+                      </li>
+                    )
+                  })}
                 </ul>
               </div>
             )

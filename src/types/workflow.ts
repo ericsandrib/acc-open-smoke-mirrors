@@ -88,6 +88,8 @@ export interface Task {
   assignedTo: string
   formKey: string
   order: number
+  unread?: boolean
+  edited?: boolean
   children?: ChildTask[]
 }
 

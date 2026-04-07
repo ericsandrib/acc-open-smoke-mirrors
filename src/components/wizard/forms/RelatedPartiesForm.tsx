@@ -76,6 +76,7 @@ function getInitials(name: string) {
 }
 
 function HouseholdMemberCard({ party, onClick }: { party: RelatedParty; onClick: () => void }) {
+  const isIncomplete = !party.email?.trim() || !party.phone?.trim()
   return (
     <div>
       <button
@@ -93,6 +94,11 @@ function HouseholdMemberCard({ party, onClick }: { party: RelatedParty; onClick:
           )}
         </div>
         <div className="flex items-center gap-2 shrink-0">
+          {isIncomplete && (
+            <Badge variant="outline" className="text-[10px] text-text-warning-primary border-border-warning-primary">
+              Incomplete
+            </Badge>
+          )}
           {party.isPrimary && (
             <Badge variant="secondary" className="text-[10px] gap-1">
               <Shield className="h-2.5 w-2.5" />
