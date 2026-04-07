@@ -18,7 +18,7 @@ import {
   SelectContent,
   SelectItem,
 } from '@/components/ui/select'
-import { Search, User, Building2, Plus, Hash, CreditCard, Fingerprint, Users, FileText } from 'lucide-react'
+import { Search, Globe, User, Building2, Plus, Hash, CreditCard, Fingerprint, Users, FileText } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useWorkflow } from '@/stores/workflowStore'
 import { AccountOwnerIndividualFormFields } from '@/components/wizard/forms/AccountOwnerIndividualFormFields'
@@ -56,7 +56,7 @@ const searchFieldLabels: Record<SearchField, string> = {
 }
 
 const searchFieldIcons: Record<SearchField, typeof Search> = {
-  all: Search,
+  all: Globe,
   name: User,
   accountNumber: CreditCard,
   ssn: Fingerprint,
@@ -217,15 +217,20 @@ function PersonResultCard({
       onClick={() => onSelect(person)}
       className="w-full text-left rounded-lg border border-border p-3 space-y-2 hover:bg-muted/50 hover:border-primary/30 transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
     >
-      <div className="flex items-center justify-between">
-        <span className="text-sm font-semibold">
-          {person.firstName} {person.lastName}
-        </span>
-        {person.household && (
-          <Badge variant="outline" className="text-[10px]">
-            {person.household}
-          </Badge>
-        )}
+      <div className="flex items-center gap-3">
+        <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-muted text-xs font-semibold text-muted-foreground">
+          {person.firstName.charAt(0).toUpperCase()}
+        </div>
+        <div className="flex-1 min-w-0">
+          <span className="text-sm font-semibold">
+            {person.firstName} {person.lastName}
+          </span>
+          {person.household && (
+            <p className="text-[11px] text-muted-foreground leading-tight">
+              {person.household}
+            </p>
+          )}
+        </div>
       </div>
       <div className="grid grid-cols-2 gap-x-4 gap-y-1">
         {person.accountNumber && (
