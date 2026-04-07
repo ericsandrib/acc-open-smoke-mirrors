@@ -381,11 +381,19 @@ function workflowReducer(state: WorkflowState, action: WorkflowAction): Workflow
     }
 
     case 'ENTER_CHILD_ACTION': {
+      const enteredChild = state.tasks
+        .flatMap((t) => t.children ?? [])
+        .find((c) => c.id === action.childId)
+      const isAwaitingReview = enteredChild?.status === 'awaiting_review'
       return {
         ...state,
         activeChildActionId: action.childId,
         activeChildSubTaskIndex: action.subTaskIndex ?? 0,
         childActionResume: action.resumeAfterExit,
+        demoViewMode: isAwaitingReview ? (state.demoViewMode ?? 'advisor') : state.demoViewMode,
+        submittedAt: isAwaitingReview
+          ? (state.submittedAt ?? new Date().toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' }))
+          : state.submittedAt,
       }
     }
 
@@ -406,6 +414,7 @@ function workflowReducer(state: WorkflowState, action: WorkflowAction): Workflow
         childActionResume: undefined,
         demoViewMode: undefined,
         submittedAt: undefined,
+        childReviewDecision: undefined,
       }
     }
 
@@ -534,11 +543,10 @@ function workflowReducer(state: WorkflowState, action: WorkflowAction): Workflow
       return {
         ...state,
         tasks: acTasks,
-        activeChildActionId: undefined,
-        activeChildSubTaskIndex: undefined,
-        childActionResume: undefined,
-        demoViewMode: undefined,
-        submittedAt: undefined,
+        childReviewDecision: {
+          outcome: 'approved',
+          decidedAt: new Date().toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' }),
+        },
       }
     }
 
@@ -564,11 +572,10 @@ function workflowReducer(state: WorkflowState, action: WorkflowAction): Workflow
             rejectionFeedback: action.feedback,
           },
         },
-        activeChildActionId: undefined,
-        activeChildSubTaskIndex: undefined,
-        childActionResume: undefined,
-        demoViewMode: undefined,
-        submittedAt: undefined,
+        childReviewDecision: {
+          outcome: 'rejected',
+          decidedAt: new Date().toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' }),
+        },
       }
     }
 

@@ -42,7 +42,7 @@ export function ChildActionDetailSidebar() {
   const owners = state.relatedParties.filter((p) => ownerIds.includes(p.id))
 
   return (
-    <aside className="w-64 border-l border-border bg-sidebar-background text-sm">
+    <div className="text-sm h-full">
       <Tabs defaultValue="details" className="h-full flex flex-col">
         <TabsList variant="border" className="w-full border-b border-border px-2 shrink-0">
           <TabsTrigger value="details" className="flex-1 text-xs">Details</TabsTrigger>
@@ -133,6 +133,6 @@ export function ChildActionDetailSidebar() {
           </div>
         </TabsContent>
       </Tabs>
-    </aside>
+    </div>
   )
 }

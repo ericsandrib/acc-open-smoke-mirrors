@@ -133,6 +133,7 @@ export interface WorkflowState {
   reviewState?: ReviewState
   demoViewMode?: 'advisor' | 'home-office'
   submittedAt?: string
+  childReviewDecision?: { outcome: 'approved' | 'rejected'; decidedAt: string }
 }
 
 export type WorkflowAction =

@@ -10,6 +10,9 @@ import { spawnOpenAccountChildrenFromSelections } from '@/utils/spawnOpenAccount
 import { FinancialAccountsForm } from './FinancialAccountsForm'
 import { getRegistrationDocuments, getDocSubTypes } from '@/utils/registrationDocuments'
 import type { RegistrationType } from '@/utils/registrationDocuments'
+import { ChildActionKebabMenu } from '@/components/wizard/ChildActionKebabMenu'
+import { ChildActionTimelineSheet } from '@/components/wizard/ChildActionTimelineSheet'
+import type { ChildTask } from '@/types/workflow'
 import {
   Select,
   SelectTrigger,
@@ -42,6 +45,7 @@ export function OpenAccountsForm() {
   const { state, dispatch } = useWorkflow()
   const { data, updateField } = useTaskData('open-accounts')
   const [pickerOpen, setPickerOpen] = useState(false)
+  const [timelineChild, setTimelineChild] = useState<ChildTask | null>(null)
 
   const openAccountsTask = state.tasks.find((t) => t.formKey === 'open-accounts')
   const children = openAccountsTask?.children ?? []
@@ -140,7 +144,7 @@ export function OpenAccountsForm() {
             {accountOpeningChildren.map((child) => {
               const hasAnnuity = isAnnuity(child)
               return (
-                <div key={child.id} className="flex items-center justify-between rounded-lg border border-border p-3 hover:bg-muted/50 transition-colors">
+                <div key={child.id} className="group flex items-center justify-between rounded-lg border border-border p-3 hover:bg-muted/50 transition-colors">
                   <button
                     onClick={() => dispatch({ type: 'ENTER_CHILD_ACTION', childId: child.id })}
                     className="flex-1 flex items-center gap-3 text-left cursor-pointer"
@@ -161,7 +165,7 @@ export function OpenAccountsForm() {
                     <Badge
                       variant="secondary"
                       className={cn(
-                        'capitalize text-xs',
+                        'capitalize text-xs group-hover:hidden',
                         child.status === 'complete' && 'bg-green-100 text-green-800 border-green-200',
                         child.status === 'in_progress' && 'bg-blue-100 text-blue-800 border-blue-200',
                         child.status === 'awaiting_review' && 'bg-yellow-100 text-yellow-800 border-yellow-200',
@@ -171,12 +175,12 @@ export function OpenAccountsForm() {
                     >
                       {child.status.replace('_', ' ')}
                     </Badge>
-                    <button
-                      onClick={() => dispatch({ type: 'ENTER_CHILD_ACTION', childId: child.id })}
-                      className="cursor-pointer"
-                    >
-                      <ChevronRight className="h-4 w-4 text-muted-foreground" />
-                    </button>
+                    <div className="hidden group-hover:block">
+                      <ChildActionKebabMenu
+                        onViewDetails={() => setTimelineChild(child)}
+                        onDelete={() => dispatch({ type: 'REMOVE_CHILD', parentTaskId: openAccountsTask!.id, childId: child.id })}
+                      />
+                    </div>
                   </div>
                 </div>
               )
@@ -199,6 +203,12 @@ export function OpenAccountsForm() {
           open={pickerOpen}
           onOpenChange={setPickerOpen}
           onConfirm={handlePickerConfirm}
+        />
+
+        <ChildActionTimelineSheet
+          open={!!timelineChild}
+          onOpenChange={(o) => { if (!o) setTimelineChild(null) }}
+          child={timelineChild}
         />
       </section>
 

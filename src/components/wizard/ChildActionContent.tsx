@@ -1,8 +1,64 @@
 import { useWorkflow, useChildActionContext } from '@/stores/workflowStore'
 import { formComponents, taskDescriptions } from './formRegistry'
-import { ShieldCheck, Lock } from 'lucide-react'
+import { ShieldCheck, Lock, AlertTriangle, CheckCircle2 } from 'lucide-react'
 
-function AdvisorLockedBanner() {
+function AdvisorViewBanner() {
+  const { state } = useWorkflow()
+  const decision = state.childReviewDecision
+  const childId = state.activeChildActionId
+  const reviewData = childId
+    ? (state.taskData[`${childId}-review`] as Record<string, unknown> | undefined)
+    : undefined
+
+  if (decision?.outcome === 'rejected') {
+    return (
+      <div className="rounded-lg border border-red-200 bg-red-50 dark:border-red-900/60 dark:bg-red-950/40 px-4 py-3 mb-6">
+        <div className="flex items-start gap-3">
+          <AlertTriangle className="h-5 w-5 text-red-600 dark:text-red-400 mt-0.5 shrink-0" />
+          <div className="space-y-1">
+            <p className="text-sm font-medium text-red-900 dark:text-red-100">
+              Submission Rejected by Home Office
+            </p>
+            <p className="text-xs text-red-800/80 dark:text-red-200/70">
+              Your submission has been returned for corrections. Please review the feedback below and resubmit.
+            </p>
+            {reviewData?.rejectionReason && (
+              <div className="mt-2 rounded-md bg-red-100/60 dark:bg-red-900/30 px-3 py-2 space-y-1">
+                <p className="text-xs text-red-900 dark:text-red-100">
+                  <span className="font-semibold">Reason:</span> {String(reviewData.rejectionReason)}
+                </p>
+                {reviewData.rejectionFeedback && (
+                  <p className="text-xs text-red-800/90 dark:text-red-200/80">
+                    <span className="font-semibold">Feedback:</span> {String(reviewData.rejectionFeedback)}
+                  </p>
+                )}
+              </div>
+            )}
+            <p className="text-xs text-red-700/70 dark:text-red-300/60 mt-1">
+              Rejected at {decision.decidedAt}
+            </p>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  if (decision?.outcome === 'approved') {
+    return (
+      <div className="rounded-lg border border-green-200 bg-green-50 dark:border-green-900/60 dark:bg-green-950/40 px-4 py-3 mb-6">
+        <div className="flex items-start gap-3">
+          <CheckCircle2 className="h-5 w-5 text-green-600 dark:text-green-400 mt-0.5 shrink-0" />
+          <div className="space-y-0.5">
+            <p className="text-sm font-medium text-green-900 dark:text-green-100">Approved by Home Office</p>
+            <p className="text-xs text-green-800/80 dark:text-green-200/70">
+              This account opening has been approved and is being processed. Approved at {decision.decidedAt}.
+            </p>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
   return (
     <div className="rounded-lg border border-blue-200 bg-blue-50 dark:border-blue-900/60 dark:bg-blue-950/40 px-4 py-3 mb-6">
       <div className="flex items-start gap-3">
@@ -50,7 +106,7 @@ export function ChildActionContent() {
             </div>
           </div>
         )}
-        {isAdvisorView && <AdvisorLockedBanner />}
+        {isAdvisorView && <AdvisorViewBanner />}
         <p className="text-sm text-muted-foreground mb-1">{child.name}</p>
         <h2 className="text-3xl font-semibold text-foreground mb-6">
           {currentSubTask.title}
