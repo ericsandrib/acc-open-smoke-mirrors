@@ -1,5 +1,6 @@
 import { useState, useMemo } from 'react'
 import { useWorkflow, useTaskData } from '@/stores/workflowStore'
+import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Label } from '@/components/ui/label'
@@ -157,7 +158,17 @@ export function OpenAccountsForm() {
                     )}
                   </button>
                   <div className="flex items-center gap-2">
-                    <Badge variant="secondary" className="capitalize text-xs">
+                    <Badge
+                      variant="secondary"
+                      className={cn(
+                        'capitalize text-xs',
+                        child.status === 'complete' && 'bg-green-100 text-green-800 border-green-200',
+                        child.status === 'in_progress' && 'bg-blue-100 text-blue-800 border-blue-200',
+                        child.status === 'awaiting_review' && 'bg-yellow-100 text-yellow-800 border-yellow-200',
+                        child.status === 'rejected' && 'bg-red-100 text-red-800 border-red-200',
+                        child.status === 'not_started' && 'bg-muted text-muted-foreground',
+                      )}
+                    >
                       {child.status.replace('_', ' ')}
                     </Badge>
                     <button
@@ -274,7 +285,7 @@ export function OpenAccountsForm() {
                       <thead>
                         <tr className="border-b border-border bg-muted/20">
                           <th className="text-left font-medium text-muted-foreground px-4 py-2 text-xs">Specification</th>
-                          <th className="text-left font-medium text-muted-foreground px-4 py-2 text-xs">Assigned To</th>
+                          <th className="text-left font-medium text-muted-foreground px-4 py-2 text-xs">Owner</th>
                           <th className="text-left font-medium text-muted-foreground px-4 py-2 text-xs">File</th>
                           <th className="w-[40px]" />
                         </tr>

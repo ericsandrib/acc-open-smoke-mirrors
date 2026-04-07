@@ -390,7 +390,7 @@ export function AcctChildOwnerInfoForm() {
                       <thead>
                         <tr className="border-b border-border bg-muted/20">
                           <th className="text-left font-medium text-muted-foreground px-4 py-2 text-xs">Specification</th>
-                          <th className="text-left font-medium text-muted-foreground px-4 py-2 text-xs">Assigned To</th>
+                          <th className="text-left font-medium text-muted-foreground px-4 py-2 text-xs">Owner</th>
                           <th className="text-left font-medium text-muted-foreground px-4 py-2 text-xs">File</th>
                           <th className="w-[40px]" />
                         </tr>

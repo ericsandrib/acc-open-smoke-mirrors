@@ -1,9 +1,10 @@
-import { useState } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useWorkflow } from '@/stores/workflowStore'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Checkbox } from '@/components/ui/checkbox'
-import { CheckCircle2, ChevronRight, ShieldAlert, ShieldCheck, Clock } from 'lucide-react'
+import { CheckCircle2, ShieldAlert, ShieldCheck, Clock, UserPlus } from 'lucide-react'
+import { AddHouseholdMemberSheet } from './AddPartySheet'
 
 export function KycForm() {
   const { state, dispatch } = useWorkflow()
@@ -19,8 +20,26 @@ export function KycForm() {
     (m) => m.kycStatus !== 'verified' && !spawnedNames.has(m.name),
   )
 
-  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(
+    () => new Set(needsKycMembers.map((m) => m.id)),
+  )
+  const prevMemberIdsRef = useRef<Set<string>>(new Set(needsKycMembers.map((m) => m.id)))
+
+  useEffect(() => {
+    const currentIds = new Set(needsKycMembers.map((m) => m.id))
+    const newIds = [...currentIds].filter((id) => !prevMemberIdsRef.current.has(id))
+    if (newIds.length > 0) {
+      setSelectedIds((prev) => {
+        const next = new Set(prev)
+        for (const id of newIds) next.add(id)
+        return next
+      })
+    }
+    prevMemberIdsRef.current = currentIds
+  }, [needsKycMembers])
+
   const [showBatchConfirm, setShowBatchConfirm] = useState(false)
+  const [addSheetOpen, setAddSheetOpen] = useState(false)
 
   const toggleSelect = (id: string) => {
     setSelectedIds((prev) => {
@@ -61,24 +80,12 @@ export function KycForm() {
 
   return (
     <div className="space-y-6">
-      {children.length > 0 && (
-        <div className="rounded-lg border border-blue-200 bg-blue-50 dark:border-blue-900/60 dark:bg-blue-950/40 px-4 py-3">
-          <div className="flex items-start gap-3">
-            <ShieldCheck className="h-5 w-5 text-blue-600 dark:text-blue-400 mt-0.5 shrink-0" />
-            <div className="space-y-1">
-              <p className="text-sm font-medium text-blue-900 dark:text-blue-100">
-                Compliance Verification In Progress
-              </p>
-              <p className="text-xs text-blue-800/80 dark:text-blue-200/70">
-                Identity verification has been initiated for {children.length}{' '}
-                {children.length === 1 ? 'individual' : 'individuals'}. Submitted
-                information is locked and has been forwarded to the verification
-                provider. Status updates will appear below as each review completes.
-              </p>
-            </div>
-          </div>
-        </div>
-      )}
+      <div className="flex items-center justify-end">
+        <Button variant="outline" onClick={() => setAddSheetOpen(true)}>
+          <UserPlus className="h-4 w-4 mr-2" />
+          Add Individuals
+        </Button>
+      </div>
 
       {verifiedMembers.length > 0 && (
         <div className="space-y-2">
@@ -121,6 +128,22 @@ export function KycForm() {
           <h3 className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
             Pending Verification
           </h3>
+          <div className="rounded-lg border border-blue-200 bg-blue-50 dark:border-blue-900/60 dark:bg-blue-950/40 px-4 py-3">
+            <div className="flex items-start gap-3">
+              <ShieldCheck className="h-5 w-5 text-blue-600 dark:text-blue-400 mt-0.5 shrink-0" />
+              <div className="space-y-1">
+                <p className="text-sm font-medium text-blue-900 dark:text-blue-100">
+                  Compliance Verification In Progress
+                </p>
+                <p className="text-xs text-blue-800/80 dark:text-blue-200/70">
+                  Identity verification has been initiated for {children.length}{' '}
+                  {children.length === 1 ? 'individual' : 'individuals'}. Submitted
+                  information is locked and has been forwarded to the verification
+                  provider. Status updates will appear below as each review completes.
+                </p>
+              </div>
+            </div>
+          </div>
           {children.map((child) => (
             <button
               key={child.id}
@@ -139,7 +162,6 @@ export function KycForm() {
                 <Badge variant="secondary" className="capitalize text-xs">
                   {child.status.replace('_', ' ')}
                 </Badge>
-                <ChevronRight className="h-4 w-4 text-muted-foreground" />
               </div>
             </button>
           ))}
@@ -158,21 +180,16 @@ export function KycForm() {
         </div>
       ) : needsKycMembers.length > 0 && (
         <div className="space-y-2">
-          <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            {needsKycMembers.length > 1 && (
+              <Checkbox
+                checked={selectedIds.size === needsKycMembers.length}
+                onCheckedChange={toggleSelectAll}
+              />
+            )}
             <h3 className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
               Requires Verification
             </h3>
-            {needsKycMembers.length > 1 && (
-              <button
-                type="button"
-                onClick={toggleSelectAll}
-                className="text-xs text-muted-foreground hover:text-foreground transition-colors"
-              >
-                {selectedIds.size === needsKycMembers.length
-                  ? 'Deselect all'
-                  : 'Select all'}
-              </button>
-            )}
           </div>
           {needsKycMembers.map((member) => {
             const isSelected = selectedIds.has(member.id)
@@ -209,7 +226,6 @@ export function KycForm() {
                     >
                       Needs verification
                     </Badge>
-                    <ChevronRight className="h-4 w-4 text-muted-foreground" />
                   </div>
                 </button>
               </div>
@@ -279,6 +295,13 @@ export function KycForm() {
           </div>
         </div>
       )}
+
+      <AddHouseholdMemberSheet
+        open={addSheetOpen}
+        onOpenChange={setAddSheetOpen}
+        title="Add individual for verification"
+        description="Search for an existing person or create a new individual to add for KYC verification."
+      />
     </div>
   )
 }

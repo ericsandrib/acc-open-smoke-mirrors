@@ -131,6 +131,8 @@ export interface WorkflowState {
   /** When drilling into a funding-line or feature-service-line child, EXIT restores this account child + sub-step. */
   childActionResume?: { accountChildId: string; subTaskIndex: number }
   reviewState?: ReviewState
+  demoViewMode?: 'advisor' | 'home-office'
+  submittedAt?: string
 }
 
 export type WorkflowAction =
@@ -172,3 +174,4 @@ export type WorkflowAction =
   | { type: 'SUBMIT_CHILD_FOR_REVIEW' }
   | { type: 'ACCEPT_CHILD_REVIEW' }
   | { type: 'REJECT_CHILD_REVIEW'; reason: string; feedback?: string }
+  | { type: 'SET_DEMO_VIEW'; mode: 'advisor' | 'home-office' }

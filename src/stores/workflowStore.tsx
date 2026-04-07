@@ -91,6 +91,8 @@ function workflowReducer(state: WorkflowState, action: WorkflowAction): Workflow
             reviewStatus: 'pending',
             assignedTo: 'Home Office Review Team',
           },
+          submittedAt: new Date().toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' }),
+          demoViewMode: 'advisor',
         }
       }
 
@@ -402,6 +404,8 @@ function workflowReducer(state: WorkflowState, action: WorkflowAction): Workflow
         activeChildActionId: undefined,
         activeChildSubTaskIndex: undefined,
         childActionResume: undefined,
+        demoViewMode: undefined,
+        submittedAt: undefined,
       }
     }
 
@@ -533,6 +537,8 @@ function workflowReducer(state: WorkflowState, action: WorkflowAction): Workflow
         activeChildActionId: undefined,
         activeChildSubTaskIndex: undefined,
         childActionResume: undefined,
+        demoViewMode: undefined,
+        submittedAt: undefined,
       }
     }
 
@@ -561,6 +567,16 @@ function workflowReducer(state: WorkflowState, action: WorkflowAction): Workflow
         activeChildActionId: undefined,
         activeChildSubTaskIndex: undefined,
         childActionResume: undefined,
+        demoViewMode: undefined,
+        submittedAt: undefined,
+      }
+    }
+
+    case 'SET_DEMO_VIEW': {
+      return {
+        ...state,
+        demoViewMode: action.mode,
+        submittedAt: state.submittedAt ?? new Date().toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' }),
       }
     }
 
