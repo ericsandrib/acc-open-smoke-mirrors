@@ -4,7 +4,7 @@ import { Label } from '@/components/ui/label'
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui/select'
 import { Button } from '@/components/ui/button'
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from '@/components/ui/sheet'
-import { Plus, Trash2 } from 'lucide-react'
+import { Plus, Trash2, Landmark } from 'lucide-react'
 import { useWorkflow } from '@/stores/workflowStore'
 import type { AccountType, FinancialAccount } from '@/types/workflow'
 
@@ -166,13 +166,16 @@ function DeleteAccountButton({ account }: { account: FinancialAccount }) {
 
 function AccountCard({ account, onClick }: { account: FinancialAccount; onClick: () => void }) {
   return (
-    <div className="rounded-lg border border-border">
+    <div>
       <button
         type="button"
         onClick={onClick}
         className="flex items-center justify-between w-full p-3 hover:bg-muted/50 rounded-lg focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
       >
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-3">
+          <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-muted">
+            <Landmark className="h-4 w-4 text-muted-foreground" />
+          </div>
           <span className="text-sm font-medium">{account.accountName}</span>
           {account.accountType && (
             <span className="text-xs text-muted-foreground">{accountTypeLabels[account.accountType]}</span>
@@ -328,22 +331,23 @@ export function FinancialAccountsForm() {
 
   return (
     <div className="space-y-4">
-      <div className="space-y-2">
-        {state.financialAccounts.length === 0 ? (
-          <div className="rounded-lg border border-dashed border-border p-4 text-center">
-            <p className="text-sm text-muted-foreground">No financial accounts added yet. Add accounts you'd like to transfer or manage.</p>
-          </div>
-        ) : (
-          state.financialAccounts.map((account) => (
-            <AccountCard key={account.id} account={account} onClick={() => setEditingAccountId(account.id)} />
-          ))
-        )}
+      <div className="rounded-lg border border-border p-1">
+        <div>
+          {state.financialAccounts.length === 0 ? (
+            <div className="p-4 text-center">
+              <p className="text-sm text-muted-foreground">No financial accounts added yet. Add accounts you'd like to transfer or manage.</p>
+            </div>
+          ) : (
+            state.financialAccounts.map((account) => (
+              <AccountCard key={account.id} account={account} onClick={() => setEditingAccountId(account.id)} />
+            ))
+          )}
+        </div>
+        <Button variant="ghost" className="w-full" onClick={() => setShowAdd(true)}>
+          <Plus className="h-4 w-4 mr-2" />
+          Add account
+        </Button>
       </div>
-
-      <Button variant="outline" className="w-full" onClick={() => setShowAdd(true)}>
-        <Plus className="h-4 w-4 mr-2" />
-        Add account
-      </Button>
 
       <AddAccountSheet open={showAdd} onOpenChange={setShowAdd} />
 

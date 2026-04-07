@@ -1,4 +1,3 @@
-import { Wallet, ClipboardList } from 'lucide-react'
 import { Label } from '@/components/ui/label'
 import { useTaskData } from '@/stores/workflowStore'
 import { FinancialAccountsForm } from './FinancialAccountsForm'
@@ -9,22 +8,20 @@ export function ExistingAccountsForm() {
   return (
     <div className="space-y-8">
       <section>
-        <div className="flex items-center gap-2 mb-2">
-          <Wallet className="h-4 w-4 text-muted-foreground" />
-          <h3 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
+        <div className="mb-4">
+          <h3 className="text-base font-semibold">
             Existing Accounts
           </h3>
+          <p className="text-base text-muted-foreground">
+            These are the financial accounts currently held by the client, including brokerage, retirement, and trust accounts.
+          </p>
         </div>
-        <p className="text-sm text-muted-foreground mb-4">
-          These are the financial accounts currently held by the client, including brokerage, retirement, and trust accounts.
-        </p>
         <FinancialAccountsForm />
       </section>
 
       <section>
-        <div className="flex items-center gap-2 mb-3">
-          <ClipboardList className="h-4 w-4 text-muted-foreground" />
-          <Label htmlFor="additionalInstructions" className="text-sm font-medium text-muted-foreground">
+        <div className="mb-3">
+          <Label htmlFor="additionalInstructions" className="text-base font-semibold">
             Additional Instructions
           </Label>
         </div>

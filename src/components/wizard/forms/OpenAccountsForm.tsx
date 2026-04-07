@@ -202,15 +202,14 @@ export function OpenAccountsForm() {
   return (
     <div className="space-y-8">
       <section>
-        <div className="flex items-center gap-2 mb-2">
-          <Wallet className="h-4 w-4 text-muted-foreground" />
-          <h3 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
+        <div className="mb-4">
+          <h3 className="text-base font-semibold">
             Existing Accounts
           </h3>
+          <p className="text-base text-muted-foreground">
+            These are the financial accounts currently held by the client, including brokerage, retirement, and trust accounts.
+          </p>
         </div>
-        <p className="text-sm text-muted-foreground mb-4">
-          These are the financial accounts currently held by the client, including brokerage, retirement, and trust accounts.
-        </p>
         <FinancialAccountsForm />
       </section>
 
@@ -233,29 +232,20 @@ export function OpenAccountsForm() {
 
       {/* Section 3: Accounts to be Opened */}
       <section>
-        <div className="flex items-center justify-between mb-3">
-          <div className="flex items-center gap-2">
-            <Plus className="h-4 w-4 text-muted-foreground" />
-            <h3 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
-              Accounts to be Opened
-            </h3>
-          </div>
-          {accountOpeningChildren.length > 0 && (
-            <Button variant="outline" size="sm" onClick={() => setPickerOpen(true)}>
-              <Plus className="h-3 w-3 mr-1" />
-              Add More
-            </Button>
-          )}
+        <div className="mb-3">
+          <h3 className="text-base font-semibold">
+            Accounts to be Opened
+          </h3>
         </div>
 
         {accountOpeningChildren.length > 0 ? (
-          <div className="space-y-2">
+          <div className="rounded-lg border border-border p-1">
             {topLevelChildren.map((child) => {
               const annuities = getAnnuities(child.name)
               return (
-                <div key={child.id} className="space-y-1">
+                <div key={child.id}>
                   {/* Account row */}
-                  <div className="group flex items-center justify-between rounded-lg border border-border p-3 hover:bg-muted/50 transition-colors">
+                  <div className="group flex items-center justify-between p-3 hover:bg-muted/50 transition-colors">
                     <button
                       onClick={() => dispatch({ type: 'ENTER_CHILD_ACTION', childId: child.id })}
                       className="flex-1 flex items-center gap-3 text-left cursor-pointer"
@@ -323,16 +313,20 @@ export function OpenAccountsForm() {
                 </div>
               )
             })}
+            <Button variant="ghost" className="w-full" onClick={() => setPickerOpen(true)}>
+              <Plus className="h-4 w-4 mr-2" />
+              Add accounts
+            </Button>
           </div>
         ) : (
-          <div className="rounded-lg border border-dashed border-border p-6 text-center">
+          <div className="rounded-lg border border-border p-6 text-center">
             <Wallet className="mx-auto mb-2 h-8 w-8 text-muted-foreground/50" />
             <p className="text-sm text-muted-foreground mb-3">
               No accounts to open yet. Add the types of accounts you want to open.
             </p>
-            <Button onClick={() => setPickerOpen(true)}>
+            <Button variant="ghost" onClick={() => setPickerOpen(true)}>
               <Plus className="h-4 w-4 mr-1" />
-              Add Accounts
+              Add accounts
             </Button>
           </div>
         )}
@@ -352,17 +346,16 @@ export function OpenAccountsForm() {
 
       {/* Section 4: Required Documents */}
       <section>
-        <div className="flex items-center gap-2 mb-2">
-          <FileText className="h-4 w-4 text-muted-foreground" />
-          <h3 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
+        <div className="mb-4">
+          <h3 className="text-base font-semibold">
             Required Documents
           </h3>
+          <p className="text-base text-muted-foreground">
+            Firm and custodian forms are configured only under <span className="font-medium text-foreground">eSign envelopes</span>{' '}
+            below. Use this section for items that need a file from the client (for example ID or trust pages), once per person
+            where applicable.
+          </p>
         </div>
-        <p className="text-sm text-muted-foreground mb-4">
-          Firm and custodian forms are configured only under <span className="font-medium text-foreground">eSign envelopes</span>{' '}
-          below. Use this section for items that need a file from the client (for example ID or trust pages), once per person
-          where applicable.
-        </p>
         {accountOpeningChildren.length > 0 && uploadDocs.length > 0 ? (
           <div className="space-y-2">
             <div className="flex items-center gap-2">
@@ -566,23 +559,22 @@ export function OpenAccountsForm() {
 
       {/* eSign envelopes */}
       <section>
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between mb-2">
-          <div className="flex items-center gap-2">
-            <FileSignature className="h-4 w-4 text-muted-foreground" />
-            <h3 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
-              eSign envelopes
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between mb-4">
+          <div>
+            <h3 className="text-base font-semibold">
+              eSign Envelopes
             </h3>
+            <p className="text-base text-muted-foreground">
+              Create one or more signing envelopes for this application. Required firm and custodian forms are grouped by
+              account number; add optional forms, signers, and extra files. Data captured in the wizard maps onto generated
+              forms automatically—those forms are not uploaded as attachments.
+            </p>
           </div>
           <Button type="button" variant="outline" size="sm" className="gap-1 shrink-0" onClick={openNewEnvelopeDrawer}>
             <Plus className="h-3.5 w-3.5" />
             New envelope
           </Button>
         </div>
-        <p className="text-sm text-muted-foreground mb-4">
-          Create one or more signing envelopes for this application. Required firm and custodian forms are grouped by
-          account number; add optional forms, signers, and extra files. Data captured in the wizard maps onto generated
-          forms automatically—those forms are not uploaded as attachments.
-        </p>
         {esignEnvelopes.length === 0 ? (
           <div className="rounded-lg border border-dashed border-border p-6 text-center">
             <FileSignature className="mx-auto mb-2 h-8 w-8 text-muted-foreground/50" />

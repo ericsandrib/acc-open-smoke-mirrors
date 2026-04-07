@@ -77,7 +77,7 @@ function getInitials(name: string) {
 
 function HouseholdMemberCard({ party, onClick }: { party: RelatedParty; onClick: () => void }) {
   return (
-    <div className="rounded-lg border border-border">
+    <div>
       <button
         type="button"
         onClick={onClick}
@@ -108,7 +108,7 @@ function HouseholdMemberCard({ party, onClick }: { party: RelatedParty; onClick:
 
 function ContactCard({ party, onClick }: { party: RelatedParty; onClick: () => void }) {
   return (
-    <div className="rounded-lg border border-border">
+    <div>
       <button
         type="button"
         onClick={onClick}
@@ -349,56 +349,56 @@ export function RelatedPartiesForm() {
     <div className="space-y-8">
       {/* Household Members */}
       <section className="space-y-4">
-        <div className="flex items-center gap-2">
-          <Users className="h-5 w-5 text-muted-foreground" />
+        <div>
           <h3 className="text-base font-semibold">Household Members</h3>
-        </div>
-        <p className="text-sm text-muted-foreground">
-          People in the household you're onboarding — the primary contact and their family.
-        </p>
-
-        <div className="space-y-2">
-          {householdMembers.length === 0 ? (
-            <EmptyState message="No household members added yet. Start by adding the primary contact." />
-          ) : (
-            householdMembers.map((member) => (
-              <HouseholdMemberCard key={member.id} party={member} onClick={() => setEditingPartyId(member.id)} />
-            ))
-          )}
+          <p className="text-base text-muted-foreground">
+            People in the household you're onboarding — the primary contact and their family.
+          </p>
         </div>
 
-        <Button variant="outline" className="w-full" onClick={() => setShowAddHouseholdSheet(true)}>
-          <Plus className="h-4 w-4 mr-2" />
-          Add member
-        </Button>
+        <div className="rounded-lg border border-border p-1">
+          <div>
+            {householdMembers.length === 0 ? (
+              <EmptyState message="No household members added yet. Start by adding the primary contact." />
+            ) : (
+              householdMembers.map((member) => (
+                <HouseholdMemberCard key={member.id} party={member} onClick={() => setEditingPartyId(member.id)} />
+              ))
+            )}
+          </div>
+          <Button variant="ghost" className="w-full" onClick={() => setShowAddHouseholdSheet(true)}>
+            <Plus className="h-4 w-4 mr-2" />
+            Add member
+          </Button>
+        </div>
 
         <AddHouseholdMemberSheet open={showAddHouseholdSheet} onOpenChange={setShowAddHouseholdSheet} />
       </section>
 
       {/* Related Contacts */}
       <section className="space-y-4">
-        <div className="flex items-center gap-2">
-          <UserPlus className="h-5 w-5 text-muted-foreground" />
+        <div>
           <h3 className="text-base font-semibold">Related Contacts</h3>
-        </div>
-        <p className="text-sm text-muted-foreground">
-          Other people connected to the household — such as attorneys, accountants, or family.
-        </p>
-
-        <div className="space-y-2">
-          {relatedContacts.length === 0 ? (
-            <EmptyState message="No related contacts yet. Add attorneys, accountants, or family connections." />
-          ) : (
-            relatedContacts.map((contact) => (
-              <ContactCard key={contact.id} party={contact} onClick={() => setEditingPartyId(contact.id)} />
-            ))
-          )}
+          <p className="text-base text-muted-foreground">
+            Other people connected to the household — such as attorneys, accountants, or family.
+          </p>
         </div>
 
-        <Button variant="outline" className="w-full" onClick={() => setShowAddContactSheet(true)}>
-          <Plus className="h-4 w-4 mr-2" />
-          Add contact
-        </Button>
+        <div className="rounded-lg border border-border p-1">
+          <div>
+            {relatedContacts.length === 0 ? (
+              <EmptyState message="No related contacts yet. Add attorneys, accountants, or family connections." />
+            ) : (
+              relatedContacts.map((contact) => (
+                <ContactCard key={contact.id} party={contact} onClick={() => setEditingPartyId(contact.id)} />
+              ))
+            )}
+          </div>
+          <Button variant="ghost" className="w-full" onClick={() => setShowAddContactSheet(true)}>
+            <Plus className="h-4 w-4 mr-2" />
+            Add contact
+          </Button>
+        </div>
 
         <AddContactSheet open={showAddContactSheet} onOpenChange={setShowAddContactSheet} />
       </section>
