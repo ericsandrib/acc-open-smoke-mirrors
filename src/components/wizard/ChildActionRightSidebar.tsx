@@ -1,17 +1,29 @@
-import { useChildActionContext } from '@/stores/workflowStore'
+import { useChildActionContext, useWorkflow } from '@/stores/workflowStore'
 import { SmartDocumentsPanel } from '@/components/wizard/SmartDocumentsPanel'
 import { ChildActionDetailSidebar } from '@/components/wizard/ChildActionDetailSidebar'
 import { MissingDataSection } from '@/components/wizard/MissingDataSection'
+import { ChildActionTimeline } from '@/components/wizard/ChildActionTimelineSheet'
 import { cn } from '@/lib/utils'
 
-/**
- * Account-opening (and funding / feature): Details / Context / Owners, then missing data, then documents.
- * KYC: Details tabs, then missing data (no documents rail).
- */
 export function ChildActionRightSidebar() {
   const ctx = useChildActionContext()
+  const { state } = useWorkflow()
 
   if (!ctx) return null
+
+  const timelineSection = (
+    <div className="px-4 py-4 border-b border-border">
+      <h3 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-3">
+        Summary
+      </h3>
+      <ChildActionTimeline
+        childType={ctx.child.childType}
+        status={ctx.child.status}
+        compact
+        reviewState={state.childReviewState}
+      />
+    </div>
+  )
 
   function missingRail(className?: string) {
     return (
@@ -28,6 +40,7 @@ export function ChildActionRightSidebar() {
   ) {
     return (
       <aside className="w-80 shrink-0 border-l border-border flex flex-col min-h-0 min-w-0 h-full bg-sidebar-background">
+        {timelineSection}
         <ChildActionDetailSidebar variant="embedded" embeddedLayout="docsRail" />
         {missingRail('border-t border-b border-border')}
         <div className="flex-1 min-h-0 flex flex-col">
@@ -39,6 +52,7 @@ export function ChildActionRightSidebar() {
 
   return (
     <aside className="w-64 shrink-0 border-l border-border bg-sidebar-background flex flex-col min-h-0 h-full">
+      {timelineSection}
       <div className="flex-1 min-h-0 min-w-0 flex flex-col overflow-hidden">
         <ChildActionDetailSidebar variant="embedded" embeddedLayout="fill" />
       </div>

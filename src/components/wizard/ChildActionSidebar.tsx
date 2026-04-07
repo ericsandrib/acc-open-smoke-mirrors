@@ -61,7 +61,7 @@ function SubTaskStatusBadge({ subTaskId }: { subTaskId: string }) {
   )
 }
 
-type OverallStatus = 'not_started' | 'in_progress' | 'awaiting_review' | 'complete'
+type OverallStatus = 'not_started' | 'in_progress' | 'awaiting_review' | 'complete' | 'rejected'
 
 const overallStatusConfig: Record<OverallStatus, { label: string; className: string }> = {
   not_started: {
@@ -73,17 +73,32 @@ const overallStatusConfig: Record<OverallStatus, { label: string; className: str
     className: 'bg-blue-50 text-blue-700 border-blue-200',
   },
   awaiting_review: {
-    label: 'Awaiting Review',
-    className: 'bg-yellow-50 text-yellow-700 border-yellow-200',
+    label: 'In Review',
+    className: 'bg-violet-50 text-violet-700 border-violet-200',
   },
   complete: {
-    label: 'Complete',
+    label: 'Approved',
     className: 'bg-green-50 text-green-700 border-green-200',
+  },
+  rejected: {
+    label: 'Rejected',
+    className: 'bg-red-50 text-red-700 border-red-200',
   },
 }
 
-function useChildOverallStatus(_childId: string, subTaskIds: string[]): OverallStatus {
+function useChildOverallStatus(childId: string, subTaskIds: string[]): OverallStatus {
   const { state } = useWorkflow()
+
+  const child = state.tasks
+    .flatMap((t) => t.children ?? [])
+    .find((c) => c.id === childId)
+
+  if (child) {
+    if (child.status === 'awaiting_review') return 'awaiting_review'
+    if (child.status === 'complete') return 'complete'
+    if (child.status === 'rejected') return 'rejected'
+  }
+
   const completedCount = subTaskIds.filter((id) => state.submittedTaskIds.includes(id)).length
   const startedCount = subTaskIds.filter(
     (id) => !!state.taskData[id] && Object.keys(state.taskData[id]).length > 0,

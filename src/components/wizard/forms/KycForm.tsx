@@ -1,9 +1,13 @@
-import { useState } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useWorkflow } from '@/stores/workflowStore'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Checkbox } from '@/components/ui/checkbox'
-import { CheckCircle2, ChevronRight, ShieldAlert, Clock } from 'lucide-react'
+import { CheckCircle2, ShieldAlert, ShieldCheck, Clock, UserPlus } from 'lucide-react'
+import { AddHouseholdMemberSheet } from './AddPartySheet'
+import { ChildActionKebabMenu } from '@/components/wizard/ChildActionKebabMenu'
+import { ChildActionTimelineSheet } from '@/components/wizard/ChildActionTimelineSheet'
+import type { ChildTask } from '@/types/workflow'
 
 export function KycForm() {
   const { state, dispatch } = useWorkflow()
@@ -19,8 +23,27 @@ export function KycForm() {
     (m) => m.kycStatus !== 'verified' && !spawnedNames.has(m.name),
   )
 
-  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(
+    () => new Set(needsKycMembers.map((m) => m.id)),
+  )
+  const prevMemberIdsRef = useRef<Set<string>>(new Set(needsKycMembers.map((m) => m.id)))
+
+  useEffect(() => {
+    const currentIds = new Set(needsKycMembers.map((m) => m.id))
+    const newIds = [...currentIds].filter((id) => !prevMemberIdsRef.current.has(id))
+    if (newIds.length > 0) {
+      setSelectedIds((prev) => {
+        const next = new Set(prev)
+        for (const id of newIds) next.add(id)
+        return next
+      })
+    }
+    prevMemberIdsRef.current = currentIds
+  }, [needsKycMembers])
+
   const [showBatchConfirm, setShowBatchConfirm] = useState(false)
+  const [addSheetOpen, setAddSheetOpen] = useState(false)
+  const [timelineChild, setTimelineChild] = useState<ChildTask | null>(null)
 
   const toggleSelect = (id: string) => {
     setSelectedIds((prev) => {
@@ -61,68 +84,133 @@ export function KycForm() {
 
   return (
     <div className="space-y-6">
+      <div className="flex items-center justify-end">
+        <Button variant="outline" onClick={() => setAddSheetOpen(true)}>
+          <UserPlus className="h-4 w-4 mr-2" />
+          Add Individuals
+        </Button>
+      </div>
+
       {verifiedMembers.length > 0 && (
         <div className="space-y-2">
-          <h3 className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+          <h3 className="text-base font-semibold">
             Previously Verified
           </h3>
-          {verifiedMembers.map((member) => (
-            <div
-              key={member.id}
-              className="flex items-center justify-between rounded-lg border border-border bg-muted/30 p-3"
-            >
-              <div className="flex items-center gap-3">
-                <div className="flex h-8 w-8 items-center justify-center rounded-full bg-fill-success-tertiary text-text-success-primary">
-                  <CheckCircle2 className="h-4 w-4" />
-                </div>
-                <div>
-                  <span className="text-sm font-medium text-muted-foreground">
-                    {member.name}
-                  </span>
-                  {member.relationship && (
-                    <span className="ml-2 text-xs text-muted-foreground/70">
-                      {member.relationship}
+          {verifiedMembers.map((member) => {
+            const matchingChild = children.find((c) => c.name === member.name)
+            return (
+              <div
+                key={member.id}
+                className="group flex items-center justify-between rounded-lg border border-border bg-muted/30 p-3 hover:bg-muted/50 transition-colors"
+              >
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (matchingChild) {
+                      dispatch({ type: 'ENTER_CHILD_ACTION', childId: matchingChild.id })
+                    } else {
+                      dispatch({
+                        type: 'SPAWN_AND_ENTER_CHILD',
+                        parentTaskId: kycTask!.id,
+                        childName: member.name,
+                        childType: 'kyc',
+                      })
+                    }
+                  }}
+                  className="flex-1 flex items-center gap-3 text-left cursor-pointer"
+                >
+                  <div className="flex h-8 w-8 items-center justify-center rounded-full bg-fill-success-tertiary text-text-success-primary">
+                    <CheckCircle2 className="h-4 w-4" />
+                  </div>
+                  <div>
+                    <span className="text-sm font-medium text-muted-foreground">
+                      {member.name}
                     </span>
-                  )}
+                    {member.relationship && (
+                      <span className="ml-2 text-xs text-muted-foreground/70">
+                        {member.relationship}
+                      </span>
+                    )}
+                  </div>
+                </button>
+                <div className="flex items-center gap-2">
+                  <Badge
+                    variant="secondary"
+                    className="text-xs text-text-success-primary bg-fill-success-tertiary group-hover:hidden"
+                  >
+                    Verified
+                  </Badge>
+                  <div className="hidden group-hover:block">
+                    <ChildActionKebabMenu
+                      onViewDetails={() =>
+                        setTimelineChild(
+                          matchingChild ?? {
+                            id: member.id,
+                            name: member.name,
+                            status: 'complete',
+                            formKey: 'kyc',
+                            childType: 'kyc',
+                          },
+                        )
+                      }
+                    />
+                  </div>
                 </div>
               </div>
-              <Badge
-                variant="secondary"
-                className="text-xs text-text-success-primary bg-fill-success-tertiary"
-              >
-                Verified
-              </Badge>
-            </div>
-          ))}
+            )
+          })}
         </div>
       )}
 
       {children.length > 0 && (
         <div className="space-y-2">
-          <h3 className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+          <h3 className="text-base font-semibold">
             Pending Verification
           </h3>
+          <div className="rounded-lg border border-blue-200 bg-blue-50 dark:border-blue-900/60 dark:bg-blue-950/40 px-4 py-3">
+            <div className="flex items-start gap-3">
+              <ShieldCheck className="h-5 w-5 text-blue-600 dark:text-blue-400 mt-0.5 shrink-0" />
+              <div className="space-y-1">
+                <p className="text-sm font-medium text-blue-900 dark:text-blue-100">
+                  Compliance Verification In Progress
+                </p>
+                <p className="text-xs text-blue-800/80 dark:text-blue-200/70">
+                  Identity verification has been initiated for {children.length}{' '}
+                  {children.length === 1 ? 'individual' : 'individuals'}. Submitted
+                  information is locked and has been forwarded to the verification
+                  provider. Status updates will appear below as each review completes.
+                </p>
+              </div>
+            </div>
+          </div>
           {children.map((child) => (
-            <button
+            <div
               key={child.id}
-              onClick={() =>
-                dispatch({ type: 'ENTER_CHILD_ACTION', childId: child.id })
-              }
-              className="w-full flex items-center justify-between rounded-lg border border-border p-3 text-left cursor-pointer hover:bg-muted/50 transition-colors"
+              className="group w-full flex items-center justify-between rounded-lg border border-border p-3 hover:bg-muted/50 transition-colors"
             >
-              <div className="flex items-center gap-3">
+              <button
+                onClick={() =>
+                  dispatch({ type: 'ENTER_CHILD_ACTION', childId: child.id })
+                }
+                className="flex-1 flex items-center gap-3 text-left cursor-pointer"
+              >
                 <div className="flex h-8 w-8 items-center justify-center rounded-full bg-yellow-100 text-yellow-700">
                   <Clock className="h-4 w-4" />
                 </div>
                 <span className="text-sm font-medium">{child.name}</span>
-              </div>
+              </button>
               <div className="flex items-center gap-2">
-                <Badge variant="secondary" className="capitalize text-xs">
+                <Badge variant="secondary" className="capitalize text-xs group-hover:hidden">
                   {child.status.replace('_', ' ')}
                 </Badge>
-                <ChevronRight className="h-4 w-4 text-muted-foreground" />
+                <div className="hidden group-hover:block">
+                  <ChildActionKebabMenu
+                    onViewDetails={() => setTimelineChild(child)}
+                    onDelete={() => dispatch({ type: 'REMOVE_CHILD', parentTaskId: kycTask!.id, childId: child.id })}
+                  />
+                </div>
               </div>
-            </button>
+            </div>
           ))}
         </div>
       )}
@@ -139,21 +227,16 @@ export function KycForm() {
         </div>
       ) : needsKycMembers.length > 0 && (
         <div className="space-y-2">
-          <div className="flex items-center justify-between">
-            <h3 className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+          <div className="flex items-center gap-2">
+            {needsKycMembers.length > 1 && (
+              <Checkbox
+                checked={selectedIds.size === needsKycMembers.length}
+                onCheckedChange={toggleSelectAll}
+              />
+            )}
+            <h3 className="text-base font-semibold">
               Requires Verification
             </h3>
-            {needsKycMembers.length > 1 && (
-              <button
-                type="button"
-                onClick={toggleSelectAll}
-                className="text-xs text-muted-foreground hover:text-foreground transition-colors"
-              >
-                {selectedIds.size === needsKycMembers.length
-                  ? 'Deselect all'
-                  : 'Select all'}
-              </button>
-            )}
           </div>
           {needsKycMembers.map((member) => {
             const isSelected = selectedIds.has(member.id)
@@ -190,7 +273,6 @@ export function KycForm() {
                     >
                       Needs verification
                     </Badge>
-                    <ChevronRight className="h-4 w-4 text-muted-foreground" />
                   </div>
                 </button>
               </div>
@@ -260,6 +342,19 @@ export function KycForm() {
           </div>
         </div>
       )}
+
+      <AddHouseholdMemberSheet
+        open={addSheetOpen}
+        onOpenChange={setAddSheetOpen}
+        title="Add individual for verification"
+        description="Search for an existing person or create a new individual to add for KYC verification."
+      />
+
+      <ChildActionTimelineSheet
+        open={!!timelineChild}
+        onOpenChange={(o) => { if (!o) setTimelineChild(null) }}
+        child={timelineChild}
+      />
     </div>
   )
 }

@@ -1,5 +1,4 @@
 import { useState } from 'react'
-import { useWorkflow } from '@/stores/workflowStore'
 import { Button } from '@/components/ui/button'
 import { Label } from '@/components/ui/label'
 import {
@@ -11,24 +10,25 @@ import {
 } from '@/components/ui/select'
 import { ShieldAlert } from 'lucide-react'
 
-const REJECTION_REASONS = [
+const NIGO_REASONS = [
   { value: 'incomplete-documentation', label: 'Incomplete Documentation' },
   { value: 'identity-verification-failed', label: 'Identity Verification Failed' },
   { value: 'inconsistent-information', label: 'Inconsistent Information' },
   { value: 'missing-signatures', label: 'Missing Signatures' },
   { value: 'regulatory-compliance', label: 'Regulatory Compliance Issue' },
   { value: 'duplicate-request', label: 'Duplicate Account Request' },
+  { value: 'aml-flag', label: 'AML / Sanctions Concern' },
   { value: 'other', label: 'Other' },
 ]
 
-interface ReviewRejectionDialogProps {
+interface NigoDialogProps {
   open: boolean
   onClose: () => void
-  variant?: 'main' | 'child'
+  teamLabel: string
+  onSubmit: (reason: string, feedback?: string) => void
 }
 
-export function ReviewRejectionDialog({ open, onClose, variant = 'main' }: ReviewRejectionDialogProps) {
-  const { dispatch } = useWorkflow()
+export function NigoDialog({ open, onClose, teamLabel, onSubmit }: NigoDialogProps) {
   const [reason, setReason] = useState('')
   const [feedback, setFeedback] = useState('')
 
@@ -36,15 +36,10 @@ export function ReviewRejectionDialog({ open, onClose, variant = 'main' }: Revie
 
   const handleSubmit = () => {
     if (!reason) return
-    const label = REJECTION_REASONS.find((r) => r.value === reason)?.label ?? reason
-    if (variant === 'child') {
-      dispatch({ type: 'REJECT_CHILD_REVIEW', reason: label, feedback: feedback.trim() || undefined })
-    } else {
-      dispatch({ type: 'REJECT_REVIEW', reason: label, feedback: feedback.trim() || undefined })
-    }
+    const label = NIGO_REASONS.find((r) => r.value === reason)?.label ?? reason
+    onSubmit(label, feedback.trim() || undefined)
     setReason('')
     setFeedback('')
-    onClose()
   }
 
   return (
@@ -56,21 +51,21 @@ export function ReviewRejectionDialog({ open, onClose, variant = 'main' }: Revie
             <ShieldAlert className="h-5 w-5 text-red-600" />
           </div>
           <div className="space-y-1">
-            <h3 className="text-base font-semibold">Reject Submission</h3>
+            <h3 className="text-base font-semibold">Not In Good Order (NIGO)</h3>
             <p className="text-sm text-muted-foreground">
-              This will send the submission back to the agent for corrections. Please provide a reason for rejection.
+              As the {teamLabel}, flag this submission as NIGO. It will be returned to the advisor for corrections.
             </p>
           </div>
         </div>
 
         <div className="space-y-2">
-          <Label>Reason for Rejection</Label>
+          <Label>NIGO Reason</Label>
           <Select value={reason} onValueChange={setReason}>
             <SelectTrigger>
               <SelectValue placeholder="Select a reason..." />
             </SelectTrigger>
             <SelectContent className="z-[70]">
-              {REJECTION_REASONS.map((r) => (
+              {NIGO_REASONS.map((r) => (
                 <SelectItem key={r.value} value={r.value}>
                   {r.label}
                 </SelectItem>
@@ -83,7 +78,7 @@ export function ReviewRejectionDialog({ open, onClose, variant = 'main' }: Revie
           <Label>Additional Feedback <span className="text-muted-foreground font-normal">(optional)</span></Label>
           <textarea
             className="flex min-h-[80px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-            placeholder="Provide additional context or instructions for the agent..."
+            placeholder="Provide additional context or instructions for the advisor..."
             value={feedback}
             onChange={(e) => setFeedback(e.target.value)}
           />
@@ -92,7 +87,7 @@ export function ReviewRejectionDialog({ open, onClose, variant = 'main' }: Revie
         <div className="flex items-center justify-end gap-3 pt-1">
           <Button variant="outline" onClick={onClose}>Cancel</Button>
           <Button variant="destructive" onClick={handleSubmit} disabled={!reason}>
-            Submit Rejection
+            Submit NIGO
           </Button>
         </div>
       </div>

@@ -25,7 +25,13 @@ function computeFlatTaskOrder(allTasks: Task[], allActions: typeof actions): str
 
 const initialState: WorkflowState = {
   actions,
-  tasks: tasks.map((t) => ({ ...t, children: t.children ? [...t.children] : undefined })),
+  tasks: tasks.map((t) => ({
+    ...t,
+    children: t.children ? [...t.children] : undefined,
+    status: 'in_progress' as const,
+    unread: true,
+    edited: false,
+  })),
   relatedParties: [...initialRelatedParties],
   financialAccounts: [...initialFinancialAccounts],
   activeTaskId: tasks[0].id,
@@ -34,20 +40,31 @@ const initialState: WorkflowState = {
   submittedTaskIds: [],
 }
 
+function markTaskEdited(allTasks: Task[], formKey: string): Task[] {
+  return allTasks.map((t) => (t.formKey === formKey ? { ...t, edited: true } : t))
+}
+
 function workflowReducer(state: WorkflowState, action: WorkflowAction): WorkflowState {
   switch (action.type) {
     case 'SET_ACTIVE_TASK': {
       const taskExists =
         state.flatTaskOrder.includes(action.taskId)
       if (!taskExists) return state
-      return { ...state, activeTaskId: action.taskId }
+      const newTasks = state.tasks.map((t) =>
+        t.id === action.taskId ? { ...t, unread: false } : t
+      )
+      return { ...state, activeTaskId: action.taskId, tasks: newTasks }
     }
 
     case 'GO_TO_TASK': {
       if (!state.flatTaskOrder.includes(action.taskId)) return state
+      const goToTasks = state.tasks.map((t) =>
+        t.id === action.taskId ? { ...t, unread: false } : t
+      )
       return {
         ...state,
         activeTaskId: action.taskId,
+        tasks: goToTasks,
         activeChildActionId: undefined,
         activeChildSubTaskIndex: undefined,
         childActionResume: undefined,
@@ -102,6 +119,8 @@ function workflowReducer(state: WorkflowState, action: WorkflowAction): Workflow
             reviewStatus: 'pending',
             assignedTo: 'Home Office Review Team',
           },
+          submittedAt: new Date().toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' }),
+          demoViewMode: 'advisor',
         }
       }
 
@@ -150,6 +169,7 @@ function workflowReducer(state: WorkflowState, action: WorkflowAction): Workflow
           spawnedChildId = childId
           return {
             ...t,
+            edited: true,
             children: [
               ...t.children,
               {
@@ -190,6 +210,7 @@ function workflowReducer(state: WorkflowState, action: WorkflowAction): Workflow
           newChildId = childId
           return {
             ...t,
+            edited: true,
             children: [
               ...t.children,
               {
@@ -222,6 +243,7 @@ function workflowReducer(state: WorkflowState, action: WorkflowAction): Workflow
           if (child) removedChildType = child.childType
           return {
             ...t,
+            edited: true,
             children: t.children.filter((c) => c.id !== action.childId),
           }
         }
@@ -247,7 +269,11 @@ function workflowReducer(state: WorkflowState, action: WorkflowAction): Workflow
     }
 
     case 'ADD_RELATED_PARTY': {
-      return { ...state, relatedParties: [...state.relatedParties, action.party] }
+      return {
+        ...state,
+        relatedParties: [...state.relatedParties, action.party],
+        tasks: markTaskEdited(state.tasks, 'related-parties'),
+      }
     }
 
     case 'UPDATE_RELATED_PARTY': {
@@ -256,6 +282,7 @@ function workflowReducer(state: WorkflowState, action: WorkflowAction): Workflow
         relatedParties: state.relatedParties.map((p) =>
           p.id === action.partyId ? { ...p, ...action.updates } : p
         ),
+        tasks: markTaskEdited(state.tasks, 'related-parties'),
       }
     }
 
@@ -269,6 +296,7 @@ function workflowReducer(state: WorkflowState, action: WorkflowAction): Workflow
             ? { ...p, isPrimary: p.id === action.partyId }
             : p
         ),
+        tasks: markTaskEdited(state.tasks, 'related-parties'),
       }
     }
 
@@ -280,6 +308,7 @@ function workflowReducer(state: WorkflowState, action: WorkflowAction): Workflow
         relatedParties: state.relatedParties.map((p) =>
           p.id === action.partyId ? { ...p, isHidden: true } : p
         ),
+        tasks: markTaskEdited(state.tasks, 'related-parties'),
       }
     }
 
@@ -289,11 +318,16 @@ function workflowReducer(state: WorkflowState, action: WorkflowAction): Workflow
         relatedParties: state.relatedParties.map((p) =>
           action.partyIds.includes(p.id) ? { ...p, isHidden: false } : p
         ),
+        tasks: markTaskEdited(state.tasks, 'related-parties'),
       }
     }
 
     case 'ADD_FINANCIAL_ACCOUNT': {
-      return { ...state, financialAccounts: [...state.financialAccounts, action.account] }
+      return {
+        ...state,
+        financialAccounts: [...state.financialAccounts, action.account],
+        tasks: markTaskEdited(state.tasks, 'existing-accounts'),
+      }
     }
 
     case 'UPDATE_FINANCIAL_ACCOUNT': {
@@ -302,6 +336,7 @@ function workflowReducer(state: WorkflowState, action: WorkflowAction): Workflow
         financialAccounts: state.financialAccounts.map((a) =>
           a.id === action.accountId ? { ...a, ...action.updates } : a
         ),
+        tasks: markTaskEdited(state.tasks, 'existing-accounts'),
       }
     }
 
@@ -309,24 +344,29 @@ function workflowReducer(state: WorkflowState, action: WorkflowAction): Workflow
       return {
         ...state,
         financialAccounts: state.financialAccounts.filter((a) => a.id !== action.accountId),
+        tasks: markTaskEdited(state.tasks, 'existing-accounts'),
       }
     }
 
     case 'SET_TASK_DATA': {
-      // Mark task as in_progress on first data entry
       const parsedData = parseChildSubTaskId(action.taskId)
       const dataChildId = parsedData?.childId ?? action.taskId
       const newTasks = state.tasks.map((t) => {
-        if (t.id === dataChildId && t.status === 'not_started') {
-          return { ...t, status: 'in_progress' as const }
+        // Direct task match — mark edited
+        if (t.id === dataChildId) {
+          return { ...t, edited: true }
         }
+        // Child match — mark parent edited + transition child not_started → in_progress
         if (t.children) {
+          const hasChild = t.children.some((c) => c.id === dataChildId)
           const newChildren = t.children.map((c) =>
             c.id === dataChildId && c.status === 'not_started'
               ? { ...c, status: 'in_progress' as const }
               : c
           )
-          return { ...t, children: newChildren }
+          return hasChild
+            ? { ...t, edited: true, children: newChildren }
+            : { ...t, children: newChildren }
         }
         return t
       })
@@ -347,9 +387,11 @@ function workflowReducer(state: WorkflowState, action: WorkflowAction): Workflow
       const assignee = action.assignedTo ?? 'Unassigned'
       const freshTasks = tasks.map((t) => ({
         ...t,
-        status: 'not_started' as const,
+        status: 'in_progress' as const,
         assignedTo: assignee,
         children: t.children ? [] : undefined,
+        unread: true,
+        edited: false,
       }))
       const newOrder = computeFlatTaskOrder(freshTasks, actions)
       return {
@@ -377,24 +419,38 @@ function workflowReducer(state: WorkflowState, action: WorkflowAction): Workflow
       if (idx >= state.flatTaskOrder.length - 1) return state
 
       const nextId = state.flatTaskOrder[idx + 1]
-      return { ...state, activeTaskId: nextId }
+      const goNextTasks = state.tasks.map((t) =>
+        t.id === nextId ? { ...t, unread: false } : t
+      )
+      return { ...state, activeTaskId: nextId, tasks: goNextTasks }
     }
 
     case 'GO_BACK': {
       const idx = state.flatTaskOrder.indexOf(state.activeTaskId)
       if (idx > 0) {
         const prevId = state.flatTaskOrder[idx - 1]
-        return { ...state, activeTaskId: prevId }
+        const goBackTasks = state.tasks.map((t) =>
+          t.id === prevId ? { ...t, unread: false } : t
+        )
+        return { ...state, activeTaskId: prevId, tasks: goBackTasks }
       }
       return state
     }
 
     case 'ENTER_CHILD_ACTION': {
+      const enteredChild = state.tasks
+        .flatMap((t) => t.children ?? [])
+        .find((c) => c.id === action.childId)
+      const isAwaitingReview = enteredChild?.status === 'awaiting_review'
       return {
         ...state,
         activeChildActionId: action.childId,
         activeChildSubTaskIndex: action.subTaskIndex ?? 0,
         childActionResume: action.resumeAfterExit,
+        demoViewMode: isAwaitingReview ? (state.demoViewMode ?? 'advisor') : state.demoViewMode,
+        submittedAt: isAwaitingReview
+          ? (state.submittedAt ?? new Date().toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' }))
+          : state.submittedAt,
       }
     }
 
@@ -413,6 +469,10 @@ function workflowReducer(state: WorkflowState, action: WorkflowAction): Workflow
         activeChildActionId: undefined,
         activeChildSubTaskIndex: undefined,
         childActionResume: undefined,
+        demoViewMode: undefined,
+        submittedAt: undefined,
+        childReviewDecision: undefined,
+        childReviewState: undefined,
       }
     }
 
@@ -508,6 +568,200 @@ function workflowReducer(state: WorkflowState, action: WorkflowAction): Workflow
           rejectionReason: action.reason,
           rejectionFeedback: action.feedback,
         },
+      }
+    }
+
+    case 'SUBMIT_CHILD_FOR_REVIEW': {
+      if (!state.activeChildActionId) return state
+      const cid = state.activeChildActionId
+      const updTasks = state.tasks.map((t) => {
+        if (!t.children) return t
+        return {
+          ...t,
+          children: t.children.map((c) =>
+            c.id === cid ? { ...c, status: 'awaiting_review' as const } : c,
+          ),
+        }
+      })
+      return {
+        ...state,
+        tasks: updTasks,
+        activeChildSubTaskIndex: 0,
+        childReviewState: {
+          ...state.childReviewState,
+          documentReview: { status: 'pending' },
+          principalReview: { status: 'pending' },
+        },
+      }
+    }
+
+    case 'ACCEPT_CHILD_REVIEW': {
+      if (!state.activeChildActionId) return state
+      const acId = state.activeChildActionId
+      const acTasks = state.tasks.map((t) => {
+        if (!t.children) return t
+        return {
+          ...t,
+          children: t.children.map((c) =>
+            c.id === acId ? { ...c, status: 'complete' as const } : c,
+          ),
+        }
+      })
+      return {
+        ...state,
+        tasks: acTasks,
+        childReviewDecision: {
+          outcome: 'approved',
+          decidedAt: new Date().toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' }),
+        },
+      }
+    }
+
+    case 'REJECT_CHILD_REVIEW': {
+      if (!state.activeChildActionId) return state
+      const rcId = state.activeChildActionId
+      const rcTasks = state.tasks.map((t) => {
+        if (!t.children) return t
+        return {
+          ...t,
+          children: t.children.map((c) =>
+            c.id === rcId ? { ...c, status: 'rejected' as const } : c,
+          ),
+        }
+      })
+      return {
+        ...state,
+        tasks: rcTasks,
+        taskData: {
+          ...state.taskData,
+          [`${rcId}-review`]: {
+            rejectionReason: action.reason,
+            rejectionFeedback: action.feedback,
+          },
+        },
+        childReviewDecision: {
+          outcome: 'rejected',
+          decidedAt: new Date().toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' }),
+        },
+      }
+    }
+
+    case 'SET_AML_FLAG': {
+      return {
+        ...state,
+        childReviewState: {
+          ...state.childReviewState,
+          amlFlagged: action.flagged,
+          amlNotes: action.notes,
+        },
+      }
+    }
+
+    case 'DOCUMENT_REVIEW_IGO': {
+      const ts = new Date().toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })
+      return {
+        ...state,
+        childReviewState: {
+          ...state.childReviewState,
+          documentReview: { status: 'igo', decidedAt: ts },
+        },
+      }
+    }
+
+    case 'DOCUMENT_REVIEW_NIGO': {
+      if (!state.activeChildActionId) return state
+      const dnigoId = state.activeChildActionId
+      const ts = new Date().toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })
+      const dnigoTasks = state.tasks.map((t) => {
+        if (!t.children) return t
+        return {
+          ...t,
+          children: t.children.map((c) =>
+            c.id === dnigoId ? { ...c, status: 'rejected' as const } : c,
+          ),
+        }
+      })
+      return {
+        ...state,
+        tasks: dnigoTasks,
+        childReviewState: {
+          ...state.childReviewState,
+          documentReview: { status: 'nigo', decidedAt: ts, nigoReason: action.reason, nigoFeedback: action.feedback },
+        },
+        childReviewDecision: { outcome: 'rejected', decidedAt: ts },
+        taskData: {
+          ...state.taskData,
+          [`${dnigoId}-review`]: {
+            rejectionReason: action.reason,
+            rejectionFeedback: action.feedback,
+            rejectedBy: 'Document Review Team',
+          },
+        },
+      }
+    }
+
+    case 'PRINCIPAL_REVIEW_IGO': {
+      if (!state.activeChildActionId) return state
+      const pigoId = state.activeChildActionId
+      const ts = new Date().toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })
+      const docIgo = state.childReviewState?.documentReview?.status === 'igo'
+      const pigoTasks = state.tasks.map((t) => {
+        if (!t.children) return t
+        return {
+          ...t,
+          children: t.children.map((c) =>
+            c.id === pigoId && docIgo ? { ...c, status: 'complete' as const } : c,
+          ),
+        }
+      })
+      return {
+        ...state,
+        tasks: pigoTasks,
+        childReviewState: {
+          ...state.childReviewState,
+          principalReview: { status: 'igo', decidedAt: ts },
+        },
+        childReviewDecision: docIgo ? { outcome: 'approved', decidedAt: ts } : state.childReviewDecision,
+      }
+    }
+
+    case 'PRINCIPAL_REVIEW_NIGO': {
+      if (!state.activeChildActionId) return state
+      const pnigoId = state.activeChildActionId
+      const ts = new Date().toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })
+      const pnigoTasks = state.tasks.map((t) => {
+        if (!t.children) return t
+        return {
+          ...t,
+          children: t.children.map((c) =>
+            c.id === pnigoId ? { ...c, status: 'rejected' as const } : c,
+          ),
+        }
+      })
+      return {
+        ...state,
+        tasks: pnigoTasks,
+        childReviewState: {
+          ...state.childReviewState,
+          principalReview: { status: 'nigo', decidedAt: ts, nigoReason: action.reason, nigoFeedback: action.feedback },
+        },
+        childReviewDecision: { outcome: 'rejected', decidedAt: ts },
+        taskData: {
+          ...state.taskData,
+          [`${pnigoId}-review`]: {
+            rejectionReason: action.reason,
+            rejectionFeedback: action.feedback,
+            rejectedBy: 'Principal Review Team',
+          },
+        },
+      }
+    }
+
+    case 'SET_DEMO_VIEW': {
+      return {
+        ...state,
+        demoViewMode: action.mode,
+        submittedAt: state.submittedAt ?? new Date().toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' }),
       }
     }
 

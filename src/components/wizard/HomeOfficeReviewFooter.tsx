@@ -1,96 +1,251 @@
 import { useState } from 'react'
 import { useWorkflow } from '@/stores/workflowStore'
 import { Button } from '@/components/ui/button'
-import { ChevronLeft, ChevronRight, CheckCircle2, XCircle } from 'lucide-react'
-import { ReviewRejectionDialog } from './ReviewRejectionDialog'
+import { CheckCircle2, XCircle, ArrowLeft } from 'lucide-react'
+import { NigoDialog } from './NigoDialog'
 
 export function HomeOfficeReviewFooter() {
   const { state, dispatch } = useWorkflow()
-  const [showAcceptConfirm, setShowAcceptConfirm] = useState(false)
-  const [showRejectModal, setShowRejectModal] = useState(false)
+  const [showApproveConfirm, setShowApproveConfirm] = useState(false)
+  const [showNigoModal, setShowNigoModal] = useState(false)
 
-  const idx = state.flatTaskOrder.indexOf(state.activeTaskId)
-  const isFirst = idx === 0
-  const isLast = idx === state.flatTaskOrder.length - 1
+  const isDocView = state.demoViewMode === 'ho-documents'
+  const isPrincipalView = state.demoViewMode === 'ho-principal'
+  const reviewState = state.childReviewState
+  const decision = state.childReviewDecision
 
-  return (
-    <>
-      <footer className="border-t border-border bg-background px-6 py-3 grid grid-cols-3 items-center shrink-0">
-        <div className="flex justify-start">
-          <Button
-            variant="outline"
-            onClick={() => dispatch({ type: 'GO_BACK' })}
-            disabled={isFirst}
-          >
-            <ChevronLeft className="h-4 w-4" />
-            Back
+  const child = state.tasks
+    .flatMap((t) => t.children ?? [])
+    .find((c) => c.id === state.activeChildActionId)
+
+  const docReview = reviewState?.documentReview
+  const principalReview = reviewState?.principalReview
+
+  if (isDocView) {
+    if (docReview?.status === 'igo') {
+      return (
+        <footer className="border-t border-border bg-background px-6 py-3 flex items-center justify-between shrink-0">
+          <Button variant="outline" size="sm" onClick={() => dispatch({ type: 'EXIT_CHILD_ACTION' })}>
+            <ArrowLeft className="h-4 w-4 mr-1" />
+            Back to Servicing Page
           </Button>
-        </div>
+          <div className="flex items-center gap-2 text-sm">
+            <CheckCircle2 className="h-4 w-4 text-green-600" />
+            <span className="text-green-700 font-medium">IGO — Passed to Principal Review</span>
+            <span className="text-muted-foreground ml-1">at {docReview.decidedAt}</span>
+          </div>
+        </footer>
+      )
+    }
 
-        <div className="flex items-center justify-center gap-2">
+    if (docReview?.status === 'nigo') {
+      return (
+        <footer className="border-t border-border bg-background px-6 py-3 flex items-center justify-between shrink-0">
+          <Button variant="outline" size="sm" onClick={() => dispatch({ type: 'EXIT_CHILD_ACTION' })}>
+            <ArrowLeft className="h-4 w-4 mr-1" />
+            Back to Servicing Page
+          </Button>
+          <div className="flex items-center gap-2 text-sm">
+            <XCircle className="h-4 w-4 text-destructive" />
+            <span className="text-destructive font-medium">NIGO — Sent back to advisor</span>
+            <span className="text-muted-foreground ml-1">at {docReview.decidedAt}</span>
+          </div>
+        </footer>
+      )
+    }
+
+    return (
+      <>
+        <footer className="border-t border-border bg-background px-6 py-3 flex items-center justify-center gap-3 shrink-0">
           <Button
             variant="outline"
             className="text-destructive border-destructive/30 hover:bg-destructive/10"
-            onClick={() => setShowRejectModal(true)}
+            onClick={() => setShowNigoModal(true)}
+          >
+            <XCircle className="h-4 w-4" />
+            NIGO
+          </Button>
+          <Button
+            className="bg-green-600 hover:bg-green-700 text-white"
+            onClick={() => setShowApproveConfirm(true)}
+          >
+            <CheckCircle2 className="h-4 w-4" />
+            IGO
+          </Button>
+        </footer>
+
+        {showApproveConfirm && (
+          <div className="fixed inset-0 z-[60] flex items-center justify-center">
+            <div className="fixed inset-0 bg-black/50" onClick={() => setShowApproveConfirm(false)} />
+            <div className="relative z-10 bg-background rounded-lg border border-border shadow-lg max-w-sm w-full mx-4 p-6 space-y-4">
+              <div className="flex items-start gap-3">
+                <div className="rounded-full bg-green-50 p-2 shrink-0">
+                  <CheckCircle2 className="h-5 w-5 text-green-600" />
+                </div>
+                <div className="space-y-1">
+                  <h3 className="text-base font-semibold">Mark as In Good Order</h3>
+                  <p className="text-sm text-muted-foreground">
+                    All documents for <span className="font-medium text-foreground">{child?.name}</span> have been
+                    verified. This will pass the submission to the Principal Review team.
+                  </p>
+                </div>
+              </div>
+              <div className="flex items-center justify-end gap-3 pt-1">
+                <Button variant="outline" onClick={() => setShowApproveConfirm(false)}>Cancel</Button>
+                <Button
+                  className="bg-green-600 hover:bg-green-700 text-white"
+                  onClick={() => {
+                    dispatch({ type: 'DOCUMENT_REVIEW_IGO' })
+                    setShowApproveConfirm(false)
+                  }}
+                >
+                  Confirm IGO
+                </Button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        <NigoDialog
+          open={showNigoModal}
+          onClose={() => setShowNigoModal(false)}
+          teamLabel="Document Review Team"
+          onSubmit={(reason, feedback) => {
+            dispatch({ type: 'DOCUMENT_REVIEW_NIGO', reason, feedback: feedback || undefined })
+            setShowNigoModal(false)
+          }}
+        />
+      </>
+    )
+  }
+
+  if (isPrincipalView) {
+    if (principalReview?.status === 'igo') {
+      return (
+        <footer className="border-t border-border bg-background px-6 py-3 flex items-center justify-between shrink-0">
+          <Button variant="outline" size="sm" onClick={() => dispatch({ type: 'EXIT_CHILD_ACTION' })}>
+            <ArrowLeft className="h-4 w-4 mr-1" />
+            Back to Servicing Page
+          </Button>
+          <div className="flex items-center gap-2 text-sm">
+            <CheckCircle2 className="h-4 w-4 text-green-600" />
+            <span className="text-green-700 font-medium">Approved — Account cleared for processing</span>
+            <span className="text-muted-foreground ml-1">at {principalReview.decidedAt}</span>
+          </div>
+        </footer>
+      )
+    }
+
+    if (principalReview?.status === 'nigo') {
+      return (
+        <footer className="border-t border-border bg-background px-6 py-3 flex items-center justify-between shrink-0">
+          <Button variant="outline" size="sm" onClick={() => dispatch({ type: 'EXIT_CHILD_ACTION' })}>
+            <ArrowLeft className="h-4 w-4 mr-1" />
+            Back to Servicing Page
+          </Button>
+          <div className="flex items-center gap-2 text-sm">
+            <XCircle className="h-4 w-4 text-destructive" />
+            <span className="text-destructive font-medium">Rejected — Sent back to advisor</span>
+            <span className="text-muted-foreground ml-1">at {principalReview.decidedAt}</span>
+          </div>
+        </footer>
+      )
+    }
+
+    const docIgo = docReview?.status === 'igo'
+
+    return (
+      <>
+        <footer className="border-t border-border bg-background px-6 py-3 flex items-center justify-center gap-3 shrink-0">
+          <Button
+            variant="outline"
+            className="text-destructive border-destructive/30 hover:bg-destructive/10"
+            onClick={() => setShowNigoModal(true)}
           >
             <XCircle className="h-4 w-4" />
             Reject
           </Button>
           <Button
             className="bg-green-600 hover:bg-green-700 text-white"
-            onClick={() => setShowAcceptConfirm(true)}
+            onClick={() => setShowApproveConfirm(true)}
+            disabled={!docIgo}
+            title={!docIgo ? 'Document review must be completed first' : undefined}
           >
             <CheckCircle2 className="h-4 w-4" />
-            Accept
+            Approve
           </Button>
-        </div>
+        </footer>
 
-        <div className="flex justify-end">
-          <Button
-            onClick={() => dispatch({ type: 'GO_NEXT' })}
-            disabled={isLast}
-          >
-            Next
-            <ChevronRight className="h-4 w-4" />
-          </Button>
-        </div>
-      </footer>
-
-      {showAcceptConfirm && (
-        <div className="fixed inset-0 z-[60] flex items-center justify-center">
-          <div className="fixed inset-0 bg-black/50" onClick={() => setShowAcceptConfirm(false)} />
-          <div className="relative z-10 bg-background rounded-lg border border-border shadow-lg max-w-sm w-full mx-4 p-6 space-y-4">
-            <div className="flex items-start gap-3">
-              <div className="rounded-full bg-green-50 p-2 shrink-0">
-                <CheckCircle2 className="h-5 w-5 text-green-600" />
+        {showApproveConfirm && (
+          <div className="fixed inset-0 z-[60] flex items-center justify-center">
+            <div className="fixed inset-0 bg-black/50" onClick={() => setShowApproveConfirm(false)} />
+            <div className="relative z-10 bg-background rounded-lg border border-border shadow-lg max-w-sm w-full mx-4 p-6 space-y-4">
+              <div className="flex items-start gap-3">
+                <div className="rounded-full bg-green-50 p-2 shrink-0">
+                  <CheckCircle2 className="h-5 w-5 text-green-600" />
+                </div>
+                <div className="space-y-1">
+                  <h3 className="text-base font-semibold">Approve Account Opening</h3>
+                  <p className="text-sm text-muted-foreground">
+                    Are you sure you want to approve <span className="font-medium text-foreground">{child?.name}</span>?
+                    This will finalize the account and clear it for processing at Pershing.
+                  </p>
+                </div>
               </div>
-              <div className="space-y-1">
-                <h3 className="text-base font-semibold">Confirm Acceptance</h3>
-                <p className="text-sm text-muted-foreground">
-                  Are you sure you want to accept this submission? This will mark all tasks as complete and finalize the account opening process.
-                </p>
+              <div className="flex items-center justify-end gap-3 pt-1">
+                <Button variant="outline" onClick={() => setShowApproveConfirm(false)}>Cancel</Button>
+                <Button
+                  className="bg-green-600 hover:bg-green-700 text-white"
+                  onClick={() => {
+                    dispatch({ type: 'PRINCIPAL_REVIEW_IGO' })
+                    setShowApproveConfirm(false)
+                  }}
+                >
+                  Confirm Approval
+                </Button>
               </div>
-            </div>
-            <div className="flex items-center justify-end gap-3 pt-1">
-              <Button variant="outline" onClick={() => setShowAcceptConfirm(false)}>Cancel</Button>
-              <Button
-                className="bg-green-600 hover:bg-green-700 text-white"
-                onClick={() => {
-                  dispatch({ type: 'ACCEPT_REVIEW' })
-                  setShowAcceptConfirm(false)
-                }}
-              >
-                Confirm Accept
-              </Button>
             </div>
           </div>
-        </div>
-      )}
+        )}
 
-      <ReviewRejectionDialog
-        open={showRejectModal}
-        onClose={() => setShowRejectModal(false)}
-      />
-    </>
-  )
+        <NigoDialog
+          open={showNigoModal}
+          onClose={() => setShowNigoModal(false)}
+          teamLabel="Principal Review Team"
+          onSubmit={(reason, feedback) => {
+            dispatch({ type: 'PRINCIPAL_REVIEW_NIGO', reason, feedback: feedback || undefined })
+            setShowNigoModal(false)
+          }}
+        />
+      </>
+    )
+  }
+
+  if (decision) {
+    const isApproved = decision.outcome === 'approved'
+    return (
+      <footer className="border-t border-border bg-background px-6 py-3 flex items-center justify-between shrink-0">
+        <Button variant="outline" size="sm" onClick={() => dispatch({ type: 'EXIT_CHILD_ACTION' })}>
+          <ArrowLeft className="h-4 w-4 mr-1" />
+          Back to Servicing Page
+        </Button>
+        <div className="flex items-center gap-2 text-sm">
+          {isApproved ? (
+            <>
+              <CheckCircle2 className="h-4 w-4 text-green-600" />
+              <span className="text-green-700 font-medium">Approved</span>
+            </>
+          ) : (
+            <>
+              <XCircle className="h-4 w-4 text-destructive" />
+              <span className="text-destructive font-medium">Rejected — sent back to advisor</span>
+            </>
+          )}
+          <span className="text-muted-foreground ml-1">at {decision.decidedAt}</span>
+        </div>
+      </footer>
+    )
+  }
+
+  return null
 }
