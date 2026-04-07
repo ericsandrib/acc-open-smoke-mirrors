@@ -37,6 +37,8 @@ export type PartySlotCardProps = {
    */
   previewVariant?: 'account_owner' | 'designation'
   footer?: ReactNode
+  onStartKyc?: (partyId: string) => void
+  onGoToKyc?: (partyId: string) => void
 }
 
 export function PartySlotCard({
@@ -54,6 +56,8 @@ export function PartySlotCard({
   roleLabel,
   previewVariant = 'account_owner',
   footer,
+  onStartKyc,
+  onGoToKyc,
 }: PartySlotCardProps) {
   const matchedParty = partyId ? parties.find((p) => p.id === partyId) ?? null : null
   const ownerPreview = matchedParty
@@ -87,63 +91,65 @@ export function PartySlotCard({
         )}
       </div>
 
-      <div className="space-y-2">
-        <Label>{selectLabel}</Label>
-        <Select
-          value={partyId ?? ''}
-          onValueChange={(v) => {
-            if (v === ADD_PARTY_VALUE) {
-              onOpenAddParty()
-              return
-            }
-            onPartyIdChange(v)
-          }}
-        >
-          <SelectTrigger>
-            <SelectValue placeholder="Choose…" />
-          </SelectTrigger>
-          <SelectContent>
-            {selectCandidates.length > 0 ? (
-              selectCandidates.map((party) => (
-                <SelectItem key={party.id} value={party.id} textValue={party.name}>
-                  <span className="flex items-center gap-2">
-                    <span>{party.name}</span>
-                    {party.type === 'related_organization' && (
-                      <Badge variant="outline" className="text-[10px] font-normal shrink-0">
-                        Entity
-                      </Badge>
+      {!matchedParty && (
+        <div className="space-y-2">
+          <Label>{selectLabel}</Label>
+          <Select
+            value={partyId ?? ''}
+            onValueChange={(v) => {
+              if (v === ADD_PARTY_VALUE) {
+                onOpenAddParty()
+                return
+              }
+              onPartyIdChange(v)
+            }}
+          >
+            <SelectTrigger>
+              <SelectValue placeholder="Choose…" />
+            </SelectTrigger>
+            <SelectContent>
+              {selectCandidates.length > 0 ? (
+                selectCandidates.map((party) => (
+                  <SelectItem key={party.id} value={party.id} textValue={party.name}>
+                    <span className="flex items-center gap-2">
+                      <span>{party.name}</span>
+                      {party.type === 'related_organization' && (
+                        <Badge variant="outline" className="text-[10px] font-normal shrink-0">
+                          Entity
+                        </Badge>
+                      )}
+                    </span>
+                  </SelectItem>
+                ))
+              ) : (
+                <div className="px-2 py-3 text-xs text-muted-foreground">
+                  No matches — use add below.
+                </div>
+              )}
+              <SelectSeparator />
+              <SelectItem
+                value={ADD_PARTY_VALUE}
+                className="whitespace-normal py-2.5 pl-2 pr-8 [&>span]:items-start"
+                textValue={addPartyItemLabel}
+              >
+                <span className="flex gap-2 text-left">
+                  <Plus className="h-4 w-4 shrink-0 text-muted-foreground mt-0.5" aria-hidden />
+                  <span>
+                    {addPartyItemDescription ? (
+                      <>
+                        <span className="font-medium">{addPartyItemLabel}</span>
+                        <span className="block text-muted-foreground text-xs mt-0.5">{addPartyItemDescription}</span>
+                      </>
+                    ) : (
+                      addPartyItemLabel
                     )}
                   </span>
-                </SelectItem>
-              ))
-            ) : (
-              <div className="px-2 py-3 text-xs text-muted-foreground">
-                No matches — use add below.
-              </div>
-            )}
-            <SelectSeparator />
-            <SelectItem
-              value={ADD_PARTY_VALUE}
-              className="whitespace-normal py-2.5 pl-2 pr-8 [&>span]:items-start"
-              textValue={addPartyItemLabel}
-            >
-              <span className="flex gap-2 text-left">
-                <Plus className="h-4 w-4 shrink-0 text-muted-foreground mt-0.5" aria-hidden />
-                <span>
-                  {addPartyItemDescription ? (
-                    <>
-                      <span className="font-medium">{addPartyItemLabel}</span>
-                      <span className="block text-muted-foreground text-xs mt-0.5">{addPartyItemDescription}</span>
-                    </>
-                  ) : (
-                    addPartyItemLabel
-                  )}
                 </span>
-              </span>
-            </SelectItem>
-          </SelectContent>
-        </Select>
-      </div>
+              </SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+      )}
 
       {matchedParty && ownerPreview && (
         <div className="rounded-md bg-muted/50 p-3 space-y-3">
@@ -257,9 +263,26 @@ export function PartySlotCard({
                     ? 'Not Started'
                     : 'Pending'}
               </Badge>
-              {matchedParty.kycStatus === 'needs_kyc' && (
-                <Button variant="outline" size="sm" className="h-6 text-xs" type="button">
+              {matchedParty.kycStatus === 'needs_kyc' && onStartKyc && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="h-6 text-xs"
+                  type="button"
+                  onClick={() => onStartKyc(matchedParty.id)}
+                >
                   Start
+                </Button>
+              )}
+              {matchedParty.kycStatus === 'pending' && onGoToKyc && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="h-6 text-xs"
+                  type="button"
+                  onClick={() => onGoToKyc(matchedParty.id)}
+                >
+                  Go to KYC
                 </Button>
               )}
             </div>

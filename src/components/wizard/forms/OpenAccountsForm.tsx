@@ -1,8 +1,12 @@
 import { useState, useMemo } from 'react'
 import { useWorkflow, useTaskData } from '@/stores/workflowStore'
+import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Label } from '@/components/ui/label'
+import { ChildActionKebabMenu } from '@/components/wizard/ChildActionKebabMenu'
+import { ChildActionTimelineSheet } from '@/components/wizard/ChildActionTimelineSheet'
+import type { ChildTask } from '@/types/workflow'
 import { AccountTypePickerDialog } from './AccountTypePickerDialog'
 import type { Selection } from './AccountTypePickerDialog'
 import { spawnOpenAccountChildrenFromSelections } from '@/utils/spawnOpenAccountChildrenFromSelections'
@@ -55,6 +59,7 @@ export function OpenAccountsForm() {
   const { state, dispatch } = useWorkflow()
   const { data, updateField } = useTaskData('open-accounts')
   const [pickerOpen, setPickerOpen] = useState(false)
+  const [timelineChild, setTimelineChild] = useState<ChildTask | null>(null)
   const [envelopeDrawerOpen, setEnvelopeDrawerOpen] = useState(false)
   const [envelopeDraft, setEnvelopeDraft] = useState<EsignEnvelope | null>(null)
   const [envelopeDrawerCreate, setEnvelopeDrawerCreate] = useState(true)
@@ -250,7 +255,7 @@ export function OpenAccountsForm() {
               return (
                 <div key={child.id} className="space-y-1">
                   {/* Account row */}
-                  <div className="flex items-center justify-between rounded-lg border border-border p-3 hover:bg-muted/50 transition-colors">
+                  <div className="group flex items-center justify-between rounded-lg border border-border p-3 hover:bg-muted/50 transition-colors">
                     <button
                       onClick={() => dispatch({ type: 'ENTER_CHILD_ACTION', childId: child.id })}
                       className="flex-1 flex items-center gap-3 text-left cursor-pointer"
@@ -261,15 +266,25 @@ export function OpenAccountsForm() {
                       <span className="text-sm font-medium">{child.name}</span>
                     </button>
                     <div className="flex items-center gap-2">
-                      <Badge variant="secondary" className="capitalize text-xs">
+                      <Badge
+                        variant="secondary"
+                        className={cn(
+                          'capitalize text-xs group-hover:hidden',
+                          child.status === 'complete' && 'bg-green-100 text-green-800 border-green-200',
+                          child.status === 'in_progress' && 'bg-blue-100 text-blue-800 border-blue-200',
+                          child.status === 'awaiting_review' && 'bg-yellow-100 text-yellow-800 border-yellow-200',
+                          child.status === 'rejected' && 'bg-red-100 text-red-800 border-red-200',
+                          child.status === 'not_started' && 'bg-muted text-muted-foreground',
+                        )}
+                      >
                         {child.status.replace('_', ' ')}
                       </Badge>
-                      <button
-                        onClick={() => dispatch({ type: 'ENTER_CHILD_ACTION', childId: child.id })}
-                        className="cursor-pointer"
-                      >
-                        <ChevronRight className="h-4 w-4 text-muted-foreground" />
-                      </button>
+                      <div className="hidden group-hover:block">
+                        <ChildActionKebabMenu
+                          onViewDetails={() => setTimelineChild(child)}
+                          onDelete={() => dispatch({ type: 'REMOVE_CHILD', parentTaskId: openAccountsTask!.id, childId: child.id })}
+                        />
+                      </div>
                     </div>
                   </div>
 
@@ -326,6 +341,12 @@ export function OpenAccountsForm() {
           open={pickerOpen}
           onOpenChange={setPickerOpen}
           onConfirm={handlePickerConfirm}
+        />
+
+        <ChildActionTimelineSheet
+          open={!!timelineChild}
+          onOpenChange={(o) => { if (!o) setTimelineChild(null) }}
+          child={timelineChild}
         />
       </section>
 
