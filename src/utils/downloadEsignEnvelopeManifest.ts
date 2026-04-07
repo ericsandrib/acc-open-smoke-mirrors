@@ -37,8 +37,18 @@ export function buildEnvelopeManifestText(envelope: EsignEnvelope): string {
     lines.push('')
   }
   lines.push('— Signers —')
+  const groupedForSigners = groupFormSelectionsByAccountChild(envelope.formSelections)
+  const accountLabelById = new Map(
+    Array.from(groupedForSigners.entries()).map(([accountChildId, rows]) => {
+      const head = rows[0]
+      return [accountChildId, head?.accountOpeningName ?? head?.accountNumberLabel ?? 'Account']
+    }),
+  )
   for (const s of envelope.signers) {
-    lines.push(`  • ${s.name} <${s.email || 'no email'}>`)
+    const accountScope = (s.accountChildIds ?? []).map((id) => accountLabelById.get(id) ?? 'Account').join(', ')
+    lines.push(
+      `  • ${s.name} <${s.email || 'no email'}>${accountScope ? ` — signs for: ${accountScope}` : ''}`,
+    )
   }
   lines.push('')
   lines.push('— Uploaded files —')

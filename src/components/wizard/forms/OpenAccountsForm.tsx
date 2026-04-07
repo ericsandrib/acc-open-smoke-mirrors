@@ -51,6 +51,8 @@ interface DocInstance {
   subType?: string
 }
 
+type OwnerSlot = { partyId?: string; type: string }
+
 export function OpenAccountsForm() {
   const { state, dispatch } = useWorkflow()
   const { data, updateField } = useTaskData('open-accounts')
@@ -83,44 +85,70 @@ export function OpenAccountsForm() {
     [childRegistrationTypes],
   )
 
+  const ownerPartyIdsByAccountChild = useMemo(() => {
+    const map = new Map<string, string[]>()
+    for (const c of accountOpeningChildren) {
+      const ownerData = (state.taskData[`${c.id}-account-owners`] as Record<string, unknown> | undefined)
+      const owners = (ownerData?.owners as OwnerSlot[] | undefined) ?? []
+      const ids = owners.filter((o) => o.type === 'existing' && o.partyId).map((o) => o.partyId as string)
+      map.set(c.id, Array.from(new Set(ids)))
+    }
+    return map
+  }, [accountOpeningChildren, state.taskData])
+
   // Collect all owner party IDs across all child accounts for smart dedup
   const allOwnerPartyIds = useMemo(() => {
     const ids = new Set<string>()
-    for (const c of accountOpeningChildren) {
-      const ownerData = (state.taskData[`${c.id}-account-owners`] as Record<string, unknown> | undefined)
-      const owners = (ownerData?.owners as { partyId?: string; type: string }[] | undefined) ?? []
-      for (const o of owners) {
-        if (o.type === 'existing' && o.partyId) ids.add(o.partyId)
-      }
+    for (const ownerIds of ownerPartyIdsByAccountChild.values()) {
+      for (const id of ownerIds) ids.add(id)
     }
     return ids
-  }, [accountOpeningChildren, state.taskData])
-
-  const defaultEnvelopeSigners = useMemo((): EsignEnvelopeSigner[] => {
-    const rows: EsignEnvelopeSigner[] = []
-    for (const id of allOwnerPartyIds) {
-      const p = state.relatedParties.find((x) => x.id === id)
-      if (p) rows.push({ id: `sig-${p.id}`, name: p.name, email: p.email ?? '' })
-    }
-    if (rows.length === 0) {
-      for (const p of state.relatedParties) {
-        if (p.type === 'household_member' && !p.isHidden) {
-          rows.push({ id: `sig-${p.id}`, name: p.name, email: p.email ?? '' })
-        }
-      }
-    }
-    return rows
-  }, [allOwnerPartyIds, state.relatedParties])
+  }, [ownerPartyIdsByAccountChild])
 
   const requiredEsignFormRows = useMemo(
     () => buildRequiredEsignFormRows(accountOpeningChildren, state.taskData),
     [accountOpeningChildren, state.taskData],
   )
 
+  const deriveEnvelopeSigners = (
+    formSelections: EsignEnvelope['formSelections'],
+    existingSigners: EsignEnvelopeSigner[] = [],
+  ): EsignEnvelopeSigner[] => {
+    const accountChildIds = new Set(formSelections.filter((r) => r.included).map((r) => r.accountChildId))
+    const ownerToAccounts = new Map<string, Set<string>>()
+    for (const accountChildId of accountChildIds) {
+      const ownerIds = ownerPartyIdsByAccountChild.get(accountChildId) ?? []
+      for (const ownerId of ownerIds) {
+        if (!ownerToAccounts.has(ownerId)) ownerToAccounts.set(ownerId, new Set<string>())
+        ownerToAccounts.get(ownerId)!.add(accountChildId)
+      }
+    }
+
+    const existingByPartyId = new Map(
+      existingSigners.map((s) => [s.partyId ?? s.id.replace(/^sig-/, ''), s]),
+    )
+
+    const rows: EsignEnvelopeSigner[] = []
+    for (const [partyId, accounts] of ownerToAccounts) {
+      const party = state.relatedParties.find((p) => p.id === partyId)
+      const existing = existingByPartyId.get(partyId)
+      rows.push({
+        id: `sig-${partyId}`,
+        partyId,
+        name: party?.name ?? existing?.name ?? 'Account owner',
+        email: existing?.email ?? party?.email ?? '',
+        accountChildIds: Array.from(accounts),
+      })
+    }
+    return rows
+  }
+
   const esignEnvelopes = (data.esignEnvelopes as EsignEnvelope[] | undefined) ?? []
 
   const openNewEnvelopeDrawer = () => {
-    setEnvelopeDraft(createNewEnvelope(requiredEsignFormRows, defaultEnvelopeSigners))
+    setEnvelopeDraft(
+      createNewEnvelope(requiredEsignFormRows, deriveEnvelopeSigners(requiredEsignFormRows)),
+    )
     setEnvelopeDrawerCreate(true)
     setEnvelopeDrawerMountKey((k) => k + 1)
     setEnvelopeDrawerOpen(true)
@@ -140,12 +168,16 @@ export function OpenAccountsForm() {
   }
 
   const saveEnvelopeFromDrawer = (env: EsignEnvelope) => {
+    const normalized = {
+      ...env,
+      signers: deriveEnvelopeSigners(env.formSelections, env.signers),
+    }
     if (envelopeDrawerCreate) {
-      updateField('esignEnvelopes', [...esignEnvelopes, env])
+      updateField('esignEnvelopes', [...esignEnvelopes, normalized])
     } else {
       updateField(
         'esignEnvelopes',
-        esignEnvelopes.map((e) => (e.id === env.id ? env : e)),
+        esignEnvelopes.map((e) => (e.id === env.id ? normalized : e)),
       )
     }
     setEnvelopeDraft(null)

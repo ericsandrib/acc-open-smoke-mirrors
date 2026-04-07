@@ -8,6 +8,11 @@ export default defineConfig({
   resolve: {
     alias: {
       '@': path.resolve(__dirname, './src'),
+      /** Prebundled ESM — some environments fail resolving the package root `main`/`module`. */
+      'pdf-lib': path.resolve(__dirname, 'node_modules/pdf-lib/dist/pdf-lib.esm.js'),
     },
+  },
+  optimizeDeps: {
+    include: ['pdf-lib'],
   },
 })
