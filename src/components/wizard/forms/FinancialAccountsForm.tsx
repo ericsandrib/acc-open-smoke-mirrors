@@ -4,7 +4,7 @@ import { Label } from '@/components/ui/label'
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui/select'
 import { Button } from '@/components/ui/button'
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from '@/components/ui/sheet'
-import { Plus, Trash2 } from 'lucide-react'
+import { Plus, Trash2, Landmark } from 'lucide-react'
 import { useWorkflow } from '@/stores/workflowStore'
 import type { AccountType, FinancialAccount } from '@/types/workflow'
 
@@ -172,7 +172,10 @@ function AccountCard({ account, onClick }: { account: FinancialAccount; onClick:
         onClick={onClick}
         className="flex items-center justify-between w-full p-3 hover:bg-muted/50 rounded-lg focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
       >
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-3">
+          <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-muted">
+            <Landmark className="h-4 w-4 text-muted-foreground" />
+          </div>
           <span className="text-sm font-medium">{account.accountName}</span>
           {account.accountType && (
             <span className="text-xs text-muted-foreground">{accountTypeLabels[account.accountType]}</span>
