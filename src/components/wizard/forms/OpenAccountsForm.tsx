@@ -356,7 +356,7 @@ export function OpenAccountsForm() {
             <p className="text-sm text-muted-foreground mb-3">
               No accounts to open yet. Add the types of accounts you want to open.
             </p>
-            <Button variant="ghost" onClick={() => setPickerOpen(true)}>
+            <Button onClick={() => setPickerOpen(true)}>
               <Plus className="h-4 w-4 mr-1" />
               Add accounts
             </Button>
@@ -602,10 +602,6 @@ export function OpenAccountsForm() {
               forms automatically—those forms are not uploaded as attachments.
             </p>
           </div>
-          <Button type="button" variant="outline" size="sm" className="gap-1 shrink-0" onClick={openNewEnvelopeDrawer}>
-            <Plus className="h-3.5 w-3.5" />
-            New envelope
-          </Button>
         </div>
         {esignEnvelopes.length === 0 ? (
           <div className="rounded-lg border border-dashed border-border p-6 text-center">

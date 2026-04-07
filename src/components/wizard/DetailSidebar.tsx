@@ -1,6 +1,5 @@
 import { useWorkflow } from '@/stores/workflowStore'
 import { parseChildSubTaskId } from '@/utils/childTaskRegistry'
-import { MissingDataSection } from '@/components/wizard/MissingDataSection'
 
 export function DetailSidebar() {
   const { state } = useWorkflow()
@@ -78,9 +77,6 @@ export function DetailSidebar() {
             </div>
           </div>
         )}
-      </div>
-      <div className="shrink-0 p-4 pt-3 border-t border-border">
-        <MissingDataSection variant="compact" />
       </div>
     </aside>
   )
