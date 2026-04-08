@@ -9,9 +9,7 @@ import {
 } from '@/components/ui/select'
 import type { AccountType } from '@/types/workflow'
 import type { RegistrationType } from '@/utils/registrationDocuments'
-import { registrationTypeLabels } from '@/utils/registrationDocuments'
 import { getAccountProductTypeForRegistration } from '@/utils/accountTypeFromRegistration'
-import { PROTOTYPE_AGENT_CODES } from '@/constants/prototypeAgent'
 
 const accountProductLabels: Record<AccountType, string> = {
   brokerage: 'Brokerage',
@@ -92,8 +90,7 @@ export function AccountProfileSection({
             Account details
           </h3>
           <p className="text-sm text-muted-foreground">
-            Registration, product type, and firm servicing codes for this account. Tax IDs, addresses, and KYC details are
-            captured under{' '}
+            Product type and servicing details for this account. Tax IDs, addresses, and KYC details are captured under{' '}
             <span className="font-medium text-foreground">View / edit details</span> on each owner card.
           </p>
         </div>
@@ -109,45 +106,6 @@ export function AccountProfileSection({
                 ? 'Product type set explicitly on this account.'
                 : 'Based on the registration you chose when this account was added (for example, brokerage for most individual registrations, or trust for trust and estate structures).'}
             </p>
-          </div>
-
-          <div className="space-y-2">
-            <Label>Registration type</Label>
-            <div className="rounded-md border border-border bg-muted/30 px-3 py-2 text-sm text-foreground">
-              {registrationType ? registrationTypeLabels[registrationType] : '—'}
-            </div>
-          </div>
-
-          <div className="space-y-2">
-            <Label>Office code</Label>
-            <div className="rounded-md border border-border bg-muted/30 px-3 py-2 text-sm text-foreground tabular-nums font-medium">
-              {PROTOTYPE_AGENT_CODES.officeCode}
-            </div>
-          </div>
-
-          <div className="space-y-2">
-            <Label>Team code</Label>
-            <div className="rounded-md border border-border bg-muted/30 px-3 py-2 text-sm text-foreground tabular-nums font-medium">
-              {PROTOTYPE_AGENT_CODES.teamCode}
-            </div>
-          </div>
-
-          <div className="space-y-2">
-            <Label>Advisor code</Label>
-            <div className="rounded-md border border-border bg-muted/30 px-3 py-2 text-sm text-foreground tabular-nums font-medium">
-              {PROTOTYPE_AGENT_CODES.advisorCode}
-            </div>
-            <p className="text-xs text-muted-foreground">
-              From the assigned advisor profile ({PROTOTYPE_AGENT_CODES.agentName}).
-            </p>
-          </div>
-
-          <div className="space-y-2">
-            <Label>Short name</Label>
-            <div className="rounded-md border border-border bg-muted/30 px-3 py-2 text-sm text-foreground font-mono">
-              {prefilledShortName || '—'}
-            </div>
-            <p className="text-xs text-muted-foreground">Generated when this account was added to the household.</p>
           </div>
 
           <div className="space-y-2">

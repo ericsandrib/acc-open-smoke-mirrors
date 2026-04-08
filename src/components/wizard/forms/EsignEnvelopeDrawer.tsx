@@ -212,15 +212,6 @@ export function EsignEnvelopeDrawer({
     }))
   }
 
-  const toggleUploadMapping = (fileId: string, manualFieldMapping: boolean) => {
-    setLocal((prev) => ({
-      ...prev,
-      uploadedFiles: prev.uploadedFiles.map((f) =>
-        f.id === fileId ? { ...f, manualFieldMapping } : f,
-      ),
-    }))
-  }
-
   const removeUpload = (fileId: string) => {
     const toRemove = local.uploadedFiles.find((f) => f.id === fileId)
     if (toRemove?.previewUrl) URL.revokeObjectURL(toRemove.previewUrl)
@@ -663,8 +654,7 @@ export function EsignEnvelopeDrawer({
             <div>
               <p className="text-sm font-medium">Additional files for this envelope</p>
               <p className="text-xs text-muted-foreground mt-1">
-                Upload PDFs or images to include in the envelope. Enable manual mapping when you will place fields and
-                signature tabs yourself in the e-sign provider.
+                Upload PDFs or images to include in the envelope.
               </p>
             </div>
             {local.uploadedFiles.length === 0 ? (
@@ -677,13 +667,6 @@ export function EsignEnvelopeDrawer({
                     className="flex flex-wrap items-center gap-3 rounded-md border border-border px-3 py-2 text-sm"
                   >
                     <span className="flex-1 min-w-0 truncate">{f.fileName}</span>
-                    <label className="flex items-center gap-2 text-xs text-muted-foreground shrink-0">
-                      <Checkbox
-                        checked={f.manualFieldMapping}
-                        onCheckedChange={(c) => toggleUploadMapping(f.id, c === true)}
-                      />
-                      Manual field &amp; signature mapping
-                    </label>
                     <Button type="button" variant="ghost" size="sm" onClick={() => removeUpload(f.id)}>
                       Remove
                     </Button>
