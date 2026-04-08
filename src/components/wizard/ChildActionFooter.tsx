@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { toast } from 'sonner'
 import { useWorkflow, useChildActionContext, useAdvisorUnlocked } from '@/stores/workflowStore'
 import { Button } from '@/components/ui/button'
-import { ChevronLeft, ChevronRight, Clock, ShieldAlert, RotateCcw } from 'lucide-react'
+import { CheckCircle2, ChevronLeft, ChevronRight, Clock, ShieldAlert, RotateCcw } from 'lucide-react'
 import { getKycValidationErrors } from './forms/KycChildInfoForm'
 
 function SubmitConfirmModal({ childName, onConfirm, onCancel }: { childName: string; onConfirm: () => void; onCancel: () => void }) {
@@ -95,6 +95,18 @@ export function ChildActionFooter() {
                 <RotateCcw className="h-4 w-4" />
                 Resubmit for Review
               </Button>
+            ) : child.status === 'complete' ? (
+              <div className="flex items-center gap-1.5 text-sm text-green-700">
+                <CheckCircle2 className="h-3.5 w-3.5" />
+                <span>
+                  Completed at{' '}
+                  {(() => {
+                    const rs = state.childReviewState
+                    if (isKyc) return rs?.principalKycReview?.decidedAt ?? rs?.hoKycReview?.decidedAt ?? state.submittedAt ?? 'N/A'
+                    return rs?.principalReview?.decidedAt ?? state.childReviewDecision?.decidedAt ?? state.submittedAt ?? 'N/A'
+                  })()}
+                </span>
+              </div>
             ) : (
               <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
                 <Clock className="h-3.5 w-3.5" />

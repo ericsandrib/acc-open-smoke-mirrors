@@ -3,6 +3,9 @@ import type { WorkflowState } from '@/types/workflow'
 export type ChildDisplayStatus =
   | 'draft'
   | 'awaiting_review'
+  | 'aml_review'
+  | 'document_review'
+  | 'ho_kyc_review'
   | 'escalation_hold'
   | 'principal_review'
   | 'nigo'
@@ -19,6 +22,18 @@ export const childStatusConfig: Record<ChildDisplayStatus, { label: string; clas
   },
   awaiting_review: {
     label: 'Awaiting Review',
+    className: 'bg-violet-50 text-violet-700 border-violet-200',
+  },
+  aml_review: {
+    label: 'AML Review',
+    className: 'bg-amber-50 text-amber-700 border-amber-200',
+  },
+  document_review: {
+    label: 'Document Review',
+    className: 'bg-violet-50 text-violet-700 border-violet-200',
+  },
+  ho_kyc_review: {
+    label: 'Home Office Review',
     className: 'bg-violet-50 text-violet-700 border-violet-200',
   },
   escalation_hold: {
@@ -81,10 +96,27 @@ export function deriveChildDisplayStatus(
 
   if (rawStatus === 'awaiting_review') {
     if (!reviewState) return 'awaiting_review'
+    const amlReview = reviewState.amlReview
     const docReview = reviewState.documentReview
+    const hoKycReview = reviewState.hoKycReview
+    const principalKycReview = reviewState.principalKycReview
     const amlFlagged = reviewState.amlFlagged
+
+    if (amlReview?.status === 'pending') return 'aml_review'
     if (amlFlagged && (!docReview || docReview.status === 'pending')) return 'escalation_hold'
-    if (docReview?.status === 'igo') return 'principal_review'
+
+    if (hoKycReview) {
+      if (hoKycReview.status === 'pending') return 'ho_kyc_review'
+      if (hoKycReview.status === 'approved') {
+        if (principalKycReview?.status === 'pending' || !principalKycReview) return 'principal_review'
+      }
+    }
+
+    if (docReview) {
+      if (docReview.status === 'pending') return 'document_review'
+      if (docReview.status === 'igo') return 'principal_review'
+    }
+
     return 'awaiting_review'
   }
 

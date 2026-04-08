@@ -20,6 +20,7 @@ const ACCOUNT_OPENING_STAGES: TimelineStage[] = [
   { label: 'Pending Client Signature', description: 'Combined eSign package generated and sent to client for signature.', matchStatuses: [] },
   { label: 'Pending Advisor Signature', description: 'Awaiting advisor counter-signature on the application.', matchStatuses: [] },
   { label: 'Submitted', description: 'Account application submitted to Home Office for review.', matchStatuses: ['awaiting_review'] },
+  { label: 'AML Review', description: 'AML Team reviews account owners against OFAC sanctions and watchlists.', matchStatuses: ['aml_pending', 'aml_flagged'] },
   { label: 'Document Review', description: 'Document Review Team verifies completeness of all account documents.', matchStatuses: ['doc_review_pending'] },
   { label: 'Principal Review', description: 'Principal Review Team performs final approval and oversight.', matchStatuses: ['principal_review_pending', 'rejected'] },
   { label: 'Pending Release', description: 'Both reviews passed — account approved (IGO). Preparing for release to Pershing.', matchStatuses: [] },
@@ -80,14 +81,19 @@ function deriveEffectiveStatus(
     return rawStatus
   }
 
+  const amlStatus = reviewState?.amlReview?.status
   const docStatus = reviewState?.documentReview?.status
   const principalStatus = reviewState?.principalReview?.status
 
   if (rawStatus === 'rejected') {
+    if (amlStatus === 'flagged' || amlStatus === 'escalated') return 'rejected'
     if (principalStatus === 'nigo') return 'rejected'
     if (docStatus === 'nigo') return 'rejected'
     return 'rejected'
   }
+
+  if (amlStatus === 'pending') return 'aml_pending'
+  if (amlStatus === 'flagged') return 'aml_flagged'
 
   if (docStatus === 'igo' && principalStatus === 'igo') return 'complete'
   if (docStatus === 'igo') return 'principal_review_pending'

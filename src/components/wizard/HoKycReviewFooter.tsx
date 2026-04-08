@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { toast } from 'sonner'
 import { useWorkflow, useChildActionContext } from '@/stores/workflowStore'
 import { Button } from '@/components/ui/button'
 import { Label } from '@/components/ui/label'
@@ -135,9 +136,15 @@ export function HoKycReviewFooter() {
               <Button
                 variant="default"
                 onClick={() => {
-                  dispatch({ type: 'HO_KYC_REQUEST_CHANGES', comments: comments.trim() || 'Please review and resubmit.' })
+                  const feedback = comments.trim() || 'Please review and resubmit.'
+                  dispatch({ type: 'HO_KYC_REQUEST_CHANGES', comments: feedback })
                   setShowRequestChanges(false)
                   setComments('')
+                  toast('Home Office KYC Team returned feedback', {
+                    description: feedback,
+                    icon: <MessageSquare className="h-4 w-4 text-amber-600" />,
+                    duration: 6000,
+                  })
                 }}
               >
                 Send Back to Advisor

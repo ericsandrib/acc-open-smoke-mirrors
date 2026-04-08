@@ -605,7 +605,7 @@ function workflowReducer(state: WorkflowState, action: WorkflowAction): Workflow
                 hoKycReview: { status: 'pending' as const },
                 validationErrors: [],
               }
-            : { documentReview: { status: 'pending' }, principalReview: { status: 'pending' } }
+            : { amlReview: { status: 'pending' as const }, documentReview: { status: 'pending' }, principalReview: { status: 'pending' } }
           ),
         },
       }
@@ -854,8 +854,7 @@ function workflowReducer(state: WorkflowState, action: WorkflowAction): Workflow
           hoKycReview: { status: 'changes_requested', decidedAt: hoReqTs, comments: action.comments },
         },
         childReviewDecision: { outcome: 'rejected', decidedAt: hoReqTs },
-        demoViewMode: undefined,
-        submittedAt: undefined,
+        demoViewMode: 'advisor',
       }
     }
 
@@ -1065,6 +1064,8 @@ export function useAdvisorUnlocked(): boolean {
   }
 
   return (
+    rs.amlReview?.status === 'info_requested' ||
+    rs.amlReview?.status === 'flagged' ||
     rs.documentReview?.status === 'nigo' ||
     rs.principalReview?.status === 'nigo' ||
     false

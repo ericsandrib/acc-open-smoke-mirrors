@@ -62,7 +62,6 @@ function SubTaskStatusBadge({ subTaskId }: { subTaskId: string }) {
 
 import { childStatusConfig, deriveChildDisplayStatus } from '@/utils/childStatusDisplay'
 import type { ChildDisplayStatus } from '@/utils/childStatusDisplay'
-import { getActiveStageLabel } from './ChildActionTimelineSheet'
 
 function useChildOverallStatus(childId: string): ChildDisplayStatus {
   const { state } = useWorkflow()
@@ -106,15 +105,15 @@ export function ChildActionSidebar() {
   const isHoPrincipalKycView = viewMode === 'ho-principal-kyc'
 
   const hoTaskLabel = isHoDocView ? 'Document Review' : isHoPrincipalView ? 'Principal Review' : null
-  const kycReviewTaskLabel =
-    child.childType === 'kyc' && isAmlView
+  const reviewTaskLabel =
+    isAmlView
       ? 'AML Review'
       : child.childType === 'kyc' && isHoKycView
         ? 'Home Office Review'
         : child.childType === 'kyc' && isHoPrincipalKycView
           ? 'Principal Review'
           : null
-  const showSingleReviewStep = Boolean((isHoView && hoTaskLabel) || kycReviewTaskLabel)
+  const showSingleReviewStep = Boolean((isHoView && hoTaskLabel) || reviewTaskLabel)
 
   return (
     <TooltipProvider delayDuration={300}>
@@ -140,7 +139,7 @@ export function ChildActionSidebar() {
               <div className="w-full text-left px-3 py-2 rounded-md text-sm flex items-center gap-2 bg-accent text-accent-foreground font-medium">
                 <span className="flex items-center gap-2 truncate">
                   <span className="text-xs text-muted-foreground w-4 shrink-0">1.</span>
-                  {kycReviewTaskLabel ?? hoTaskLabel}
+                  {reviewTaskLabel ?? hoTaskLabel}
                 </span>
               </div>
             </li>
@@ -176,7 +175,7 @@ export function ChildActionSidebar() {
             <Badge variant="outline" className={cn('text-xs', advisorUnlocked ? 'bg-amber-50 text-amber-700 border-amber-200' : statusCfg.className)}>
               {advisorUnlocked
                 ? 'Action Required'
-                : getActiveStageLabel(child.status, child.childType, state.childReviewState)}
+                : statusCfg.label}
             </Badge>
           </div>
         </div>
