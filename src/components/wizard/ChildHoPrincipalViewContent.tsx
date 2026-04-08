@@ -96,12 +96,6 @@ export function ChildHoPrincipalViewContent() {
     <main className="flex-1 overflow-y-auto p-8">
       <div className="max-w-3xl mx-auto space-y-6">
         <div className="space-y-1">
-          <div className="flex items-center gap-2">
-            <Badge variant="outline" className="text-[10px] bg-violet-50 text-violet-700 border-violet-200">
-              <ShieldCheck className="h-3 w-3 mr-1" />
-              Principal Team
-            </Badge>
-          </div>
           <h2 className="text-2xl font-semibold text-foreground">Principal Review</h2>
           <p className="text-sm text-muted-foreground">
             Full overview of <strong>{accountName}</strong> — review document team findings,
@@ -109,73 +103,6 @@ export function ChildHoPrincipalViewContent() {
           </p>
         </div>
 
-        {(() => {
-          if (principalReview?.status === 'nigo') {
-            return (
-              <div className="rounded-lg border border-red-200 bg-red-50 dark:border-red-900/60 dark:bg-red-950/40 px-4 py-3">
-                <div className="flex items-start gap-3">
-                  <AlertTriangle className="h-5 w-5 text-red-600 dark:text-red-400 mt-0.5 shrink-0" />
-                  <div className="space-y-1">
-                    <p className="text-sm font-medium text-red-900 dark:text-red-100">Rejected by Principal Team</p>
-                    <p className="text-xs text-red-800/80 dark:text-red-200/70">
-                      This submission has been rejected and returned to the advisor.
-                    </p>
-                    {principalReview.nigoReason && (
-                      <div className="mt-2 rounded-md bg-red-100/60 dark:bg-red-900/30 px-3 py-2 space-y-1">
-                        <p className="text-xs text-red-900 dark:text-red-100">
-                          <span className="font-semibold">Reason:</span> {principalReview.nigoReason}
-                        </p>
-                        {principalReview.nigoFeedback && (
-                          <p className="text-xs text-red-800/90 dark:text-red-200/80">
-                            <span className="font-semibold">Feedback:</span> {principalReview.nigoFeedback}
-                          </p>
-                        )}
-                      </div>
-                    )}
-                    <p className="text-xs text-red-700/70 dark:text-red-300/60 mt-1">
-                      Rejected at {principalReview.decidedAt}
-                    </p>
-                  </div>
-                </div>
-              </div>
-            )
-          }
-
-          if (decision?.outcome === 'approved') {
-            return (
-              <div className="rounded-lg border border-green-200 bg-green-50 dark:border-green-900/60 dark:bg-green-950/40 px-4 py-3">
-                <div className="flex items-start gap-3">
-                  <CheckCircle2 className="h-5 w-5 text-green-600 dark:text-green-400 mt-0.5 shrink-0" />
-                  <div className="space-y-0.5">
-                    <p className="text-sm font-medium text-green-900 dark:text-green-100">Approved</p>
-                    <p className="text-xs text-green-800/80 dark:text-green-200/70">
-                      Both document and principal reviews passed. Account cleared for processing at {decision.decidedAt}.
-                    </p>
-                  </div>
-                </div>
-              </div>
-            )
-          }
-
-          return (
-            <div className="rounded-lg border border-violet-200 bg-violet-50 dark:border-violet-900/60 dark:bg-violet-950/40 px-4 py-3">
-              <div className="flex items-start gap-3">
-                <ShieldCheck className="h-5 w-5 text-violet-600 dark:text-violet-400 mt-0.5 shrink-0" />
-                <div className="space-y-0.5">
-                  <p className="text-sm font-medium text-violet-900 dark:text-violet-100">Pending Principal Approval</p>
-                  <p className="text-xs text-violet-800/80 dark:text-violet-200/70">
-                    Review the document team findings and full account details below.
-                    {!docReview || docReview.status === 'pending'
-                      ? ' Document review is still in progress — approval is blocked until documents are verified.'
-                      : docReview.status === 'igo'
-                      ? ' Document review has passed (IGO).'
-                      : ' Document review flagged NIGO — review the findings below.'}
-                  </p>
-                </div>
-              </div>
-            </div>
-          )
-        })()}
 
         <div className="space-y-3">
           <AccordionSection

@@ -1,14 +1,9 @@
 import { useState } from 'react'
 import { useWorkflow, useChildActionContext } from '@/stores/workflowStore'
 import { Button } from '@/components/ui/button'
-import { Checkbox } from '@/components/ui/checkbox'
-import { Label } from '@/components/ui/label'
 import { ChevronLeft, ChevronRight, Clock, ShieldAlert } from 'lucide-react'
 
-function AmlFlagModal({ childName, onConfirm, onCancel }: { childName: string; onConfirm: (flagged: boolean, notes: string) => void; onCancel: () => void }) {
-  const [flagged, setFlagged] = useState(false)
-  const [notes, setNotes] = useState('')
-
+function SubmitConfirmModal({ childName, onConfirm, onCancel }: { childName: string; onConfirm: () => void; onCancel: () => void }) {
   return (
     <div className="fixed inset-0 z-[60] flex items-center justify-center">
       <div className="fixed inset-0 bg-black/50" onClick={onCancel} />
@@ -18,47 +13,17 @@ function AmlFlagModal({ childName, onConfirm, onCancel }: { childName: string; o
             <ShieldAlert className="h-5 w-5 text-amber-600" />
           </div>
           <div className="space-y-1">
-            <h3 className="text-base font-semibold">Submit for AML Review</h3>
+            <h3 className="text-base font-semibold">Submit for Review</h3>
             <p className="text-sm text-muted-foreground">
               You are about to submit <span className="font-medium text-foreground">{childName}</span> for
-              KYC verification. Would you like to flag this individual for AML review?
+              compliance verification. Once submitted, the information will be locked and forwarded for review.
             </p>
           </div>
         </div>
 
-        <div className="space-y-3 rounded-lg border border-border p-4">
-          <div className="flex items-start gap-3">
-            <Checkbox
-              id="aml-flag"
-              checked={flagged}
-              onCheckedChange={(v) => setFlagged(v === true)}
-              className="mt-0.5"
-            />
-            <div>
-              <Label htmlFor="aml-flag" className="text-sm font-medium cursor-pointer">
-                Flag for AML Review
-              </Label>
-              <p className="text-xs text-muted-foreground mt-0.5">
-                Route this individual to the AML team for OFAC watchlist and sanctions screening.
-              </p>
-            </div>
-          </div>
-          {flagged && (
-            <div className="space-y-1.5 pl-7">
-              <Label className="text-xs">Notes for AML Team <span className="text-muted-foreground font-normal">(optional)</span></Label>
-              <textarea
-                value={notes}
-                onChange={(e) => setNotes(e.target.value)}
-                placeholder="Describe any concerns or context for the AML team..."
-                className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm min-h-[60px] resize-none focus:outline-none focus:ring-2 focus:ring-ring"
-              />
-            </div>
-          )}
-        </div>
-
         <div className="flex items-center justify-end gap-3 pt-1">
           <Button variant="outline" onClick={onCancel}>Cancel</Button>
-          <Button onClick={() => onConfirm(flagged, notes.trim())}>
+          <Button onClick={onConfirm}>
             Submit for Review
           </Button>
         </div>
@@ -70,7 +35,7 @@ function AmlFlagModal({ childName, onConfirm, onCancel }: { childName: string; o
 export function ChildActionFooter() {
   const { state, dispatch } = useWorkflow()
   const ctx = useChildActionContext()
-  const [showAmlModal, setShowAmlModal] = useState(false)
+  const [showConfirmModal, setShowConfirmModal] = useState(false)
 
   if (!ctx) return null
 
@@ -108,20 +73,17 @@ export function ChildActionFooter() {
 
   const handleDone = () => {
     if (isKyc) {
-      setShowAmlModal(true)
+      setShowConfirmModal(true)
     } else {
       dispatch({ type: 'SUBMIT_CHILD_FOR_REVIEW' })
       dispatch({ type: 'SET_DEMO_VIEW', mode: 'advisor' })
     }
   }
 
-  const handleAmlConfirm = (flagged: boolean, notes: string) => {
-    if (flagged) {
-      dispatch({ type: 'SET_AML_FLAG', flagged: true, notes: notes || undefined })
-    }
+  const handleConfirmSubmit = () => {
     dispatch({ type: 'SUBMIT_CHILD_FOR_REVIEW' })
     dispatch({ type: 'SET_DEMO_VIEW', mode: 'advisor' })
-    setShowAmlModal(false)
+    setShowConfirmModal(false)
   }
 
   return (
@@ -153,11 +115,11 @@ export function ChildActionFooter() {
         </div>
       </footer>
 
-      {showAmlModal && (
-        <AmlFlagModal
+      {showConfirmModal && (
+        <SubmitConfirmModal
           childName={child.name}
-          onConfirm={handleAmlConfirm}
-          onCancel={() => setShowAmlModal(false)}
+          onConfirm={handleConfirmSubmit}
+          onCancel={() => setShowConfirmModal(false)}
         />
       )}
     </>

@@ -65,6 +65,23 @@ export interface RelatedParty {
   jurisdiction?: string
   contactPerson?: string
   accountOwnerIndividual?: AccountOwnerIndividualProfile
+  controlPerson?: {
+    firstName?: string
+    lastName?: string
+    dob?: string
+    ssn?: string
+    address?: string
+    relationship?: string
+  }
+  beneficialOwners?: Array<{
+    name: string
+    ownershipPercent: string
+  }>
+  businessProfile?: {
+    industry?: string
+    sourceOfFunds?: string
+    annualRevenueRange?: string
+  }
 }
 
 export type AccountType = 'brokerage' | 'ira' | 'roth_ira' | '401k' | 'trust' | 'checking' | 'savings'

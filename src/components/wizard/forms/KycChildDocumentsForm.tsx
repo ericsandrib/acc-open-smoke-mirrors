@@ -8,7 +8,7 @@ export function KycChildDocumentsForm() {
   const taskId = ctx?.subTaskId ?? ''
   const { data, updateField } = useTaskData(taskId || '__no_child__')
 
-  const isLocked = child ? child.status !== 'not_started' : false
+  const isLocked = child ? (child.status === 'awaiting_review' || child.status === 'complete' || child.status === 'rejected') : false
 
   const docs = [
     {
@@ -32,7 +32,7 @@ export function KycChildDocumentsForm() {
           <div className="flex items-center gap-2">
             <Lock className="h-4 w-4 text-amber-600 dark:text-amber-400 shrink-0" />
             <p className="text-xs font-medium text-amber-900 dark:text-amber-100">
-              Documents have been submitted for compliance verification and are locked.
+              This submission is under review. Documents are locked and cannot be modified.
             </p>
           </div>
         </div>

@@ -95,6 +95,12 @@ export function ChildActionSidebar() {
   if (!ctx) return null
 
   const { child, config, subTaskIndex, parentTask } = ctx
+  const viewMode = state.demoViewMode
+  const isHoDocView = viewMode === 'ho-documents'
+  const isHoPrincipalView = viewMode === 'ho-principal'
+  const isHoView = isHoDocView || isHoPrincipalView
+
+  const hoTaskLabel = isHoDocView ? 'Document Review' : isHoPrincipalView ? 'Principal Review' : null
 
   return (
     <TooltipProvider delayDuration={300}>
@@ -115,28 +121,39 @@ export function ChildActionSidebar() {
         </div>
 
         <ul className="space-y-1">
-          {config.subTasks.map((subTask, idx) => {
-            const subTaskId = `${child.id}-${subTask.suffix}`
-            return (
-              <li key={subTask.suffix}>
-                <button
-                  onClick={() => dispatch({ type: 'SET_CHILD_SUB_TASK', index: idx })}
-                  className={cn(
-                    'w-full text-left px-3 py-2 rounded-md text-sm flex items-center justify-between gap-2 transition-colors',
-                    idx === subTaskIndex
-                      ? 'bg-accent text-accent-foreground font-medium'
-                      : 'hover:bg-muted text-foreground'
-                  )}
-                >
-                  <span className="flex items-center gap-2 truncate">
-                    <span className="text-xs text-muted-foreground w-4 shrink-0">{idx + 1}.</span>
-                    {subTask.title}
-                  </span>
-                  <SubTaskStatusBadge subTaskId={subTaskId} />
-                </button>
-              </li>
-            )
-          })}
+          {isHoView && hoTaskLabel ? (
+            <li>
+              <div className="w-full text-left px-3 py-2 rounded-md text-sm flex items-center gap-2 bg-accent text-accent-foreground font-medium">
+                <span className="flex items-center gap-2 truncate">
+                  <span className="text-xs text-muted-foreground w-4 shrink-0">1.</span>
+                  {hoTaskLabel}
+                </span>
+              </div>
+            </li>
+          ) : (
+            config.subTasks.map((subTask, idx) => {
+              const subTaskId = `${child.id}-${subTask.suffix}`
+              return (
+                <li key={subTask.suffix}>
+                  <button
+                    onClick={() => dispatch({ type: 'SET_CHILD_SUB_TASK', index: idx })}
+                    className={cn(
+                      'w-full text-left px-3 py-2 rounded-md text-sm flex items-center justify-between gap-2 transition-colors',
+                      idx === subTaskIndex
+                        ? 'bg-accent text-accent-foreground font-medium'
+                        : 'hover:bg-muted text-foreground'
+                    )}
+                  >
+                    <span className="flex items-center gap-2 truncate">
+                      <span className="text-xs text-muted-foreground w-4 shrink-0">{idx + 1}.</span>
+                      {subTask.title}
+                    </span>
+                    <SubTaskStatusBadge subTaskId={subTaskId} />
+                  </button>
+                </li>
+              )
+            })
+          )}
         </ul>
 
         <div className="mt-auto px-3 pt-4 pb-2 border-t border-border mt-4">

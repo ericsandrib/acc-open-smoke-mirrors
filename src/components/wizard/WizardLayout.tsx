@@ -115,6 +115,7 @@ export function WizardLayout() {
               </>
             ) : isHomeOfficeView ? (
               <>
+                <ChildActionSidebar />
                 <div className="flex-1 flex flex-col overflow-hidden">
                   {isHoDocView ? <ChildHoDocumentViewContent /> : <ChildHoPrincipalViewContent />}
                   <HomeOfficeReviewFooter />

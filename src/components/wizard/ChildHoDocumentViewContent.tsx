@@ -91,12 +91,6 @@ export function ChildHoDocumentViewContent() {
     <main className="flex-1 overflow-y-auto p-8">
       <div className="max-w-3xl mx-auto space-y-6">
         <div className="space-y-1">
-          <div className="flex items-center gap-2">
-            <Badge variant="outline" className="text-[10px] bg-blue-50 text-blue-700 border-blue-200">
-              <FileSearch2 className="h-3 w-3 mr-1" />
-              Document Team
-            </Badge>
-          </div>
           <h2 className="text-2xl font-semibold text-foreground">Document Review</h2>
           <p className="text-sm text-muted-foreground">
             Verify all documents for <strong>{accountName}</strong> ({registrationType}).
@@ -104,68 +98,6 @@ export function ChildHoDocumentViewContent() {
           </p>
         </div>
 
-        {(() => {
-          if (docReview?.status === 'nigo') {
-            return (
-              <div className="rounded-lg border border-red-200 bg-red-50 dark:border-red-900/60 dark:bg-red-950/40 px-4 py-3">
-                <div className="flex items-start gap-3">
-                  <AlertTriangle className="h-5 w-5 text-red-600 dark:text-red-400 mt-0.5 shrink-0" />
-                  <div className="space-y-1">
-                    <p className="text-sm font-medium text-red-900 dark:text-red-100">NIGO — Not In Good Order</p>
-                    <p className="text-xs text-red-800/80 dark:text-red-200/70">
-                      This submission has been flagged as NIGO and returned to the advisor.
-                    </p>
-                    {docReview.nigoReason && (
-                      <div className="mt-2 rounded-md bg-red-100/60 dark:bg-red-900/30 px-3 py-2 space-y-1">
-                        <p className="text-xs text-red-900 dark:text-red-100">
-                          <span className="font-semibold">Reason:</span> {docReview.nigoReason}
-                        </p>
-                        {docReview.nigoFeedback && (
-                          <p className="text-xs text-red-800/90 dark:text-red-200/80">
-                            <span className="font-semibold">Feedback:</span> {docReview.nigoFeedback}
-                          </p>
-                        )}
-                      </div>
-                    )}
-                    <p className="text-xs text-red-700/70 dark:text-red-300/60 mt-1">
-                      Flagged at {docReview.decidedAt}
-                    </p>
-                  </div>
-                </div>
-              </div>
-            )
-          }
-
-          if (docReview?.status === 'igo') {
-            return (
-              <div className="rounded-lg border border-green-200 bg-green-50 dark:border-green-900/60 dark:bg-green-950/40 px-4 py-3">
-                <div className="flex items-start gap-3">
-                  <CheckCircle2 className="h-5 w-5 text-green-600 dark:text-green-400 mt-0.5 shrink-0" />
-                  <div className="space-y-0.5">
-                    <p className="text-sm font-medium text-green-900 dark:text-green-100">IGO — In Good Order</p>
-                    <p className="text-xs text-green-800/80 dark:text-green-200/70">
-                      All documents verified. Passed to Principal Review at {docReview.decidedAt}.
-                    </p>
-                  </div>
-                </div>
-              </div>
-            )
-          }
-
-          return (
-            <div className="rounded-lg border border-yellow-200 bg-yellow-50 dark:border-yellow-900/60 dark:bg-yellow-950/40 px-4 py-3">
-              <div className="flex items-start gap-3">
-                <Clock className="h-5 w-5 text-yellow-600 dark:text-yellow-400 mt-0.5 shrink-0" />
-                <div className="space-y-0.5">
-                  <p className="text-sm font-medium text-yellow-900 dark:text-yellow-100">Pending Document Review</p>
-                  <p className="text-xs text-yellow-800/80 dark:text-yellow-200/70">
-                    Verify each document below for completeness and accuracy. Mark as IGO or NIGO when finished.
-                  </p>
-                </div>
-              </div>
-            </div>
-          )
-        })()}
 
         <div className="space-y-3">
           <AccordionSection title="Client Identification" icon={Eye} defaultOpen>
