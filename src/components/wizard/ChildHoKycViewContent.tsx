@@ -85,7 +85,7 @@ export function ChildHoKycViewContent() {
 
   const party = state.relatedParties.find((p) => p.name === child.name)
   const taskData = state.taskData[`${child.id}-info`] ?? {}
-  const docData = state.taskData[`${child.id}-documents`] ?? {}
+  const docData = taskData
 
   const firstName = (taskData.firstName as string) || party?.firstName || ''
   const lastName = (taskData.lastName as string) || party?.lastName || ''

@@ -1,9 +1,10 @@
 import { useEffect, useRef, useState, useCallback } from 'react'
-import { useWorkflow, useTaskData, useChildActionContext } from '@/stores/workflowStore'
+import { useWorkflow, useTaskData, useChildActionContext, useAdvisorUnlocked } from '@/stores/workflowStore'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui/select'
-import { Lock, AlertTriangle, CheckCircle2 } from 'lucide-react'
+import { Lock, AlertTriangle, CheckCircle2, Upload } from 'lucide-react'
+import { FileUpload, type FileWithStatus } from '@/components/ui/file-upload'
 import { householdRelationships, householdRoles } from './AddPartySheet'
 import { cn } from '@/lib/utils'
 
@@ -12,6 +13,21 @@ const SOURCE_OF_FUNDS = ['Employment Income', 'Inheritance', 'Investment Returns
 const CITIZENSHIP_OPTIONS = ['United States', 'Canada', 'United Kingdom', 'Australia', 'Other'] as const
 const sectionCls = 'text-sm font-semibold text-foreground'
 const fieldCls = 'text-xs font-medium text-foreground'
+
+const KYC_DOCS = [
+  {
+    id: 'gov-id',
+    label: 'Government-Issued ID',
+    description: 'Upload a passport, driver\'s license, or national ID card',
+    hint: 'PDF, JPG, or PNG up to 10 MB',
+  },
+  {
+    id: 'supporting-docs',
+    label: 'Supporting Documents',
+    description: 'Upload proof of address, utility bills, or other supporting documentation',
+    hint: 'PDF, JPG, or PNG up to 10 MB',
+  },
+]
 
 interface ValidationError {
   field: string
@@ -177,9 +193,12 @@ export function KycChildInfoForm() {
     })
   }, [])
 
+  const advisorUnlocked = useAdvisorUnlocked()
+
   if (!child) return null
 
-  const isLocked = child.status === 'awaiting_review' || child.status === 'complete' || child.status === 'rejected'
+  const statusLocked = child.status === 'awaiting_review' || child.status === 'complete' || child.status === 'rejected'
+  const isLocked = statusLocked && !advisorUnlocked
   const str = (key: string) => (data[key] as string) ?? ''
   const mailingSame = str('mailingSameAsLegal') !== 'false'
 
@@ -501,19 +520,40 @@ export function KycChildInfoForm() {
         </div>
       </section>
 
-      {!isLocked && !submitAttempted && allErrors.length > 0 && (
-        <>
-          <hr className="border-border" />
-          <ValidationSummary errors={allErrors} position="bottom" />
-        </>
-      )}
+      {/* Documents */}
+      <section className="space-y-3">
+        <h3 className={sectionCls}>
+          <span className="flex items-center gap-2">
+            <Upload className="h-4 w-4 text-muted-foreground" />
+            Documents
+          </span>
+        </h3>
+        <div className="space-y-4">
+          {KYC_DOCS.map((doc) => {
+            const storedFiles = (data[`doc-${doc.id}`] as { name: string; size?: number }[] | undefined) ?? []
+            return (
+              <FileUpload
+                key={doc.id}
+                id={`kyc-${taskId}-${doc.id}`}
+                label={doc.label}
+                subtitle={doc.description}
+                hint={doc.hint}
+                initialFiles={storedFiles}
+                acceptedFileTypes={['.pdf', '.jpg', '.jpeg', '.png']}
+                disabled={isLocked}
+                onFilesChange={(files: FileWithStatus[]) => {
+                  const meta = files.map((f) => ({
+                    name: f.file.name,
+                    size: f.file.size,
+                  }))
+                  updateField(`doc-${doc.id}`, meta)
+                }}
+              />
+            )
+          })}
+        </div>
+      </section>
 
-      {!isLocked && allErrors.length === 0 && (
-        <>
-          <hr className="border-border" />
-          <ValidationSummary errors={[]} position="bottom" />
-        </>
-      )}
     </div>
   )
 }

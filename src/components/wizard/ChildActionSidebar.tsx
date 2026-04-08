@@ -1,4 +1,4 @@
-import { useWorkflow, useChildActionContext } from '@/stores/workflowStore'
+import { useWorkflow, useChildActionContext, useAdvisorUnlocked } from '@/stores/workflowStore'
 import type { TaskStatus } from '@/types/workflow'
 import { cn } from '@/lib/utils'
 import { Badge } from '@/components/ui/badge'
@@ -62,6 +62,7 @@ function SubTaskStatusBadge({ subTaskId }: { subTaskId: string }) {
 
 import { childStatusConfig, deriveChildDisplayStatus } from '@/utils/childStatusDisplay'
 import type { ChildDisplayStatus } from '@/utils/childStatusDisplay'
+import { getActiveStageLabel } from './ChildActionTimelineSheet'
 
 function useChildOverallStatus(childId: string): ChildDisplayStatus {
   const { state } = useWorkflow()
@@ -91,6 +92,7 @@ export function ChildActionSidebar() {
 
   const overallStatus = useChildOverallStatus(ctx?.child.id ?? '')
   const statusCfg = childStatusConfig[overallStatus]
+  const advisorUnlocked = useAdvisorUnlocked()
 
   if (!ctx) return null
 
@@ -101,6 +103,7 @@ export function ChildActionSidebar() {
   const isHoView = isHoDocView || isHoPrincipalView
   const isAmlView = viewMode === 'aml'
   const isHoKycView = viewMode === 'ho-kyc'
+  const isHoPrincipalKycView = viewMode === 'ho-principal-kyc'
 
   const hoTaskLabel = isHoDocView ? 'Document Review' : isHoPrincipalView ? 'Principal Review' : null
   const kycReviewTaskLabel =
@@ -108,7 +111,9 @@ export function ChildActionSidebar() {
       ? 'AML Review'
       : child.childType === 'kyc' && isHoKycView
         ? 'Home Office Review'
-        : null
+        : child.childType === 'kyc' && isHoPrincipalKycView
+          ? 'Principal Review'
+          : null
   const showSingleReviewStep = Boolean((isHoView && hoTaskLabel) || kycReviewTaskLabel)
 
   return (
@@ -168,8 +173,10 @@ export function ChildActionSidebar() {
         <div className="mt-auto px-3 pt-4 pb-2 border-t border-border mt-4">
           <div className="flex items-center justify-between">
             <span className="text-xs font-medium text-muted-foreground">Status:</span>
-            <Badge variant="outline" className={cn('text-xs', statusCfg.className)}>
-              {statusCfg.label}
+            <Badge variant="outline" className={cn('text-xs', advisorUnlocked ? 'bg-amber-50 text-amber-700 border-amber-200' : statusCfg.className)}>
+              {advisorUnlocked
+                ? 'Action Required'
+                : getActiveStageLabel(child.status, child.childType, state.childReviewState)}
             </Badge>
           </div>
         </div>

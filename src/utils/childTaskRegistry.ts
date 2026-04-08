@@ -20,7 +20,6 @@ const CHILD_TYPE_CONFIGS: Record<ChildType, ChildTypeConfig> = {
     displayLabel: 'KYC Review',
     subTasks: [
       { suffix: 'info', title: 'Collect Client Info', formKey: 'kyc-child-info' },
-      { suffix: 'documents', title: 'Upload Documents', formKey: 'kyc-child-documents' },
     ],
   },
   'account-opening': {

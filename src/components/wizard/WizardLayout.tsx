@@ -12,7 +12,9 @@ import { ChildActionRightSidebar } from './ChildActionRightSidebar'
 import { ChildHoDocumentViewContent } from './ChildHoDocumentViewContent'
 import { ChildHoPrincipalViewContent } from './ChildHoPrincipalViewContent'
 import { ChildHoKycViewContent } from './ChildHoKycViewContent'
+import { ChildHoPrincipalKycContent } from './ChildHoPrincipalKycContent'
 import { ChildAmlReviewContent } from './ChildAmlReviewContent'
+import { HoPrincipalKycFooter } from './HoPrincipalKycFooter'
 import { Eye, FileSearch, ShieldCheck, ShieldAlert, Building } from 'lucide-react'
 import { VerticalNav } from '@/components/navigation/vertical-nav'
 import { useWorkflow } from '@/stores/workflowStore'
@@ -28,6 +30,7 @@ export function WizardLayout() {
   const isHoDocView = viewMode === 'ho-documents'
   const isHoPrincipalView = viewMode === 'ho-principal'
   const isHoKycView = viewMode === 'ho-kyc'
+  const isHoPrincipalKycView = viewMode === 'ho-principal-kyc'
   const isAmlView = viewMode === 'aml'
   const isHomeOfficeView = isHoDocView || isHoPrincipalView
 
@@ -87,6 +90,19 @@ export function WizardLayout() {
                     <Building className="h-3.5 w-3.5" />
                     Home Office
                   </button>
+                  <button
+                    type="button"
+                    onClick={() => dispatch({ type: 'SET_DEMO_VIEW', mode: 'ho-principal-kyc' })}
+                    className={cn(
+                      'flex items-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-medium transition-colors',
+                      isHoPrincipalKycView
+                        ? 'bg-primary text-primary-foreground shadow-sm'
+                        : 'text-muted-foreground hover:text-foreground hover:bg-muted/50',
+                    )}
+                  >
+                    <ShieldCheck className="h-3.5 w-3.5" />
+                    Principal
+                  </button>
                 </>
               ) : (
                 <>
@@ -138,6 +154,15 @@ export function WizardLayout() {
                 <div className="flex-1 flex flex-col overflow-hidden">
                   <ChildHoKycViewContent />
                   <HoKycReviewFooter />
+                </div>
+                <ChildActionRightSidebar />
+              </>
+            ) : isHoPrincipalKycView ? (
+              <>
+                <ChildActionSidebar />
+                <div className="flex-1 flex flex-col overflow-hidden">
+                  <ChildHoPrincipalKycContent />
+                  <HoPrincipalKycFooter />
                 </div>
                 <ChildActionRightSidebar />
               </>

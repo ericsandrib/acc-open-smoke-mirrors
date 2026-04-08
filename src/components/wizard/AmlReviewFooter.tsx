@@ -2,16 +2,15 @@ import { useState } from 'react'
 import { useWorkflow } from '@/stores/workflowStore'
 import { Button } from '@/components/ui/button'
 import { Label } from '@/components/ui/label'
-import { CheckCircle2, XCircle, AlertTriangle, MessageSquare, ShieldAlert } from 'lucide-react'
+import { CheckCircle2, XCircle, AlertTriangle, ShieldAlert } from 'lucide-react'
 
 export function AmlReviewFooter() {
   const { state, dispatch } = useWorkflow()
   const [showClearConfirm, setShowClearConfirm] = useState(false)
   const [showFlagModal, setShowFlagModal] = useState(false)
-  const [showInfoRequest, setShowInfoRequest] = useState(false)
   const [showSarConfirm, setShowSarConfirm] = useState(false)
   const [findings, setFindings] = useState('')
-  const [infoComments, setInfoComments] = useState('')
+  const [sarReason, setSarReason] = useState('')
 
   const reviewState = state.childReviewState
   const amlReview = reviewState?.amlReview
@@ -37,7 +36,7 @@ export function AmlReviewFooter() {
       <footer className="border-t border-border bg-background px-6 py-3 flex items-center justify-end shrink-0">
         <div className="flex items-center gap-2 text-sm">
           <XCircle className="h-4 w-4 text-destructive" />
-          <span className="text-destructive font-medium">Flagged — Requires further investigation</span>
+          <span className="text-destructive font-medium">Flagged — Returned to advisor</span>
           <span className="text-muted-foreground ml-1">at {amlReview.decidedAt}</span>
         </div>
       </footer>
@@ -49,7 +48,7 @@ export function AmlReviewFooter() {
       <footer className="border-t border-border bg-background px-6 py-3 flex items-center justify-end shrink-0">
         <div className="flex items-center gap-2 text-sm">
           <ShieldAlert className="h-4 w-4 text-red-600" />
-          <span className="text-red-700 font-medium">SAR Escalated</span>
+          <span className="text-red-700 font-medium">Rejected — AML Review</span>
           <span className="text-muted-foreground ml-1">at {amlReview.decidedAt}</span>
         </div>
       </footer>
@@ -60,8 +59,8 @@ export function AmlReviewFooter() {
     return (
       <footer className="border-t border-border bg-background px-6 py-3 flex items-center justify-end shrink-0">
         <div className="flex items-center gap-2 text-sm">
-          <MessageSquare className="h-4 w-4 text-blue-600" />
-          <span className="text-blue-700 font-medium">Waiting for additional info from Home Office</span>
+          <ShieldAlert className="h-4 w-4 text-red-600" />
+          <span className="text-red-700 font-medium">Rejected — AML Review</span>
           <span className="text-muted-foreground ml-1">at {amlReview.decidedAt}</span>
         </div>
       </footer>
@@ -72,14 +71,6 @@ export function AmlReviewFooter() {
     <>
       <footer className="border-t border-border bg-background px-6 py-3 flex items-center justify-end shrink-0">
         <div className="flex items-center gap-2">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => setShowInfoRequest(true)}
-          >
-            <MessageSquare className="h-4 w-4" />
-            Request Info
-          </Button>
           <Button
             variant="outline"
             size="sm"
@@ -151,14 +142,14 @@ export function AmlReviewFooter() {
               <div className="space-y-1">
                 <h3 className="text-base font-semibold">Flag for Further Review</h3>
                 <p className="text-sm text-muted-foreground">
-                  Flag <span className="font-medium text-foreground">{child?.name}</span> for
-                  further investigation.
+                  Flag <span className="font-medium text-foreground">{child?.name}</span> and return
+                  to the advisor for corrections.
                 </p>
               </div>
             </div>
 
             <div className="space-y-2">
-              <Label className="text-sm">Findings & Concerns</Label>
+              <Label className="text-sm">Rationale</Label>
               <textarea
                 value={findings}
                 onChange={(e) => setFindings(e.target.value)}
@@ -184,53 +175,10 @@ export function AmlReviewFooter() {
         </div>
       )}
 
-      {showInfoRequest && (
-        <div className="fixed inset-0 z-[60] flex items-center justify-center">
-          <div className="fixed inset-0 bg-black/50" onClick={() => setShowInfoRequest(false)} />
-          <div className="relative z-10 bg-background rounded-lg border border-border shadow-lg max-w-md w-full mx-4 p-6 space-y-4">
-            <div className="flex items-start gap-3">
-              <div className="rounded-full bg-blue-50 p-2 shrink-0">
-                <MessageSquare className="h-5 w-5 text-blue-600" />
-              </div>
-              <div className="space-y-1">
-                <h3 className="text-base font-semibold">Request Additional Information</h3>
-                <p className="text-sm text-muted-foreground">
-                  Request additional information from the Home Office for{' '}
-                  <span className="font-medium text-foreground">{child?.name}</span>.
-                </p>
-              </div>
-            </div>
-
-            <div className="space-y-2">
-              <Label className="text-sm">What information do you need?</Label>
-              <textarea
-                value={infoComments}
-                onChange={(e) => setInfoComments(e.target.value)}
-                placeholder="Describe the additional information or documentation needed..."
-                className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm min-h-[80px] resize-none focus:outline-none focus:ring-2 focus:ring-ring"
-              />
-            </div>
-
-            <div className="flex items-center justify-end gap-3 pt-1">
-              <Button variant="outline" onClick={() => setShowInfoRequest(false)}>Cancel</Button>
-              <Button
-                onClick={() => {
-                  dispatch({ type: 'AML_REQUEST_MORE_INFO', comments: infoComments.trim() || 'Please provide additional documentation.' })
-                  setShowInfoRequest(false)
-                  setInfoComments('')
-                }}
-              >
-                Send Request
-              </Button>
-            </div>
-          </div>
-        </div>
-      )}
-
       {showSarConfirm && (
         <div className="fixed inset-0 z-[60] flex items-center justify-center">
           <div className="fixed inset-0 bg-black/50" onClick={() => setShowSarConfirm(false)} />
-          <div className="relative z-10 bg-background rounded-lg border border-border shadow-lg max-w-sm w-full mx-4 p-6 space-y-4">
+          <div className="relative z-10 bg-background rounded-lg border border-border shadow-lg max-w-md w-full mx-4 p-6 space-y-4">
             <div className="flex items-start gap-3">
               <div className="rounded-full bg-red-50 p-2 shrink-0">
                 <ShieldAlert className="h-5 w-5 text-red-600" />
@@ -239,17 +187,29 @@ export function AmlReviewFooter() {
                 <h3 className="text-base font-semibold">Escalate SAR</h3>
                 <p className="text-sm text-muted-foreground">
                   Escalate <span className="font-medium text-foreground">{child?.name}</span> for
-                  Suspicious Activity Report (SAR) filing. This action cannot be undone.
+                  Suspicious Activity Report (SAR) filing. This will mark the KYC as <span className="font-medium text-foreground">Rejected — AML Review</span>. This action cannot be undone.
                 </p>
               </div>
             </div>
+
+            <div className="space-y-2">
+              <Label className="text-sm">Rationale</Label>
+              <textarea
+                value={sarReason}
+                onChange={(e) => setSarReason(e.target.value)}
+                placeholder="Describe the reason for SAR escalation..."
+                className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm min-h-[80px] resize-none focus:outline-none focus:ring-2 focus:ring-ring"
+              />
+            </div>
+
             <div className="flex items-center justify-end gap-3 pt-1">
               <Button variant="outline" onClick={() => setShowSarConfirm(false)}>Cancel</Button>
               <Button
                 variant="destructive"
                 onClick={() => {
-                  dispatch({ type: 'AML_ESCALATE_SAR' })
+                  dispatch({ type: 'AML_ESCALATE_SAR', reason: sarReason.trim() || undefined })
                   setShowSarConfirm(false)
+                  setSarReason('')
                 }}
               >
                 Confirm Escalation

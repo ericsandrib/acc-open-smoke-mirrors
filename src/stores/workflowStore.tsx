@@ -898,9 +898,58 @@ function workflowReducer(state: WorkflowState, action: WorkflowAction): Workflow
             ...state.childReviewState?.amlReview,
             status: 'escalated' as const,
             decidedAt: sarTs,
+            reason: action.reason,
           },
         },
         childReviewDecision: { outcome: 'rejected', decidedAt: sarTs },
+      }
+    }
+
+    case 'PRINCIPAL_KYC_APPROVE': {
+      if (!state.activeChildActionId) return state
+      const pkApproveTs = new Date().toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })
+      const pkApproveId = state.activeChildActionId
+      const pkApproveTasks = state.tasks.map((t) => {
+        if (!t.children) return t
+        return {
+          ...t,
+          children: t.children.map((c) =>
+            c.id === pkApproveId ? { ...c, status: 'complete' as const } : c,
+          ),
+        }
+      })
+      return {
+        ...state,
+        tasks: pkApproveTasks,
+        childReviewState: {
+          ...state.childReviewState,
+          principalKycReview: { status: 'approved', decidedAt: pkApproveTs },
+        },
+        childReviewDecision: { outcome: 'approved', decidedAt: pkApproveTs },
+      }
+    }
+
+    case 'PRINCIPAL_KYC_REJECT': {
+      if (!state.activeChildActionId) return state
+      const pkRejectTs = new Date().toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })
+      const pkRejectId = state.activeChildActionId
+      const pkRejectTasks = state.tasks.map((t) => {
+        if (!t.children) return t
+        return {
+          ...t,
+          children: t.children.map((c) =>
+            c.id === pkRejectId ? { ...c, status: 'rejected' as const } : c,
+          ),
+        }
+      })
+      return {
+        ...state,
+        tasks: pkRejectTasks,
+        childReviewState: {
+          ...state.childReviewState,
+          principalKycReview: { status: 'rejected', decidedAt: pkRejectTs, reason: action.reason },
+        },
+        childReviewDecision: { outcome: 'rejected', decidedAt: pkRejectTs },
       }
     }
 
@@ -986,4 +1035,38 @@ export function useChildActionContext() {
     isLast: state.activeChildSubTaskIndex === config.subTasks.length - 1,
     parentTask,
   }
+}
+
+/**
+ * Returns `true` when the advisor is viewing a child that has been sent back
+ * with feedback by any reviewer (AML, HO Document, HO Principal, HO KYC,
+ * or Principal KYC).  Forms use this to re-enable editing so the advisor
+ * can fix issues and resubmit.
+ */
+export function useAdvisorUnlocked(): boolean {
+  const { state } = useWorkflow()
+  if (state.demoViewMode !== 'advisor') return false
+  const rs = state.childReviewState
+  if (!rs) return false
+
+  const child = state.tasks
+    .flatMap((t) => t.children ?? [])
+    .find((c) => c.id === state.activeChildActionId)
+  if (!child) return false
+
+  if (child.childType === 'kyc') {
+    return (
+      rs.amlReview?.status === 'info_requested' ||
+      rs.amlReview?.status === 'flagged' ||
+      rs.hoKycReview?.status === 'changes_requested' ||
+      rs.principalKycReview?.status === 'rejected' ||
+      false
+    )
+  }
+
+  return (
+    rs.documentReview?.status === 'nigo' ||
+    rs.principalReview?.status === 'nigo' ||
+    false
+  )
 }

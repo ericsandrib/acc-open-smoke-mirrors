@@ -6,6 +6,9 @@ export type ChildDisplayStatus =
   | 'escalation_hold'
   | 'principal_review'
   | 'nigo'
+  | 'nigo_document'
+  | 'nigo_principal'
+  | 'rejected_aml'
   | 'awaiting_documents'
   | 'complete'
 
@@ -28,6 +31,18 @@ export const childStatusConfig: Record<ChildDisplayStatus, { label: string; clas
   },
   nigo: {
     label: 'NIGO',
+    className: 'bg-red-50 text-red-700 border-red-200',
+  },
+  nigo_document: {
+    label: 'NIGO - Document Review',
+    className: 'bg-red-50 text-red-700 border-red-200',
+  },
+  nigo_principal: {
+    label: 'NIGO - Principal',
+    className: 'bg-red-50 text-red-700 border-red-200',
+  },
+  rejected_aml: {
+    label: 'Rejected - AML Review',
     className: 'bg-red-50 text-red-700 border-red-200',
   },
   awaiting_documents: {
@@ -55,8 +70,12 @@ export function deriveChildDisplayStatus(
     if (!reviewState) return 'nigo'
     const docReview = reviewState.documentReview
     const principalReview = reviewState.principalReview
-    if (principalReview?.status === 'nigo') return 'nigo'
-    if (docReview?.status === 'nigo' && (!principalReview || principalReview.status !== 'nigo')) return 'awaiting_documents'
+    const amlReview = reviewState.amlReview
+    const principalKycReview = reviewState.principalKycReview
+    if (amlReview?.status === 'escalated' || amlReview?.status === 'flagged') return 'rejected_aml'
+    if (principalKycReview?.status === 'rejected') return 'nigo_principal'
+    if (principalReview?.status === 'nigo') return 'nigo_principal'
+    if (docReview?.status === 'nigo') return 'nigo_document'
     return 'nigo'
   }
 

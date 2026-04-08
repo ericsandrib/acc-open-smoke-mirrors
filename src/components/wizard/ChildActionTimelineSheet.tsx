@@ -30,7 +30,9 @@ const KYC_STAGES: TimelineStage[] = [
   { label: 'Draft', description: 'KYC verification initiated. Client data captured.', matchStatuses: ['not_started', 'in_progress'] },
   { label: 'ID Verification', description: 'Identity verification performed by Avantos.', matchStatuses: [] },
   { label: 'Submitted', description: 'ID verification documents submitted for compliance review.', matchStatuses: ['awaiting_review'] },
-  { label: 'AML Review', description: 'AML Team reviews watchlist codes against OFAC and KYC platforms.', matchStatuses: ['aml_pending', 'aml_flagged'] },
+  { label: 'AML Review', description: 'AML Team reviews watchlist codes against OFAC and KYC platforms.', matchStatuses: ['aml_pending', 'aml_flagged', 'rejected'] },
+  { label: 'Home Office Review', description: 'Home Office KYC Team reviews the complete submission.', matchStatuses: ['ho_kyc_pending', 'ho_kyc_changes_requested'] },
+  { label: 'Principal Sign-Off', description: 'Principal performs final sign-off on the KYC package.', matchStatuses: ['principal_kyc_pending', 'principal_kyc_rejected'] },
   { label: 'Complete', description: 'Identity verified. No further KYC action required.', matchStatuses: ['complete'] },
 ]
 
@@ -47,8 +49,26 @@ function deriveEffectiveStatus(
 
   if (childType === 'kyc') {
     const amlStatus = reviewState?.amlReview?.status
-    if (rawStatus === 'rejected' && amlStatus === 'flagged') return 'aml_flagged'
-    if (rawStatus === 'awaiting_review') return amlStatus === 'pending' ? 'aml_pending' : rawStatus
+    const hoKycStatus = reviewState?.hoKycReview?.status
+    const principalKycStatus = reviewState?.principalKycReview?.status
+
+    if (rawStatus === 'rejected') {
+      if (amlStatus === 'flagged' || amlStatus === 'escalated') return 'rejected'
+      if (principalKycStatus === 'rejected') return 'principal_kyc_rejected'
+      if (hoKycStatus === 'changes_requested') return 'ho_kyc_changes_requested'
+      return 'rejected'
+    }
+
+    if (rawStatus === 'awaiting_review' || rawStatus === 'complete') {
+      if (amlStatus === 'pending') return 'aml_pending'
+      if (amlStatus === 'flagged') return 'aml_flagged'
+      if (amlStatus === 'cleared' && hoKycStatus === 'pending') return 'ho_kyc_pending'
+      if (hoKycStatus === 'approved') return 'principal_kyc_pending'
+      if (principalKycStatus === 'pending') return 'principal_kyc_pending'
+      if (principalKycStatus === 'approved') return 'complete'
+      return rawStatus
+    }
+
     return rawStatus
   }
 
@@ -79,6 +99,21 @@ function getActiveStageIndex(stages: TimelineStage[], status: string): number {
     if (stages[i].matchStatuses.includes(status)) return i
   }
   return 0
+}
+
+/**
+ * Returns the label of the currently active timeline stage for a child.
+ * Used by the sidebar badge so it stays in sync with the right-side timeline.
+ */
+export function getActiveStageLabel(
+  rawStatus: string,
+  childType: ChildType,
+  reviewState?: WorkflowState['childReviewState'],
+): string {
+  const effectiveStatus = deriveEffectiveStatus(rawStatus, childType, reviewState)
+  const stages = getStagesForType(childType)
+  const idx = getActiveStageIndex(stages, effectiveStatus)
+  return stages[idx].label
 }
 
 function formatTimestamp() {
@@ -120,6 +155,9 @@ export function ChildActionTimeline({
         const isPending = i > activeIndex
         const isLast = i === stages.length - 1
 
+        const hoKycReview = reviewState?.hoKycReview
+        const principalKycReview = reviewState?.principalKycReview
+
         let stageAnnotation: string | null = null
         if (stage.label === 'Document Review' && docReview) {
           if (docReview.status === 'igo') stageAnnotation = `IGO at ${docReview.decidedAt}`
@@ -132,12 +170,23 @@ export function ChildActionTimeline({
         if (stage.label === 'AML Review' && amlReview) {
           if (amlReview.status === 'cleared') stageAnnotation = `Cleared at ${amlReview.decidedAt}`
           else if (amlReview.status === 'flagged') stageAnnotation = `Flagged at ${amlReview.decidedAt}`
+          else if (amlReview.status === 'escalated') stageAnnotation = `Rejected at ${amlReview.decidedAt}`
+        }
+        if (stage.label === 'Home Office Review' && hoKycReview) {
+          if (hoKycReview.status === 'approved') stageAnnotation = `Approved at ${hoKycReview.decidedAt}`
+          else if (hoKycReview.status === 'changes_requested') stageAnnotation = `Changes requested at ${hoKycReview.decidedAt}`
+        }
+        if (stage.label === 'Principal Sign-Off' && principalKycReview) {
+          if (principalKycReview.status === 'approved') stageAnnotation = `Signed off at ${principalKycReview.decidedAt}`
+          else if (principalKycReview.status === 'rejected') stageAnnotation = `Rejected at ${principalKycReview.decidedAt}`
         }
 
         const isNigoStage =
           (stage.label === 'Document Review' && docReview?.status === 'nigo') ||
           (stage.label === 'Principal Review' && principalReview?.status === 'nigo') ||
-          (stage.label === 'AML Review' && amlReview?.status === 'flagged')
+          (stage.label === 'AML Review' && (amlReview?.status === 'flagged' || amlReview?.status === 'escalated')) ||
+          (stage.label === 'Home Office Review' && hoKycReview?.status === 'changes_requested') ||
+          (stage.label === 'Principal Sign-Off' && principalKycReview?.status === 'rejected')
 
         return (
           <div key={stage.label} className="relative flex gap-3">

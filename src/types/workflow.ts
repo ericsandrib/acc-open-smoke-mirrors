@@ -151,7 +151,7 @@ export interface WorkflowState {
   /** When drilling into a funding-line or feature-service-line child, EXIT restores this account child + sub-step. */
   childActionResume?: { accountChildId: string; subTaskIndex: number }
   reviewState?: ReviewState
-  demoViewMode?: 'advisor' | 'ho-documents' | 'ho-principal' | 'ho-kyc' | 'aml'
+  demoViewMode?: 'advisor' | 'ho-documents' | 'ho-principal' | 'ho-kyc' | 'ho-principal-kyc' | 'aml'
   submittedAt?: string
   childReviewDecision?: { outcome: 'approved' | 'rejected'; decidedAt: string }
   childReviewState?: {
@@ -159,7 +159,7 @@ export interface WorkflowState {
     principalReview?: { status: 'pending' | 'igo' | 'nigo'; decidedAt?: string; nigoReason?: string; nigoFeedback?: string }
     amlFlagged?: boolean
     amlNotes?: string
-    amlReview?: { status: 'pending' | 'cleared' | 'flagged' | 'info_requested' | 'escalated'; decidedAt?: string; findings?: string; infoRequestComments?: string }
+    amlReview?: { status: 'pending' | 'cleared' | 'flagged' | 'info_requested' | 'escalated'; decidedAt?: string; findings?: string; infoRequestComments?: string; reason?: string }
     cipStatus?: {
       idVerification: 'pass' | 'fail' | 'pending'
       addressMatch: 'pass' | 'fail' | 'pending'
@@ -167,6 +167,7 @@ export interface WorkflowState {
       overallStatus: 'pass' | 'fail' | 'pending'
     }
     hoKycReview?: { status: 'pending' | 'approved' | 'changes_requested'; decidedAt?: string; comments?: string }
+    principalKycReview?: { status: 'pending' | 'approved' | 'rejected'; decidedAt?: string; reason?: string }
     validationErrors?: string[]
   }
 }
@@ -212,7 +213,7 @@ export type WorkflowAction =
   | { type: 'SUBMIT_CHILD_FOR_REVIEW' }
   | { type: 'ACCEPT_CHILD_REVIEW' }
   | { type: 'REJECT_CHILD_REVIEW'; reason: string; feedback?: string }
-  | { type: 'SET_DEMO_VIEW'; mode: 'advisor' | 'ho-documents' | 'ho-principal' | 'ho-kyc' | 'aml' }
+  | { type: 'SET_DEMO_VIEW'; mode: 'advisor' | 'ho-documents' | 'ho-principal' | 'ho-kyc' | 'ho-principal-kyc' | 'aml' }
   | { type: 'DOCUMENT_REVIEW_IGO' }
   | { type: 'DOCUMENT_REVIEW_NIGO'; reason: string; feedback?: string }
   | { type: 'PRINCIPAL_REVIEW_IGO' }
@@ -223,4 +224,6 @@ export type WorkflowAction =
   | { type: 'HO_KYC_APPROVE' }
   | { type: 'HO_KYC_REQUEST_CHANGES'; comments: string }
   | { type: 'AML_REQUEST_MORE_INFO'; comments: string }
-  | { type: 'AML_ESCALATE_SAR' }
+  | { type: 'AML_ESCALATE_SAR'; reason?: string }
+  | { type: 'PRINCIPAL_KYC_APPROVE' }
+  | { type: 'PRINCIPAL_KYC_REJECT'; reason: string }
