@@ -65,6 +65,7 @@ export interface RelatedParty {
   jurisdiction?: string
   contactPerson?: string
   accountOwnerIndividual?: AccountOwnerIndividualProfile
+  kycDirectAdd?: boolean
   controlPerson?: {
     firstName?: string
     lastName?: string
