@@ -1,7 +1,9 @@
 import { useState } from 'react'
+import { toast } from 'sonner'
 import { useWorkflow, useChildActionContext } from '@/stores/workflowStore'
 import { Button } from '@/components/ui/button'
 import { ChevronLeft, ChevronRight, Clock, ShieldAlert } from 'lucide-react'
+import { getKycValidationErrors } from './forms/KycChildInfoForm'
 
 function SubmitConfirmModal({ childName, onConfirm, onCancel }: { childName: string; onConfirm: () => void; onCancel: () => void }) {
   return (
@@ -43,8 +45,9 @@ export function ChildActionFooter() {
   const isKyc = child.childType === 'kyc'
   const isAdvisorView = state.demoViewMode === 'advisor'
   const isAmlView = state.demoViewMode === 'aml'
+  const isHoKycView = state.demoViewMode === 'ho-kyc'
 
-  if (isAdvisorView || isAmlView) {
+  if (isAdvisorView || isAmlView || isHoKycView) {
     return (
       <footer className="border-t border-border bg-background px-6 py-3 flex justify-between items-center shrink-0">
         <div>
@@ -58,7 +61,7 @@ export function ChildActionFooter() {
         <div className="flex items-center gap-3">
           <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
             <Clock className="h-3.5 w-3.5" />
-            <span>Submitted for {isKyc ? 'AML review' : 'home office review'} at {state.submittedAt ?? 'N/A'}</span>
+            <span>Submitted for {isKyc ? 'home office' : 'home office review'} at {state.submittedAt ?? 'N/A'}</span>
           </div>
           {!isLast && (
             <Button onClick={() => dispatch({ type: 'CHILD_GO_NEXT' })}>
@@ -73,6 +76,23 @@ export function ChildActionFooter() {
 
   const handleDone = () => {
     if (isKyc) {
+      const infoTaskId = `${child.id}-info`
+      const infoData = state.taskData[infoTaskId] ?? {}
+      const errors = getKycValidationErrors(infoData)
+
+      if (errors.length > 0) {
+        toast.error('Please fix validation errors before submitting', {
+          description: `${errors.length} required field${errors.length === 1 ? '' : 's'} need attention. Review the summary at the top of the form.`,
+        })
+        dispatch({
+          type: 'SET_TASK_DATA',
+          taskId: infoTaskId,
+          fields: { _submitAttempted: true, _validationScrollNonce: Date.now() },
+        })
+        dispatch({ type: 'SET_CHILD_SUB_TASK', index: 0 })
+        return
+      }
+
       setShowConfirmModal(true)
     } else {
       dispatch({ type: 'SUBMIT_CHILD_FOR_REVIEW' })

@@ -594,7 +594,17 @@ function workflowReducer(state: WorkflowState, action: WorkflowAction): Workflow
         childReviewState: {
           ...state.childReviewState,
           ...(isKycChild
-            ? { amlReview: { status: 'pending' as const } }
+            ? {
+                amlReview: { status: 'pending' as const },
+                cipStatus: {
+                  idVerification: 'pass' as const,
+                  addressMatch: 'pass' as const,
+                  dobMatch: 'pass' as const,
+                  overallStatus: 'pass' as const,
+                },
+                hoKycReview: { status: 'pending' as const },
+                validationErrors: [],
+              }
             : { documentReview: { status: 'pending' }, principalReview: { status: 'pending' } }
           ),
         },
@@ -766,24 +776,12 @@ function workflowReducer(state: WorkflowState, action: WorkflowAction): Workflow
     case 'AML_REVIEW_CLEAR': {
       if (!state.activeChildActionId) return state
       const amlClearTs = new Date().toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })
-      const amlClearId = state.activeChildActionId
-      const amlClearTasks = state.tasks.map((t) => {
-        if (!t.children) return t
-        return {
-          ...t,
-          children: t.children.map((c) =>
-            c.id === amlClearId ? { ...c, status: 'complete' as const } : c,
-          ),
-        }
-      })
       return {
         ...state,
-        tasks: amlClearTasks,
         childReviewState: {
           ...state.childReviewState,
           amlReview: { status: 'cleared', decidedAt: amlClearTs },
         },
-        childReviewDecision: { outcome: 'approved', decidedAt: amlClearTs },
       }
     }
 
@@ -808,6 +806,101 @@ function workflowReducer(state: WorkflowState, action: WorkflowAction): Workflow
           amlReview: { status: 'flagged', decidedAt: amlFlagTs, findings: action.findings },
         },
         childReviewDecision: { outcome: 'rejected', decidedAt: amlFlagTs },
+      }
+    }
+
+    case 'HO_KYC_APPROVE': {
+      if (!state.activeChildActionId) return state
+      const hoApproveTs = new Date().toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })
+      const hoApproveId = state.activeChildActionId
+      const hoApproveTasks = state.tasks.map((t) => {
+        if (!t.children) return t
+        return {
+          ...t,
+          children: t.children.map((c) =>
+            c.id === hoApproveId ? { ...c, status: 'complete' as const } : c,
+          ),
+        }
+      })
+      return {
+        ...state,
+        tasks: hoApproveTasks,
+        childReviewState: {
+          ...state.childReviewState,
+          hoKycReview: { status: 'approved', decidedAt: hoApproveTs },
+        },
+        childReviewDecision: { outcome: 'approved', decidedAt: hoApproveTs },
+      }
+    }
+
+    case 'HO_KYC_REQUEST_CHANGES': {
+      if (!state.activeChildActionId) return state
+      const hoReqTs = new Date().toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })
+      const hoReqId = state.activeChildActionId
+      const hoReqTasks = state.tasks.map((t) => {
+        if (!t.children) return t
+        return {
+          ...t,
+          children: t.children.map((c) =>
+            c.id === hoReqId ? { ...c, status: 'in_progress' as const } : c,
+          ),
+        }
+      })
+      return {
+        ...state,
+        tasks: hoReqTasks,
+        childReviewState: {
+          ...state.childReviewState,
+          hoKycReview: { status: 'changes_requested', decidedAt: hoReqTs, comments: action.comments },
+        },
+        childReviewDecision: { outcome: 'rejected', decidedAt: hoReqTs },
+        demoViewMode: undefined,
+        submittedAt: undefined,
+      }
+    }
+
+    case 'AML_REQUEST_MORE_INFO': {
+      if (!state.activeChildActionId) return state
+      const amlInfoTs = new Date().toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })
+      return {
+        ...state,
+        childReviewState: {
+          ...state.childReviewState,
+          amlReview: {
+            ...state.childReviewState?.amlReview,
+            status: 'info_requested' as const,
+            decidedAt: amlInfoTs,
+            infoRequestComments: action.comments,
+          },
+        },
+      }
+    }
+
+    case 'AML_ESCALATE_SAR': {
+      if (!state.activeChildActionId) return state
+      const sarTs = new Date().toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })
+      const sarId = state.activeChildActionId
+      const sarTasks = state.tasks.map((t) => {
+        if (!t.children) return t
+        return {
+          ...t,
+          children: t.children.map((c) =>
+            c.id === sarId ? { ...c, status: 'rejected' as const } : c,
+          ),
+        }
+      })
+      return {
+        ...state,
+        tasks: sarTasks,
+        childReviewState: {
+          ...state.childReviewState,
+          amlReview: {
+            ...state.childReviewState?.amlReview,
+            status: 'escalated' as const,
+            decidedAt: sarTs,
+          },
+        },
+        childReviewDecision: { outcome: 'rejected', decidedAt: sarTs },
       }
     }
 

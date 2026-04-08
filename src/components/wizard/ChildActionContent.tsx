@@ -110,9 +110,38 @@ function AdvisorViewBanner() {
     )
   }
 
+  const hoKycReview = reviewState?.hoKycReview
+
+  if (isKyc && hoKycReview?.status === 'changes_requested') {
+    return (
+      <div className="rounded-lg border border-amber-200 bg-amber-50 dark:border-amber-900/60 dark:bg-amber-950/40 px-4 py-3 mb-6">
+        <div className="flex items-start gap-3">
+          <AlertTriangle className="h-5 w-5 text-amber-600 dark:text-amber-400 mt-0.5 shrink-0" />
+          <div className="space-y-1">
+            <p className="text-sm font-medium text-amber-900 dark:text-amber-100">
+              Changes Requested by Home Office
+            </p>
+            <p className="text-xs text-amber-800/80 dark:text-amber-200/70">
+              The Home Office has requested changes to this submission. Please review the feedback and resubmit.
+            </p>
+            {hoKycReview.comments && (
+              <div className="mt-2 rounded-md bg-amber-100/60 dark:bg-amber-900/30 px-3 py-2">
+                <p className="text-xs text-amber-900 dark:text-amber-100">
+                  <span className="font-semibold">Feedback:</span> {hoKycReview.comments}
+                </p>
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+    )
+  }
+
   const progressParts: string[] = []
   if (isKyc) {
-    if (amlReview?.status === 'pending') progressParts.push('AML Review: Pending')
+    if (amlReview?.status === 'pending') progressParts.push('AML Screening: In Progress')
+    else if (amlReview?.status === 'cleared') progressParts.push('AML Screening: Cleared')
+    if (hoKycReview?.status === 'pending') progressParts.push('Home Office Review: Pending')
   } else {
     if (docReview?.status === 'igo') progressParts.push('Document Review: IGO')
     else if (docReview?.status === 'pending') progressParts.push('Document Review: Pending')
@@ -125,10 +154,12 @@ function AdvisorViewBanner() {
         <Lock className="h-5 w-5 text-blue-600 dark:text-blue-400 mt-0.5 shrink-0" />
         <div className="space-y-0.5">
           <p className="text-sm font-medium text-blue-900 dark:text-blue-100">
-            Read-Only — Under {isKyc ? 'AML' : 'Home Office'} Review
+            {isKyc ? 'Submitted to Home Office' : 'Read-Only — Under Home Office Review'}
           </p>
           <p className="text-xs text-blue-800/80 dark:text-blue-200/70">
-            This submission is being reviewed by the {isKyc ? 'AML' : 'home office'} team. All fields are locked until the review is complete.
+            {isKyc
+              ? 'Your submission has been sent to the Home Office for review. AML screening is in progress. You will be notified when the review is complete.'
+              : 'This submission is being reviewed by the home office team. All fields are locked until the review is complete.'}
           </p>
           {progressParts.length > 0 && (
             <p className="text-xs text-blue-700/80 dark:text-blue-300/70 mt-1">

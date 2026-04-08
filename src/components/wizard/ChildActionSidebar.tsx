@@ -99,8 +99,17 @@ export function ChildActionSidebar() {
   const isHoDocView = viewMode === 'ho-documents'
   const isHoPrincipalView = viewMode === 'ho-principal'
   const isHoView = isHoDocView || isHoPrincipalView
+  const isAmlView = viewMode === 'aml'
+  const isHoKycView = viewMode === 'ho-kyc'
 
   const hoTaskLabel = isHoDocView ? 'Document Review' : isHoPrincipalView ? 'Principal Review' : null
+  const kycReviewTaskLabel =
+    child.childType === 'kyc' && isAmlView
+      ? 'AML Review'
+      : child.childType === 'kyc' && isHoKycView
+        ? 'Home Office Review'
+        : null
+  const showSingleReviewStep = Boolean((isHoView && hoTaskLabel) || kycReviewTaskLabel)
 
   return (
     <TooltipProvider delayDuration={300}>
@@ -121,12 +130,12 @@ export function ChildActionSidebar() {
         </div>
 
         <ul className="space-y-1">
-          {isHoView && hoTaskLabel ? (
+          {showSingleReviewStep ? (
             <li>
               <div className="w-full text-left px-3 py-2 rounded-md text-sm flex items-center gap-2 bg-accent text-accent-foreground font-medium">
                 <span className="flex items-center gap-2 truncate">
                   <span className="text-xs text-muted-foreground w-4 shrink-0">1.</span>
-                  {hoTaskLabel}
+                  {kycReviewTaskLabel ?? hoTaskLabel}
                 </span>
               </div>
             </li>

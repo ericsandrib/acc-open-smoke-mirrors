@@ -151,7 +151,7 @@ export interface WorkflowState {
   /** When drilling into a funding-line or feature-service-line child, EXIT restores this account child + sub-step. */
   childActionResume?: { accountChildId: string; subTaskIndex: number }
   reviewState?: ReviewState
-  demoViewMode?: 'advisor' | 'ho-documents' | 'ho-principal' | 'aml'
+  demoViewMode?: 'advisor' | 'ho-documents' | 'ho-principal' | 'ho-kyc' | 'aml'
   submittedAt?: string
   childReviewDecision?: { outcome: 'approved' | 'rejected'; decidedAt: string }
   childReviewState?: {
@@ -159,7 +159,15 @@ export interface WorkflowState {
     principalReview?: { status: 'pending' | 'igo' | 'nigo'; decidedAt?: string; nigoReason?: string; nigoFeedback?: string }
     amlFlagged?: boolean
     amlNotes?: string
-    amlReview?: { status: 'pending' | 'cleared' | 'flagged'; decidedAt?: string; findings?: string }
+    amlReview?: { status: 'pending' | 'cleared' | 'flagged' | 'info_requested' | 'escalated'; decidedAt?: string; findings?: string; infoRequestComments?: string }
+    cipStatus?: {
+      idVerification: 'pass' | 'fail' | 'pending'
+      addressMatch: 'pass' | 'fail' | 'pending'
+      dobMatch: 'pass' | 'fail' | 'pending'
+      overallStatus: 'pass' | 'fail' | 'pending'
+    }
+    hoKycReview?: { status: 'pending' | 'approved' | 'changes_requested'; decidedAt?: string; comments?: string }
+    validationErrors?: string[]
   }
 }
 
@@ -204,7 +212,7 @@ export type WorkflowAction =
   | { type: 'SUBMIT_CHILD_FOR_REVIEW' }
   | { type: 'ACCEPT_CHILD_REVIEW' }
   | { type: 'REJECT_CHILD_REVIEW'; reason: string; feedback?: string }
-  | { type: 'SET_DEMO_VIEW'; mode: 'advisor' | 'ho-documents' | 'ho-principal' | 'aml' }
+  | { type: 'SET_DEMO_VIEW'; mode: 'advisor' | 'ho-documents' | 'ho-principal' | 'ho-kyc' | 'aml' }
   | { type: 'DOCUMENT_REVIEW_IGO' }
   | { type: 'DOCUMENT_REVIEW_NIGO'; reason: string; feedback?: string }
   | { type: 'PRINCIPAL_REVIEW_IGO' }
@@ -212,3 +220,7 @@ export type WorkflowAction =
   | { type: 'SET_AML_FLAG'; flagged: boolean; notes?: string }
   | { type: 'AML_REVIEW_CLEAR' }
   | { type: 'AML_REVIEW_FLAG'; findings?: string }
+  | { type: 'HO_KYC_APPROVE' }
+  | { type: 'HO_KYC_REQUEST_CHANGES'; comments: string }
+  | { type: 'AML_REQUEST_MORE_INFO'; comments: string }
+  | { type: 'AML_ESCALATE_SAR' }

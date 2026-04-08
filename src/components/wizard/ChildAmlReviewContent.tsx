@@ -1,5 +1,7 @@
+import { useState } from 'react'
 import { useWorkflow, useChildActionContext } from '@/stores/workflowStore'
 import { Badge } from '@/components/ui/badge'
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion'
 import {
   ShieldAlert,
   ShieldCheck,
@@ -13,7 +15,6 @@ import {
   Landmark,
   Clock,
 } from 'lucide-react'
-import { cn } from '@/lib/utils'
 
 function ReviewRow({ label, value }: { label: string; value?: string | null }) {
   if (!value) return null
@@ -25,30 +26,44 @@ function ReviewRow({ label, value }: { label: string; value?: string | null }) {
   )
 }
 
-function SectionCard({ title, icon: Icon, children, badge }: {
+function AccordionSection({ value, title, icon: Icon, badge, children }: {
+  value: string
   title: string
   icon: React.ComponentType<{ className?: string }>
   children: React.ReactNode
   badge?: React.ReactNode
 }) {
   return (
-    <div className="rounded-lg border border-border">
-      <div className="flex items-center justify-between px-4 py-3 border-b border-border bg-muted/30">
-        <div className="flex items-center gap-2">
-          <Icon className="h-4 w-4 text-muted-foreground" />
-          <span className="text-sm font-semibold">{title}</span>
+    <AccordionItem value={value} className="rounded-lg border border-border overflow-hidden bg-background">
+      <AccordionTrigger className="px-4 py-3 hover:no-underline bg-muted/30 border-b border-border data-[state=open]:border-b">
+        <span className="flex flex-1 items-center justify-between gap-3 pr-2">
+          <span className="flex items-center gap-2 min-w-0">
+            <Icon className="h-4 w-4 shrink-0 text-muted-foreground" />
+            <span className="text-sm font-semibold truncate">{title}</span>
+          </span>
+          {badge ? <span className="shrink-0" onClick={(e) => e.stopPropagation()}>{badge}</span> : null}
+        </span>
+      </AccordionTrigger>
+      <AccordionContent className="px-0 pb-0">
+        <div className="px-4 py-2 divide-y divide-border border-t-0">
+          {children}
         </div>
-        {badge}
-      </div>
-      <div className="px-4 py-2 divide-y divide-border">
-        {children}
-      </div>
-    </div>
+      </AccordionContent>
+    </AccordionItem>
   )
 }
 
+const AML_SECTION_DEFAULTS = [
+  'individual',
+  'ofac',
+  'pep',
+  'risk',
+  'source-funds',
+  'case-notes',
+] as const
+
 export function ChildAmlReviewContent() {
-  const { state } = useWorkflow()
+  const { state, dispatch } = useWorkflow()
   const ctx = useChildActionContext()
   if (!ctx) return null
 
@@ -57,6 +72,7 @@ export function ChildAmlReviewContent() {
   const amlReview = reviewState?.amlReview
   const amlFlagged = reviewState?.amlFlagged
   const amlNotes = reviewState?.amlNotes
+  const [caseNotes, setCaseNotes] = useState(amlNotes ?? '')
 
   const party = state.relatedParties.find((p) => p.name === child.name)
   const taskData = state.taskData[`${child.id}-info`] ?? {}
@@ -122,6 +138,41 @@ export function ChildAmlReviewContent() {
           </div>
         )}
 
+        {amlReview?.status === 'info_requested' && (
+          <div className="rounded-lg border border-blue-200 bg-blue-50 px-4 py-3">
+            <div className="flex items-start gap-3">
+              <Clock className="h-5 w-5 text-blue-600 mt-0.5 shrink-0" />
+              <div className="space-y-0.5">
+                <p className="text-sm font-medium text-blue-900">Additional Info Requested</p>
+                <p className="text-xs text-blue-800/80">
+                  You have requested additional information from the Home Office. Waiting for response.
+                </p>
+                {amlReview.infoRequestComments && (
+                  <div className="mt-2 rounded-md bg-blue-100/60 px-3 py-2">
+                    <p className="text-xs text-blue-900">
+                      <span className="font-semibold">Your request:</span> {amlReview.infoRequestComments}
+                    </p>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {amlReview?.status === 'escalated' && (
+          <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3">
+            <div className="flex items-start gap-3">
+              <AlertTriangle className="h-5 w-5 text-red-600 mt-0.5 shrink-0" />
+              <div className="space-y-0.5">
+                <p className="text-sm font-medium text-red-900">SAR Escalated</p>
+                <p className="text-xs text-red-800/80">
+                  This case has been escalated for Suspicious Activity Report (SAR) filing. Escalated at {amlReview.decidedAt}.
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* Header */}
         <div>
           <div className="flex items-center gap-3 mb-1">
@@ -154,78 +205,100 @@ export function ChildAmlReviewContent() {
           </div>
         )}
 
-        {/* Individual Information */}
-        <SectionCard title="Individual Information" icon={User}>
-          <ReviewRow label="Full Name" value={fullName} />
-          <ReviewRow label="Date of Birth" value={dob} />
-          <ReviewRow label="SSN / Tax ID" value={ssn ? `***-**-${ssn.slice(-4)}` : undefined} />
-          <ReviewRow label="Email" value={email} />
-          <ReviewRow label="Phone" value={phone} />
-          <ReviewRow label="Relationship" value={party?.relationship} />
-        </SectionCard>
+        <Accordion type="multiple" defaultValue={[...AML_SECTION_DEFAULTS]} className="space-y-3">
+          <AccordionSection value="individual" title="Individual Information" icon={User}>
+            <ReviewRow label="Full Name" value={fullName} />
+            <ReviewRow label="Date of Birth" value={dob} />
+            <ReviewRow label="SSN / Tax ID" value={ssn ? `***-**-${ssn.slice(-4)}` : undefined} />
+            <ReviewRow label="Email" value={email} />
+            <ReviewRow label="Phone" value={phone} />
+            <ReviewRow label="Relationship" value={party?.relationship} />
+          </AccordionSection>
 
-        {/* OFAC / Sanctions Screening */}
-        <SectionCard
-          title="OFAC / Sanctions Screening"
-          icon={Globe}
-          badge={
-            amlReview?.status === 'cleared' ? (
-              <Badge variant="outline" className="text-green-700 border-green-200 bg-green-50 text-[10px]">
-                <CheckCircle2 className="h-3 w-3 mr-1" />
-                No Match
-              </Badge>
-            ) : amlReview?.status === 'flagged' ? (
-              <Badge variant="outline" className="text-red-700 border-red-200 bg-red-50 text-[10px]">
-                <XCircle className="h-3 w-3 mr-1" />
-                Match Found
-              </Badge>
-            ) : (
-              <Badge variant="outline" className="text-amber-700 border-amber-200 bg-amber-50 text-[10px]">
-                <Clock className="h-3 w-3 mr-1" />
-                Pending
-              </Badge>
-            )
-          }
-        >
-          <ReviewRow label="SDN List (OFAC)" value={amlReview?.status === 'cleared' ? 'No match' : amlReview?.status === 'flagged' ? 'Potential match' : 'Pending screening'} />
-          <ReviewRow label="Consolidated Sanctions List" value={amlReview?.status === 'cleared' ? 'No match' : 'Pending screening'} />
-          <ReviewRow label="EU Sanctions List" value={amlReview?.status === 'cleared' ? 'No match' : 'Pending screening'} />
-          <ReviewRow label="UN Sanctions List" value={amlReview?.status === 'cleared' ? 'No match' : 'Pending screening'} />
-        </SectionCard>
+          <AccordionSection
+            value="ofac"
+            title="OFAC / Sanctions Screening"
+            icon={Globe}
+            badge={
+              amlReview?.status === 'cleared' ? (
+                <Badge variant="outline" className="text-green-700 border-green-200 bg-green-50 text-[10px]">
+                  <CheckCircle2 className="h-3 w-3 mr-1" />
+                  No Match
+                </Badge>
+              ) : amlReview?.status === 'flagged' ? (
+                <Badge variant="outline" className="text-red-700 border-red-200 bg-red-50 text-[10px]">
+                  <XCircle className="h-3 w-3 mr-1" />
+                  Match Found
+                </Badge>
+              ) : (
+                <Badge variant="outline" className="text-amber-700 border-amber-200 bg-amber-50 text-[10px]">
+                  <Clock className="h-3 w-3 mr-1" />
+                  Pending
+                </Badge>
+              )
+            }
+          >
+            <ReviewRow label="SDN List (OFAC)" value={amlReview?.status === 'cleared' ? 'No match' : amlReview?.status === 'flagged' ? 'Potential match — 87% similarity' : 'Pending screening'} />
+            <ReviewRow label="Consolidated Sanctions List" value={amlReview?.status === 'cleared' ? 'No match' : 'Pending screening'} />
+            <ReviewRow label="EU Sanctions List" value={amlReview?.status === 'cleared' ? 'No match' : 'Pending screening'} />
+            <ReviewRow label="UN Sanctions List" value={amlReview?.status === 'cleared' ? 'No match' : 'Pending screening'} />
+            {amlReview?.status === 'flagged' && (
+              <>
+                <ReviewRow label="Similarity Score" value="87% — Requires manual review" />
+                <ReviewRow label="Match Type" value="Partial name match on SDN list" />
+              </>
+            )}
+          </AccordionSection>
 
-        {/* PEP & Adverse Media */}
-        <SectionCard title="PEP & Adverse Media Check" icon={Search}>
-          <ReviewRow label="Politically Exposed Person (PEP)" value={amlReview?.status === 'cleared' ? 'Not a PEP' : 'Pending review'} />
-          <ReviewRow label="Adverse Media Screening" value={amlReview?.status === 'cleared' ? 'No adverse media found' : 'Pending review'} />
-          <ReviewRow label="Negative News" value={amlReview?.status === 'cleared' ? 'None found' : 'Pending review'} />
-        </SectionCard>
+          <AccordionSection value="pep" title="PEP & Adverse Media Check" icon={Search}>
+            <ReviewRow label="Politically Exposed Person (PEP)" value={amlReview?.status === 'cleared' ? 'Not a PEP' : amlReview?.status === 'flagged' ? 'Level 2 — Family member of PEP' : 'Pending review'} />
+            <ReviewRow label="PEP Level" value={amlReview?.status === 'flagged' ? 'Level 2 — Relative / Close Associate' : amlReview?.status === 'cleared' ? 'N/A' : 'Pending'} />
+            <ReviewRow label="Adverse Media Screening" value={amlReview?.status === 'cleared' ? 'No adverse media found' : amlReview?.status === 'flagged' ? '2 potential matches found' : 'Pending review'} />
+            <ReviewRow label="Negative News" value={amlReview?.status === 'cleared' ? 'None found' : amlReview?.status === 'flagged' ? 'Financial fraud allegations (2023)' : 'Pending review'} />
+          </AccordionSection>
 
-        {/* Risk Assessment */}
-        <SectionCard
-          title="Risk Assessment"
-          icon={ShieldCheck}
-          badge={
-            amlReview?.status === 'cleared' ? (
-              <Badge variant="outline" className="text-green-700 border-green-200 bg-green-50 text-[10px]">Low Risk</Badge>
-            ) : amlReview?.status === 'flagged' ? (
-              <Badge variant="outline" className="text-red-700 border-red-200 bg-red-50 text-[10px]">High Risk</Badge>
-            ) : (
-              <Badge variant="outline" className="text-muted-foreground text-[10px]">Not Assessed</Badge>
-            )
-          }
-        >
-          <ReviewRow label="Customer Risk Rating" value={amlReview?.status === 'cleared' ? 'Low' : amlReview?.status === 'flagged' ? 'High' : 'Pending'} />
-          <ReviewRow label="Geographic Risk" value={amlReview?.status === 'cleared' ? 'Low — Domestic' : 'Pending assessment'} />
-          <ReviewRow label="Product Risk" value={amlReview?.status === 'cleared' ? 'Standard' : 'Pending assessment'} />
-        </SectionCard>
+          <AccordionSection
+            value="risk"
+            title="Risk Assessment"
+            icon={ShieldCheck}
+            badge={
+              amlReview?.status === 'cleared' ? (
+                <Badge variant="outline" className="text-green-700 border-green-200 bg-green-50 text-[10px]">Low Risk</Badge>
+              ) : amlReview?.status === 'flagged' ? (
+                <Badge variant="outline" className="text-red-700 border-red-200 bg-red-50 text-[10px]">High Risk</Badge>
+              ) : (
+                <Badge variant="outline" className="text-muted-foreground text-[10px]">Not Assessed</Badge>
+              )
+            }
+          >
+            <ReviewRow label="Customer Risk Rating" value={amlReview?.status === 'cleared' ? 'Low' : amlReview?.status === 'flagged' ? 'High' : 'Pending'} />
+            <ReviewRow label="Risk Score" value={amlReview?.status === 'cleared' ? '12 / 100' : amlReview?.status === 'flagged' ? '78 / 100' : 'Pending assessment'} />
+            <ReviewRow label="Geographic Risk" value={amlReview?.status === 'cleared' ? 'Low — Domestic' : 'Pending assessment'} />
+            <ReviewRow label="Product Risk" value={amlReview?.status === 'cleared' ? 'Standard' : 'Pending assessment'} />
+          </AccordionSection>
 
-        {/* Transaction Monitoring */}
-        <SectionCard title="Source of Funds" icon={Landmark}>
-          <ReviewRow label="Declared Source" value={party?.accountOwnerIndividual?.sourceOfFunds || 'Not provided'} />
-          <ReviewRow label="Employment Status" value={party?.accountOwnerIndividual?.employmentStatus || 'Not provided'} />
-          <ReviewRow label="Annual Income" value={party?.accountOwnerIndividual?.annualIncomeRange || 'Not provided'} />
-          <ReviewRow label="Net Worth" value={party?.accountOwnerIndividual?.netWorthRange || 'Not provided'} />
-        </SectionCard>
+          <AccordionSection value="source-funds" title="Source of Funds" icon={Landmark}>
+            <ReviewRow label="Declared Source" value={taskData.sourceOfFunds as string || party?.accountOwnerIndividual?.sourceOfFunds || 'Not provided'} />
+            <ReviewRow label="Employment Status" value={taskData.employmentStatus as string || party?.accountOwnerIndividual?.employmentStatus || 'Not provided'} />
+            <ReviewRow label="Annual Income" value={party?.accountOwnerIndividual?.annualIncomeRange || 'Not provided'} />
+            <ReviewRow label="Net Worth" value={party?.accountOwnerIndividual?.netWorthRange || 'Not provided'} />
+          </AccordionSection>
+
+          <AccordionSection value="case-notes" title="Internal Case Notes" icon={FileText}>
+            <div className="py-2">
+              <textarea
+                value={caseNotes}
+                onChange={(e) => {
+                  setCaseNotes(e.target.value)
+                  dispatch({ type: 'SET_AML_FLAG', flagged: reviewState?.amlFlagged ?? false, notes: e.target.value })
+                }}
+                placeholder="Add internal notes about this AML case..."
+                className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm min-h-[100px] resize-none focus:outline-none focus:ring-2 focus:ring-ring"
+                disabled={amlReview?.status === 'cleared' || amlReview?.status === 'flagged' || amlReview?.status === 'escalated'}
+              />
+            </div>
+          </AccordionSection>
+        </Accordion>
       </div>
     </main>
   )

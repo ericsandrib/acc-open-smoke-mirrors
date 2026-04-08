@@ -4,14 +4,16 @@ import { DetailSidebar } from './DetailSidebar'
 import { WizardFooter } from './WizardFooter'
 import { HomeOfficeReviewFooter } from './HomeOfficeReviewFooter'
 import { AmlReviewFooter } from './AmlReviewFooter'
+import { HoKycReviewFooter } from './HoKycReviewFooter'
 import { ChildActionSidebar } from './ChildActionSidebar'
 import { ChildActionContent } from './ChildActionContent'
 import { ChildActionFooter } from './ChildActionFooter'
 import { ChildActionRightSidebar } from './ChildActionRightSidebar'
 import { ChildHoDocumentViewContent } from './ChildHoDocumentViewContent'
 import { ChildHoPrincipalViewContent } from './ChildHoPrincipalViewContent'
+import { ChildHoKycViewContent } from './ChildHoKycViewContent'
 import { ChildAmlReviewContent } from './ChildAmlReviewContent'
-import { Eye, FileSearch, ShieldCheck, ShieldAlert } from 'lucide-react'
+import { Eye, FileSearch, ShieldCheck, ShieldAlert, Building } from 'lucide-react'
 import { VerticalNav } from '@/components/navigation/vertical-nav'
 import { useWorkflow } from '@/stores/workflowStore'
 import { cn } from '@/lib/utils'
@@ -25,6 +27,7 @@ export function WizardLayout() {
   const isAdvisorView = viewMode === 'advisor'
   const isHoDocView = viewMode === 'ho-documents'
   const isHoPrincipalView = viewMode === 'ho-principal'
+  const isHoKycView = viewMode === 'ho-kyc'
   const isAmlView = viewMode === 'aml'
   const isHomeOfficeView = isHoDocView || isHoPrincipalView
 
@@ -57,19 +60,34 @@ export function WizardLayout() {
               </button>
 
               {isKycChild ? (
-                <button
-                  type="button"
-                  onClick={() => dispatch({ type: 'SET_DEMO_VIEW', mode: 'aml' })}
-                  className={cn(
-                    'flex items-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-medium transition-colors',
-                    isAmlView
-                      ? 'bg-primary text-primary-foreground shadow-sm'
-                      : 'text-muted-foreground hover:text-foreground hover:bg-muted/50',
-                  )}
-                >
-                  <ShieldAlert className="h-3.5 w-3.5" />
-                  AML Review
-                </button>
+                <>
+                  <button
+                    type="button"
+                    onClick={() => dispatch({ type: 'SET_DEMO_VIEW', mode: 'aml' })}
+                    className={cn(
+                      'flex items-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-medium transition-colors',
+                      isAmlView
+                        ? 'bg-primary text-primary-foreground shadow-sm'
+                        : 'text-muted-foreground hover:text-foreground hover:bg-muted/50',
+                    )}
+                  >
+                    <ShieldAlert className="h-3.5 w-3.5" />
+                    AML Team
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => dispatch({ type: 'SET_DEMO_VIEW', mode: 'ho-kyc' })}
+                    className={cn(
+                      'flex items-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-medium transition-colors',
+                      isHoKycView
+                        ? 'bg-primary text-primary-foreground shadow-sm'
+                        : 'text-muted-foreground hover:text-foreground hover:bg-muted/50',
+                    )}
+                  >
+                    <Building className="h-3.5 w-3.5" />
+                    Home Office
+                  </button>
+                </>
               ) : (
                 <>
                   <button
@@ -107,9 +125,19 @@ export function WizardLayout() {
           {inChildAction ? (
             isAmlView ? (
               <>
+                <ChildActionSidebar />
                 <div className="flex-1 flex flex-col overflow-hidden">
                   <ChildAmlReviewContent />
                   <AmlReviewFooter />
+                </div>
+                <ChildActionRightSidebar />
+              </>
+            ) : isHoKycView ? (
+              <>
+                <ChildActionSidebar />
+                <div className="flex-1 flex flex-col overflow-hidden">
+                  <ChildHoKycViewContent />
+                  <HoKycReviewFooter />
                 </div>
                 <ChildActionRightSidebar />
               </>

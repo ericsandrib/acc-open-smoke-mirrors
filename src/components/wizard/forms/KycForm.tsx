@@ -3,7 +3,7 @@ import { useWorkflow } from '@/stores/workflowStore'
 import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
-import { CheckCircle2, ShieldCheck, Clock, UserPlus, XCircle, AlertTriangle, Play } from 'lucide-react'
+import { CheckCircle2, ShieldCheck, Clock, UserPlus, AlertTriangle, Play } from 'lucide-react'
 import { AddHouseholdMemberSheet } from './AddPartySheet'
 import { ChildActionKebabMenu } from '@/components/wizard/ChildActionKebabMenu'
 import { ChildActionTimelineSheet } from '@/components/wizard/ChildActionTimelineSheet'
@@ -53,17 +53,17 @@ export function KycForm() {
       {householdMembers.length > 0 && (
         <div className="space-y-2">
           <h3 className="text-base font-semibold">KYC Statuses</h3>
-          <div className="rounded-lg border border-border overflow-hidden">
-            <table className="w-full text-sm">
+          <div className="w-full">
+            <table className="w-full text-sm border-collapse">
               <thead>
-                <tr className="border-b border-border bg-muted/40">
+                <tr className="border-b border-border">
                   <th className="text-left font-medium text-muted-foreground px-4 py-2.5">Member Name</th>
                   <th className="text-left font-medium text-muted-foreground px-4 py-2.5">Relationship</th>
                   <th className="text-left font-medium text-muted-foreground px-4 py-2.5">KYC Status</th>
                 </tr>
               </thead>
               <tbody>
-                {householdMembers.map((member, idx) => {
+                {householdMembers.map((member) => {
                   const matchingChild = children.find((c) => c.name === member.name)
                   const isVerified = member.kycStatus === 'verified' || matchingChild?.status === 'complete'
                   const isPending = !isVerified && (member.kycStatus === 'pending' || matchingChild?.status === 'awaiting_review')
@@ -76,7 +76,7 @@ export function KycForm() {
                     : member.relationship ?? member.role ?? '—'
 
                   return (
-                    <tr key={member.id} className={cn('border-b border-border last:border-b-0', idx % 2 === 1 && 'bg-muted/20')}>
+                    <tr key={member.id} className="border-b border-border last:border-b-0">
                       <td className="px-4 py-3 font-medium">{member.name}</td>
                       <td className="px-4 py-3 text-muted-foreground">{relationship}</td>
                       <td className="px-4 py-3">
@@ -139,22 +139,20 @@ export function KycForm() {
           Manage contacts who need identity verification (KYC/KYB). Click on a contact to begin or continue their review.
         </p>
 
-        <div className="rounded-lg border border-border p-1">
+        <div className="divide-y divide-border border-t border-border">
           {children.map((child) => (
             <div
               key={child.id}
-              className="group w-full flex items-center justify-between p-3 hover:bg-muted/50 rounded-lg transition-colors"
+              className="group flex items-center justify-between gap-3 py-3"
             >
               <button
+                type="button"
                 onClick={() =>
                   dispatch({ type: 'ENTER_CHILD_ACTION', childId: child.id })
                 }
-                className="flex-1 flex items-center gap-3 text-left cursor-pointer"
+                className="min-w-0 flex-1 text-left text-sm font-medium text-foreground hover:underline"
               >
-                <div className="flex h-8 w-8 items-center justify-center rounded-full bg-yellow-100 text-yellow-700 shrink-0">
-                  <Clock className="h-4 w-4" />
-                </div>
-                <span className="text-sm font-medium">{child.name}</span>
+                {child.name}
               </button>
               <div className="flex items-center gap-2">
                 {(() => {
