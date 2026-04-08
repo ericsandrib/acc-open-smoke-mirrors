@@ -4,12 +4,43 @@ import { ShieldCheck, Lock, AlertTriangle, CheckCircle2 } from 'lucide-react'
 
 function AdvisorViewBanner() {
   const { state } = useWorkflow()
+  const ctx = useChildActionContext()
   const decision = state.childReviewDecision
   const reviewState = state.childReviewState
   const docReview = reviewState?.documentReview
   const principalReview = reviewState?.principalReview
+  const amlReview = reviewState?.amlReview
+  const isKyc = ctx?.child.childType === 'kyc'
 
   if (decision?.outcome === 'rejected') {
+    if (isKyc && amlReview?.status === 'flagged') {
+      return (
+        <div className="rounded-lg border border-red-200 bg-red-50 dark:border-red-900/60 dark:bg-red-950/40 px-4 py-3 mb-6">
+          <div className="flex items-start gap-3">
+            <AlertTriangle className="h-5 w-5 text-red-600 dark:text-red-400 mt-0.5 shrink-0" />
+            <div className="space-y-1">
+              <p className="text-sm font-medium text-red-900 dark:text-red-100">
+                Flagged by AML Team
+              </p>
+              <p className="text-xs text-red-800/80 dark:text-red-200/70">
+                The AML team has flagged this individual for further investigation. Please review their findings below.
+              </p>
+              {amlReview.findings && (
+                <div className="mt-2 rounded-md bg-red-100/60 dark:bg-red-900/30 px-3 py-2">
+                  <p className="text-xs text-red-900 dark:text-red-100">
+                    <span className="font-semibold">Findings:</span> {amlReview.findings}
+                  </p>
+                </div>
+              )}
+              <p className="text-xs text-red-700/70 dark:text-red-300/60 mt-1">
+                Flagged at {decision.decidedAt}
+              </p>
+            </div>
+          </div>
+        </div>
+      )
+    }
+
     const rejectedByDoc = docReview?.status === 'nigo'
     const rejectedByPrincipal = principalReview?.status === 'nigo'
     const teamLabel = rejectedByPrincipal ? 'Principal Review Team' : rejectedByDoc ? 'Document Review Team' : 'Home Office'
@@ -48,6 +79,22 @@ function AdvisorViewBanner() {
   }
 
   if (decision?.outcome === 'approved') {
+    if (isKyc && amlReview?.status === 'cleared') {
+      return (
+        <div className="rounded-lg border border-green-200 bg-green-50 dark:border-green-900/60 dark:bg-green-950/40 px-4 py-3 mb-6">
+          <div className="flex items-start gap-3">
+            <CheckCircle2 className="h-5 w-5 text-green-600 dark:text-green-400 mt-0.5 shrink-0" />
+            <div className="space-y-0.5">
+              <p className="text-sm font-medium text-green-900 dark:text-green-100">Cleared by AML Team</p>
+              <p className="text-xs text-green-800/80 dark:text-green-200/70">
+                This individual has been cleared by the AML team. No sanctions or watchlist concerns found. Cleared at {decision.decidedAt}.
+              </p>
+            </div>
+          </div>
+        </div>
+      )
+    }
+
     return (
       <div className="rounded-lg border border-green-200 bg-green-50 dark:border-green-900/60 dark:bg-green-950/40 px-4 py-3 mb-6">
         <div className="flex items-start gap-3">
@@ -64,18 +111,24 @@ function AdvisorViewBanner() {
   }
 
   const progressParts: string[] = []
-  if (docReview?.status === 'igo') progressParts.push('Document Review: IGO')
-  else if (docReview?.status === 'pending') progressParts.push('Document Review: Pending')
-  if (principalReview?.status === 'pending') progressParts.push('Principal Review: Pending')
+  if (isKyc) {
+    if (amlReview?.status === 'pending') progressParts.push('AML Review: Pending')
+  } else {
+    if (docReview?.status === 'igo') progressParts.push('Document Review: IGO')
+    else if (docReview?.status === 'pending') progressParts.push('Document Review: Pending')
+    if (principalReview?.status === 'pending') progressParts.push('Principal Review: Pending')
+  }
 
   return (
     <div className="rounded-lg border border-blue-200 bg-blue-50 dark:border-blue-900/60 dark:bg-blue-950/40 px-4 py-3 mb-6">
       <div className="flex items-start gap-3">
         <Lock className="h-5 w-5 text-blue-600 dark:text-blue-400 mt-0.5 shrink-0" />
         <div className="space-y-0.5">
-          <p className="text-sm font-medium text-blue-900 dark:text-blue-100">Read-Only — Under Home Office Review</p>
+          <p className="text-sm font-medium text-blue-900 dark:text-blue-100">
+            Read-Only — Under {isKyc ? 'AML' : 'Home Office'} Review
+          </p>
           <p className="text-xs text-blue-800/80 dark:text-blue-200/70">
-            This submission is being reviewed by the home office team. All fields are locked until the review is complete.
+            This submission is being reviewed by the {isKyc ? 'AML' : 'home office'} team. All fields are locked until the review is complete.
           </p>
           {progressParts.length > 0 && (
             <p className="text-xs text-blue-700/80 dark:text-blue-300/70 mt-1">

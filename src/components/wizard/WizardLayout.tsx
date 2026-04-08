@@ -3,13 +3,15 @@ import { TaskContent } from './TaskContent'
 import { DetailSidebar } from './DetailSidebar'
 import { WizardFooter } from './WizardFooter'
 import { HomeOfficeReviewFooter } from './HomeOfficeReviewFooter'
+import { AmlReviewFooter } from './AmlReviewFooter'
 import { ChildActionSidebar } from './ChildActionSidebar'
 import { ChildActionContent } from './ChildActionContent'
 import { ChildActionFooter } from './ChildActionFooter'
 import { ChildActionRightSidebar } from './ChildActionRightSidebar'
 import { ChildHoDocumentViewContent } from './ChildHoDocumentViewContent'
 import { ChildHoPrincipalViewContent } from './ChildHoPrincipalViewContent'
-import { Eye, FileSearch, ShieldCheck } from 'lucide-react'
+import { ChildAmlReviewContent } from './ChildAmlReviewContent'
+import { Eye, FileSearch, ShieldCheck, ShieldAlert } from 'lucide-react'
 import { VerticalNav } from '@/components/navigation/vertical-nav'
 import { useWorkflow } from '@/stores/workflowStore'
 import { cn } from '@/lib/utils'
@@ -23,9 +25,15 @@ export function WizardLayout() {
   const isAdvisorView = viewMode === 'advisor'
   const isHoDocView = viewMode === 'ho-documents'
   const isHoPrincipalView = viewMode === 'ho-principal'
+  const isAmlView = viewMode === 'aml'
   const isHomeOfficeView = isHoDocView || isHoPrincipalView
 
   const showViewToggle = inChildAction && isSubmitted
+
+  const activeChild = inChildAction
+    ? state.tasks.flatMap((t) => t.children ?? []).find((c) => c.id === state.activeChildActionId)
+    : null
+  const isKycChild = activeChild?.childType === 'kyc'
 
   return (
     <div className="flex h-screen bg-background">
@@ -47,38 +55,65 @@ export function WizardLayout() {
                 <Eye className="h-3.5 w-3.5" />
                 Advisor
               </button>
-              <button
-                type="button"
-                onClick={() => dispatch({ type: 'SET_DEMO_VIEW', mode: 'ho-documents' })}
-                className={cn(
-                  'flex items-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-medium transition-colors',
-                  isHoDocView
-                    ? 'bg-primary text-primary-foreground shadow-sm'
-                    : 'text-muted-foreground hover:text-foreground hover:bg-muted/50',
-                )}
-              >
-                <FileSearch className="h-3.5 w-3.5" />
-                HO Document Team
-              </button>
-              <button
-                type="button"
-                onClick={() => dispatch({ type: 'SET_DEMO_VIEW', mode: 'ho-principal' })}
-                className={cn(
-                  'flex items-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-medium transition-colors',
-                  isHoPrincipalView
-                    ? 'bg-primary text-primary-foreground shadow-sm'
-                    : 'text-muted-foreground hover:text-foreground hover:bg-muted/50',
-                )}
-              >
-                <ShieldCheck className="h-3.5 w-3.5" />
-                HO Principal Team
-              </button>
+
+              {isKycChild ? (
+                <button
+                  type="button"
+                  onClick={() => dispatch({ type: 'SET_DEMO_VIEW', mode: 'aml' })}
+                  className={cn(
+                    'flex items-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-medium transition-colors',
+                    isAmlView
+                      ? 'bg-primary text-primary-foreground shadow-sm'
+                      : 'text-muted-foreground hover:text-foreground hover:bg-muted/50',
+                  )}
+                >
+                  <ShieldAlert className="h-3.5 w-3.5" />
+                  AML Review
+                </button>
+              ) : (
+                <>
+                  <button
+                    type="button"
+                    onClick={() => dispatch({ type: 'SET_DEMO_VIEW', mode: 'ho-documents' })}
+                    className={cn(
+                      'flex items-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-medium transition-colors',
+                      isHoDocView
+                        ? 'bg-primary text-primary-foreground shadow-sm'
+                        : 'text-muted-foreground hover:text-foreground hover:bg-muted/50',
+                    )}
+                  >
+                    <FileSearch className="h-3.5 w-3.5" />
+                    HO Document Team
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => dispatch({ type: 'SET_DEMO_VIEW', mode: 'ho-principal' })}
+                    className={cn(
+                      'flex items-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-medium transition-colors',
+                      isHoPrincipalView
+                        ? 'bg-primary text-primary-foreground shadow-sm'
+                        : 'text-muted-foreground hover:text-foreground hover:bg-muted/50',
+                    )}
+                  >
+                    <ShieldCheck className="h-3.5 w-3.5" />
+                    HO Principal Team
+                  </button>
+                </>
+              )}
             </div>
           </header>
         )}
         <div className="flex flex-1 overflow-hidden">
           {inChildAction ? (
-            isHomeOfficeView ? (
+            isAmlView ? (
+              <>
+                <div className="flex-1 flex flex-col overflow-hidden">
+                  <ChildAmlReviewContent />
+                  <AmlReviewFooter />
+                </div>
+                <ChildActionRightSidebar />
+              </>
+            ) : isHomeOfficeView ? (
               <>
                 <div className="flex-1 flex flex-col overflow-hidden">
                   {isHoDocView ? <ChildHoDocumentViewContent /> : <ChildHoPrincipalViewContent />}

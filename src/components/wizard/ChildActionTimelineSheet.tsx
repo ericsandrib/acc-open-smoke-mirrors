@@ -30,7 +30,7 @@ const KYC_STAGES: TimelineStage[] = [
   { label: 'Draft', description: 'KYC verification initiated. Client data captured.', matchStatuses: ['not_started', 'in_progress'] },
   { label: 'ID Verification', description: 'Identity verification performed by Avantos.', matchStatuses: [] },
   { label: 'Submitted', description: 'ID verification documents submitted for compliance review.', matchStatuses: ['awaiting_review'] },
-  { label: 'AML Review', description: 'AML Team reviews watchlist codes against OFAC and KYC platforms.', matchStatuses: ['rejected'] },
+  { label: 'AML Review', description: 'AML Team reviews watchlist codes against OFAC and KYC platforms.', matchStatuses: ['aml_pending', 'aml_flagged'] },
   { label: 'Complete', description: 'Identity verified. No further KYC action required.', matchStatuses: ['complete'] },
 ]
 
@@ -43,15 +43,22 @@ function deriveEffectiveStatus(
   childType: ChildType,
   reviewState?: WorkflowState['childReviewState'],
 ): string {
+  if (rawStatus === 'complete') return 'complete'
+
+  if (childType === 'kyc') {
+    const amlStatus = reviewState?.amlReview?.status
+    if (rawStatus === 'rejected' && amlStatus === 'flagged') return 'aml_flagged'
+    if (rawStatus === 'awaiting_review') return amlStatus === 'pending' ? 'aml_pending' : rawStatus
+    return rawStatus
+  }
+
   if (childType !== 'account-opening' && childType !== 'funding-line' && childType !== 'feature-service-line') {
     return rawStatus
   }
 
-  if (rawStatus !== 'awaiting_review' && rawStatus !== 'rejected' && rawStatus !== 'complete') {
+  if (rawStatus !== 'awaiting_review' && rawStatus !== 'rejected') {
     return rawStatus
   }
-
-  if (rawStatus === 'complete') return 'complete'
 
   const docStatus = reviewState?.documentReview?.status
   const principalStatus = reviewState?.principalReview?.status
@@ -103,6 +110,7 @@ export function ChildActionTimeline({
 
   const docReview = reviewState?.documentReview
   const principalReview = reviewState?.principalReview
+  const amlReview = reviewState?.amlReview
 
   return (
     <div className="relative">
@@ -121,10 +129,15 @@ export function ChildActionTimeline({
           if (principalReview.status === 'igo') stageAnnotation = `Approved at ${principalReview.decidedAt}`
           else if (principalReview.status === 'nigo') stageAnnotation = `Rejected at ${principalReview.decidedAt}`
         }
+        if (stage.label === 'AML Review' && amlReview) {
+          if (amlReview.status === 'cleared') stageAnnotation = `Cleared at ${amlReview.decidedAt}`
+          else if (amlReview.status === 'flagged') stageAnnotation = `Flagged at ${amlReview.decidedAt}`
+        }
 
         const isNigoStage =
           (stage.label === 'Document Review' && docReview?.status === 'nigo') ||
-          (stage.label === 'Principal Review' && principalReview?.status === 'nigo')
+          (stage.label === 'Principal Review' && principalReview?.status === 'nigo') ||
+          (stage.label === 'AML Review' && amlReview?.status === 'flagged')
 
         return (
           <div key={stage.label} className="relative flex gap-3">
@@ -179,7 +192,7 @@ export function ChildActionTimeline({
               )}
               {isActive && !stageAnnotation && (
                 <p className={cn('text-xs mt-0.5', isRejected ? 'text-destructive/80' : 'text-muted-foreground')}>
-                  {formatTimestamp()} by <span className="underline">{isRejected ? 'Home Office' : 'Jane Advisor'}</span>
+                  {formatTimestamp()} by <span className="underline">{isRejected ? (childType === 'kyc' ? 'AML Team' : 'Home Office') : 'Jane Advisor'}</span>
                 </p>
               )}
             </div>

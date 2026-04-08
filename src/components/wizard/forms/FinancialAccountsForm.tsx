@@ -4,7 +4,7 @@ import { Label } from '@/components/ui/label'
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui/select'
 import { Button } from '@/components/ui/button'
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from '@/components/ui/sheet'
-import { Plus, Trash2, Landmark } from 'lucide-react'
+import { Plus, Trash2 } from 'lucide-react'
 import { useWorkflow } from '@/stores/workflowStore'
 import type { AccountType, FinancialAccount } from '@/types/workflow'
 
@@ -164,29 +164,37 @@ function DeleteAccountButton({ account }: { account: FinancialAccount }) {
   )
 }
 
+function getAccountInitials(name: string) {
+  return name
+    .split(' ')
+    .filter(Boolean)
+    .map((w) => w[0])
+    .slice(0, 2)
+    .join('')
+    .toUpperCase()
+}
+
 function AccountCard({ account, onClick }: { account: FinancialAccount; onClick: () => void }) {
   return (
-    <div>
-      <button
-        type="button"
-        onClick={onClick}
-        className="flex items-center justify-between w-full p-3 hover:bg-muted/50 rounded-lg focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
-      >
-        <div className="flex items-center gap-3">
-          <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-muted">
-            <Landmark className="h-4 w-4 text-muted-foreground" />
-          </div>
-          <span className="text-sm font-medium">{account.accountName}</span>
-          {account.accountType && (
-            <span className="text-xs text-muted-foreground">{accountTypeLabels[account.accountType]}</span>
-          )}
-          {account.custodian && (
-            <span className="text-xs text-muted-foreground">at {account.custodian}</span>
-          )}
+    <button
+      type="button"
+      onClick={onClick}
+      className="flex items-center justify-between w-full p-3 hover:bg-muted/50 rounded-lg focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+    >
+      <div className="flex items-center gap-3 min-w-0">
+        <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary/10 text-primary text-xs font-medium shrink-0">
+          {getAccountInitials(account.accountName)}
         </div>
-        <DeleteAccountButton account={account} />
-      </button>
-    </div>
+        <span className="text-sm font-medium truncate">{account.accountName}</span>
+        {account.accountType && (
+          <span className="text-xs text-muted-foreground shrink-0">{accountTypeLabels[account.accountType]}</span>
+        )}
+        {account.custodian && (
+          <span className="text-xs text-muted-foreground shrink-0">at {account.custodian}</span>
+        )}
+      </div>
+      <DeleteAccountButton account={account} />
+    </button>
   )
 }
 

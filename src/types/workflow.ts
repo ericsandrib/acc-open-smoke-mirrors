@@ -133,7 +133,7 @@ export interface WorkflowState {
   /** When drilling into a funding-line or feature-service-line child, EXIT restores this account child + sub-step. */
   childActionResume?: { accountChildId: string; subTaskIndex: number }
   reviewState?: ReviewState
-  demoViewMode?: 'advisor' | 'ho-documents' | 'ho-principal'
+  demoViewMode?: 'advisor' | 'ho-documents' | 'ho-principal' | 'aml'
   submittedAt?: string
   childReviewDecision?: { outcome: 'approved' | 'rejected'; decidedAt: string }
   childReviewState?: {
@@ -141,6 +141,7 @@ export interface WorkflowState {
     principalReview?: { status: 'pending' | 'igo' | 'nigo'; decidedAt?: string; nigoReason?: string; nigoFeedback?: string }
     amlFlagged?: boolean
     amlNotes?: string
+    amlReview?: { status: 'pending' | 'cleared' | 'flagged'; decidedAt?: string; findings?: string }
   }
 }
 
@@ -185,9 +186,11 @@ export type WorkflowAction =
   | { type: 'SUBMIT_CHILD_FOR_REVIEW' }
   | { type: 'ACCEPT_CHILD_REVIEW' }
   | { type: 'REJECT_CHILD_REVIEW'; reason: string; feedback?: string }
-  | { type: 'SET_DEMO_VIEW'; mode: 'advisor' | 'ho-documents' | 'ho-principal' }
+  | { type: 'SET_DEMO_VIEW'; mode: 'advisor' | 'ho-documents' | 'ho-principal' | 'aml' }
   | { type: 'DOCUMENT_REVIEW_IGO' }
   | { type: 'DOCUMENT_REVIEW_NIGO'; reason: string; feedback?: string }
   | { type: 'PRINCIPAL_REVIEW_IGO' }
   | { type: 'PRINCIPAL_REVIEW_NIGO'; reason: string; feedback?: string }
   | { type: 'SET_AML_FLAG'; flagged: boolean; notes?: string }
+  | { type: 'AML_REVIEW_CLEAR' }
+  | { type: 'AML_REVIEW_FLAG'; findings?: string }

@@ -6,6 +6,7 @@ import { Badge } from '@/components/ui/badge'
 import { Label } from '@/components/ui/label'
 import { ChildActionKebabMenu } from '@/components/wizard/ChildActionKebabMenu'
 import { ChildActionTimelineSheet } from '@/components/wizard/ChildActionTimelineSheet'
+import { childStatusConfig, deriveChildDisplayStatus } from '@/utils/childStatusDisplay'
 import type { ChildTask } from '@/types/workflow'
 import { AccountTypePickerDialog } from './AccountTypePickerDialog'
 import type { Selection } from './AccountTypePickerDialog'
@@ -288,19 +289,18 @@ export function OpenAccountsForm() {
                       <span className="text-sm font-medium">{child.name}</span>
                     </button>
                     <div className="flex items-center gap-2">
-                      <Badge
-                        variant="secondary"
-                        className={cn(
-                          'capitalize text-xs group-hover:hidden',
-                          child.status === 'complete' && 'bg-green-100 text-green-800 border-green-200',
-                          child.status === 'in_progress' && 'bg-blue-100 text-blue-800 border-blue-200',
-                          child.status === 'awaiting_review' && 'bg-yellow-100 text-yellow-800 border-yellow-200',
-                          child.status === 'rejected' && 'bg-red-100 text-red-800 border-red-200',
-                          child.status === 'not_started' && 'bg-muted text-muted-foreground',
-                        )}
-                      >
-                        {child.status.replace('_', ' ')}
-                      </Badge>
+                      {(() => {
+                        const displayStatus = deriveChildDisplayStatus(child.status)
+                        const cfg = childStatusConfig[displayStatus]
+                        return (
+                          <Badge
+                            variant="outline"
+                            className={cn('text-xs group-hover:hidden', cfg.className)}
+                          >
+                            {cfg.label}
+                          </Badge>
+                        )
+                      })()}
                       <div className="hidden group-hover:block">
                         <ChildActionKebabMenu
                           onViewDetails={() => setTimelineChild(child)}

@@ -1,4 +1,3 @@
-import { useMemo } from 'react'
 import { useWorkflow, useChildActionContext } from '@/stores/workflowStore'
 import type { TaskStatus } from '@/types/workflow'
 import { cn } from '@/lib/utils'
@@ -61,53 +60,17 @@ function SubTaskStatusBadge({ subTaskId }: { subTaskId: string }) {
   )
 }
 
-type OverallStatus = 'not_started' | 'in_progress' | 'awaiting_review' | 'complete' | 'rejected'
+import { childStatusConfig, deriveChildDisplayStatus } from '@/utils/childStatusDisplay'
+import type { ChildDisplayStatus } from '@/utils/childStatusDisplay'
 
-const overallStatusConfig: Record<OverallStatus, { label: string; className: string }> = {
-  not_started: {
-    label: 'Not Started',
-    className: 'bg-muted text-muted-foreground border-border',
-  },
-  in_progress: {
-    label: 'In Progress',
-    className: 'bg-blue-50 text-blue-700 border-blue-200',
-  },
-  awaiting_review: {
-    label: 'In Review',
-    className: 'bg-violet-50 text-violet-700 border-violet-200',
-  },
-  complete: {
-    label: 'Approved',
-    className: 'bg-green-50 text-green-700 border-green-200',
-  },
-  rejected: {
-    label: 'Rejected',
-    className: 'bg-red-50 text-red-700 border-red-200',
-  },
-}
-
-function useChildOverallStatus(childId: string, subTaskIds: string[]): OverallStatus {
+function useChildOverallStatus(childId: string): ChildDisplayStatus {
   const { state } = useWorkflow()
 
   const child = state.tasks
     .flatMap((t) => t.children ?? [])
     .find((c) => c.id === childId)
 
-  if (child) {
-    if (child.status === 'awaiting_review') return 'awaiting_review'
-    if (child.status === 'complete') return 'complete'
-    if (child.status === 'rejected') return 'rejected'
-  }
-
-  const completedCount = subTaskIds.filter((id) => state.submittedTaskIds.includes(id)).length
-  const startedCount = subTaskIds.filter(
-    (id) => !!state.taskData[id] && Object.keys(state.taskData[id]).length > 0,
-  ).length
-
-  if (completedCount === subTaskIds.length) return 'complete'
-  if (completedCount > 0 || startedCount === subTaskIds.length) return 'awaiting_review'
-  if (startedCount > 0) return 'in_progress'
-  return 'not_started'
+  return deriveChildDisplayStatus(child?.status ?? 'not_started', state.childReviewState)
 }
 
 function backLabelForParent(formKey: string | undefined): string {
@@ -126,12 +89,8 @@ export function ChildActionSidebar() {
   const { state, dispatch } = useWorkflow()
   const ctx = useChildActionContext()
 
-  const subTaskIds = useMemo(() => {
-    if (!ctx) return [] as string[]
-    return ctx.config.subTasks.map((st) => `${ctx.child.id}-${st.suffix}`)
-  }, [ctx])
-  const overallStatus = useChildOverallStatus(ctx?.child.id ?? '', subTaskIds)
-  const statusCfg = overallStatusConfig[overallStatus]
+  const overallStatus = useChildOverallStatus(ctx?.child.id ?? '')
+  const statusCfg = childStatusConfig[overallStatus]
 
   if (!ctx) return null
 

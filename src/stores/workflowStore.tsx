@@ -574,6 +574,10 @@ function workflowReducer(state: WorkflowState, action: WorkflowAction): Workflow
     case 'SUBMIT_CHILD_FOR_REVIEW': {
       if (!state.activeChildActionId) return state
       const cid = state.activeChildActionId
+      const submittedChild = state.tasks
+        .flatMap((t) => t.children ?? [])
+        .find((c) => c.id === cid)
+      const isKycChild = submittedChild?.childType === 'kyc'
       const updTasks = state.tasks.map((t) => {
         if (!t.children) return t
         return {
@@ -589,8 +593,10 @@ function workflowReducer(state: WorkflowState, action: WorkflowAction): Workflow
         activeChildSubTaskIndex: 0,
         childReviewState: {
           ...state.childReviewState,
-          documentReview: { status: 'pending' },
-          principalReview: { status: 'pending' },
+          ...(isKycChild
+            ? { amlReview: { status: 'pending' as const } }
+            : { documentReview: { status: 'pending' }, principalReview: { status: 'pending' } }
+          ),
         },
       }
     }
@@ -754,6 +760,54 @@ function workflowReducer(state: WorkflowState, action: WorkflowAction): Workflow
             rejectedBy: 'Principal Review Team',
           },
         },
+      }
+    }
+
+    case 'AML_REVIEW_CLEAR': {
+      if (!state.activeChildActionId) return state
+      const amlClearTs = new Date().toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })
+      const amlClearId = state.activeChildActionId
+      const amlClearTasks = state.tasks.map((t) => {
+        if (!t.children) return t
+        return {
+          ...t,
+          children: t.children.map((c) =>
+            c.id === amlClearId ? { ...c, status: 'complete' as const } : c,
+          ),
+        }
+      })
+      return {
+        ...state,
+        tasks: amlClearTasks,
+        childReviewState: {
+          ...state.childReviewState,
+          amlReview: { status: 'cleared', decidedAt: amlClearTs },
+        },
+        childReviewDecision: { outcome: 'approved', decidedAt: amlClearTs },
+      }
+    }
+
+    case 'AML_REVIEW_FLAG': {
+      if (!state.activeChildActionId) return state
+      const amlFlagTs = new Date().toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })
+      const amlFlagId = state.activeChildActionId
+      const amlFlagTasks = state.tasks.map((t) => {
+        if (!t.children) return t
+        return {
+          ...t,
+          children: t.children.map((c) =>
+            c.id === amlFlagId ? { ...c, status: 'rejected' as const } : c,
+          ),
+        }
+      })
+      return {
+        ...state,
+        tasks: amlFlagTasks,
+        childReviewState: {
+          ...state.childReviewState,
+          amlReview: { status: 'flagged', decidedAt: amlFlagTs, findings: action.findings },
+        },
+        childReviewDecision: { outcome: 'rejected', decidedAt: amlFlagTs },
       }
     }
 
