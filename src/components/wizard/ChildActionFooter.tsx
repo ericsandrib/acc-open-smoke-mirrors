@@ -77,10 +77,13 @@ export function ChildActionFooter() {
     setShowResubmitModal(false)
   }
 
+  const hideNextInAdvisorAfterSubmit =
+    isAdvisorView && child.status === 'awaiting_review' && !advisorUnlocked
+
   if (isAdvisorView || isAmlView || isHoKycView || isHoPrincipalKycView) {
     return (
       <>
-        <footer className="border-t border-border bg-background px-6 py-3 flex justify-between items-center shrink-0">
+        <footer className="border-t border-border bg-background px-6 py-3 min-h-14 flex justify-between items-center shrink-0 box-border">
           <div>
             {!isFirst && (
               <Button variant="outline" onClick={() => dispatch({ type: 'CHILD_GO_BACK' })}>
@@ -113,7 +116,7 @@ export function ChildActionFooter() {
                 <span>Submitted for {isKyc ? 'home office' : 'home office review'} at {state.submittedAt ?? 'N/A'}</span>
               </div>
             )}
-            {!isLast && (
+            {!isLast && !hideNextInAdvisorAfterSubmit && (
               <Button onClick={() => dispatch({ type: 'CHILD_GO_NEXT' })}>
                 Next
                 <ChevronRight className="h-4 w-4" />
@@ -167,7 +170,7 @@ export function ChildActionFooter() {
 
   return (
     <>
-      <footer className="border-t border-border bg-background px-6 py-3 flex justify-between items-center shrink-0">
+      <footer className="border-t border-border bg-background px-6 py-3 min-h-14 flex justify-between items-center shrink-0 box-border">
         <div>
           {!isFirst && (
             <Button

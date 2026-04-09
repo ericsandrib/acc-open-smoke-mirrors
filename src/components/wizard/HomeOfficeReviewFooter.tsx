@@ -27,7 +27,7 @@ export function HomeOfficeReviewFooter() {
   if (isDocView) {
     if (docReview?.status === 'igo') {
       return (
-        <footer className="border-t border-border bg-background px-6 py-3 flex items-center justify-end shrink-0">
+        <footer className="border-t border-border bg-background px-6 py-3 min-h-14 flex items-center justify-center shrink-0 box-border">
           <div className="flex items-center gap-2 text-sm">
             <CheckCircle2 className="h-4 w-4 text-green-600" />
             <span className="text-green-700 font-medium">IGO — Passed to Principal Review</span>
@@ -39,7 +39,7 @@ export function HomeOfficeReviewFooter() {
 
     if (docReview?.status === 'nigo') {
       return (
-        <footer className="border-t border-border bg-background px-6 py-3 flex items-center justify-end shrink-0">
+        <footer className="border-t border-border bg-background px-6 py-3 min-h-14 flex items-center justify-center shrink-0 box-border">
           <div className="flex items-center gap-2 text-sm">
             <XCircle className="h-4 w-4 text-destructive" />
             <span className="text-destructive font-medium">NIGO — Sent back to advisor</span>
@@ -51,7 +51,7 @@ export function HomeOfficeReviewFooter() {
 
     if (amlEscalated) {
       return (
-        <footer className="border-t border-border bg-background px-6 py-3 flex items-center justify-end shrink-0">
+        <footer className="border-t border-border bg-background px-6 py-3 min-h-14 flex items-center justify-center shrink-0 box-border">
           <div className="flex items-center gap-2 text-sm">
             <ShieldAlert className="h-4 w-4 text-red-600" />
             <span className="text-red-700 font-medium">SAR Escalated — Cannot approve</span>
@@ -62,15 +62,11 @@ export function HomeOfficeReviewFooter() {
 
     return (
       <>
-        <footer className="border-t border-border bg-background px-6 py-3 flex items-center justify-end shrink-0">
-          <div className="flex items-center gap-3">
-            {amlBlocked && (
-              <span className="text-xs text-amber-600 font-medium mr-2">
-                AML review must complete before approval
-              </span>
-            )}
+        <footer className="border-t border-border bg-background px-6 py-3 min-h-14 flex items-center justify-center shrink-0 box-border">
+          <div className="flex items-center gap-2">
             <Button
               variant="outline"
+              size="sm"
               className="text-destructive border-destructive/30 hover:bg-destructive/10"
               onClick={() => setShowNigoModal(true)}
             >
@@ -78,6 +74,7 @@ export function HomeOfficeReviewFooter() {
               NIGO
             </Button>
             <Button
+              size="sm"
               className="bg-green-600 hover:bg-green-700 text-white"
               disabled={amlBlocked}
               onClick={() => setShowApproveConfirm(true)}
@@ -136,7 +133,7 @@ export function HomeOfficeReviewFooter() {
   if (isPrincipalView) {
     if (principalReview?.status === 'igo') {
       return (
-        <footer className="border-t border-border bg-background px-6 py-3 flex items-center justify-end shrink-0">
+        <footer className="border-t border-border bg-background px-6 py-3 min-h-14 flex items-center justify-center shrink-0 box-border">
           <div className="flex items-center gap-2 text-sm">
             <CheckCircle2 className="h-4 w-4 text-green-600" />
             <span className="text-green-700 font-medium">Approved — Account cleared for processing</span>
@@ -148,7 +145,7 @@ export function HomeOfficeReviewFooter() {
 
     if (principalReview?.status === 'nigo') {
       return (
-        <footer className="border-t border-border bg-background px-6 py-3 flex items-center justify-end shrink-0">
+        <footer className="border-t border-border bg-background px-6 py-3 min-h-14 flex items-center justify-center shrink-0 box-border">
           <div className="flex items-center gap-2 text-sm">
             <XCircle className="h-4 w-4 text-destructive" />
             <span className="text-destructive font-medium">Rejected — Sent back to advisor</span>
@@ -160,7 +157,7 @@ export function HomeOfficeReviewFooter() {
 
     if (amlEscalated) {
       return (
-        <footer className="border-t border-border bg-background px-6 py-3 flex items-center justify-end shrink-0">
+        <footer className="border-t border-border bg-background px-6 py-3 min-h-14 flex items-center justify-center shrink-0 box-border">
           <div className="flex items-center gap-2 text-sm">
             <ShieldAlert className="h-4 w-4 text-red-600" />
             <span className="text-red-700 font-medium">SAR Escalated — Cannot approve</span>
@@ -175,13 +172,8 @@ export function HomeOfficeReviewFooter() {
 
     return (
       <>
-        <footer className="border-t border-border bg-background px-6 py-3 flex items-center justify-end shrink-0">
-          <div className="flex items-center gap-3">
-            {blocked && (
-              <span className="text-xs text-amber-600 font-medium mr-2">
-                {!amlCleared ? 'AML must be cleared' : 'Document review must pass IGO'} before approval
-              </span>
-            )}
+        <footer className="border-t border-border bg-background px-6 py-3 min-h-14 flex items-center justify-center shrink-0 box-border">
+          <div className="flex items-center gap-2">
             <Button
               variant="destructive"
               size="sm"
@@ -250,7 +242,7 @@ export function HomeOfficeReviewFooter() {
   if (decision) {
     const isApproved = decision.outcome === 'approved'
     return (
-      <footer className="border-t border-border bg-background px-6 py-3 flex items-center justify-end shrink-0">
+      <footer className="border-t border-border bg-background px-6 py-3 min-h-14 flex items-center justify-center shrink-0 box-border">
         <div className="flex items-center gap-2 text-sm">
           {isApproved ? (
             <>

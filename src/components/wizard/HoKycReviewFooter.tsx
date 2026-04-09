@@ -24,7 +24,7 @@ export function HoKycReviewFooter() {
 
   if (hoKycReview?.status === 'approved') {
     return (
-      <footer className="border-t border-border bg-background px-6 py-3 flex items-center justify-end shrink-0">
+      <footer className="border-t border-border bg-background px-6 py-3 min-h-14 flex items-center justify-end shrink-0 box-border">
         <div className="flex items-center gap-2 text-sm">
           <CheckCircle2 className="h-4 w-4 text-green-600" />
           <span className="text-green-700 font-medium">KYC Approved</span>
@@ -36,7 +36,7 @@ export function HoKycReviewFooter() {
 
   if (amlEscalated) {
     return (
-      <footer className="border-t border-border bg-background px-6 py-3 flex items-center justify-end shrink-0">
+      <footer className="border-t border-border bg-background px-6 py-3 min-h-14 flex items-center justify-end shrink-0 box-border">
         <div className="flex items-center gap-2 text-sm">
           <ShieldAlert className="h-4 w-4 text-red-600" />
           <span className="text-red-700 font-medium">SAR Escalated — Cannot approve</span>
@@ -47,7 +47,7 @@ export function HoKycReviewFooter() {
 
   return (
     <>
-      <footer className="border-t border-border bg-background px-6 py-3 flex items-center justify-end shrink-0">
+      <footer className="border-t border-border bg-background px-6 py-3 min-h-14 flex items-center justify-end shrink-0 box-border">
         <div className="flex items-center gap-3">
           {amlBlocked && (
             <span className="text-xs text-amber-600 font-medium mr-2">

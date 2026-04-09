@@ -27,7 +27,7 @@ export function HoPrincipalKycFooter() {
 
   if (principalKycReview?.status === 'approved') {
     return (
-      <footer className="border-t border-border bg-background px-6 py-3 flex items-center justify-end shrink-0">
+      <footer className="border-t border-border bg-background px-6 py-3 min-h-14 flex items-center justify-end shrink-0 box-border">
         <div className="flex items-center gap-2 text-sm">
           <CheckCircle2 className="h-4 w-4 text-green-600" />
           <span className="text-green-700 font-medium">Principal Sign-Off Complete</span>
@@ -39,7 +39,7 @@ export function HoPrincipalKycFooter() {
 
   if (principalKycReview?.status === 'rejected') {
     return (
-      <footer className="border-t border-border bg-background px-6 py-3 flex items-center justify-end shrink-0">
+      <footer className="border-t border-border bg-background px-6 py-3 min-h-14 flex items-center justify-end shrink-0 box-border">
         <div className="flex items-center gap-2 text-sm">
           <XCircle className="h-4 w-4 text-red-600" />
           <span className="text-red-700 font-medium">Principal Rejected</span>
@@ -51,7 +51,7 @@ export function HoPrincipalKycFooter() {
 
   if (amlEscalated) {
     return (
-      <footer className="border-t border-border bg-background px-6 py-3 flex items-center justify-end shrink-0">
+      <footer className="border-t border-border bg-background px-6 py-3 min-h-14 flex items-center justify-end shrink-0 box-border">
         <div className="flex items-center gap-2 text-sm">
           <ShieldAlert className="h-4 w-4 text-red-600" />
           <span className="text-red-700 font-medium">SAR Escalated — Sign-off blocked</span>
@@ -62,7 +62,7 @@ export function HoPrincipalKycFooter() {
 
   return (
     <>
-      <footer className="border-t border-border bg-background px-6 py-3 flex items-center justify-end shrink-0">
+      <footer className="border-t border-border bg-background px-6 py-3 min-h-14 flex items-center justify-end shrink-0 box-border">
         <div className="flex items-center gap-3">
           {blocked && (
             <span className="text-xs text-amber-600 font-medium mr-2">

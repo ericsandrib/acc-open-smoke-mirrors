@@ -1,6 +1,250 @@
+import type { WorkflowState } from '@/types/workflow'
 import { useWorkflow, useChildActionContext, useAdvisorUnlocked } from '@/stores/workflowStore'
 import { formComponents, taskDescriptions } from './formRegistry'
-import { ShieldCheck, Lock, AlertTriangle, CheckCircle2 } from 'lucide-react'
+import { Badge } from '@/components/ui/badge'
+import { ShieldAlert, ShieldCheck, Lock, AlertTriangle, CheckCircle2, Clock, FileText, FileSearch } from 'lucide-react'
+
+type ChildReviewState = NonNullable<WorkflowState['childReviewState']>
+
+function AmlAccountOpeningBanners({ amlReview }: { amlReview: ChildReviewState['amlReview'] }) {
+  if (!amlReview) return null
+
+  if (amlReview.status === 'cleared') {
+    return (
+      <div className="rounded-lg border border-green-200 bg-green-50 dark:border-green-900/50 dark:bg-green-950/30 px-4 py-3 mb-6">
+        <div className="flex items-start gap-3">
+          <CheckCircle2 className="h-5 w-5 text-green-600 mt-0.5 shrink-0" />
+          <div className="space-y-0.5">
+            <p className="text-sm font-medium text-green-900 dark:text-green-100">AML Review Cleared</p>
+            <p className="text-xs text-green-800/80 dark:text-green-200/70">
+              This account opening has been cleared by the AML team. Cleared at {amlReview.decidedAt}.
+            </p>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  if (amlReview.status === 'flagged') {
+    return (
+      <div className="rounded-lg border border-red-200 bg-red-50 dark:border-red-900/50 dark:bg-red-950/30 px-4 py-3 mb-6">
+        <div className="flex items-start gap-3">
+          <AlertTriangle className="h-5 w-5 text-red-600 mt-0.5 shrink-0" />
+          <div className="space-y-1">
+            <p className="text-sm font-medium text-red-900 dark:text-red-100">Flagged for Further Review</p>
+            <p className="text-xs text-red-800/80 dark:text-red-200/70">
+              Flagged by the AML team at {amlReview.decidedAt}.
+            </p>
+            {amlReview.findings && (
+              <div className="mt-2 rounded-md bg-red-100/60 dark:bg-red-900/30 px-3 py-2">
+                <p className="text-xs text-red-900 dark:text-red-100">
+                  <span className="font-semibold">Findings:</span> {amlReview.findings}
+                </p>
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  if (amlReview.status === 'pending') {
+    return (
+      <div className="rounded-lg border border-amber-200 bg-amber-50 dark:border-amber-900/50 dark:bg-amber-950/30 px-4 py-3 mb-6">
+        <div className="flex items-start gap-3">
+          <ShieldAlert className="h-5 w-5 text-amber-600 mt-0.5 shrink-0" />
+          <div className="space-y-0.5">
+            <p className="text-sm font-medium text-amber-900 dark:text-amber-100">Pending AML Review</p>
+            <p className="text-xs text-amber-800/80 dark:text-amber-200/70">
+              This account opening is awaiting AML/sanctions screening. Review the information below and take action.
+            </p>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  if (amlReview.status === 'info_requested') {
+    return (
+      <div className="rounded-lg border border-blue-200 bg-blue-50 dark:border-blue-900/50 dark:bg-blue-950/30 px-4 py-3 mb-6">
+        <div className="flex items-start gap-3">
+          <Clock className="h-5 w-5 text-blue-600 mt-0.5 shrink-0" />
+          <div className="space-y-0.5">
+            <p className="text-sm font-medium text-blue-900 dark:text-blue-100">Additional Info Requested</p>
+            <p className="text-xs text-blue-800/80 dark:text-blue-200/70">
+              Waiting for response from the Home Office.
+            </p>
+            {amlReview.infoRequestComments && (
+              <div className="mt-2 rounded-md bg-blue-100/60 dark:bg-blue-900/30 px-3 py-2">
+                <p className="text-xs text-blue-900 dark:text-blue-100">
+                  <span className="font-semibold">Your request:</span> {amlReview.infoRequestComments}
+                </p>
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  if (amlReview.status === 'escalated') {
+    return (
+      <div className="rounded-lg border border-red-200 bg-red-50 dark:border-red-900/50 dark:bg-red-950/30 px-4 py-3 mb-6">
+        <div className="flex items-start gap-3">
+          <AlertTriangle className="h-5 w-5 text-red-600 mt-0.5 shrink-0" />
+          <div className="space-y-0.5">
+            <p className="text-sm font-medium text-red-900 dark:text-red-100">SAR Escalated</p>
+            <p className="text-xs text-red-800/80 dark:text-red-200/70">
+              Escalated at {amlReview.decidedAt}.
+            </p>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  return null
+}
+
+function HoDocumentAccountOpeningBanners({
+  docReview,
+}: {
+  docReview: ChildReviewState['documentReview']
+}) {
+  if (!docReview) return null
+
+  if (docReview.status === 'igo') {
+    return (
+      <div className="rounded-lg border border-green-200 bg-green-50 dark:border-green-900/50 dark:bg-green-950/30 px-4 py-3 mb-6">
+        <div className="flex items-start gap-3">
+          <CheckCircle2 className="h-5 w-5 text-green-600 mt-0.5 shrink-0" />
+          <div className="space-y-0.5">
+            <p className="text-sm font-medium text-green-900 dark:text-green-100">Document Review — In Good Order</p>
+            <p className="text-xs text-green-800/80 dark:text-green-200/70">
+              Documents passed review and were sent to Principal Review at {docReview.decidedAt}.
+            </p>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  if (docReview.status === 'nigo') {
+    return (
+      <div className="rounded-lg border border-red-200 bg-red-50 dark:border-red-900/50 dark:bg-red-950/30 px-4 py-3 mb-6">
+        <div className="flex items-start gap-3">
+          <AlertTriangle className="h-5 w-5 text-red-600 mt-0.5 shrink-0" />
+          <div className="space-y-1">
+            <p className="text-sm font-medium text-red-900 dark:text-red-100">Document Review — NIGO</p>
+            <p className="text-xs text-red-800/80 dark:text-red-200/70">
+              Returned to the advisor at {docReview.decidedAt}.
+            </p>
+            {docReview.nigoReason && (
+              <div className="mt-2 rounded-md bg-red-100/60 dark:bg-red-900/30 px-3 py-2 space-y-1">
+                <p className="text-xs text-red-900 dark:text-red-100">
+                  <span className="font-semibold">Reason:</span> {docReview.nigoReason}
+                </p>
+                {docReview.nigoFeedback && (
+                  <p className="text-xs text-red-800/90 dark:text-red-200/80">
+                    <span className="font-semibold">Feedback:</span> {docReview.nigoFeedback}
+                  </p>
+                )}
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  if (docReview.status === 'pending') {
+    return (
+      <div className="rounded-lg border border-amber-200 bg-amber-50 dark:border-amber-900/50 dark:bg-amber-950/30 px-4 py-3 mb-6">
+        <div className="flex items-start gap-3">
+          <FileSearch className="h-5 w-5 text-amber-600 mt-0.5 shrink-0" />
+          <div className="space-y-0.5">
+            <p className="text-sm font-medium text-amber-900 dark:text-amber-100">Pending Document Team Review</p>
+            <p className="text-xs text-amber-800/80 dark:text-amber-200/70">
+              Review the account documentation below and mark IGO or NIGO when ready.
+            </p>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  return null
+}
+
+function HoPrincipalAccountOpeningBanners({
+  principalReview,
+}: {
+  principalReview: ChildReviewState['principalReview']
+}) {
+  if (!principalReview) return null
+
+  if (principalReview.status === 'igo') {
+    return (
+      <div className="rounded-lg border border-green-200 bg-green-50 dark:border-green-900/50 dark:bg-green-950/30 px-4 py-3 mb-6">
+        <div className="flex items-start gap-3">
+          <CheckCircle2 className="h-5 w-5 text-green-600 mt-0.5 shrink-0" />
+          <div className="space-y-0.5">
+            <p className="text-sm font-medium text-green-900 dark:text-green-100">Principal Review — Approved</p>
+            <p className="text-xs text-green-800/80 dark:text-green-200/70">
+              This account opening was approved at {principalReview.decidedAt}.
+            </p>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  if (principalReview.status === 'nigo') {
+    return (
+      <div className="rounded-lg border border-red-200 bg-red-50 dark:border-red-900/50 dark:bg-red-950/30 px-4 py-3 mb-6">
+        <div className="flex items-start gap-3">
+          <AlertTriangle className="h-5 w-5 text-red-600 mt-0.5 shrink-0" />
+          <div className="space-y-1">
+            <p className="text-sm font-medium text-red-900 dark:text-red-100">Principal Review — NIGO</p>
+            <p className="text-xs text-red-800/80 dark:text-red-200/70">
+              Returned to the advisor at {principalReview.decidedAt}.
+            </p>
+            {principalReview.nigoReason && (
+              <div className="mt-2 rounded-md bg-red-100/60 dark:bg-red-900/30 px-3 py-2 space-y-1">
+                <p className="text-xs text-red-900 dark:text-red-100">
+                  <span className="font-semibold">Reason:</span> {principalReview.nigoReason}
+                </p>
+                {principalReview.nigoFeedback && (
+                  <p className="text-xs text-red-800/90 dark:text-red-200/80">
+                    <span className="font-semibold">Feedback:</span> {principalReview.nigoFeedback}
+                  </p>
+                )}
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  if (principalReview.status === 'pending') {
+    return (
+      <div className="rounded-lg border border-amber-200 bg-amber-50 dark:border-amber-900/50 dark:bg-amber-950/30 px-4 py-3 mb-6">
+        <div className="flex items-start gap-3">
+          <ShieldCheck className="h-5 w-5 text-amber-600 mt-0.5 shrink-0" />
+          <div className="space-y-0.5">
+            <p className="text-sm font-medium text-amber-900 dark:text-amber-100">Pending HO Principal Team</p>
+            <p className="text-xs text-amber-800/80 dark:text-amber-200/70">
+              Review the account opening below and approve or return with feedback when ready.
+            </p>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  return null
+}
 
 function AdvisorViewBanner() {
   const { state } = useWorkflow()
@@ -190,11 +434,21 @@ export function ChildActionContent() {
   const description = taskDescriptions[currentSubTask.formKey]
   const inReview = child.status === 'awaiting_review'
   const advisorDisabled = isAdvisorView && !advisorUnlocked
+  const isAmlAccountOpening = state.demoViewMode === 'aml' && child.childType === 'account-opening'
+  const isHoDocAccountOpening =
+    state.demoViewMode === 'ho-documents' && child.childType === 'account-opening'
+  const isHoPrincipalAccountOpening =
+    state.demoViewMode === 'ho-principal' && child.childType === 'account-opening'
+  const isHoTeamAccountOpening = isHoDocAccountOpening || isHoPrincipalAccountOpening
+  const reviewState = state.childReviewState
+  const amlFlagged = reviewState?.amlFlagged
+  const amlNotes = reviewState?.amlNotes
+  const formReadOnly = advisorDisabled || isAmlAccountOpening || isHoTeamAccountOpening
 
   return (
     <main className="flex-1 overflow-y-auto p-8">
       <div className="max-w-2xl mx-auto">
-        {inReview && !isAdvisorView && (
+        {inReview && !isAdvisorView && !isAmlAccountOpening && !isHoTeamAccountOpening && (
           <div className="rounded-lg border border-violet-200 bg-violet-50 dark:border-violet-900/60 dark:bg-violet-950/40 px-4 py-3 mb-6">
             <div className="flex items-start gap-3">
               <ShieldCheck className="h-5 w-5 text-violet-600 dark:text-violet-400 mt-0.5 shrink-0" />
@@ -212,14 +466,37 @@ export function ChildActionContent() {
           </div>
         )}
         {isAdvisorView && <AdvisorViewBanner />}
+        {isAmlAccountOpening && <AmlAccountOpeningBanners amlReview={reviewState?.amlReview} />}
+        {isHoDocAccountOpening && <HoDocumentAccountOpeningBanners docReview={reviewState?.documentReview} />}
+        {isHoPrincipalAccountOpening && (
+          <HoPrincipalAccountOpeningBanners principalReview={reviewState?.principalReview} />
+        )}
+        {(isAmlAccountOpening || isHoTeamAccountOpening) && amlFlagged && amlNotes && (
+          <div className="rounded-lg border border-amber-200 bg-amber-50/50 dark:border-amber-900/40 dark:bg-amber-950/20 px-4 py-3 mb-6">
+            <div className="flex items-start gap-3">
+              <FileText className="h-4 w-4 text-amber-600 mt-0.5 shrink-0" />
+              <div className="space-y-0.5">
+                <p className="text-xs font-semibold text-amber-900 dark:text-amber-100">Advisor Notes</p>
+                <p className="text-sm text-amber-800/90 dark:text-amber-200/80">{amlNotes}</p>
+              </div>
+            </div>
+          </div>
+        )}
         <p className="text-sm text-muted-foreground mb-1">{child.name}</p>
+        {(isAmlAccountOpening || isHoTeamAccountOpening) && amlFlagged && (
+          <div className="flex items-center gap-3 mb-2">
+            <Badge variant="outline" className="text-red-700 border-red-200 bg-red-50 dark:text-red-200 dark:border-red-800 dark:bg-red-950/40 text-[10px]">
+              Advisor Flagged
+            </Badge>
+          </div>
+        )}
         <h2 className="text-3xl font-semibold text-foreground mb-6">
           {currentSubTask.title}
         </h2>
         {description && (
           <p className="text-base text-muted-foreground mb-6">{description}</p>
         )}
-        <div className={advisorDisabled ? 'pointer-events-none opacity-75 select-none' : ''}>
+        <div className={formReadOnly ? 'pointer-events-none opacity-75 select-none' : ''}>
           {FormComponent ? <FormComponent /> : <p className="text-muted-foreground">No form available.</p>}
         </div>
       </div>

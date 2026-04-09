@@ -97,23 +97,15 @@ export function ChildActionSidebar() {
 
   const { child, config, subTaskIndex, parentTask } = ctx
   const viewMode = state.demoViewMode
-  const isHoDocView = viewMode === 'ho-documents'
-  const isHoPrincipalView = viewMode === 'ho-principal'
-  const isHoView = isHoDocView || isHoPrincipalView
-  const isAmlView = viewMode === 'aml'
   const isHoKycView = viewMode === 'ho-kyc'
   const isHoPrincipalKycView = viewMode === 'ho-principal-kyc'
 
-  const hoTaskLabel = isHoDocView ? 'Document Review' : isHoPrincipalView ? 'Principal Review' : null
-  const reviewTaskLabel =
-    isAmlView
-      ? 'AML Review'
-      : child.childType === 'kyc' && isHoKycView
-        ? 'Home Office Review'
-        : child.childType === 'kyc' && isHoPrincipalKycView
-          ? 'Principal Review'
-          : null
-  const showSingleReviewStep = Boolean((isHoView && hoTaskLabel) || reviewTaskLabel)
+  // Only collapse to one pseudo-step for KYC Home Office / Principal KYC modes. AML Team, HO
+  // Document, and HO Principal account-opening views use the same numbered subtasks as Advisor
+  // (e.g. Account & owners → Documents).
+  const showSingleReviewStep =
+    child.childType === 'kyc' && (isHoKycView || isHoPrincipalKycView)
+  const singleReviewStepLabel = isHoKycView ? 'Home Office Review' : 'Principal Review'
 
   return (
     <TooltipProvider delayDuration={300}>
@@ -139,7 +131,7 @@ export function ChildActionSidebar() {
               <div className="w-full text-left px-3 py-2 rounded-md text-sm flex items-center gap-2 bg-accent text-accent-foreground font-medium">
                 <span className="flex items-center gap-2 truncate">
                   <span className="text-xs text-muted-foreground w-4 shrink-0">1.</span>
-                  {reviewTaskLabel ?? hoTaskLabel}
+                  {singleReviewStepLabel}
                 </span>
               </div>
             </li>

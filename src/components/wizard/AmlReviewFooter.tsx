@@ -21,7 +21,7 @@ export function AmlReviewFooter() {
 
   if (amlReview?.status === 'cleared') {
     return (
-      <footer className="border-t border-border bg-background px-6 py-3 flex items-center justify-end shrink-0">
+      <footer className="border-t border-border bg-background px-6 py-3 min-h-14 flex items-center justify-center shrink-0 box-border">
         <div className="flex items-center gap-2 text-sm">
           <CheckCircle2 className="h-4 w-4 text-green-600" />
           <span className="text-green-700 font-medium">Cleared — Ready for Home Office approval</span>
@@ -33,7 +33,7 @@ export function AmlReviewFooter() {
 
   if (amlReview?.status === 'flagged') {
     return (
-      <footer className="border-t border-border bg-background px-6 py-3 flex items-center justify-end shrink-0">
+      <footer className="border-t border-border bg-background px-6 py-3 min-h-14 flex items-center justify-center shrink-0 box-border">
         <div className="flex items-center gap-2 text-sm">
           <XCircle className="h-4 w-4 text-destructive" />
           <span className="text-destructive font-medium">Flagged — Returned to advisor</span>
@@ -45,7 +45,7 @@ export function AmlReviewFooter() {
 
   if (amlReview?.status === 'escalated') {
     return (
-      <footer className="border-t border-border bg-background px-6 py-3 flex items-center justify-end shrink-0">
+      <footer className="border-t border-border bg-background px-6 py-3 min-h-14 flex items-center justify-center shrink-0 box-border">
         <div className="flex items-center gap-2 text-sm">
           <ShieldAlert className="h-4 w-4 text-red-600" />
           <span className="text-red-700 font-medium">Rejected — AML Review</span>
@@ -57,7 +57,7 @@ export function AmlReviewFooter() {
 
   if (amlReview?.status === 'info_requested') {
     return (
-      <footer className="border-t border-border bg-background px-6 py-3 flex items-center justify-end shrink-0">
+      <footer className="border-t border-border bg-background px-6 py-3 min-h-14 flex items-center justify-center shrink-0 box-border">
         <div className="flex items-center gap-2 text-sm">
           <ShieldAlert className="h-4 w-4 text-red-600" />
           <span className="text-red-700 font-medium">Rejected — AML Review</span>
@@ -69,7 +69,7 @@ export function AmlReviewFooter() {
 
   return (
     <>
-      <footer className="border-t border-border bg-background px-6 py-3 flex items-center justify-end shrink-0">
+      <footer className="border-t border-border bg-background px-6 py-3 min-h-14 flex items-center justify-center shrink-0 box-border">
         <div className="flex items-center gap-2">
           <Button
             variant="outline"

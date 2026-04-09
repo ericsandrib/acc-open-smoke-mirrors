@@ -153,14 +153,33 @@ export function WizardLayout() {
         <div className="flex flex-1 overflow-hidden">
           {inChildAction ? (
             isAmlView ? (
-              <>
-                <ChildActionSidebar />
-                <div className="flex-1 flex flex-col overflow-hidden">
-                  <ChildAmlReviewContent />
+              activeChild?.childType === 'account-opening' ? (
+                <div className="flex-1 flex flex-col min-h-0 min-w-0 overflow-hidden">
+                  <div className="flex flex-1 min-h-0 overflow-hidden">
+                    <ChildActionSidebar />
+                    <div className="flex flex-1 min-h-0 overflow-hidden min-w-0">
+                      <div className="flex-1 flex flex-col overflow-hidden min-w-0">
+                        <ChildActionContent />
+                      </div>
+                      <ChildActionRightSidebar />
+                    </div>
+                  </div>
                   <AmlReviewFooter />
                 </div>
-                <ChildActionRightSidebar />
-              </>
+              ) : (
+                <div className="flex-1 flex flex-col min-h-0 min-w-0 overflow-hidden">
+                  <div className="flex flex-1 min-h-0 overflow-hidden">
+                    <ChildActionSidebar />
+                    <div className="flex flex-1 min-h-0 overflow-hidden min-w-0">
+                      <div className="flex-1 flex flex-col overflow-hidden min-w-0">
+                        <ChildAmlReviewContent />
+                      </div>
+                      <ChildActionRightSidebar />
+                    </div>
+                  </div>
+                  <AmlReviewFooter />
+                </div>
+              )
             ) : isHoKycView ? (
               <>
                 <ChildActionSidebar />
@@ -180,14 +199,33 @@ export function WizardLayout() {
                 <ChildActionRightSidebar />
               </>
             ) : isHomeOfficeView ? (
-              <>
-                <ChildActionSidebar />
-                <div className="flex-1 flex flex-col overflow-hidden">
-                  {isHoDocView ? <ChildHoDocumentViewContent /> : <ChildHoPrincipalViewContent />}
+              activeChild?.childType === 'account-opening' ? (
+                <div className="flex-1 flex flex-col min-h-0 min-w-0 overflow-hidden">
+                  <div className="flex flex-1 min-h-0 overflow-hidden">
+                    <ChildActionSidebar />
+                    <div className="flex flex-1 min-h-0 overflow-hidden min-w-0">
+                      <div className="flex-1 flex flex-col overflow-hidden min-w-0">
+                        <ChildActionContent />
+                      </div>
+                      <ChildActionRightSidebar />
+                    </div>
+                  </div>
                   <HomeOfficeReviewFooter />
                 </div>
-                <ChildActionRightSidebar />
-              </>
+              ) : (
+                <div className="flex-1 flex flex-col min-h-0 min-w-0 overflow-hidden">
+                  <div className="flex flex-1 min-h-0 overflow-hidden">
+                    <ChildActionSidebar />
+                    <div className="flex flex-1 min-h-0 overflow-hidden min-w-0">
+                      <div className="flex-1 flex flex-col overflow-hidden min-w-0">
+                        {isHoDocView ? <ChildHoDocumentViewContent /> : <ChildHoPrincipalViewContent />}
+                      </div>
+                      <ChildActionRightSidebar />
+                    </div>
+                  </div>
+                  <HomeOfficeReviewFooter />
+                </div>
+              )
             ) : (
               <>
                 <ChildActionSidebar />

@@ -9,7 +9,7 @@ export function AdvisorViewFooter() {
   const isLast = idx === state.flatTaskOrder.length - 1
 
   return (
-    <footer className="border-t border-border bg-background px-6 py-3 flex justify-between items-center shrink-0">
+    <footer className="border-t border-border bg-background px-6 py-3 min-h-14 flex justify-between items-center shrink-0 box-border">
       <div>
         {!isFirst && (
           <Button variant="outline" onClick={() => dispatch({ type: 'GO_BACK' })}>

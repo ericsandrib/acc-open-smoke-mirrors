@@ -33,7 +33,7 @@ export function WizardFooter() {
   const isSubmitted = state.submittedTaskIds.includes(state.activeTaskId)
 
   return (
-    <footer className="border-t border-border bg-background px-6 py-3 flex justify-between items-center shrink-0">
+    <footer className="border-t border-border bg-background px-6 py-3 min-h-14 flex justify-between items-center shrink-0 box-border">
       <div>
         {!isFirst && (
           <Button

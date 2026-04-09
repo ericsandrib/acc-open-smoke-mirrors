@@ -1008,7 +1008,7 @@ export function useTaskData(taskId: string) {
 
 export function useChildActionContext() {
   const { state } = useWorkflow()
-  if (!state.activeChildActionId || state.activeChildSubTaskIndex == null) return null
+  if (!state.activeChildActionId) return null
 
   const child = state.tasks
     .flatMap((t) => t.children ?? [])
@@ -1016,7 +1016,16 @@ export function useChildActionContext() {
   if (!child) return null
 
   const config = getChildTypeConfig(child.childType)
-  const currentSubTask = config.subTasks[state.activeChildSubTaskIndex]
+  const n = config.subTasks.length
+  if (n === 0) return null
+
+  const raw = state.activeChildSubTaskIndex
+  const subTaskIndex =
+    raw == null || Number.isNaN(Number(raw)) ? 0 : Math.min(Math.max(0, raw), n - 1)
+
+  const currentSubTask = config.subTasks[subTaskIndex]
+  if (!currentSubTask) return null
+
   const subTaskId = `${child.id}-${currentSubTask.suffix}`
 
   const parentTask = state.tasks.find((t) =>
@@ -1028,10 +1037,10 @@ export function useChildActionContext() {
     config,
     currentSubTask,
     subTaskId,
-    subTaskIndex: state.activeChildSubTaskIndex,
+    subTaskIndex,
     totalSubTasks: config.subTasks.length,
-    isFirst: state.activeChildSubTaskIndex === 0,
-    isLast: state.activeChildSubTaskIndex === config.subTasks.length - 1,
+    isFirst: subTaskIndex === 0,
+    isLast: subTaskIndex === config.subTasks.length - 1,
     parentTask,
   }
 }
