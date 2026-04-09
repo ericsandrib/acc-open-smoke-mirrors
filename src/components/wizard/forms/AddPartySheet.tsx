@@ -30,10 +30,12 @@ import {
 import {
   searchPeople,
   searchAll,
+  searchEntities,
   type DirectoryPerson,
   type DirectoryEntity,
   type SearchField,
   type CombinedSearchField,
+  type EntitySearchField,
 } from '@/data/people-directory'
 
 // ─── Constants ───
@@ -41,7 +43,12 @@ import {
 export const householdRelationships = ['Spouse', 'Child', 'Parent', 'Sibling']
 export const householdRoles = ['Client', 'Spouse', 'Dependent', 'Trustee', 'Beneficiary']
 const contactRelationships = ['Attorney', 'Accountant', 'Financial Advisor', 'Parent', 'Guardian', 'Power of Attorney']
+const professionalContactRelationships = new Set(['Attorney', 'Accountant', 'Financial Advisor'])
 const contactCategories = ['Family', 'Professional', 'Other']
+export const relatedIndividualRelationshipOptions: string[] = Array.from(
+  new Set([...householdRelationships, ...contactRelationships.filter((r) => !professionalContactRelationships.has(r))]),
+)
+export type ClientInfoIndividualMode = 'related-family' | 'professional'
 export const entityTypes = ['Trust', 'LLC', 'Corporation', 'Partnership', 'Foundation', 'Other']
 const entityCategories = ['Business', 'Legal', 'Other']
 
@@ -427,6 +434,89 @@ function CombinedSearchPanel({
   )
 }
 
+const entitySearchFieldLabels: Record<EntitySearchField, string> = {
+  all: 'Search All Fields',
+  entityName: 'Entity name',
+  taxId: 'Tax ID / EIN',
+  clientId: 'Client ID',
+  contactPerson: 'Contact person',
+}
+
+const entitySearchFieldIcons: Record<EntitySearchField, typeof Search> = {
+  all: Search,
+  entityName: Building2,
+  taxId: FileText,
+  clientId: Hash,
+  contactPerson: User,
+}
+
+function EntitySearchPanel({
+  onSelect,
+  trustOnly,
+}: {
+  onSelect: (e: DirectoryEntity) => void
+  trustOnly: boolean
+}) {
+  const [query, setQuery] = useState('')
+  const [field, setField] = useState<EntitySearchField>('all')
+  const debouncedQuery = useDebounce(query, 300)
+  const raw = searchEntities(debouncedQuery, field)
+  const results = trustOnly
+    ? raw.filter((e) => e.entityType === 'Trust')
+    : raw.filter((e) => e.entityType !== 'Trust')
+
+  return (
+    <div className="space-y-3">
+      <div className="flex gap-2">
+        <div className="relative flex-1">
+          <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+          <Input
+            placeholder="Search legal entities..."
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            className="pl-9"
+            autoFocus
+          />
+        </div>
+        <Select value={field} onValueChange={(v) => setField(v as EntitySearchField)}>
+          <SelectTrigger className="w-[148px]">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            {(Object.keys(entitySearchFieldLabels) as EntitySearchField[]).map((f) => {
+              const Icon = entitySearchFieldIcons[f]
+              return (
+                <SelectItem key={f} value={f}>
+                  <span className="flex items-center gap-1.5">
+                    <Icon className="h-3.5 w-3.5" />
+                    {entitySearchFieldLabels[f]}
+                  </span>
+                </SelectItem>
+              )
+            })}
+          </SelectContent>
+        </Select>
+      </div>
+
+      <div className="space-y-2 max-h-[calc(100vh-280px)] overflow-y-auto">
+        {debouncedQuery.trim() === '' ? (
+          <div className="text-center py-8 text-sm text-muted-foreground">
+            Type to search for existing legal entities
+          </div>
+        ) : results.length === 0 ? (
+          <div className="text-center py-8 text-sm text-muted-foreground">
+            No results for &ldquo;{debouncedQuery}&rdquo;. Try another search or create new.
+          </div>
+        ) : (
+          results.map((entity) => (
+            <EntityResultCard key={entity.id} entity={entity} onSelect={onSelect} />
+          ))
+        )}
+      </div>
+    </div>
+  )
+}
+
 // ─── Create Individual form (for contacts) ───
 
 function CreateIndividualForm({ onDone }: { onDone: () => void }) {
@@ -613,14 +703,16 @@ const REVENUE_RANGES = ['Under $500K', '$500K – $1M', '$1M – $5M', '$5M – 
 function CreateHouseholdLegalEntityForm({
   onDone,
   onPartyAdded,
+  legalEntityVariant = 'default',
 }: {
   onDone: () => void
   onPartyAdded?: (partyId: string) => void
+  legalEntityVariant?: 'default' | 'trust-only' | 'non-trust'
 }) {
   const { dispatch } = useWorkflow()
 
   const [legalName, setLegalName] = useState('')
-  const [entityType, setEntityType] = useState('')
+  const [entityType, setEntityType] = useState(() => (legalEntityVariant === 'trust-only' ? 'Trust' : ''))
   const [taxId, setTaxId] = useState('')
   const [jurisdiction, setJurisdiction] = useState('')
   const [email, setEmail] = useState('')
@@ -646,6 +738,11 @@ function CreateHouseholdLegalEntityForm({
   const updateOwner = (idx: number, field: 'name' | 'ownershipPercent', value: string) =>
     setBeneficialOwners((prev) => prev.map((o, i) => (i === idx ? { ...o, [field]: value } : o)))
 
+  const entityTypeOptions =
+    legalEntityVariant === 'non-trust' ? entityTypes.filter((t) => t !== 'Trust') : entityTypes
+  const resolvedEntityType =
+    legalEntityVariant === 'trust-only' ? 'Trust' : entityType || undefined
+
   const handleAdd = () => {
     if (!legalName.trim()) return
     const id = `org-${Date.now()}`
@@ -657,7 +754,7 @@ function CreateHouseholdLegalEntityForm({
         name: legalName.trim(),
         organizationName: legalName.trim(),
         type: 'related_organization',
-        entityType: entityType || undefined,
+        entityType: resolvedEntityType,
         taxId: taxId || undefined,
         jurisdiction: jurisdiction || undefined,
         contactPerson: cpFirstName.trim() ? `${cpFirstName.trim()} ${cpLastName.trim()}` : undefined,
@@ -701,10 +798,14 @@ function CreateHouseholdLegalEntityForm({
           </div>
           <div className="space-y-1.5">
             <Label className={fieldCls}>Entity type</Label>
-            <Select value={entityType} onValueChange={setEntityType}>
+            <Select
+              value={entityType}
+              onValueChange={setEntityType}
+              disabled={legalEntityVariant === 'trust-only'}
+            >
               <SelectTrigger><SelectValue placeholder="Select type" /></SelectTrigger>
               <SelectContent>
-                {entityTypes.map((t) => <SelectItem key={t} value={t}>{t}</SelectItem>)}
+                {entityTypeOptions.map((t) => <SelectItem key={t} value={t}>{t}</SelectItem>)}
               </SelectContent>
             </Select>
           </div>
@@ -966,9 +1067,11 @@ const fieldCls = 'text-xs font-medium text-foreground'
 function CreateHouseholdIndividualForm({
   onDone,
   onPartyAdded,
+  clientInfoMode = 'household',
 }: {
   onDone: () => void
   onPartyAdded?: (partyId: string) => void
+  clientInfoMode?: 'household' | ClientInfoIndividualMode
 }) {
   const { dispatch } = useWorkflow()
   const [form, setForm] = useState<IndividualAccountOwnerFormState>(() =>
@@ -978,21 +1081,47 @@ function CreateHouseholdIndividualForm({
   const [idNumber, setIdNumber] = useState('')
   const [idState, setIdState] = useState('')
   const [idExpiration, setIdExpiration] = useState('')
+  const [contactCategory, setContactCategory] = useState<'Family' | 'Other'>('Family')
 
   const patch = (p: Partial<IndividualAccountOwnerFormState>) => setForm((prev) => ({ ...prev, ...p }))
+  const relationshipOptions =
+    clientInfoMode === 'professional'
+      ? [...professionalContactRelationships]
+      : clientInfoMode === 'related-family'
+        ? relatedIndividualRelationshipOptions
+        : householdRelationships
 
   const handleAdd = () => {
     if (!form.firstName.trim() || !form.lastName.trim()) return
-    const id = `household-${Date.now()}`
     const { top, accountOwnerIndividual } = splitFormIntoPartyUpdate(form)
+
+    if (clientInfoMode === 'household') {
+      const id = `household-${Date.now()}`
+      dispatch({
+        type: 'ADD_RELATED_PARTY',
+        party: {
+          id,
+          type: 'household_member',
+          ...top,
+          accountOwnerIndividual,
+          kycStatus: 'needs_kyc',
+        },
+      })
+      onPartyAdded?.(id)
+      onDone()
+      return
+    }
+
+    const id = `contact-${Date.now()}`
     dispatch({
       type: 'ADD_RELATED_PARTY',
       party: {
         id,
-        type: 'household_member',
+        type: 'related_contact',
         ...top,
+        role: undefined,
         accountOwnerIndividual,
-        kycStatus: 'needs_kyc',
+        relationshipCategory: clientInfoMode === 'professional' ? 'Professional' : contactCategory,
       },
     })
     onPartyAdded?.(id)
@@ -1044,19 +1173,33 @@ function CreateHouseholdIndividualForm({
             <Select value={form.relationship || undefined} onValueChange={(v) => patch({ relationship: v })}>
               <SelectTrigger><SelectValue placeholder="Select" /></SelectTrigger>
               <SelectContent>
-                {householdRelationships.map((r) => <SelectItem key={r} value={r}>{r}</SelectItem>)}
+                {relationshipOptions.map((r) => <SelectItem key={r} value={r}>{r}</SelectItem>)}
               </SelectContent>
             </Select>
           </div>
-          <div className="space-y-1.5">
-            <Label className={fieldCls}>Role</Label>
-            <Select value={form.role || undefined} onValueChange={(v) => patch({ role: v })}>
-              <SelectTrigger><SelectValue placeholder="Select" /></SelectTrigger>
-              <SelectContent>
-                {householdRoles.map((r) => <SelectItem key={r} value={r}>{r}</SelectItem>)}
-              </SelectContent>
-            </Select>
-          </div>
+          {clientInfoMode === 'related-family' ? (
+            <div className="space-y-1.5">
+              <Label className={fieldCls}>Contact category</Label>
+              <Select value={contactCategory} onValueChange={(v) => setContactCategory(v as 'Family' | 'Other')}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="Family">Family</SelectItem>
+                  <SelectItem value="Other">Other</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          ) : null}
+          {clientInfoMode === 'household' ? (
+            <div className="space-y-1.5">
+              <Label className={fieldCls}>Role</Label>
+              <Select value={form.role || undefined} onValueChange={(v) => patch({ role: v })}>
+                <SelectTrigger><SelectValue placeholder="Select" /></SelectTrigger>
+                <SelectContent>
+                  {householdRoles.map((r) => <SelectItem key={r} value={r}>{r}</SelectItem>)}
+                </SelectContent>
+              </Select>
+            </div>
+          ) : null}
         </div>
       </section>
 
@@ -1219,12 +1362,20 @@ function CreateHouseholdMemberForm({
   onDone,
   onPartyAdded,
   includeLegalEntityCreate = false,
+  individualCreateOnly = false,
 }: {
   onDone: () => void
   onPartyAdded?: (partyId: string) => void
   includeLegalEntityCreate?: boolean
+  individualCreateOnly?: boolean
 }) {
   const [createKind, setCreateKind] = useState<'individual' | 'entity'>('individual')
+
+  if (individualCreateOnly) {
+    return (
+      <CreateHouseholdIndividualForm onDone={onDone} onPartyAdded={onPartyAdded} clientInfoMode="household" />
+    )
+  }
 
   if (includeLegalEntityCreate) {
     return (
@@ -1282,6 +1433,7 @@ export function AddHouseholdMemberSheet({
   title = DEFAULT_HOUSEHOLD_MEMBER_SHEET_TITLE,
   description = DEFAULT_HOUSEHOLD_MEMBER_SHEET_DESCRIPTION,
   includeLegalEntityCreate = false,
+  individualCreateOnly = false,
 }: {
   open: boolean
   onOpenChange: (open: boolean) => void
@@ -1292,6 +1444,8 @@ export function AddHouseholdMemberSheet({
   description?: string
   /** When true, Create tab offers Individual vs Legal entity (account owner flow). */
   includeLegalEntityCreate?: boolean
+  /** For Client Info household, create flow is individual-only. */
+  individualCreateOnly?: boolean
 }) {
   const { dispatch } = useWorkflow()
   const [tab, setTab] = useState<'search' | 'create'>('search')
@@ -1361,6 +1515,185 @@ export function AddHouseholdMemberSheet({
               onDone={resetAndClose}
               onPartyAdded={onPartyAdded}
               includeLegalEntityCreate={includeLegalEntityCreate}
+              individualCreateOnly={individualCreateOnly}
+            />
+          )}
+        </div>
+      </SheetContent>
+    </Sheet>
+  )
+}
+
+// ═══════════════════════════════════════════════════
+// Client Info — related/professional individuals
+// ═══════════════════════════════════════════════════
+
+export function AddClientInfoIndividualSheet({
+  open,
+  onOpenChange,
+  onPartyAdded,
+  clientInfoMode,
+  title,
+  description,
+}: {
+  open: boolean
+  onOpenChange: (open: boolean) => void
+  onPartyAdded?: (partyId: string) => void
+  clientInfoMode: ClientInfoIndividualMode
+  title: string
+  description: string
+}) {
+  const { dispatch } = useWorkflow()
+  const [tab, setTab] = useState<'search' | 'create'>('search')
+
+  const handleSelectPerson = useCallback(
+    (person: DirectoryPerson) => {
+      const id = `contact-${Date.now()}`
+      dispatch({
+        type: 'ADD_RELATED_PARTY',
+        party: {
+          id,
+          name: `${person.firstName} ${person.lastName}`,
+          firstName: person.firstName,
+          lastName: person.lastName,
+          type: 'related_contact',
+          email: person.email,
+          phone: person.phone,
+          dob: person.dob,
+          accountNumber: person.accountNumber,
+          ssn: person.ssn,
+          taxId: person.taxId,
+          clientId: person.clientId,
+          relationshipCategory: clientInfoMode === 'professional' ? 'Professional' : 'Family',
+        },
+      })
+      onPartyAdded?.(id)
+      onOpenChange(false)
+    },
+    [clientInfoMode, dispatch, onOpenChange, onPartyAdded],
+  )
+
+  const resetAndClose = useCallback(() => {
+    setTab('search')
+    onOpenChange(false)
+  }, [onOpenChange])
+
+  return (
+    <Sheet open={open} onOpenChange={(v) => { if (!v) resetAndClose(); else onOpenChange(true) }}>
+      <SheetContent side="right" className="w-full flex flex-col gap-0 p-0 sm:max-w-lg">
+        <SheetHeader className="px-6 pt-6 pb-3 space-y-1">
+          <SheetTitle>{title}</SheetTitle>
+          <SheetDescription>{description}</SheetDescription>
+        </SheetHeader>
+
+        <div className="px-6 pb-4">
+          <TabToggle
+            value={tab}
+            onChange={setTab}
+            options={[
+              { value: 'search', label: 'Search Existing', icon: <Search className="h-3.5 w-3.5" /> },
+              { value: 'create', label: 'Create New', icon: <Plus className="h-3.5 w-3.5" /> },
+            ]}
+          />
+        </div>
+
+        <div className="flex-1 min-h-0 overflow-y-auto px-6 pt-1 pb-4">
+          {tab === 'search' ? (
+            <PersonSearchPanel onSelect={handleSelectPerson} />
+          ) : (
+            <CreateHouseholdIndividualForm
+              onDone={resetAndClose}
+              onPartyAdded={onPartyAdded}
+              clientInfoMode={clientInfoMode}
+            />
+          )}
+        </div>
+      </SheetContent>
+    </Sheet>
+  )
+}
+
+// ═══════════════════════════════════════════════════
+// Client Info — trusts/other legal entities
+// ═══════════════════════════════════════════════════
+
+export function AddClientInfoLegalEntitySheet({
+  open,
+  onOpenChange,
+  onPartyAdded,
+  variant,
+  title,
+  description,
+}: {
+  open: boolean
+  onOpenChange: (open: boolean) => void
+  onPartyAdded?: (partyId: string) => void
+  variant: 'trust' | 'other'
+  title: string
+  description: string
+}) {
+  const { dispatch } = useWorkflow()
+  const [tab, setTab] = useState<'search' | 'create'>('search')
+  const legalEntityVariant = variant === 'trust' ? 'trust-only' : 'non-trust'
+
+  const handleSelectEntity = useCallback(
+    (entity: DirectoryEntity) => {
+      const id = `org-${Date.now()}`
+      dispatch({
+        type: 'ADD_RELATED_PARTY',
+        party: {
+          id,
+          name: entity.entityName,
+          organizationName: entity.entityName,
+          type: 'related_organization',
+          entityType: entity.entityType,
+          taxId: entity.taxId,
+          clientId: entity.clientId,
+          jurisdiction: entity.jurisdiction,
+          contactPerson: entity.contactPerson,
+          email: entity.email,
+          phone: entity.phone,
+          relationshipCategory: 'Legal',
+        },
+      })
+      onPartyAdded?.(id)
+      onOpenChange(false)
+    },
+    [dispatch, onOpenChange, onPartyAdded],
+  )
+
+  const resetAndClose = useCallback(() => {
+    setTab('search')
+    onOpenChange(false)
+  }, [onOpenChange])
+
+  return (
+    <Sheet open={open} onOpenChange={(v) => { if (!v) resetAndClose(); else onOpenChange(true) }}>
+      <SheetContent side="right" className="w-full flex flex-col gap-0 p-0 sm:max-w-2xl">
+        <SheetHeader className="px-6 pt-6 pb-3 space-y-1">
+          <SheetTitle>{title}</SheetTitle>
+          <SheetDescription>{description}</SheetDescription>
+        </SheetHeader>
+
+        <div className="px-6 pb-4">
+          <TabToggle
+            value={tab}
+            onChange={setTab}
+            options={[
+              { value: 'search', label: 'Search Existing', icon: <Search className="h-3.5 w-3.5" /> },
+              { value: 'create', label: 'Create New', icon: <Plus className="h-3.5 w-3.5" /> },
+            ]}
+          />
+        </div>
+
+        <div className="flex-1 min-h-0 overflow-y-auto px-6 pt-1 pb-4">
+          {tab === 'search' ? (
+            <EntitySearchPanel onSelect={handleSelectEntity} trustOnly={variant === 'trust'} />
+          ) : (
+            <CreateHouseholdLegalEntityForm
+              onDone={resetAndClose}
+              onPartyAdded={onPartyAdded}
+              legalEntityVariant={legalEntityVariant}
             />
           )}
         </div>

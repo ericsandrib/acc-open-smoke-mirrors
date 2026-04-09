@@ -119,7 +119,26 @@ export function HomeOfficeViewContent() {
 
   const visibleParties = state.relatedParties.filter((p) => !p.isHidden)
   const householdMembers = visibleParties.filter((p) => p.type === 'household_member')
-  const relatedContacts = visibleParties.filter((p) => p.type === 'related_contact')
+  const orgLikeParties = visibleParties.filter(
+    (p) => p.type === 'related_organization' || (p.type === 'related_contact' && Boolean(p.organizationName)),
+  )
+  const relatedContacts = visibleParties.filter(
+    (p) => p.type === 'related_contact' && !p.organizationName,
+  )
+  const professionalContacts = relatedContacts.filter((p) => p.relationshipCategory === 'Professional')
+  const relatedIndividuals = relatedContacts.filter((p) => p.relationshipCategory !== 'Professional')
+  const trusts = orgLikeParties.filter((p) =>
+    (p.entityType ?? '').toLowerCase() === 'trust'
+    || (p.role ?? '').toLowerCase() === 'trust'
+    || (p.organizationName ?? p.name ?? '').toLowerCase().includes('trust'),
+  )
+  const otherEntities = orgLikeParties.filter((p) =>
+    !(
+      (p.entityType ?? '').toLowerCase() === 'trust'
+      || (p.role ?? '').toLowerCase() === 'trust'
+      || (p.organizationName ?? p.name ?? '').toLowerCase().includes('trust')
+    ),
+  )
 
   const kycTask = state.tasks.find((t) => t.id === 'kyc-review')
   const kycChildren = kycTask?.children ?? []
@@ -180,20 +199,38 @@ export function HomeOfficeViewContent() {
             icon={Users}
             badge={
               <Badge variant="secondary" className="text-[10px]">
-                {householdMembers.length} members · {relatedContacts.length} contacts
+                {householdMembers.length} household · {relatedIndividuals.length} related · {trusts.length + otherEntities.length} entities · {professionalContacts.length} professional
               </Badge>
             }
           >
             {householdMembers.length > 0 && (
               <div className="mb-3">
-                <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-2">Household Members</p>
+                <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-2">Household</p>
                 {householdMembers.map((p) => <PartyDetail key={p.id} party={p} />)}
               </div>
             )}
-            {relatedContacts.length > 0 && (
+            {relatedIndividuals.length > 0 && (
               <div>
-                <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-2">Related Contacts</p>
-                {relatedContacts.map((p) => <PartyDetail key={p.id} party={p} />)}
+                <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-2">Related Individuals</p>
+                {relatedIndividuals.map((p) => <PartyDetail key={p.id} party={p} />)}
+              </div>
+            )}
+            {trusts.length > 0 && (
+              <div className="mt-3">
+                <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-2">Trusts</p>
+                {trusts.map((p) => <PartyDetail key={p.id} party={p} />)}
+              </div>
+            )}
+            {otherEntities.length > 0 && (
+              <div className="mt-3">
+                <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-2">Other Entities</p>
+                {otherEntities.map((p) => <PartyDetail key={p.id} party={p} />)}
+              </div>
+            )}
+            {professionalContacts.length > 0 && (
+              <div className="mt-3">
+                <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-2">Professional Contacts</p>
+                {professionalContacts.map((p) => <PartyDetail key={p.id} party={p} />)}
               </div>
             )}
             {visibleParties.length === 0 && (

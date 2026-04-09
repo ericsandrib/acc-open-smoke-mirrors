@@ -85,8 +85,26 @@ export function Placeholder2Form() {
 
   const visibleParties = state.relatedParties.filter((p) => !p.isHidden)
   const householdMembers = visibleParties.filter((p) => p.type === 'household_member')
-  const relatedContacts = visibleParties.filter((p) => p.type === 'related_contact')
-  const relatedOrgs = visibleParties.filter((p) => p.type === 'related_organization')
+  const orgLikeParties = visibleParties.filter(
+    (p) => p.type === 'related_organization' || (p.type === 'related_contact' && Boolean(p.organizationName)),
+  )
+  const relatedContacts = visibleParties.filter(
+    (p) => p.type === 'related_contact' && !p.organizationName,
+  )
+  const professionalContacts = relatedContacts.filter((p) => p.relationshipCategory === 'Professional')
+  const relatedIndividuals = relatedContacts.filter((p) => p.relationshipCategory !== 'Professional')
+  const trusts = orgLikeParties.filter((p) =>
+    (p.entityType ?? '').toLowerCase() === 'trust'
+    || (p.role ?? '').toLowerCase() === 'trust'
+    || (p.organizationName ?? p.name ?? '').toLowerCase().includes('trust'),
+  )
+  const otherEntities = orgLikeParties.filter((p) =>
+    !(
+      (p.entityType ?? '').toLowerCase() === 'trust'
+      || (p.role ?? '').toLowerCase() === 'trust'
+      || (p.organizationName ?? p.name ?? '').toLowerCase().includes('trust')
+    ),
+  )
 
   const kycTask = state.tasks.find((t) => t.id === 'kyc-review')
   const kycChildren = kycTask?.children ?? []
@@ -152,25 +170,41 @@ export function Placeholder2Form() {
           <div className="space-y-3">
             {householdMembers.length > 0 && (
               <div>
-                <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-1">Household Members</p>
+                <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-1">Household</p>
                 <div className="divide-y divide-border">
                   {householdMembers.map((p) => <PartyRow key={p.id} party={p} />)}
                 </div>
               </div>
             )}
-            {relatedContacts.length > 0 && (
+            {relatedIndividuals.length > 0 && (
               <div>
-                <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-1">Related Contacts</p>
+                <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-1">Related Individuals</p>
                 <div className="divide-y divide-border">
-                  {relatedContacts.map((p) => <PartyRow key={p.id} party={p} />)}
+                  {relatedIndividuals.map((p) => <PartyRow key={p.id} party={p} />)}
                 </div>
               </div>
             )}
-            {relatedOrgs.length > 0 && (
+            {trusts.length > 0 && (
               <div>
-                <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-1">Organizations</p>
+                <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-1">Trusts</p>
                 <div className="divide-y divide-border">
-                  {relatedOrgs.map((p) => <PartyRow key={p.id} party={p} />)}
+                  {trusts.map((p) => <PartyRow key={p.id} party={p} />)}
+                </div>
+              </div>
+            )}
+            {otherEntities.length > 0 && (
+              <div>
+                <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-1">Other Entities</p>
+                <div className="divide-y divide-border">
+                  {otherEntities.map((p) => <PartyRow key={p.id} party={p} />)}
+                </div>
+              </div>
+            )}
+            {professionalContacts.length > 0 && (
+              <div>
+                <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-1">Professional Contacts</p>
+                <div className="divide-y divide-border">
+                  {professionalContacts.map((p) => <PartyRow key={p.id} party={p} />)}
                 </div>
               </div>
             )}

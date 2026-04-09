@@ -5,10 +5,15 @@ import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from '@/components/ui/sheet'
-import { Plus, Trash2, Users, UserPlus, Shield } from 'lucide-react'
+import { Plus, Trash2, Shield } from 'lucide-react'
 import { useWorkflow } from '@/stores/workflowStore'
 import type { RelatedParty } from '@/types/workflow'
-import { AddHouseholdMemberSheet, AddContactSheet, entityTypes } from './AddPartySheet'
+import {
+  AddHouseholdMemberSheet,
+  AddClientInfoIndividualSheet,
+  AddClientInfoLegalEntitySheet,
+  entityTypes,
+} from './AddPartySheet'
 import {
   createEmptyIndividualAccountOwnerForm,
   hydrateIndividualFormFromParty,
@@ -20,6 +25,15 @@ const householdRelationships = ['Spouse', 'Child', 'Parent', 'Sibling']
 const contactRelationships = ['Attorney', 'Accountant', 'Financial Advisor', 'Parent', 'Guardian', 'Power of Attorney']
 const contactCategories = ['Family', 'Professional', 'Other']
 const householdRoles = ['Client', 'Spouse', 'Dependent', 'Trustee', 'Beneficiary']
+
+function isTrustOrganization(party: RelatedParty): boolean {
+  const isOrgLike = party.type === 'related_organization' || (party.type === 'related_contact' && Boolean(party.organizationName))
+  if (!isOrgLike) return false
+  if ((party.entityType ?? '').toLowerCase() === 'trust') return true
+  if ((party.role ?? '').toLowerCase() === 'trust') return true
+  if ((party.organizationName ?? party.name ?? '').toLowerCase().includes('trust')) return true
+  return false
+}
 
 // --- Delete confirmation button ---
 
@@ -862,23 +876,32 @@ function EmptyState({ message }: { message: string }) {
 export function RelatedPartiesForm() {
   const { state } = useWorkflow()
   const [showAddHouseholdSheet, setShowAddHouseholdSheet] = useState(false)
-  const [showAddContactSheet, setShowAddContactSheet] = useState(false)
+  const [showAddRelatedIndividualSheet, setShowAddRelatedIndividualSheet] = useState(false)
+  const [showAddTrustSheet, setShowAddTrustSheet] = useState(false)
+  const [showAddOtherEntitySheet, setShowAddOtherEntitySheet] = useState(false)
+  const [showAddProfessionalSheet, setShowAddProfessionalSheet] = useState(false)
   const [editingPartyId, setEditingPartyId] = useState<string | null>(null)
 
   const householdMembers = state.relatedParties.filter((p) => p.type === 'household_member' && !p.isHidden)
-  const allContacts = state.relatedParties.filter((p) => p.type === 'related_contact' && !p.isHidden)
+  const allOrganizations = state.relatedParties.filter(
+    (p) => !p.isHidden && (p.type === 'related_organization' || (p.type === 'related_contact' && Boolean(p.organizationName))),
+  )
+  const allContacts = state.relatedParties.filter(
+    (p) => p.type === 'related_contact' && !p.isHidden && !p.organizationName,
+  )
   const professionalContacts = allContacts.filter((p) => p.relationshipCategory === 'Professional')
-  const relatedContacts = allContacts.filter((p) => p.relationshipCategory !== 'Professional')
+  const relatedIndividuals = allContacts.filter((p) => p.relationshipCategory !== 'Professional')
+  const trustOrganizations = allOrganizations.filter(isTrustOrganization)
+  const otherOrganizations = allOrganizations.filter((p) => !isTrustOrganization(p))
   const editingParty = editingPartyId ? state.relatedParties.find((p) => p.id === editingPartyId) ?? null : null
 
   return (
     <div className="space-y-8">
-      {/* Household Members */}
       <section className="space-y-4">
         <div>
-          <h3 className="text-base font-semibold">Household Members</h3>
+          <h3 className="text-base font-semibold">Household</h3>
           <p className="text-base text-muted-foreground">
-            People in the household you're onboarding — the primary contact and their family.
+            People in the household you are onboarding - the primary contact and their family.
           </p>
         </div>
 
@@ -898,61 +921,143 @@ export function RelatedPartiesForm() {
           </Button>
         </div>
 
-        <AddHouseholdMemberSheet open={showAddHouseholdSheet} onOpenChange={setShowAddHouseholdSheet} />
+        <AddHouseholdMemberSheet
+          open={showAddHouseholdSheet}
+          onOpenChange={setShowAddHouseholdSheet}
+          individualCreateOnly
+        />
       </section>
 
-      {/* Professional Contacts */}
+      <section className="space-y-4">
+        <div>
+          <h3 className="text-base font-semibold">Related Individuals</h3>
+          <p className="text-base text-muted-foreground">
+            Family and other non-professional individuals connected to this household.
+          </p>
+        </div>
+
+        <div className="rounded-lg border border-border p-1">
+          <div>
+            {relatedIndividuals.length === 0 ? (
+              <EmptyState message="No related individuals yet. Search your directory or create a new record." />
+            ) : (
+              relatedIndividuals.map((contact) => (
+                <ContactCard key={contact.id} party={contact} onClick={() => setEditingPartyId(contact.id)} />
+              ))
+            )}
+          </div>
+          <Button variant="ghost" className="w-full" onClick={() => setShowAddRelatedIndividualSheet(true)}>
+            <Plus className="h-4 w-4 mr-2" />
+            Add related individual
+          </Button>
+        </div>
+
+        <AddClientInfoIndividualSheet
+          open={showAddRelatedIndividualSheet}
+          onOpenChange={setShowAddRelatedIndividualSheet}
+          clientInfoMode="related-family"
+          title="Add related individual"
+          description="Search for someone in your directory or create a new individual profile."
+        />
+      </section>
+
+      <section className="space-y-4">
+        <div>
+          <h3 className="text-base font-semibold">Trusts</h3>
+          <p className="text-base text-muted-foreground">
+            Trust entities associated with this client.
+          </p>
+        </div>
+
+        <div className="rounded-lg border border-border p-1">
+          <div>
+            {trustOrganizations.length === 0 ? (
+              <EmptyState message="No trusts added yet." />
+            ) : (
+              trustOrganizations.map((org) => (
+                <ContactCard key={org.id} party={org} onClick={() => setEditingPartyId(org.id)} />
+              ))
+            )}
+          </div>
+          <Button variant="ghost" className="w-full" onClick={() => setShowAddTrustSheet(true)}>
+            <Plus className="h-4 w-4 mr-2" />
+            Add trust
+          </Button>
+        </div>
+
+        <AddClientInfoLegalEntitySheet
+          open={showAddTrustSheet}
+          onOpenChange={setShowAddTrustSheet}
+          variant="trust"
+          title="Add trust"
+          description="Search for an existing trust or create a new trust profile."
+        />
+      </section>
+
+      <section className="space-y-4">
+        <div>
+          <h3 className="text-base font-semibold">Other Entities</h3>
+          <p className="text-base text-muted-foreground">
+            Other legal entities such as LLCs, corporations, or partnerships.
+          </p>
+        </div>
+
+        <div className="rounded-lg border border-border p-1">
+          <div>
+            {otherOrganizations.length === 0 ? (
+              <EmptyState message="No other entities added yet." />
+            ) : (
+              otherOrganizations.map((org) => (
+                <ContactCard key={org.id} party={org} onClick={() => setEditingPartyId(org.id)} />
+              ))
+            )}
+          </div>
+          <Button variant="ghost" className="w-full" onClick={() => setShowAddOtherEntitySheet(true)}>
+            <Plus className="h-4 w-4 mr-2" />
+            Add entity
+          </Button>
+        </div>
+
+        <AddClientInfoLegalEntitySheet
+          open={showAddOtherEntitySheet}
+          onOpenChange={setShowAddOtherEntitySheet}
+          variant="other"
+          title="Add legal entity"
+          description="Search for an existing legal entity or create a new one."
+        />
+      </section>
+
       <section className="space-y-4">
         <div>
           <h3 className="text-base font-semibold">Professional Contacts</h3>
           <p className="text-base text-muted-foreground">
-            Professionals associated with this household — such as attorneys, accountants, or financial advisors.
+            Attorneys, accountants, advisors, and other professional relationships.
           </p>
         </div>
 
         <div className="rounded-lg border border-border p-1">
           <div>
             {professionalContacts.length === 0 ? (
-              <EmptyState message="No professional contacts yet. Add attorneys, accountants, or advisors." />
+              <EmptyState message="No professional contacts yet." />
             ) : (
               professionalContacts.map((contact) => (
                 <ContactCard key={contact.id} party={contact} onClick={() => setEditingPartyId(contact.id)} />
               ))
             )}
           </div>
-          <Button variant="ghost" className="w-full" onClick={() => setShowAddContactSheet(true)}>
+          <Button variant="ghost" className="w-full" onClick={() => setShowAddProfessionalSheet(true)}>
             <Plus className="h-4 w-4 mr-2" />
-            Add contact
-          </Button>
-        </div>
-      </section>
-
-      {/* Related Contacts */}
-      <section className="space-y-4">
-        <div>
-          <h3 className="text-base font-semibold">Related Contacts</h3>
-          <p className="text-base text-muted-foreground">
-            Other people connected to the household — such as family members or guardians.
-          </p>
-        </div>
-
-        <div className="rounded-lg border border-border p-1">
-          <div>
-            {relatedContacts.length === 0 ? (
-              <EmptyState message="No related contacts yet. Add family connections or other contacts." />
-            ) : (
-              relatedContacts.map((contact) => (
-                <ContactCard key={contact.id} party={contact} onClick={() => setEditingPartyId(contact.id)} />
-              ))
-            )}
-          </div>
-          <Button variant="ghost" className="w-full" onClick={() => setShowAddContactSheet(true)}>
-            <Plus className="h-4 w-4 mr-2" />
-            Add contact
+            Add professional
           </Button>
         </div>
 
-        <AddContactSheet open={showAddContactSheet} onOpenChange={setShowAddContactSheet} />
+        <AddClientInfoIndividualSheet
+          open={showAddProfessionalSheet}
+          onOpenChange={setShowAddProfessionalSheet}
+          clientInfoMode="professional"
+          title="Add professional contact"
+          description="Search for a professional in your directory or create a new profile."
+        />
       </section>
 
       {/* Edit party side-panel */}
