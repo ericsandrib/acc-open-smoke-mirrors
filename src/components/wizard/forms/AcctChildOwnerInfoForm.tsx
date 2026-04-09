@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useState } from 'react'
 import { useWorkflow, useTaskData, useChildActionContext } from '@/stores/workflowStore'
 import { Button } from '@/components/ui/button'
 import {
@@ -16,7 +16,7 @@ import { toast } from 'sonner'
 type OwnerRow = { id: string; type: 'existing'; partyId?: string }
 
 export function AcctChildOwnerInfoForm() {
-  const { state } = useWorkflow()
+  const { state, dispatch } = useWorkflow()
   const ctx = useChildActionContext()
   const taskId = ctx?.subTaskId ?? ''
   const { data, updateField } = useTaskData(taskId || '__no_child__')

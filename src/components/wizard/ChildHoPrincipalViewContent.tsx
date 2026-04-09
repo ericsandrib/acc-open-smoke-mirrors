@@ -3,7 +3,7 @@ import { useWorkflow, useChildActionContext } from '@/stores/workflowStore'
 import { Badge } from '@/components/ui/badge'
 import {
   ChevronDown, Clock, Users, FileText, CreditCard, Shield, Banknote,
-  Settings2, AlertTriangle, CheckCircle2, ShieldCheck, ShieldAlert, XCircle,
+  Settings2, ShieldAlert,
 } from 'lucide-react'
 import * as Collapsible from '@radix-ui/react-collapsible'
 import { cn } from '@/lib/utils'
@@ -68,8 +68,6 @@ export function ChildHoPrincipalViewContent() {
   const reviewState = state.childReviewState
   const docReview = reviewState?.documentReview
   const principalReview = reviewState?.principalReview
-  const decision = state.childReviewDecision
-  const reviewData = state.taskData[`${child.id}-review`] as Record<string, unknown> | undefined
 
   const accountName = child.name
   const registrationType = (childMeta?.registrationType as string) ?? 'N/A'

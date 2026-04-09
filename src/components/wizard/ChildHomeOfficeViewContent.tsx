@@ -1,10 +1,9 @@
 import { useState } from 'react'
-import { useWorkflow, useChildActionContext, useTaskData } from '@/stores/workflowStore'
+import { useWorkflow, useChildActionContext } from '@/stores/workflowStore'
 import { Badge } from '@/components/ui/badge'
 import { ChevronDown, Clock, Users, FileText, CreditCard, Shield, Banknote, Settings2, AlertTriangle, CheckCircle2 } from 'lucide-react'
 import * as Collapsible from '@radix-ui/react-collapsible'
 import { cn } from '@/lib/utils'
-import { getChildTypeConfig } from '@/utils/childTaskRegistry'
 
 function ReviewRow({ label, value }: { label: string; value?: string | null }) {
   if (!value) return null
@@ -112,18 +111,18 @@ export function ChildHomeOfficeViewContent() {
                     <p className="text-xs text-red-800/80 dark:text-red-200/70">
                       This account opening has been rejected and sent back to the advisor for resolution.
                     </p>
-                    {reviewData?.rejectionReason && (
+                    {reviewData?.rejectionReason ? (
                       <div className="mt-2 rounded-md bg-red-100/60 dark:bg-red-900/30 px-3 py-2 space-y-1">
                         <p className="text-xs text-red-900 dark:text-red-100">
                           <span className="font-semibold">Reason:</span> {String(reviewData.rejectionReason)}
                         </p>
-                        {reviewData.rejectionFeedback && (
+                        {reviewData.rejectionFeedback ? (
                           <p className="text-xs text-red-800/90 dark:text-red-200/80">
                             <span className="font-semibold">Feedback:</span> {String(reviewData.rejectionFeedback)}
                           </p>
-                        )}
+                        ) : null}
                       </div>
-                    )}
+                    ) : null}
                     <p className="text-xs text-red-700/70 dark:text-red-300/60 mt-1">
                       Rejected at {decision.decidedAt}
                     </p>

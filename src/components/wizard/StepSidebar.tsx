@@ -45,7 +45,7 @@ const StatusIcon: Record<TaskStatus, React.ComponentType<{ className?: string }>
   rejected: XCircle,
 }
 
-function StatusBadge({ status, className }: { status: TaskStatus; className?: string }) {
+export function StatusBadge({ status, className }: { status: TaskStatus; className?: string }) {
   const Icon = StatusIcon[status]
   return (
     <Tooltip>

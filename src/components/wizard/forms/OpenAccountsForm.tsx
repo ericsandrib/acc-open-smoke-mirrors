@@ -26,12 +26,10 @@ import {
   SelectItem,
 } from '@/components/ui/select'
 import {
-  ChevronRight,
   Minus,
   Plus,
   Shield,
   Wallet,
-  FileText,
   FileSignature,
   ClipboardList,
   Upload,

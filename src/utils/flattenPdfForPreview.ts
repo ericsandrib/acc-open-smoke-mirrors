@@ -13,5 +13,5 @@ export async function flattenPdfForPreview(file: File): Promise<Blob> {
     /* malformed or unsupported form — still return a saved copy when possible */
   }
   const flatBytes = await pdfDoc.save()
-  return new Blob([flatBytes], { type: 'application/pdf' })
+  return new Blob([flatBytes as BlobPart], { type: 'application/pdf' })
 }
