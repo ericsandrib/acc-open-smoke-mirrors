@@ -1,8 +1,11 @@
-import type { ReactNode } from 'react'
+import { type ReactNode, useMemo } from 'react'
 import type { RelatedParty } from '@/types/workflow'
+import { useWorkflow } from '@/stores/workflowStore'
+import { deriveChildDisplayStatus, childStatusConfig } from '@/utils/childStatusDisplay'
 import { Label } from '@/components/ui/label'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
+import { cn } from '@/lib/utils'
 import {
   Select,
   SelectTrigger,
@@ -59,7 +62,27 @@ export function PartySlotCard({
   onStartKyc,
   onGoToKyc,
 }: PartySlotCardProps) {
+  const { state } = useWorkflow()
   const matchedParty = partyId ? parties.find((p) => p.id === partyId) ?? null : null
+
+  const kycDisplayStatus = useMemo(() => {
+    if (!matchedParty) return null
+    const kycTask = state.tasks.find((t) => t.formKey === 'kyc')
+    const kycChild = kycTask?.children?.find((c) => c.name === matchedParty.name)
+    if (kycChild) {
+      const ds = deriveChildDisplayStatus(kycChild.status)
+      return ds === 'complete'
+        ? { label: 'Verified', className: 'bg-green-50 text-green-700 border-green-200' }
+        : childStatusConfig[ds]
+    }
+    if (matchedParty.kycStatus === 'verified') {
+      return { label: 'Verified', className: 'bg-green-100 text-green-800 border-green-200' }
+    }
+    if (matchedParty.kycStatus === 'needs_kyc') {
+      return { label: 'Not Started', className: 'bg-red-50 text-red-700 border-red-200' }
+    }
+    return null
+  }, [matchedParty, state.tasks])
   const ownerPreview = matchedParty
     ? previewVariant === 'designation'
       ? buildDesignationPartyPreview(matchedParty)
@@ -244,25 +267,17 @@ export function PartySlotCard({
 
           {!isDesignationPreview &&
             matchedParty.type !== 'related_organization' &&
-            matchedParty.kycStatus && (
+            (kycDisplayStatus || matchedParty.kycStatus) && (
             <div className="flex flex-wrap items-center gap-2 text-sm pt-1 border-t border-border/60">
               <span className="text-muted-foreground">KYC status:</span>
-              <Badge
-                variant={matchedParty.kycStatus === 'verified' ? 'default' : 'outline'}
-                className={
-                  matchedParty.kycStatus === 'verified'
-                    ? 'bg-green-100 text-green-800 border-green-200'
-                    : matchedParty.kycStatus === 'needs_kyc'
-                      ? 'bg-red-50 text-red-700 border-red-200'
-                      : 'bg-yellow-50 text-yellow-700 border-yellow-200'
-                }
-              >
-                {matchedParty.kycStatus === 'verified'
-                  ? 'Approved'
-                  : matchedParty.kycStatus === 'needs_kyc'
-                    ? 'Not Started'
-                    : 'Pending'}
-              </Badge>
+              {kycDisplayStatus && (
+                <Badge
+                  variant="outline"
+                  className={cn('text-xs', kycDisplayStatus.className)}
+                >
+                  {kycDisplayStatus.label}
+                </Badge>
+              )}
               {matchedParty.kycStatus === 'needs_kyc' && onStartKyc && (
                 <Button
                   variant="outline"

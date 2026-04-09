@@ -234,4 +234,3 @@ export function ChildHoDocumentViewContent() {
     </main>
   )
 }
-
