@@ -3,7 +3,7 @@ import { useWorkflow } from '@/stores/workflowStore'
 import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
-import { CheckCircle2, ShieldCheck, Clock, UserPlus, XCircle, AlertTriangle, Play } from 'lucide-react'
+import { CheckCircle2, ShieldCheck, Clock, UserPlus, AlertTriangle, Play } from 'lucide-react'
 import { AddHouseholdMemberSheet } from './AddPartySheet'
 import { ChildActionKebabMenu } from '@/components/wizard/ChildActionKebabMenu'
 import { ChildActionTimelineSheet } from '@/components/wizard/ChildActionTimelineSheet'
@@ -19,8 +19,6 @@ export function KycForm() {
     (p) => p.type === 'household_member' && !p.isHidden,
   )
   const householdMembers = allHouseholdMembers.filter((m) => !m.kycDirectAdd)
-  const spawnedNames = new Set(children.map((c) => c.name))
-
   const [addSheetOpen, setAddSheetOpen] = useState(false)
   const [timelineChild, setTimelineChild] = useState<ChildTask | null>(null)
   const pendingKycPartyId = useRef<string | null>(null)

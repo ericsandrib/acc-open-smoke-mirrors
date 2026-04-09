@@ -2,12 +2,11 @@ import { useState } from 'react'
 import { useWorkflow, useChildActionContext } from '@/stores/workflowStore'
 import { Badge } from '@/components/ui/badge'
 import {
-  ChevronDown, Clock, FileText, Shield, CheckCircle2,
-  AlertTriangle, Upload, Eye, FileCheck,
+  ChevronDown, Clock, FileText, Shield,
+  Upload, Eye, FileCheck,
 } from 'lucide-react'
 import * as Collapsible from '@radix-ui/react-collapsible'
 import { cn } from '@/lib/utils'
-import { getChildTypeConfig } from '@/utils/childTaskRegistry'
 
 function ReviewRow({ label, value }: { label: string; value?: string | null }) {
   if (!value) return null
@@ -234,8 +233,4 @@ export function ChildHoDocumentViewContent() {
       </div>
     </main>
   )
-}
-
-function FileSearch2({ className }: { className?: string }) {
-  return <FileText className={className} />
 }

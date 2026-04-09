@@ -75,7 +75,7 @@ export function AccountProfileSection({
   updateField,
   registrationType,
   productAccountTypeOverride,
-  prefilledShortName,
+  prefilledShortName: _prefilledShortName,
   prefilledAccountNumber,
 }: AccountProfileSectionProps) {
   const resolvedProduct =
