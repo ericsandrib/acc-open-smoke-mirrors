@@ -12,6 +12,7 @@ import {
   Globe,
   TrendingUp,
   Settings,
+  UserCheck,
   Wrench,
   PanelRight,
   Menu,
@@ -69,7 +70,7 @@ const navGroups: NavGroup[] = [
       { icon: Handshake, label: "Servicing", href: "/servicing" },
       { icon: Globe, label: "Onboarding", href: "/onboarding" },
       { icon: TrendingUp, label: "Tax", href: "/tax" },
-      { icon: Settings, label: "Advisor Matching", href: "/advisor-matching" },
+      { icon: UserCheck, label: "Advisor Matching", href: "/advisor-matching" },
       { icon: Wrench, label: "Active Actions", href: "/active-actions" },
     ],
   },
@@ -146,14 +147,14 @@ function NavigationContent({
   return (
     <>
       <div className="flex-1 px-3 pt-1 pb-2 overflow-y-auto flex flex-col gap-4">
-        {navGroups.map((group, groupIndex) => (
+        {navGroups.filter((g) => isExpanded || g.items.length > 0).map((group, groupIndex) => (
           <div key={groupIndex} className="flex flex-col gap-0.5">
             {group.label && isExpanded && (
               <span className="px-3 pt-1 pb-1 text-[11px] font-medium text-muted-foreground uppercase tracking-wider">
                 {group.label}
               </span>
             )}
-            {group.label && !isExpanded && (
+            {group.label && !isExpanded && group.items.length > 0 && (
               <div className="mx-auto w-5 border-t border-border my-1" />
             )}
             {group.items.map((item) => {
@@ -237,14 +238,14 @@ function NavigationContent({
         <Link
           to="/settings"
           onClick={onItemClick}
-          className={`flex items-center h-10 px-3 text-[14px] text-foreground/80 hover:text-foreground transition-colors ${
+          className={`flex items-center ${isExpanded ? 'px-3' : 'justify-center'} h-10 text-[14px] text-foreground/80 hover:text-foreground transition-colors ${
             pathname === "/settings" ? "font-medium text-foreground" : ""
           }`}
         >
           {isExpanded ? (
             "Settings"
           ) : (
-            <Settings className="size-[18px]" />
+            <Settings className="size-[18px] shrink-0" />
           )}
         </Link>
       </div>

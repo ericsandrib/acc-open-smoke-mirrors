@@ -15,13 +15,16 @@ import { ChildHoKycViewContent } from './ChildHoKycViewContent'
 import { ChildHoPrincipalKycContent } from './ChildHoPrincipalKycContent'
 import { ChildAmlReviewContent } from './ChildAmlReviewContent'
 import { HoPrincipalKycFooter } from './HoPrincipalKycFooter'
+import { useState } from 'react'
 import { Eye, FileSearch, ShieldCheck, ShieldAlert, Building } from 'lucide-react'
 import { VerticalNav } from '@/components/navigation/vertical-nav'
+import { ComposeDialog } from '@/components/dashboard/ComposeDialog'
 import { useWorkflow } from '@/stores/workflowStore'
 import { cn } from '@/lib/utils'
 
 export function WizardLayout() {
   const { state, dispatch } = useWorkflow()
+  const [composeOpen, setComposeOpen] = useState(false)
   const inChildAction = !!state.activeChildActionId
   const viewMode = state.demoViewMode
   const isSubmitted = !!state.submittedAt
@@ -43,7 +46,7 @@ export function WizardLayout() {
 
   return (
     <div className="flex h-screen bg-background">
-      <VerticalNav defaultCollapsed />
+      <VerticalNav defaultCollapsed onCreateClick={() => setComposeOpen(true)} />
       <div className="flex flex-col flex-1 min-w-0">
         {showViewToggle && (
           <header className="border-b border-border px-4 py-2 flex items-center justify-end shrink-0">
@@ -248,6 +251,7 @@ export function WizardLayout() {
           )}
         </div>
       </div>
+      {composeOpen && <ComposeDialog onClose={() => setComposeOpen(false)} />}
     </div>
   )
 }
