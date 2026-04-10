@@ -96,6 +96,7 @@ export function ChildActionSidebar() {
   if (!ctx) return null
 
   const { child, config, subTaskIndex, parentTask } = ctx
+  const showSubTaskNumbers = child.childType !== 'account-opening'
   const viewMode = state.demoViewMode
   const isHoKycView = viewMode === 'ho-kyc'
   const isHoPrincipalKycView = viewMode === 'ho-principal-kyc'
@@ -130,7 +131,9 @@ export function ChildActionSidebar() {
             <li>
               <div className="w-full text-left px-3 py-2 rounded-md text-sm flex items-center gap-2 bg-accent text-accent-foreground font-medium">
                 <span className="flex items-center gap-2 truncate">
-                  <span className="text-xs text-muted-foreground w-4 shrink-0">1.</span>
+                  {showSubTaskNumbers && (
+                    <span className="text-xs text-muted-foreground w-4 shrink-0">1.</span>
+                  )}
                   {singleReviewStepLabel}
                 </span>
               </div>
@@ -150,7 +153,9 @@ export function ChildActionSidebar() {
                     )}
                   >
                     <span className="flex items-center gap-2 truncate">
-                      <span className="text-xs text-muted-foreground w-4 shrink-0">{idx + 1}.</span>
+                      {showSubTaskNumbers && (
+                        <span className="text-xs text-muted-foreground w-4 shrink-0">{idx + 1}.</span>
+                      )}
                       {subTask.title}
                     </span>
                     <SubTaskStatusBadge subTaskId={subTaskId} />

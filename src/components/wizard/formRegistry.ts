@@ -33,7 +33,7 @@ export const taskDescriptions: Partial<Record<string, string>> = {
   'existing-accounts':
     'Review and maintain the client\'s current financial accounts held elsewhere (brokerage, retirement, trust, and banking).',
   'related-parties':
-    'Capture household members and related contacts for this client. People added here can be selected for KYC verification in a later step.',
+    'Capture household members and related contacts for this client.',
   'kyc':
     'Review household members and select who requires identity verification.',
   'kyc-child-info':

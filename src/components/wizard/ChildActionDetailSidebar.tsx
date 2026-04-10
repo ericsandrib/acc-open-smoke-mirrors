@@ -38,6 +38,7 @@ export function ChildActionDetailSidebar({
   const Root = embedded ? 'div' : 'aside'
 
   const { child, subTaskId, config, subTaskIndex, totalSubTasks } = ctx
+  const showStepProgress = child.childType !== 'account-opening'
 
   const detailsData = state.taskData[`${child.id}-account-owners`] as Record<string, unknown> | undefined
   const legacyAccountType = detailsData?.accountType as AccountType | undefined
@@ -101,12 +102,14 @@ export function ChildActionDetailSidebar({
                 {child.status.replace('_', ' ')}
               </p>
             </div>
-            <div>
-              <span className="text-muted-foreground">Progress</span>
-              <p className="font-medium text-foreground">
-                Step {subTaskIndex + 1} of {totalSubTasks}
-              </p>
-            </div>
+            {showStepProgress && (
+              <div>
+                <span className="text-muted-foreground">Progress</span>
+                <p className="font-medium text-foreground">
+                  Step {subTaskIndex + 1} of {totalSubTasks}
+                </p>
+              </div>
+            )}
           </div>
         </TabsContent>
 
