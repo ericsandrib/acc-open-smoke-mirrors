@@ -1,7 +1,6 @@
 import { useMemo } from 'react'
 import { useChildActionContext, useTaskData, useWorkflow } from '@/stores/workflowStore'
 import { Label } from '@/components/ui/label'
-import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import {
   Select,
@@ -11,6 +10,8 @@ import {
   SelectItem,
 } from '@/components/ui/select'
 import { Plus, Trash2, FileText, Paperclip, Upload, X } from 'lucide-react'
+import { resolveEsignFormSample } from '@/constants/esignFormSamples'
+import { EsignFormPdfSampleActions } from '@/components/wizard/EsignFormPdfSampleActions'
 import type { RegistrationType } from '@/utils/registrationDocuments'
 import {
   getRegistrationDocumentsForType,
@@ -170,29 +171,46 @@ export function AcctChildDocumentsReviewForm() {
   return (
     <div className="space-y-8">
       <section className="space-y-4">
-        <p className="text-sm text-muted-foreground">
-          Review and finalize the paperwork for <span className="font-medium text-foreground">{ctx.child.name}</span>.
-          This view shows document requirements for this specific account. The full eSign package is created and sent from
-          <span className="font-medium text-foreground"> Open Accounts</span>.
-        </p>
         <h3 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
           Forms for this account
         </h3>
         <p className="text-sm text-muted-foreground">
-          These required forms are generated automatically from this account&apos;s registration type using the same rules as
-          the Documents panel and eSign envelope builder.
+          These required forms are generated automatically from this account&apos;s registration type using the same rules
+          as the Documents panel and eSign envelope builder.
         </p>
 
         <div className="rounded-md border border-border bg-card p-3 space-y-2">
           <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Firm / custodian forms (eSign)</p>
           {ruleDrivenDocs.firmCustodianEsign.length > 0 ? (
-            <div className="flex flex-wrap gap-2">
-              {ruleDrivenDocs.firmCustodianEsign.map((doc) => (
-                <Badge key={doc.id} variant="outline">
-                  {doc.label}
-                </Badge>
-              ))}
-            </div>
+            <ul className="space-y-2">
+              {ruleDrivenDocs.firmCustodianEsign.map((doc) => {
+                const sample = resolveEsignFormSample(doc.id)
+                const titleLine = sample?.fileName ?? doc.label
+                const subLine = sample ? doc.label : 'Included in your e-sign envelope'
+                return (
+                  <li
+                    key={doc.id}
+                    className="flex items-center gap-3 rounded-lg border border-border bg-background px-3 py-2.5 shadow-sm"
+                  >
+                    <div
+                      className="flex h-11 w-11 shrink-0 items-center justify-center rounded-md border border-red-200 bg-red-50 text-red-700 dark:border-red-900/60 dark:bg-red-950/40 dark:text-red-300"
+                      aria-hidden
+                    >
+                      <FileText className="h-5 w-5" strokeWidth={1.75} />
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <p className="text-sm font-medium text-foreground truncate">{titleLine}</p>
+                      <p className="text-[11px] text-muted-foreground line-clamp-2">{subLine}</p>
+                    </div>
+                    {sample ? (
+                      <EsignFormPdfSampleActions formIdOrDocId={doc.id} />
+                    ) : (
+                      <span className="shrink-0 text-[11px] text-muted-foreground">E-sign package</span>
+                    )}
+                  </li>
+                )
+              })}
+            </ul>
           ) : (
             <p className="text-xs text-muted-foreground">No eSign firm/custodian forms required for this registration type.</p>
           )}

@@ -44,6 +44,7 @@ import { deriveDefaultEnvelopeName } from '@/utils/deriveEnvelopeDisplayName'
 import { downloadEnvelopeManifest } from '@/utils/downloadEsignEnvelopeManifest'
 import { flattenPdfForPreview } from '@/utils/flattenPdfForPreview'
 import { cn } from '@/lib/utils'
+import { EsignFormPdfSampleActions } from '@/components/wizard/EsignFormPdfSampleActions'
 import {
   Building2,
   CalendarDays,
@@ -580,14 +581,15 @@ export function EsignEnvelopeDrawer({
                     </div>
                     <ul className="divide-y divide-border">
                       {rows.map((row) => (
-                        <li key={row.formId} className="flex items-start gap-3 px-3 py-2.5">
-                          <Checkbox checked={row.included} disabled={row.required} className="mt-0.5" />
+                        <li key={row.formId} className="flex items-center gap-3 px-3 py-2.5">
+                          <Checkbox checked={row.included} disabled={row.required} className="shrink-0" />
                           <div className="min-w-0 flex-1">
                             <p className="text-sm text-foreground">{row.label}</p>
                             {row.required ? (
                               <p className="text-[11px] text-muted-foreground">Required for this registration</p>
                             ) : null}
                           </div>
+                          <EsignFormPdfSampleActions formIdOrDocId={row.formId} />
                         </li>
                       ))}
                     </ul>
@@ -600,17 +602,20 @@ export function EsignEnvelopeDrawer({
             <div className="rounded-lg border border-border p-3 space-y-2">
               <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Optional add-on forms</p>
               {OPTIONAL_ESIGN_FORM_CATALOG.map((opt) => (
-                <label
+                <div
                   key={opt.id}
-                  className="flex items-start gap-3 cursor-pointer rounded-md p-2 hover:bg-muted/50"
+                  className="flex items-center gap-2 rounded-md p-2 hover:bg-muted/50"
                 >
-                  <Checkbox
-                    checked={local.optionalFormIdsIncluded.includes(opt.id)}
-                    onCheckedChange={(c) => toggleOptional(opt.id, c === true)}
-                    className="mt-0.5"
-                  />
-                  <span className="text-sm">{opt.label}</span>
-                </label>
+                  <label className="flex min-w-0 flex-1 cursor-pointer items-center gap-3">
+                    <Checkbox
+                      checked={local.optionalFormIdsIncluded.includes(opt.id)}
+                      onCheckedChange={(c) => toggleOptional(opt.id, c === true)}
+                      className="shrink-0"
+                    />
+                    <span className="text-sm">{opt.label}</span>
+                  </label>
+                  <EsignFormPdfSampleActions formIdOrDocId={opt.id} />
+                </div>
               ))}
             </div>
           </div>

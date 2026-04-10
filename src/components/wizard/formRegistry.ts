@@ -53,7 +53,7 @@ export const taskDescriptions: Partial<Record<string, string>> = {
   'feature-service-line-child-setup':
     'Capture status, routing, dates, and notes for this feature or service workflow line.',
   'acct-child-documents-review':
-    'Finalize this account’s paperwork: lists, uploads, exceptions. Documents (right) tracked rule-driven needs since Task 1; the single aggregated eSign envelope is built on the Open Accounts parent step.',
+    'Finalize account documentation and collect required client documents',
   'placeholder-2':
     'Review the information gathered during onboarding and confirm everything is accurate before submitting.',
 }

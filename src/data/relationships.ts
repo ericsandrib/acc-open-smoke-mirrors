@@ -4,7 +4,7 @@ import { initialFinancialAccounts } from './seed'
 export const relationships: Relationship[] = [
   {
     id: 'john-smith-household',
-    name: 'John Smith Household',
+    name: 'John Smith',
     primaryContact: {
       firstName: 'John',
       lastName: 'Smith',
@@ -69,7 +69,7 @@ export const relationships: Relationship[] = [
   },
   {
     id: 'michael-johnson-household',
-    name: 'Michael Johnson Household',
+    name: 'Michael Johnson',
     primaryContact: {
       firstName: 'Michael',
       lastName: 'Johnson',
@@ -89,7 +89,7 @@ export const relationships: Relationship[] = [
   },
   {
     id: 'sarah-johnson-household',
-    name: 'Sarah Johnson Household',
+    name: 'Sarah Johnson',
     primaryContact: {
       firstName: 'Sarah',
       lastName: 'Johnson',
@@ -105,7 +105,7 @@ export const relationships: Relationship[] = [
   },
   {
     id: 'emily-davis-household',
-    name: 'Emily Davis Household',
+    name: 'Emily Davis',
     primaryContact: {
       firstName: 'Emily',
       lastName: 'Davis',
@@ -124,7 +124,7 @@ export const relationships: Relationship[] = [
   },
   {
     id: 'james-davis-household',
-    name: 'James Davis Household',
+    name: 'James Davis',
     primaryContact: {
       firstName: 'James',
       lastName: 'Davis',
@@ -140,7 +140,7 @@ export const relationships: Relationship[] = [
   },
   {
     id: 'olivia-davis-household',
-    name: 'Olivia Davis Household',
+    name: 'Olivia Davis',
     primaryContact: {
       firstName: 'Olivia',
       lastName: 'Davis',
@@ -156,7 +156,7 @@ export const relationships: Relationship[] = [
   },
   {
     id: 'maria-garcia-household',
-    name: 'Maria Garcia Household',
+    name: 'Maria Garcia',
     primaryContact: {
       firstName: 'Maria',
       lastName: 'Garcia',
@@ -176,7 +176,7 @@ export const relationships: Relationship[] = [
   },
   {
     id: 'carlos-garcia-household',
-    name: 'Carlos Garcia Household',
+    name: 'Carlos Garcia',
     primaryContact: {
       firstName: 'Carlos',
       lastName: 'Garcia',
@@ -192,7 +192,7 @@ export const relationships: Relationship[] = [
   },
   {
     id: 'sofia-garcia-household',
-    name: 'Sofia Garcia Household',
+    name: 'Sofia Garcia',
     primaryContact: {
       firstName: 'Sofia',
       lastName: 'Garcia',
@@ -208,7 +208,7 @@ export const relationships: Relationship[] = [
   },
   {
     id: 'patel-household',
-    name: 'Anita Patel Household',
+    name: 'Anita Patel',
     primaryContact: {
       firstName: 'Anita',
       lastName: 'Patel',
@@ -227,7 +227,7 @@ export const relationships: Relationship[] = [
   },
   {
     id: 'kim-household',
-    name: 'Daniel Kim Household',
+    name: 'Daniel Kim',
     primaryContact: {
       firstName: 'Daniel',
       lastName: 'Kim',
@@ -246,7 +246,7 @@ export const relationships: Relationship[] = [
   },
   {
     id: 'thompson-household',
-    name: 'Laura Thompson Household',
+    name: 'Laura Thompson',
     primaryContact: {
       firstName: 'Laura',
       lastName: 'Thompson',
@@ -265,7 +265,7 @@ export const relationships: Relationship[] = [
   },
   {
     id: 'nakamura-household',
-    name: 'Kenji Nakamura Household',
+    name: 'Kenji Nakamura',
     primaryContact: {
       firstName: 'Kenji',
       lastName: 'Nakamura',
@@ -284,7 +284,7 @@ export const relationships: Relationship[] = [
   },
   {
     id: 'oconnor-household',
-    name: "Bridget O'Connor Household",
+    name: "Bridget O'Connor",
     primaryContact: {
       firstName: 'Bridget',
       lastName: "O'Connor",
