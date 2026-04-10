@@ -3,7 +3,7 @@ import type { TaskStatus, Task, WorkflowState } from '@/types/workflow'
 import { cn } from '@/lib/utils'
 import { teamMembers } from '@/data/teamMembers'
 import { parseChildSubTaskId } from '@/utils/childTaskRegistry'
-import { Circle, Loader, CheckCircle2, Ban, User, Clock, XCircle, Pencil } from 'lucide-react'
+import { Circle, Loader, CheckCircle2, Ban, User, Clock, XCircle } from 'lucide-react'
 import {
   Tooltip,
   TooltipContent,
@@ -121,11 +121,15 @@ const DONUT_R = 7
 const DONUT_CIRCUMFERENCE = 2 * Math.PI * DONUT_R
 
 function DonutProgress({ progress, edited }: { progress: number; edited: boolean }) {
-  const filled = Math.min(1, Math.max(0, progress)) * DONUT_CIRCUMFERENCE
+  const rawPct = Math.round(progress * 100)
+  const displayProgress =
+    edited && rawPct === 0 ? 0.05 : Math.min(1, Math.max(0, progress))
+  const displayPct = Math.round(displayProgress * 100)
+  const filled = displayProgress * DONUT_CIRCUMFERENCE
   return (
     <Tooltip>
       <TooltipTrigger asChild>
-        <span className="relative shrink-0 flex items-center justify-center h-3.5 w-3.5">
+        <span className="shrink-0 flex items-center justify-center h-3.5 w-3.5">
           <svg className="h-3.5 w-3.5" viewBox="0 0 20 20">
             <circle
               cx="10"
@@ -135,7 +139,7 @@ function DonutProgress({ progress, edited }: { progress: number; edited: boolean
               strokeWidth="3"
               stroke="var(--color-border-secondary)"
             />
-            {progress > 0 && (
+            {displayProgress > 0 && (
               <circle
                 cx="10"
                 cy="10"
@@ -149,13 +153,12 @@ function DonutProgress({ progress, edited }: { progress: number; edited: boolean
               />
             )}
           </svg>
-          {edited && (
-            <Pencil className="absolute h-2 w-2 text-text-category1-primary" />
-          )}
         </span>
       </TooltipTrigger>
       <TooltipContent side="right">
-        <p>{Math.round(progress * 100)}% complete{edited ? ' · Edited' : ''}</p>
+        <p>
+          {displayPct}% complete{edited ? ' · Edited' : ''}
+        </p>
       </TooltipContent>
     </Tooltip>
   )
@@ -194,10 +197,11 @@ export function StepSidebar() {
           </div>
         </div>
         {state.actions
+          .filter((action) => action.id !== 'kyc')
           .sort((a, b) => a.order - b.order)
           .map((action) => {
             const actionTasks = state.tasks
-              .filter((t) => t.actionId === action.id)
+              .filter((t) => t.actionId === action.id && t.formKey !== 'kyc' && t.id !== 'kyc-review')
               .sort((a, b) => a.order - b.order)
 
             return (

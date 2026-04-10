@@ -2,8 +2,7 @@ import type { Action, Task, RelatedParty, FinancialAccount } from '@/types/workf
 
 export const actions: Action[] = [
   { id: 'collect-client-data', title: 'Collect Client Data', order: 1 },
-  { id: 'kyc', title: 'KYC', order: 2 },
-  { id: 'account-opening', title: 'Account Opening', order: 3 },
+  { id: 'account-opening', title: 'Account Opening', order: 2 },
 ]
 
 export const tasks: Task[] = [
@@ -24,16 +23,6 @@ export const tasks: Task[] = [
     assignedTo: 'Unassigned',
     formKey: 'existing-accounts',
     order: 2,
-  },
-  {
-    id: 'kyc-review',
-    title: 'KYC Review',
-    actionId: 'kyc',
-    status: 'not_started',
-    assignedTo: 'Unassigned',
-    formKey: 'kyc',
-    order: 1,
-    children: [],
   },
   {
     id: 'open-accounts',
@@ -109,7 +98,61 @@ export const initialRelatedParties: RelatedParty[] = [
   { id: 'org-1', name: 'Smith Family Trust LLC', organizationName: 'Smith Family Trust LLC', type: 'related_organization', role: 'Trust', relationshipCategory: 'Legal' },
 ]
 
+/** Ordered by typical registration frequency (most common first); trust last. */
 export const initialFinancialAccounts: FinancialAccount[] = [
-  { id: 'acct-1', accountName: 'Smith Family Trust', accountType: 'trust', custodian: 'Fidelity', estimatedValue: '2,500,000' },
-  { id: 'acct-2', accountName: 'John IRA', accountType: 'ira', custodian: 'Charles Schwab', accountNumber: '****4521', estimatedValue: '850,000' },
+  {
+    id: 'acct-ind-broker',
+    accountName: 'John Smith — Individual Brokerage',
+    accountType: 'brokerage',
+    custodian: 'Fidelity',
+    accountNumber: 'Z12-3456789',
+    estimatedValue: '420,000',
+  },
+  {
+    id: 'acct-401k',
+    accountName: 'John Smith — 401(k) (ComEd)',
+    accountType: '401k',
+    custodian: 'Vanguard Retirement Plan Services',
+    accountNumber: '401K-8849201',
+    estimatedValue: '385,000',
+  },
+  {
+    id: 'acct-joint-broker',
+    accountName: 'John & Jane Smith — Joint Brokerage',
+    accountType: 'brokerage',
+    custodian: 'Charles Schwab',
+    accountNumber: '8934-221199',
+    estimatedValue: '1,200,000',
+  },
+  {
+    id: 'acct-ira',
+    accountName: 'John Smith — Traditional IRA',
+    accountType: 'ira',
+    custodian: 'Charles Schwab',
+    accountNumber: '884215531',
+    estimatedValue: '850,000',
+  },
+  {
+    id: 'acct-trust',
+    accountName: 'Smith Family Trust',
+    accountType: 'trust',
+    custodian: 'Fidelity',
+    accountNumber: 'TRU-7719023',
+    estimatedValue: '2,500,000',
+  },
 ]
+
+/**
+ * Seeded for Existing Accounts / Open Accounts “Additional instructions” (taskData key: open-accounts).
+ * References the Smith household existing accounts above; advisor-facing custodian & funding notes.
+ */
+export const seedOpenAccountsAdditionalInstructions = `Custodian & new-account setup
+Open new accounts at the firm’s custodian (e.g. Pershing) using the registration titles and ownership elected in Open Accounts (individual, joint, traditional IRA, trust, etc.). Confirm titling, TIN, and trusted contacts match each new account before first funding.
+
+Funding & moving assets from existing accounts
+• Brokerage (in-kind ACAT): Plan to transfer positions from Fidelity individual brokerage (Z12-3456789) and Charles Schwab joint brokerage (8934-221199) into the new corresponding accounts after new account numbers are live. Client may prefer partial ACATs first if keeping legacy accounts open during transition.
+• 401(k) rollover: John’s employer plan is at Vanguard Retirement Plan Services (401K-8849201, ~$385k). Use direct rollover into the new traditional IRA where that is the elected destination; confirm plan contact, vesting, and any outstanding loan payoff before initiating.
+• IRA consolidation: ACAT or cash transfer from existing Schwab traditional IRA (884215531) into the new IRA per client direction.
+• Trust: For the Smith Family Trust at Fidelity (TRU-7719023), coordinate with trustee/counsel before moving trust-owned assets; obtain LOA / trustee resolutions as required for ACAT or cash movement.
+
+Operational: Collect transfer authorizations (Medallion or custodian-specific), monitor ACAT/rollover status in the custodian workflow, and reconcile statement values to the estimated balances on file when transfers complete.`

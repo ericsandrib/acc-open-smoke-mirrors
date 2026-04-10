@@ -1,4 +1,5 @@
 import type { Relationship } from '@/types/relationship'
+import { initialFinancialAccounts } from './seed'
 
 export const relationships: Relationship[] = [
   {
@@ -64,10 +65,7 @@ export const relationships: Relationship[] = [
       { id: 'contact-2', name: 'David Chen', firstName: 'David', lastName: 'Chen', type: 'related_contact', relationship: 'Attorney', relationshipCategory: 'Professional', email: 'dchen@lawfirm.com', phone: '+1 (555) 987-6543' },
       { id: 'org-1', name: 'Smith Family Trust LLC', organizationName: 'Smith Family Trust LLC', type: 'related_organization', role: 'Trust', relationshipCategory: 'Legal' },
     ],
-    financialAccounts: [
-      { id: 'acct-1', accountName: 'Smith Family Trust', accountType: 'trust', custodian: 'Fidelity', estimatedValue: '2,500,000' },
-      { id: 'acct-2', accountName: 'John IRA', accountType: 'ira', custodian: 'Charles Schwab', accountNumber: '****4521', estimatedValue: '850,000' },
-    ],
+    financialAccounts: [...initialFinancialAccounts],
   },
   {
     id: 'michael-johnson-household',

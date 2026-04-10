@@ -1,4 +1,4 @@
-import { useState, useMemo, useCallback, useRef, useEffect } from 'react'
+import { useState, useMemo, useRef, useEffect } from 'react'
 import { useWorkflow, useTaskData } from '@/stores/workflowStore'
 import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
@@ -7,7 +7,7 @@ import { Label } from '@/components/ui/label'
 import { ChildActionKebabMenu } from '@/components/wizard/ChildActionKebabMenu'
 import { ChildActionTimelineSheet } from '@/components/wizard/ChildActionTimelineSheet'
 import { childStatusConfig, deriveChildDisplayStatus } from '@/utils/childStatusDisplay'
-import type { ChildTask } from '@/types/workflow'
+import type { ChildTask, RelatedParty } from '@/types/workflow'
 import { AccountTypePickerDialog } from './AccountTypePickerDialog'
 import type { Selection } from './AccountTypePickerDialog'
 import { spawnOpenAccountChildrenFromSelections } from '@/utils/spawnOpenAccountChildrenFromSelections'
@@ -73,14 +73,14 @@ export function OpenAccountsForm() {
   const [envelopeDrawerMountKey, setEnvelopeDrawerMountKey] = useState(0)
 
   const openAccountsTask = state.tasks.find((t) => t.formKey === 'open-accounts')
-  const kycTask = state.tasks.find((t) => t.formKey === 'kyc')
-  const kycChildren = kycTask?.children ?? []
+  const kycParentTask = state.tasks.find((t) => t.formKey === 'kyc') ?? openAccountsTask
+  const kycChildren = kycParentTask?.children?.filter((c) => c.childType === 'kyc') ?? []
   const [kycAddSheetOpen, setKycAddSheetOpen] = useState(false)
   const [kycTimelineChild, setKycTimelineChild] = useState<ChildTask | null>(null)
   const pendingKycPartyId = useRef<string | null>(null)
 
   useEffect(() => {
-    if (!pendingKycPartyId.current || !kycTask) return
+    if (!pendingKycPartyId.current || !kycParentTask) return
     const partyId = pendingKycPartyId.current
     const party = state.relatedParties.find((p) => p.id === partyId)
     if (!party) return
@@ -92,26 +92,22 @@ export function OpenAccountsForm() {
     })
     dispatch({
       type: 'SPAWN_CHILD',
-      parentTaskId: kycTask.id,
+      parentTaskId: kycParentTask.id,
       childName: party.name,
       childType: 'kyc',
     })
-  }, [state.relatedParties, kycTask, dispatch])
+  }, [state.relatedParties, kycParentTask, dispatch])
 
-  const handleKycContactAdded = useCallback((partyId: string) => {
+  const handleKycContactAdded = (partyId: string) => {
     pendingKycPartyId.current = partyId
-  }, [])
-  const children = openAccountsTask?.children ?? []
-  const accountOpeningChildren = useMemo(
-    () => children.filter((c) => c.childType === 'account-opening'),
-    [children],
-  )
+  }
+  const accountOpeningChildren = (openAccountsTask?.children ?? []).filter((c) => c.childType === 'account-opening')
   const householdMembers = state.relatedParties.filter((p) => p.type === 'household_member' && !p.isHidden)
 
   type OwnerRow = { id: string; type: string; partyId?: string }
   const kycOwnerParties = useMemo(() => {
     const seenIds = new Set<string>()
-    const parties: typeof state.relatedParties = []
+    const parties: RelatedParty[] = []
     for (const child of accountOpeningChildren) {
       const subTaskId = `${child.id}-account-owners`
       const td = state.taskData[subTaskId] as Record<string, unknown> | undefined
@@ -306,7 +302,7 @@ export function OpenAccountsForm() {
         </div>
         <textarea
           id="additionalInstructions"
-          className="flex min-h-[100px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+          className="flex min-h-[28rem] w-full resize-y rounded-md border border-input bg-background px-3 py-2 text-sm leading-relaxed ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
           placeholder="Enter any client instructions regarding the accounts to be opened and associated funding sources."
           value={(data.additionalInstructions as string) ?? ''}
           onChange={(e) => updateField('additionalInstructions', e.target.value)}
@@ -315,10 +311,15 @@ export function OpenAccountsForm() {
 
       {/* Section 3: Accounts to be Opened */}
       <section>
-        <div className="mb-3">
+        <div className="mb-4">
           <h3 className="text-base font-semibold">
             Accounts to be Opened
           </h3>
+          <p className="text-base text-muted-foreground mt-2">
+            Use this section for accounts to open at the custodian—not the client&apos;s current holdings,
+            which are captured in Existing Accounts above. Each row is a new account together with the
+            funding instructions that apply to it.
+          </p>
         </div>
 
         {accountOpeningChildren.length > 0 ? (
@@ -433,9 +434,8 @@ export function OpenAccountsForm() {
             Required Documents
           </h3>
           <p className="text-base text-muted-foreground">
-            Firm and custodian forms are configured only under <span className="font-medium text-foreground">eSign envelopes</span>{' '}
-            below. Use this section for items that need a file from the client (for example ID or trust pages), once per person
-            where applicable.
+            Client file uploads (for example ID or trust documents) go here. Firm and custodian forms are configured under{' '}
+            <span className="font-medium text-foreground">eSign envelopes</span> below—not in this section.
           </p>
         </div>
         {accountOpeningChildren.length > 0 && uploadDocs.length > 0 ? (
@@ -624,7 +624,7 @@ export function OpenAccountsForm() {
             <p className="text-sm text-muted-foreground">
               {accountOpeningChildren.length === 0
                 ? 'Add accounts above to see required documents.'
-                : 'No client uploads required for these accounts. Firm and custodian forms are configured under eSign envelopes below.'}
+                : 'No client uploads required for these accounts. Use eSign envelopes below for firm and custodian forms.'}
             </p>
           </div>
         )}
@@ -635,12 +635,22 @@ export function OpenAccountsForm() {
         <div className="mb-4">
           <h3 className="text-base font-semibold">Contacts for Verification</h3>
           <p className="text-base text-muted-foreground">
-            Manage contacts who need identity verification (KYC/KYB). Click on a contact to begin or continue their review.
+            Account owners on the registration must complete identity verification (KYC/KYB) before account opening can
+            finish. {kycOwnerParties.length > 0
+              ? 'The table lists owners who need verification; the KYC workflows block below is separate—it lists each workflow you can open to complete steps and submit for review.'
+              : 'When you add owners to registration, they appear in a table above the workflows list. The KYC workflows block below lists each workflow you can open to complete steps and submit for review.'}
           </p>
         </div>
 
         {kycOwnerParties.length > 0 && (
-          <div className="rounded-lg border border-border overflow-hidden mb-4">
+          <>
+            <div className="mb-3">
+              <h4 className="text-sm font-semibold text-foreground">Owners on registration</h4>
+              <p className="text-sm text-muted-foreground mt-1">
+                One row per owner. Start a workflow when you are ready to capture identity and documents for that person.
+              </p>
+            </div>
+            <div className="rounded-lg border border-border overflow-hidden mb-4">
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b border-border bg-muted/40">
@@ -688,7 +698,7 @@ export function OpenAccountsForm() {
                             onClick={() => {
                               dispatch({
                                 type: 'SPAWN_CHILD',
-                                parentTaskId: kycTask!.id,
+                                parentTaskId: kycParentTask!.id,
                                 childName: member.name,
                                 childType: 'kyc',
                               })
@@ -700,7 +710,7 @@ export function OpenAccountsForm() {
                             }}
                           >
                             <Play className="h-3 w-3" />
-                            Start KYC
+                            Start KYC workflow
                           </Button>
                         ) : null}
                       </td>
@@ -710,9 +720,18 @@ export function OpenAccountsForm() {
               </tbody>
             </table>
           </div>
+          </>
         )}
 
-        <div className="rounded-lg border border-border p-1">
+        <div className={cn(kycOwnerParties.length > 0 && 'mt-6 pt-6 border-t border-border')}>
+          <div className="mb-3">
+            <h4 className="text-sm font-semibold text-foreground">KYC workflows</h4>
+            <p className="text-sm text-muted-foreground mt-1">
+              Each row represents a single KYC workflow instance (not the owner list above). Click into a row to complete
+              the steps and submit for review when ready.
+            </p>
+          </div>
+          <div className="rounded-lg border border-border p-1">
           {kycChildren.map((child) => (
             <div
               key={child.id}
@@ -743,7 +762,7 @@ export function OpenAccountsForm() {
                 <div className="hidden group-hover:block">
                   <ChildActionKebabMenu
                     onViewDetails={() => setKycTimelineChild(child)}
-                    onDelete={() => dispatch({ type: 'REMOVE_CHILD', parentTaskId: kycTask!.id, childId: child.id })}
+                    onDelete={() => dispatch({ type: 'REMOVE_CHILD', parentTaskId: kycParentTask!.id, childId: child.id })}
                   />
                 </div>
               </div>
@@ -756,7 +775,9 @@ export function OpenAccountsForm() {
                 <ShieldCheck className="h-6 w-6 text-muted-foreground" />
               </div>
               <p className="text-sm text-muted-foreground">
-                No contacts to verify yet. Add a new contact to begin KYC verification.
+                {kycOwnerParties.length > 0
+                  ? 'No workflows yet. Add a new contact if needed, then start a KYC workflow from the owner table above.'
+                  : 'No workflows yet. Add owners to registration so they appear in the table, then start a KYC workflow from there.'}
               </p>
               <Button className="mt-4" onClick={() => setKycAddSheetOpen(true)}>
                 <UserPlus className="h-4 w-4 mr-2" />
@@ -771,6 +792,7 @@ export function OpenAccountsForm() {
               Add contact
             </Button>
           )}
+          </div>
         </div>
 
         <AddHouseholdMemberSheet

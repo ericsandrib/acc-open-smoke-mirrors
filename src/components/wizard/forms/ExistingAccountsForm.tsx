@@ -27,7 +27,7 @@ export function ExistingAccountsForm() {
         </div>
         <textarea
           id="additionalInstructions"
-          className="flex min-h-[100px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+          className="flex min-h-[28rem] w-full resize-y rounded-md border border-input bg-background px-3 py-2 text-sm leading-relaxed ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
           placeholder="Enter any client instructions regarding the accounts to be opened and associated funding sources."
           value={(data.additionalInstructions as string) ?? ''}
           onChange={(e) => updateField('additionalInstructions', e.target.value)}

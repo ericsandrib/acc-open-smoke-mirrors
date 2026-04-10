@@ -1,6 +1,12 @@
 import { createContext, useContext, useReducer, useCallback, type ReactNode } from 'react'
 import type { WorkflowState, WorkflowAction, Task } from '@/types/workflow'
-import { actions, tasks, initialRelatedParties, initialFinancialAccounts } from '@/data/seed'
+import {
+  actions,
+  tasks,
+  initialRelatedParties,
+  initialFinancialAccounts,
+  seedOpenAccountsAdditionalInstructions,
+} from '@/data/seed'
 import { getChildSubTaskIds, getChildTypeConfig, parseChildSubTaskId } from '@/utils/childTaskRegistry'
 import { generateAccountOpenIdentifiers } from '@/utils/accountOpenIdentifiers'
 
@@ -36,7 +42,11 @@ const initialState: WorkflowState = {
   financialAccounts: [...initialFinancialAccounts],
   activeTaskId: tasks[0].id,
   flatTaskOrder: computeFlatTaskOrder(tasks, actions),
-  taskData: {},
+  taskData: {
+    'open-accounts': {
+      additionalInstructions: seedOpenAccountsAdditionalInstructions,
+    },
+  },
   submittedTaskIds: [],
 }
 
@@ -385,7 +395,12 @@ function workflowReducer(state: WorkflowState, action: WorkflowAction): Workflow
 
     case 'INITIALIZE_FROM_RELATIONSHIP': {
       const assignee = action.assignedTo ?? 'Unassigned'
-      const freshTasks = tasks.map((t) => ({
+      // Default client onboarding no longer includes a top-level KYC action/task.
+      // Keep childType='kyc' support for account-opening or future standalone flows.
+      const baseActions = actions.filter((a) => a.id !== 'kyc')
+      const baseTasks = tasks.filter((t) => t.id !== 'kyc-review' && t.formKey !== 'kyc' && t.actionId !== 'kyc')
+
+      const freshTasks = baseTasks.map((t) => ({
         ...t,
         status: 'in_progress' as const,
         assignedTo: assignee,
@@ -393,9 +408,9 @@ function workflowReducer(state: WorkflowState, action: WorkflowAction): Workflow
         unread: true,
         edited: false,
       }))
-      const newOrder = computeFlatTaskOrder(freshTasks, actions)
+      const newOrder = computeFlatTaskOrder(freshTasks, baseActions)
       return {
-        actions: [...actions],
+        actions: [...baseActions],
         tasks: freshTasks,
         relatedParties: action.relatedParties,
         financialAccounts: action.financialAccounts,
@@ -403,6 +418,9 @@ function workflowReducer(state: WorkflowState, action: WorkflowAction): Workflow
         flatTaskOrder: newOrder,
         taskData: {
           'client-info': action.clientInfo,
+          'open-accounts': {
+            additionalInstructions: seedOpenAccountsAdditionalInstructions,
+          },
         },
         journeyName: action.journeyName,
         journeyId: `journey-${Date.now()}`,

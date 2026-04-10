@@ -41,15 +41,17 @@ export function AcctChildOwnerInfoForm() {
   const childRegType = (childMeta?.registrationType as RegistrationType | undefined) ?? null
   const productAccountTypeOverride = (childMeta?.accountProductType as AccountType | undefined) ?? null
 
-  const kycTask = state.tasks.find((t) => t.formKey === 'kyc')
+  const kycParentTask =
+    state.tasks.find((t) => t.formKey === 'kyc')
+    ?? state.tasks.find((t) => t.formKey === 'open-accounts')
 
   const handleStartKyc = (partyId: string) => {
     const party = state.relatedParties.find((p) => p.id === partyId)
-    if (!party || !kycTask) return
+    if (!party || !kycParentTask) return
 
     dispatch({
       type: 'SPAWN_CHILD',
-      parentTaskId: kycTask.id,
+      parentTaskId: kycParentTask.id,
       childName: party.name,
       childType: 'kyc',
     })
@@ -60,12 +62,12 @@ export function AcctChildOwnerInfoForm() {
     })
 
     toast(`KYC verification started for ${party.name}`, {
-      description: 'Identity verification has been initiated. You can continue here or go to the KYC Review task.',
+      description: 'Identity verification has been initiated. You can continue here or go to Open Accounts.',
       action: {
-        label: 'Go to KYC Review',
+        label: 'Go to Open Accounts',
         onClick: () => {
           dispatch({ type: 'EXIT_CHILD_ACTION' })
-          dispatch({ type: 'SET_ACTIVE_TASK', taskId: kycTask.id })
+          dispatch({ type: 'SET_ACTIVE_TASK', taskId: kycParentTask.id })
         },
       },
     })
@@ -73,10 +75,10 @@ export function AcctChildOwnerInfoForm() {
 
   const handleGoToKyc = (partyId: string) => {
     const party = state.relatedParties.find((p) => p.id === partyId)
-    if (!party || !kycTask) return
-    const kycChild = kycTask.children?.find((c) => c.name === party.name)
+    if (!party || !kycParentTask) return
+    const kycChild = kycParentTask.children?.find((c) => c.name === party.name && c.childType === 'kyc')
     dispatch({ type: 'EXIT_CHILD_ACTION' })
-    dispatch({ type: 'SET_ACTIVE_TASK', taskId: kycTask.id })
+    dispatch({ type: 'SET_ACTIVE_TASK', taskId: kycParentTask.id })
     if (kycChild) {
       dispatch({ type: 'ENTER_CHILD_ACTION', childId: kycChild.id })
     }

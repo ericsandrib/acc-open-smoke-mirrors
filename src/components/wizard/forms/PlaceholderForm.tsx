@@ -106,8 +106,8 @@ export function Placeholder2Form() {
     ),
   )
 
-  const kycTask = state.tasks.find((t) => t.id === 'kyc-review')
-  const kycChildren = kycTask?.children ?? []
+  const kycParentTask = state.tasks.find((t) => t.formKey === 'kyc') ?? state.tasks.find((t) => t.formKey === 'open-accounts')
+  const kycChildren = kycParentTask?.children?.filter((c) => c.childType === 'kyc') ?? []
 
   const openAccountsTask = state.tasks.find((t) => t.id === 'open-accounts')
   const acctChildren = openAccountsTask?.children ?? []

@@ -67,8 +67,8 @@ export function PartySlotCard({
 
   const kycDisplayStatus = useMemo(() => {
     if (!matchedParty) return null
-    const kycTask = state.tasks.find((t) => t.formKey === 'kyc')
-    const kycChild = kycTask?.children?.find((c) => c.name === matchedParty.name)
+    const kycParentTask = state.tasks.find((t) => t.formKey === 'kyc') ?? state.tasks.find((t) => t.formKey === 'open-accounts')
+    const kycChild = kycParentTask?.children?.find((c) => c.childType === 'kyc' && c.name === matchedParty.name)
     if (kycChild) {
       const ds = deriveChildDisplayStatus(kycChild.status)
       return ds === 'complete'
