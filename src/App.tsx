@@ -10,30 +10,33 @@ import { OnboardingPage } from '@/pages/OnboardingPage'
 import { JourneyDetailPage } from '@/pages/JourneyDetailPage'
 import { SettingsPage } from '@/pages/SettingsPage'
 import { Toaster } from '@/components/ui/sonner'
+import { AppPasswordGate } from '@/components/AppPasswordGate'
 import { Agentation } from 'agentation'
 
 export default function App() {
   return (
     <ThemeProvider>
-      <WorkflowProvider>
-        <ServicingProvider>
-          <BrowserRouter>
-            <Routes>
-              <Route path="/" element={<DashboardPage />} />
-              <Route path="/wizard" element={<WizardPage />} />
-              <Route path="/workflow" element={<WorkflowPage />} />
-              <Route path="/servicing" element={<ServicingPage />} />
-              <Route path="/servicing/:journeyId" element={<JourneyDetailPage />} />
-              <Route path="/servicing/:journeyId/action/:actionId" element={<JourneyDetailPage />} />
-              <Route path="/onboarding" element={<OnboardingPage />} />
-              <Route path="/settings" element={<SettingsPage />} />
-              <Route path="*" element={<Navigate to="/" replace />} />
-            </Routes>
-          </BrowserRouter>
-          {import.meta.env.DEV && <Agentation />}
-        </ServicingProvider>
-      </WorkflowProvider>
-      <Toaster />
+      <AppPasswordGate>
+        <WorkflowProvider>
+          <ServicingProvider>
+            <BrowserRouter>
+              <Routes>
+                <Route path="/" element={<DashboardPage />} />
+                <Route path="/wizard" element={<WizardPage />} />
+                <Route path="/workflow" element={<WorkflowPage />} />
+                <Route path="/servicing" element={<ServicingPage />} />
+                <Route path="/servicing/:journeyId" element={<JourneyDetailPage />} />
+                <Route path="/servicing/:journeyId/action/:actionId" element={<JourneyDetailPage />} />
+                <Route path="/onboarding" element={<OnboardingPage />} />
+                <Route path="/settings" element={<SettingsPage />} />
+                <Route path="*" element={<Navigate to="/" replace />} />
+              </Routes>
+            </BrowserRouter>
+            {import.meta.env.DEV && <Agentation />}
+          </ServicingProvider>
+        </WorkflowProvider>
+        <Toaster />
+      </AppPasswordGate>
     </ThemeProvider>
   )
 }
