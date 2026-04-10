@@ -11,7 +11,6 @@ import { JourneyDetailPage } from '@/pages/JourneyDetailPage'
 import { SettingsPage } from '@/pages/SettingsPage'
 import { Toaster } from '@/components/ui/sonner'
 import { AppPasswordGate } from '@/components/AppPasswordGate'
-import { Agentation } from 'agentation'
 
 export default function App() {
   return (
@@ -32,7 +31,6 @@ export default function App() {
                 <Route path="*" element={<Navigate to="/" replace />} />
               </Routes>
             </BrowserRouter>
-            {import.meta.env.DEV && <Agentation />}
           </ServicingProvider>
         </WorkflowProvider>
         <Toaster />
