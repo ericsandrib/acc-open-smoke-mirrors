@@ -21,7 +21,7 @@ export function TopNav() {
       {/* Logo */}
       <div className="flex items-center gap-3 shrink-0">
         <span className="text-xl font-bold tracking-tight text-[var(--text-primary)]">
-          M
+          G
         </span>
         <div className="h-6 w-px bg-border" />
       </div>

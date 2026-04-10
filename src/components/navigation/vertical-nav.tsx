@@ -339,7 +339,7 @@ export function VerticalNav({
               aria-label="Main navigation"
             >
               <div className="h-14 px-4 flex items-center shrink-0">
-                <span className="text-lg font-bold tracking-tight">M</span>
+                <span className="text-lg font-bold tracking-tight">G</span>
               </div>
 
               <NavigationContent
@@ -377,11 +377,11 @@ export function VerticalNav({
             onMouseEnter={() => !isExpanded && setIsCollapsedHovered(true)}
             onMouseLeave={() => setIsCollapsedHovered(false)}
           >
-            {/* Header: M logo + panel toggle */}
+            {/* Header: G logo + panel toggle */}
             <div className="h-14 px-4 flex items-center shrink-0 justify-between">
               {isExpanded ? (
                 <>
-                  <span className="text-lg font-bold tracking-tight">M</span>
+                  <span className="text-lg font-bold tracking-tight">G</span>
                   <Tooltip>
                     <TooltipTrigger asChild>
                       <Button
@@ -412,7 +412,7 @@ export function VerticalNav({
                       isCollapsedHovered ? "invisible" : ""
                     }`}
                   >
-                    M
+                    G
                   </span>
                   {isCollapsedHovered && (
                     <div className="absolute inset-x-0 top-0 h-14 flex items-center justify-center pointer-events-none">
