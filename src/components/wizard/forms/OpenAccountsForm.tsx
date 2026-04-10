@@ -3,7 +3,6 @@ import { useWorkflow, useTaskData } from '@/stores/workflowStore'
 import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
-import { Label } from '@/components/ui/label'
 import { ChildActionKebabMenu } from '@/components/wizard/ChildActionKebabMenu'
 import { ChildActionTimelineSheet } from '@/components/wizard/ChildActionTimelineSheet'
 import { childStatusConfig, deriveChildDisplayStatus } from '@/utils/childStatusDisplay'
@@ -31,7 +30,6 @@ import {
   Shield,
   Wallet,
   FileSignature,
-  ClipboardList,
   Upload,
   X,
   Paperclip,
@@ -279,7 +277,7 @@ export function OpenAccountsForm() {
   }
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-12">
       <section>
         <div className="mb-4">
           <h3 className="text-base font-semibold">
@@ -294,16 +292,16 @@ export function OpenAccountsForm() {
 
       {/* Additional Instructions */}
       <section>
-        <div className="flex items-center gap-2 mb-3">
-          <ClipboardList className="h-4 w-4 text-muted-foreground" />
-          <Label htmlFor="additionalInstructions" className="text-sm font-medium text-muted-foreground">
-            Additional Instructions
-          </Label>
+        <div className="mb-4">
+          <h3 className="text-base font-semibold">Additional Instructions</h3>
+          <p className="text-base text-muted-foreground mt-2">
+            Account opening and funding instructions for the new accounts to be opened.
+          </p>
         </div>
         <textarea
           id="additionalInstructions"
-          className="flex min-h-[28rem] w-full resize-y rounded-md border border-input bg-background px-3 py-2 text-sm leading-relaxed ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-          placeholder="Enter any client instructions regarding the accounts to be opened and associated funding sources."
+          className="flex min-h-[18.67rem] w-full resize-y rounded-md border border-input bg-background px-3 py-2 text-sm leading-relaxed ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+          placeholder="Account opening and funding notes for the new accounts (custodian, transfers, rollovers, timing, client requests)."
           value={(data.additionalInstructions as string) ?? ''}
           onChange={(e) => updateField('additionalInstructions', e.target.value)}
         />
@@ -316,9 +314,8 @@ export function OpenAccountsForm() {
             Accounts to be Opened
           </h3>
           <p className="text-base text-muted-foreground mt-2">
-            Use this section for accounts to open at the custodian—not the client&apos;s current holdings,
-            which are captured in Existing Accounts above. Each row is a new account together with the
-            funding instructions that apply to it.
+            New accounts to open at the custodian, with funding instructions for each row. Current holdings are listed in
+            Existing Accounts above.
           </p>
         </div>
 
@@ -635,22 +632,18 @@ export function OpenAccountsForm() {
         <div className="mb-4">
           <h3 className="text-base font-semibold">Contacts for Verification</h3>
           <p className="text-base text-muted-foreground">
-            Account owners on the registration must complete identity verification (KYC/KYB) before account opening can
-            finish. {kycOwnerParties.length > 0
-              ? 'The table lists owners who need verification; the KYC workflows block below is separate—it lists each workflow you can open to complete steps and submit for review.'
-              : 'When you add owners to registration, they appear in a table above the workflows list. The KYC workflows block below lists each workflow you can open to complete steps and submit for review.'}
+            Identity verification (KYC/KYB) must be completed by all account owners before accounts can be opened.
           </p>
         </div>
 
-        {kycOwnerParties.length > 0 && (
-          <>
-            <div className="mb-3">
-              <h4 className="text-sm font-semibold text-foreground">Owners on registration</h4>
-              <p className="text-sm text-muted-foreground mt-1">
-                One row per owner. Start a workflow when you are ready to capture identity and documents for that person.
-              </p>
-            </div>
-            <div className="rounded-lg border border-border overflow-hidden mb-4">
+        <div className="mb-3">
+          <h4 className="text-sm font-semibold text-foreground">Owners on accounts</h4>
+          <p className="text-sm text-muted-foreground mt-1">
+            One row per owner from accounts. Start a KYC workflow for each.
+          </p>
+        </div>
+        {kycOwnerParties.length > 0 ? (
+          <div className="rounded-lg border border-border overflow-hidden mb-4">
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b border-border bg-muted/40">
@@ -720,15 +713,19 @@ export function OpenAccountsForm() {
               </tbody>
             </table>
           </div>
-          </>
+        ) : (
+          <div className="rounded-lg border border-dashed border-border p-6 text-center mb-4">
+            <p className="text-sm text-muted-foreground">
+              No account owners added yet.
+            </p>
+          </div>
         )}
 
-        <div className={cn(kycOwnerParties.length > 0 && 'mt-6 pt-6 border-t border-border')}>
+        <div className="mt-6">
           <div className="mb-3">
             <h4 className="text-sm font-semibold text-foreground">KYC workflows</h4>
             <p className="text-sm text-muted-foreground mt-1">
-              Each row represents a single KYC workflow instance (not the owner list above). Click into a row to complete
-              the steps and submit for review when ready.
+              Each row is one KYC workflow—open it to complete and submit for review.
             </p>
           </div>
           <div className="rounded-lg border border-border p-1">
@@ -776,10 +773,10 @@ export function OpenAccountsForm() {
               </div>
               <p className="text-sm text-muted-foreground">
                 {kycOwnerParties.length > 0
-                  ? 'No workflows yet. Add a new contact if needed, then start a KYC workflow from the owner table above.'
-                  : 'No workflows yet. Add owners to registration so they appear in the table, then start a KYC workflow from there.'}
+                  ? 'No workflows yet. Add a new contact if needed, then start a KYC workflow from the Owners on accounts table above.'
+                  : 'No KYC workflows started yet.'}
               </p>
-              <Button className="mt-4" onClick={() => setKycAddSheetOpen(true)}>
+              <Button type="button" className="mt-4" onClick={() => setKycAddSheetOpen(true)}>
                 <UserPlus className="h-4 w-4 mr-2" />
                 Add contact
               </Button>
@@ -787,7 +784,7 @@ export function OpenAccountsForm() {
           )}
 
           {kycChildren.length > 0 && (
-            <Button variant="ghost" className="w-full" onClick={() => setKycAddSheetOpen(true)}>
+            <Button type="button" variant="ghost" className="w-full" onClick={() => setKycAddSheetOpen(true)}>
               <UserPlus className="h-4 w-4 mr-2" />
               Add contact
             </Button>
@@ -812,27 +809,23 @@ export function OpenAccountsForm() {
 
       {/* eSign envelopes */}
       <section>
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between mb-4">
-          <div>
-            <h3 className="text-base font-semibold">
-              eSign Envelopes
-            </h3>
-            <p className="text-base text-muted-foreground">
-              Create one or more signing envelopes for this application. Required firm and custodian forms are grouped by
-              account number; add optional forms, signers, and extra files. Data captured in the wizard maps onto generated
-              forms automatically—those forms are not uploaded as attachments.
-            </p>
-          </div>
+        <div className="mb-4">
+          <h4 className="text-sm font-semibold text-foreground">eSign Envelopes</h4>
+          <p className="text-sm text-muted-foreground mt-1">
+            Create one or more signing envelopes for this application. Required firm and custodian forms are grouped by
+            account number. Data captured in the wizard maps onto generated forms automatically—those forms are not uploaded
+            as attachments.
+          </p>
         </div>
         {esignEnvelopes.length === 0 ? (
           <div className="rounded-lg border border-dashed border-border p-6 text-center">
             <FileSignature className="mx-auto mb-2 h-8 w-8 text-muted-foreground/50" />
             <p className="text-sm font-medium text-muted-foreground mb-1">No envelopes yet</p>
-            <p className="text-xs text-muted-foreground mb-4 max-w-md mx-auto">
-              Add an envelope to choose delivery method, template, and which generated forms to include.
+            <p className="text-sm text-muted-foreground mb-4 max-w-md mx-auto">
+              Choose delivery, template, and which generated forms to include.
             </p>
-            <Button type="button" size="sm" onClick={openNewEnvelopeDrawer}>
-              <Plus className="h-3.5 w-3.5 mr-1" />
+            <Button type="button" onClick={openNewEnvelopeDrawer}>
+              <Plus className="h-4 w-4 mr-2" />
               New envelope
             </Button>
           </div>
@@ -845,7 +838,7 @@ export function OpenAccountsForm() {
               >
                 <div className="min-w-0">
                   <p className="text-sm font-medium text-foreground truncate">{getEnvelopeDisplayName(env)}</p>
-                  <p className="text-xs text-muted-foreground mt-1">
+                  <p className="text-sm text-muted-foreground mt-1">
                     {env.formSelections.length} generated form{env.formSelections.length === 1 ? '' : 's'}
                     {env.optionalFormIdsIncluded.length > 0
                       ? ` · ${env.optionalFormIdsIncluded.length} optional`

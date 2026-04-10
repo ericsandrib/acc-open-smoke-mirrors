@@ -11,6 +11,7 @@ import {
 } from '@/components/ui/sheet'
 import { Label } from '@/components/ui/label'
 import { Input } from '@/components/ui/input'
+import { SensitiveTaxIdInput } from '@/components/ui/sensitive-tax-id-input'
 import { Button } from '@/components/ui/button'
 import {
   Select,
@@ -152,7 +153,7 @@ export function AccountOwnerPartySheet({ party, open, onOpenChange, detailTier =
               </div>
               <div className="space-y-1.5">
                 <Label className="text-xs">Tax ID / EIN</Label>
-                <Input value={taxId} onChange={(e) => setTaxId(e.target.value)} placeholder="XX-XXXXXXX" />
+                <SensitiveTaxIdInput value={taxId} onChange={(e) => setTaxId(e.target.value)} placeholder="XX-XXXXXXX" />
               </div>
               <div className="space-y-1.5">
                 <Label className="text-xs">Jurisdiction of formation</Label>

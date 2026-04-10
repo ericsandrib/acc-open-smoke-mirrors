@@ -231,12 +231,7 @@ export function StepSidebar() {
                               : 'hover:bg-muted text-foreground'
                           )}
                         >
-                          <span className="flex items-center gap-2 truncate min-w-0">
-                            {task.unread && (
-                              <span className="shrink-0 h-2 w-2 rounded-full bg-fill-category1-primary" />
-                            )}
-                            <span className="truncate">{task.title}</span>
-                          </span>
+                          <span className="truncate min-w-0">{task.title}</span>
                           <DonutProgress progress={pct} edited={!!task.edited} />
                         </button>
                       </li>

@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import { Input } from '@/components/ui/input'
+import { SensitiveTaxIdInput } from '@/components/ui/sensitive-tax-id-input'
 import { Label } from '@/components/ui/label'
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui/select'
 import { Button } from '@/components/ui/button'
@@ -289,7 +290,7 @@ function EditIndividualSheet({
               </div>
               <div className="space-y-1.5">
                 <Label className={fieldCls}>SSN / Tax ID</Label>
-                <Input value={form.taxId} onChange={(e) => patch({ taxId: e.target.value })} placeholder="XXX-XX-XXXX" />
+                <SensitiveTaxIdInput value={form.taxId} onChange={(e) => patch({ taxId: e.target.value })} placeholder="XXX-XX-XXXX" />
               </div>
               <div className="space-y-1.5">
                 <Label className={fieldCls}>Relationship</Label>
@@ -631,7 +632,7 @@ function EditEntitySheet({
               </div>
               <div className="space-y-1.5">
                 <Label className={fieldCls}>EIN / Tax ID</Label>
-                <Input value={taxId} onChange={(e) => setTaxId(e.target.value)} placeholder="XX-XXXXXXX" />
+                <SensitiveTaxIdInput value={taxId} onChange={(e) => setTaxId(e.target.value)} placeholder="XX-XXXXXXX" />
               </div>
               <div className="space-y-1.5">
                 <Label className={fieldCls}>Jurisdiction of formation</Label>
@@ -669,7 +670,7 @@ function EditEntitySheet({
               </div>
               <div className="space-y-1.5">
                 <Label className={fieldCls}>SSN</Label>
-                <Input value={cpSsn} onChange={(e) => setCpSsn(e.target.value)} placeholder="XXX-XX-XXXX" />
+                <SensitiveTaxIdInput value={cpSsn} onChange={(e) => setCpSsn(e.target.value)} placeholder="XXX-XX-XXXX" />
               </div>
               <div className="space-y-1.5">
                 <Label className={fieldCls}>Address</Label>

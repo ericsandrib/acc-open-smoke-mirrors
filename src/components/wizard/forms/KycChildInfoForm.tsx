@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState, useCallback } from 'react'
 import { useWorkflow, useTaskData, useChildActionContext, useAdvisorUnlocked } from '@/stores/workflowStore'
 import { Input } from '@/components/ui/input'
+import { SensitiveTaxIdInput } from '@/components/ui/sensitive-tax-id-input'
 import { Label } from '@/components/ui/label'
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui/select'
 import { Lock, AlertTriangle, CheckCircle2, Upload } from 'lucide-react'
@@ -287,7 +288,7 @@ export function KycChildInfoForm() {
           </div>
           <div className="space-y-1.5" data-field="taxId">
             <Label className={fieldCls}>SSN / Tax ID<RequiredStar /></Label>
-            <Input
+            <SensitiveTaxIdInput
               value={str('taxId')}
               onChange={(e) => updateField('taxId', e.target.value)}
               onBlur={() => markTouched('taxId')}

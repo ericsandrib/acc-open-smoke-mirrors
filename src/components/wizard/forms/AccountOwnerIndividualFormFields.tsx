@@ -1,5 +1,6 @@
 import { Label } from '@/components/ui/label'
 import { Input } from '@/components/ui/input'
+import { SensitiveTaxIdInput } from '@/components/ui/sensitive-tax-id-input'
 import { Checkbox } from '@/components/ui/checkbox'
 import { Separator } from '@/components/ui/separator'
 import {
@@ -92,7 +93,7 @@ export function AccountOwnerIndividualFormFields({ value: s, onChange, variant =
           </div>
           <div className="space-y-1.5 col-span-2 sm:col-span-1">
             <Label className={field}>Tax ID (SSN / TIN)</Label>
-            <Input
+            <SensitiveTaxIdInput
               value={s.taxId}
               onChange={(e) => onChange({ taxId: e.target.value })}
               placeholder="XXX-XX-XXXX or XX-XXXXXXX"

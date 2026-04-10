@@ -150,9 +150,13 @@ export const seedOpenAccountsAdditionalInstructions = `Custodian & new-account s
 Open new accounts at the firm’s custodian (e.g. Pershing) using the registration titles and ownership elected in Open Accounts (individual, joint, traditional IRA, trust, etc.). Confirm titling, TIN, and trusted contacts match each new account before first funding.
 
 Funding & moving assets from existing accounts
+
 • Brokerage (in-kind ACAT): Plan to transfer positions from Fidelity individual brokerage (Z12-3456789) and Charles Schwab joint brokerage (8934-221199) into the new corresponding accounts after new account numbers are live. Client may prefer partial ACATs first if keeping legacy accounts open during transition.
+
 • 401(k) rollover: John’s employer plan is at Vanguard Retirement Plan Services (401K-8849201, ~$385k). Use direct rollover into the new traditional IRA where that is the elected destination; confirm plan contact, vesting, and any outstanding loan payoff before initiating.
+
 • IRA consolidation: ACAT or cash transfer from existing Schwab traditional IRA (884215531) into the new IRA per client direction.
+
 • Trust: For the Smith Family Trust at Fidelity (TRU-7719023), coordinate with trustee/counsel before moving trust-owned assets; obtain LOA / trustee resolutions as required for ACAT or cash movement.
 
 Operational: Collect transfer authorizations (Medallion or custodian-specific), monitor ACAT/rollover status in the custodian workflow, and reconcile statement values to the estimated balances on file when transfers complete.`

@@ -8,6 +8,7 @@ import {
 } from '@/components/ui/sheet'
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs'
 import { Input } from '@/components/ui/input'
+import { SensitiveTaxIdInput } from '@/components/ui/sensitive-tax-id-input'
 import { Label } from '@/components/ui/label'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -590,7 +591,7 @@ function CreateIndividualForm({ onDone }: { onDone: () => void }) {
       </div>
       <div className="space-y-1.5">
         <Label className="text-xs">SSN</Label>
-        <Input value={ssn} onChange={(e) => setSsn(e.target.value)} placeholder="***-**-****" />
+        <SensitiveTaxIdInput value={ssn} onChange={(e) => setSsn(e.target.value)} placeholder="***-**-****" />
       </div>
       <div className="space-y-1.5">
         <Label className="text-xs">Date of birth</Label>
@@ -667,7 +668,7 @@ function CreateEntityForm({ onDone }: { onDone: () => void }) {
       </div>
       <div className="space-y-1.5">
         <Label className="text-xs">Tax ID / EIN</Label>
-        <Input value={taxId} onChange={(e) => setTaxId(e.target.value)} placeholder="XX-XXXXXXX" />
+        <SensitiveTaxIdInput value={taxId} onChange={(e) => setTaxId(e.target.value)} placeholder="XX-XXXXXXX" />
       </div>
       <div className="space-y-1.5">
         <Label className="text-xs">Jurisdiction</Label>
@@ -811,7 +812,7 @@ function CreateHouseholdLegalEntityForm({
           </div>
           <div className="space-y-1.5">
             <Label className={fieldCls}>EIN / Tax ID</Label>
-            <Input value={taxId} onChange={(e) => setTaxId(e.target.value)} placeholder="XX-XXXXXXX" />
+            <SensitiveTaxIdInput value={taxId} onChange={(e) => setTaxId(e.target.value)} placeholder="XX-XXXXXXX" />
           </div>
           <div className="space-y-1.5">
             <Label className={fieldCls}>Jurisdiction of formation</Label>
@@ -849,7 +850,7 @@ function CreateHouseholdLegalEntityForm({
           </div>
           <div className="space-y-1.5">
             <Label className={fieldCls}>SSN</Label>
-            <Input value={cpSsn} onChange={(e) => setCpSsn(e.target.value)} placeholder="XXX-XX-XXXX" />
+            <SensitiveTaxIdInput value={cpSsn} onChange={(e) => setCpSsn(e.target.value)} placeholder="XXX-XX-XXXX" />
           </div>
           <div className="space-y-1.5">
             <Label className={fieldCls}>Address</Label>
@@ -1166,7 +1167,7 @@ function CreateHouseholdIndividualForm({
           </div>
           <div className="space-y-1.5">
             <Label className={fieldCls}>SSN / Tax ID</Label>
-            <Input value={form.taxId} onChange={(e) => patch({ taxId: e.target.value })} placeholder="XXX-XX-XXXX" />
+            <SensitiveTaxIdInput value={form.taxId} onChange={(e) => patch({ taxId: e.target.value })} placeholder="XXX-XX-XXXX" />
           </div>
           <div className="space-y-1.5">
             <Label className={fieldCls}>Relationship</Label>
