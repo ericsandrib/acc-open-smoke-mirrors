@@ -1,22 +1,14 @@
 import { useWorkflow } from '@/stores/workflowStore'
 import type { TaskStatus, Task, WorkflowState } from '@/types/workflow'
 import { cn } from '@/lib/utils'
-import { teamMembers } from '@/data/teamMembers'
 import { parseChildSubTaskId } from '@/utils/childTaskRegistry'
-import { Circle, Loader, CheckCircle2, Ban, User, Clock, XCircle } from 'lucide-react'
+import { Circle, Loader, CheckCircle2, Ban, Clock, XCircle } from 'lucide-react'
 import {
   Tooltip,
   TooltipContent,
   TooltipProvider,
   TooltipTrigger,
 } from '@/components/ui/tooltip'
-import {
-  Select,
-  SelectTrigger,
-  SelectValue,
-  SelectContent,
-  SelectItem,
-} from '@/components/ui/select'
 
 const statusColors: Record<TaskStatus, string> = {
   not_started: 'text-text-tertiary',
@@ -171,30 +163,9 @@ export function StepSidebar() {
     <TooltipProvider delayDuration={300}>
       <nav className="w-64 border-r border-border bg-sidebar-background p-2 overflow-y-auto">
         <div className="px-3 pt-2 pb-4 mb-2 border-b border-border">
-          <h2 className="text-sm font-semibold text-foreground mb-3">
+          <h2 className="text-sm font-semibold text-foreground">
             {state.journeyName ?? 'Client Onboarding'}
           </h2>
-          <div className="flex items-center gap-2">
-            <User className="h-4 w-4 text-muted-foreground shrink-0" />
-            <Select
-              value={state.assignedTo ?? 'Unassigned'}
-              onValueChange={(value) =>
-                dispatch({ type: 'SET_JOURNEY_ASSIGNEE', assignee: value })
-              }
-            >
-              <SelectTrigger className="h-8 w-full text-sm">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="Unassigned">Unassigned</SelectItem>
-                {teamMembers.map((tm) => (
-                  <SelectItem key={tm.id} value={tm.name}>
-                    {tm.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
         </div>
         {state.actions
           .filter((action) => action.id !== 'kyc')
