@@ -94,6 +94,8 @@ export interface FinancialAccount {
   accountName: string
   accountType?: AccountType
   custodian?: string
+  /** Bank deposit accounts (checking/savings): ABA routing for ACH / wires. */
+  routingNumber?: string
   accountNumber?: string
   estimatedValue?: string
 }

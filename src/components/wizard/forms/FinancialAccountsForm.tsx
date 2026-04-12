@@ -23,6 +23,7 @@ function AddAccountSheet({ open, onOpenChange }: { open: boolean; onOpenChange: 
   const [accountName, setAccountName] = useState('')
   const [accountType, setAccountType] = useState<AccountType | ''>('')
   const [custodian, setCustodian] = useState('')
+  const [routingNumber, setRoutingNumber] = useState('')
   const [accountNumber, setAccountNumber] = useState('')
   const [estimatedValue, setEstimatedValue] = useState('')
 
@@ -30,6 +31,7 @@ function AddAccountSheet({ open, onOpenChange }: { open: boolean; onOpenChange: 
     setAccountName('')
     setAccountType('')
     setCustodian('')
+    setRoutingNumber('')
     setAccountNumber('')
     setEstimatedValue('')
   }
@@ -43,6 +45,8 @@ function AddAccountSheet({ open, onOpenChange }: { open: boolean; onOpenChange: 
         accountName: accountName.trim(),
         accountType: accountType || undefined,
         custodian: custodian || undefined,
+        routingNumber:
+          accountType === 'checking' || accountType === 'savings' ? routingNumber || undefined : undefined,
         accountNumber: accountNumber || undefined,
         estimatedValue: estimatedValue || undefined,
       },
@@ -86,13 +90,23 @@ function AddAccountSheet({ open, onOpenChange }: { open: boolean; onOpenChange: 
             </Select>
           </div>
           <div className="space-y-2">
-            <Label>Current custodian</Label>
+            <Label>{accountType === 'checking' || accountType === 'savings' ? 'Financial institution' : 'Current custodian'}</Label>
             <Input
               value={custodian}
               onChange={(e) => setCustodian(e.target.value)}
-              placeholder="e.g. Fidelity, Schwab"
+              placeholder={accountType === 'checking' || accountType === 'savings' ? 'e.g. Chase Bank' : 'e.g. Fidelity, Schwab'}
             />
           </div>
+          {(accountType === 'checking' || accountType === 'savings') && (
+            <div className="space-y-2">
+              <Label>Routing / ABA</Label>
+              <Input
+                value={routingNumber}
+                onChange={(e) => setRoutingNumber(e.target.value)}
+                placeholder="9-digit routing number"
+              />
+            </div>
+          )}
           <div className="space-y-2">
             <Label>Account number</Label>
             <Input
@@ -202,6 +216,7 @@ interface AccountFields {
   accountName: string
   accountType: string
   custodian: string
+  routingNumber: string
   accountNumber: string
   estimatedValue: string
 }
@@ -211,6 +226,7 @@ function snapshotAccount(account: FinancialAccount): AccountFields {
     accountName: account.accountName ?? '',
     accountType: account.accountType ?? '',
     custodian: account.custodian ?? '',
+    routingNumber: account.routingNumber ?? '',
     accountNumber: account.accountNumber ?? '',
     estimatedValue: account.estimatedValue ?? '',
   }
@@ -227,7 +243,7 @@ function EditAccountSheet({
 }) {
   const { dispatch } = useWorkflow()
   const [fields, setFields] = useState<AccountFields>({
-    accountName: '', accountType: '', custodian: '', accountNumber: '', estimatedValue: '',
+    accountName: '', accountType: '', custodian: '', routingNumber: '', accountNumber: '', estimatedValue: '',
   })
   const [snapshot, setSnapshot] = useState<AccountFields>(fields)
 
@@ -257,6 +273,10 @@ function EditAccountSheet({
         accountName: fields.accountName || account.accountName,
         accountType: (fields.accountType as AccountType) || undefined,
         custodian: fields.custodian || undefined,
+        routingNumber:
+          fields.accountType === 'checking' || fields.accountType === 'savings'
+            ? fields.routingNumber || undefined
+            : undefined,
         accountNumber: fields.accountNumber || undefined,
         estimatedValue: fields.estimatedValue || undefined,
       },
@@ -294,13 +314,31 @@ function EditAccountSheet({
             </Select>
           </div>
           <div className="space-y-2">
-            <Label>Current custodian</Label>
+            <Label>
+              {fields.accountType === 'checking' || fields.accountType === 'savings'
+                ? 'Financial institution'
+                : 'Current custodian'}
+            </Label>
             <Input
               value={fields.custodian}
               onChange={(e) => setField('custodian', e.target.value)}
-              placeholder="e.g. Fidelity, Schwab"
+              placeholder={
+                fields.accountType === 'checking' || fields.accountType === 'savings'
+                  ? 'e.g. Chase Bank'
+                  : 'e.g. Fidelity, Schwab'
+              }
             />
           </div>
+          {(fields.accountType === 'checking' || fields.accountType === 'savings') && (
+            <div className="space-y-2">
+              <Label>Routing / ABA</Label>
+              <Input
+                value={fields.routingNumber}
+                onChange={(e) => setField('routingNumber', e.target.value)}
+                placeholder="9-digit routing number"
+              />
+            </div>
+          )}
           <div className="space-y-2">
             <Label>Account number</Label>
             <Input

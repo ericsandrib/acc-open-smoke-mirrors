@@ -140,6 +140,15 @@ export const initialFinancialAccounts: FinancialAccount[] = [
     accountNumber: 'TRU-7719023',
     estimatedValue: '2,500,000',
   },
+  {
+    id: 'acct-checking',
+    accountName: 'John Smith — Checking',
+    accountType: 'checking',
+    custodian: 'Chase Bank',
+    routingNumber: '021000021',
+    accountNumber: '4532198762',
+    estimatedValue: '85,000',
+  },
 ]
 
 /**

@@ -1,3 +1,4 @@
+import { useCallback, useMemo } from 'react'
 import { useChildActionContext, useTaskData, useWorkflow } from '@/stores/workflowStore'
 import { Label } from '@/components/ui/label'
 import { Input } from '@/components/ui/input'
@@ -23,12 +24,14 @@ const dividendOptions = [
   { value: 'transfer', label: 'Transfer to Another Account' },
 ]
 
+const PREFILL_NONE = '__prefill_none__'
+
 /** Detail form for a single funding / asset movement workflow line. */
 export function FundingLineSetupForm() {
   const { state } = useWorkflow()
   const ctx = useChildActionContext()
   const taskId = ctx?.subTaskId ?? ''
-  const { data, updateField } = useTaskData(taskId || '__no_child__')
+  const { data, updateField, updateFields } = useTaskData(taskId || '__no_child__')
 
   const childRoot = ctx ? ((state.taskData[ctx.child.id] as Record<string, unknown> | undefined) ?? undefined) : undefined
   const fundingSource =
@@ -42,6 +45,70 @@ export function FundingLineSetupForm() {
 
   const needsBank = fundingSource === 'ach' || fundingSource === 'bank_send_receive' || fundingSource === 'fed_fund_wires'
   const isCheckMovement = fundingSource === 'check_deposits' || fundingSource === 'check_withdrawals'
+
+  const bankAccountsForPrefill = useMemo(
+    () =>
+      state.financialAccounts.filter(
+        (a) => a.accountType === 'checking' || a.accountType === 'savings',
+      ),
+    [state.financialAccounts],
+  )
+
+  const investmentAccountsForPrefill = useMemo(
+    () =>
+      state.financialAccounts.filter(
+        (a) =>
+          !!a.accountType && a.accountType !== 'checking' && a.accountType !== 'savings',
+      ),
+    [state.financialAccounts],
+  )
+
+  const bankPrefillSelectValue = useMemo(() => {
+    const id = String((data.bankPrefillAccountId as string) ?? '').trim()
+    if (!id || !bankAccountsForPrefill.some((a) => a.id === id)) return PREFILL_NONE
+    return id
+  }, [data.bankPrefillAccountId, bankAccountsForPrefill])
+
+  const transferPrefillSelectValue = useMemo(() => {
+    const id = String((data.transferPrefillAccountId as string) ?? '').trim()
+    if (!id || !investmentAccountsForPrefill.some((a) => a.id === id)) return PREFILL_NONE
+    return id
+  }, [data.transferPrefillAccountId, investmentAccountsForPrefill])
+
+  const onBankPrefillChange = useCallback(
+    (value: string) => {
+      if (value === PREFILL_NONE) {
+        updateFields({ bankPrefillAccountId: '' })
+        return
+      }
+      const acc = state.financialAccounts.find((a) => a.id === value)
+      if (!acc) return
+      updateFields({
+        bankPrefillAccountId: value,
+        bankName: acc.custodian ?? '',
+        bankRouting: acc.routingNumber ?? '',
+        bankAccountNumber: acc.accountNumber ?? '',
+      })
+    },
+    [state.financialAccounts, updateFields],
+  )
+
+  const onTransferPrefillChange = useCallback(
+    (value: string) => {
+      if (value === PREFILL_NONE) {
+        updateFields({ transferPrefillAccountId: '' })
+        return
+      }
+      const acc = state.financialAccounts.find((a) => a.id === value)
+      if (!acc) return
+      updateFields({
+        transferPrefillAccountId: value,
+        deliveringFirm: acc.custodian ?? '',
+        transferFromAccount: acc.accountNumber ?? '',
+      })
+    },
+    [state.financialAccounts, updateFields],
+  )
 
   return (
     <div className="space-y-8">
@@ -120,6 +187,28 @@ export function FundingLineSetupForm() {
           <h3 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
             Account transfer
           </h3>
+          {investmentAccountsForPrefill.length > 0 ? (
+            <div className="space-y-2">
+              <Label>Pre-fill from collected accounts</Label>
+              <Select value={transferPrefillSelectValue} onValueChange={onTransferPrefillChange}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Choose an account…" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value={PREFILL_NONE}>None (enter manually)</SelectItem>
+                  {investmentAccountsForPrefill.map((a) => (
+                    <SelectItem key={a.id} value={a.id}>
+                      {a.accountName}
+                      {a.custodian ? ` — ${a.custodian}` : ''}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <p className="text-xs text-muted-foreground">
+                Fills delivering firm and transfer-from account # from Existing accounts (collect client data).
+              </p>
+            </div>
+          ) : null}
           <div className="space-y-2">
             <Label>Delivering firm</Label>
             <Input
@@ -195,6 +284,28 @@ export function FundingLineSetupForm() {
           <h3 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
             Bank details
           </h3>
+          {bankAccountsForPrefill.length > 0 ? (
+            <div className="space-y-2">
+              <Label>Pre-fill from collected accounts</Label>
+              <Select value={bankPrefillSelectValue} onValueChange={onBankPrefillChange}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Choose a bank account…" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value={PREFILL_NONE}>None (enter manually)</SelectItem>
+                  {bankAccountsForPrefill.map((a) => (
+                    <SelectItem key={a.id} value={a.id}>
+                      {a.accountName}
+                      {a.custodian ? ` — ${a.custodian}` : ''}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <p className="text-xs text-muted-foreground">
+                Fills institution, routing/ABA, and account # from checking or savings accounts in Existing accounts.
+              </p>
+            </div>
+          ) : null}
           <div className="grid gap-4 sm:grid-cols-2">
             <div className="space-y-2 sm:col-span-2">
               <Label>Financial institution</Label>
