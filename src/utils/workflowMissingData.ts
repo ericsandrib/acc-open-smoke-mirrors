@@ -137,24 +137,5 @@ export function computeWorkflowMissingData(state: WorkflowState): MissingDataEnt
     }
   }
 
-  const finalTask = state.tasks.find((t) => t.formKey === 'placeholder-2')
-  const reviewBlocksFinalEdits =
-    state.reviewState?.reviewStatus === 'pending' || state.reviewState?.reviewStatus === 'accepted'
-  if (finalTask && !reviewBlocksFinalEdits) {
-    const data = state.taskData['placeholder-2'] ?? {}
-    const issues: string[] = []
-    if (!data.termsAccepted) issues.push('Confirm that information is accurate')
-    if (!data.regulatoryAccepted) issues.push('Confirm regulatory disclosures')
-    if (!data.dataConsent) issues.push('Confirm data processing consent')
-    if (issues.length) {
-      entries.push({
-        taskId: finalTask.id,
-        taskTitle: finalTask.title,
-        actionTitle: actionTitle(state, finalTask.id),
-        issues,
-      })
-    }
-  }
-
   return entries
 }

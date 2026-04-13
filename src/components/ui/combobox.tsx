@@ -138,8 +138,13 @@ function Combobox({
         break
       case "Enter":
         e.preventDefault()
+        if (filtered.length === 0) break
         if (highlightIndex >= 0 && highlightIndex < filtered.length) {
           selectOption(filtered[highlightIndex])
+        } else if (filtered.length === 1) {
+          selectOption(filtered[0])
+        } else if (search.trim().length > 0) {
+          selectOption(filtered[0])
         }
         break
       case "Escape":

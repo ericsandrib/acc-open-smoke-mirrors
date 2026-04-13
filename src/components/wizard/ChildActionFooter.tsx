@@ -51,7 +51,19 @@ function KycRequiredForOwnersModal({
   )
 }
 
-function SubmitConfirmModal({ childName, onConfirm, onCancel }: { childName: string; onConfirm: () => void; onCancel: () => void }) {
+function SubmitConfirmModal({
+  childName,
+  onConfirm,
+  onCancel,
+  variant = 'submit',
+}: {
+  childName: string
+  onConfirm: () => void
+  onCancel: () => void
+  /** `complete-step` — last account-opening subtask; `submit` — resubmit / generic. */
+  variant?: 'submit' | 'complete-step'
+}) {
+  const isCompleteStep = variant === 'complete-step'
   return (
     <div className="fixed inset-0 z-[60] flex items-center justify-center">
       <div className="fixed inset-0 bg-black/50" onClick={onCancel} />
@@ -61,19 +73,27 @@ function SubmitConfirmModal({ childName, onConfirm, onCancel }: { childName: str
             <ShieldAlert className="h-5 w-5 text-amber-600" />
           </div>
           <div className="space-y-1">
-            <h3 className="text-base font-semibold">Submit for Review</h3>
+            <h3 className="text-base font-semibold">{isCompleteStep ? 'Complete this step?' : 'Submit for Review'}</h3>
             <p className="text-sm text-muted-foreground">
-              You are about to submit <span className="font-medium text-foreground">{childName}</span> for
-              compliance verification. Once submitted, the information will be locked and forwarded for review.
+              {isCompleteStep ? (
+                <>
+                  Finish setup for <span className="font-medium text-foreground">{childName}</span> and submit it for
+                  home office review. You will switch to the home office view and advisor edits lock until review
+                  completes.
+                </>
+              ) : (
+                <>
+                  You are about to submit <span className="font-medium text-foreground">{childName}</span> for
+                  compliance verification. Once submitted, the information will be locked and forwarded for review.
+                </>
+              )}
             </p>
           </div>
         </div>
 
         <div className="flex items-center justify-end gap-3 pt-1">
           <Button variant="outline" onClick={onCancel}>Cancel</Button>
-          <Button onClick={onConfirm}>
-            Submit for Review
-          </Button>
+          <Button onClick={onConfirm}>{isCompleteStep ? 'Complete step' : 'Submit for Review'}</Button>
         </div>
       </div>
     </div>
@@ -85,6 +105,7 @@ export function ChildActionFooter() {
   const ctx = useChildActionContext()
   const [showConfirmModal, setShowConfirmModal] = useState(false)
   const [showResubmitModal, setShowResubmitModal] = useState(false)
+  const [showCompleteStepModal, setShowCompleteStepModal] = useState(false)
   const [kycBlockOwnerNames, setKycBlockOwnerNames] = useState<string[] | null>(null)
   const advisorUnlocked = useAdvisorUnlocked()
 
@@ -194,6 +215,7 @@ export function ChildActionFooter() {
             childName={child.name}
             onConfirm={handleConfirmResubmit}
             onCancel={() => setShowResubmitModal(false)}
+            variant="submit"
           />
         )}
         {kycBlockOwnerNames && kycBlockOwnerNames.length > 0 && (
@@ -235,13 +257,21 @@ export function ChildActionFooter() {
         setKycBlockOwnerNames(names)
         return
       }
+      setShowCompleteStepModal(true)
+      return
     }
 
     dispatch({ type: 'SUBMIT_CHILD_FOR_REVIEW' })
     dispatch({
       type: 'SET_DEMO_VIEW',
-      mode: child.childType === 'account-opening' ? 'ho-documents' : 'advisor',
+      mode: 'advisor',
     })
+  }
+
+  const handleConfirmCompleteAccountStep = () => {
+    dispatch({ type: 'SUBMIT_CHILD_FOR_REVIEW' })
+    dispatch({ type: 'SET_DEMO_VIEW', mode: 'ho-documents' })
+    setShowCompleteStepModal(false)
   }
 
   const handleConfirmSubmit = () => {
@@ -268,7 +298,7 @@ export function ChildActionFooter() {
         <div className="flex items-center gap-2">
           {isLast ? (
             <Button onClick={handleDone}>
-              Submit for Review
+              {child.childType === 'account-opening' ? 'Complete step' : 'Submit for Review'}
             </Button>
           ) : (
             <Button onClick={() => dispatch({ type: 'CHILD_GO_NEXT' })}>
@@ -284,6 +314,15 @@ export function ChildActionFooter() {
           childName={child.name}
           onConfirm={handleConfirmSubmit}
           onCancel={() => setShowConfirmModal(false)}
+          variant="submit"
+        />
+      )}
+      {showCompleteStepModal && (
+        <SubmitConfirmModal
+          childName={child.name}
+          onConfirm={handleConfirmCompleteAccountStep}
+          onCancel={() => setShowCompleteStepModal(false)}
+          variant="complete-step"
         />
       )}
       {kycBlockOwnerNames && kycBlockOwnerNames.length > 0 && (

@@ -265,6 +265,29 @@ export function PartySlotCard({
             ))}
           </dl>
 
+          {!isDesignationPreview &&
+            matchedParty.type === 'related_organization' &&
+            matchedParty.trustParties &&
+            matchedParty.trustParties.length > 0 && (
+              <div className="rounded-md border border-border bg-muted/30 px-3 py-2.5 space-y-1.5">
+                <p className="text-[10px] font-medium text-muted-foreground uppercase tracking-wide">
+                  Trustees (CIP)
+                </p>
+                <ul className="text-xs text-foreground space-y-1">
+                  {matchedParty.trustParties.map((t) => {
+                    const linked = t.partyId ? parties.find((p) => p.id === t.partyId) : undefined
+                    const line = [linked?.name ?? t.displayName, t.role].filter(Boolean).join(' · ')
+                    return <li key={t.id}>{line}</li>
+                  })}
+                </ul>
+                <p className="text-[11px] text-muted-foreground leading-snug">
+                  Same trustee list as in{' '}
+                  <span className="font-medium text-foreground">Collect client data → Related parties → Trusts</span> for
+                  this entity. Government ID for these people applies when this trust is an account owner.
+                </p>
+              </div>
+            )}
+
           {!isDesignationPreview && (kycDisplayStatus || matchedParty.kycStatus) && (
             <div className="flex flex-wrap items-center gap-2 text-sm pt-1 border-t border-border/60">
               <span className="text-muted-foreground">KYC status:</span>

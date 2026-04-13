@@ -3,6 +3,7 @@ import { useWorkflow, useTaskData } from '@/stores/workflowStore'
 import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
+import { Checkbox } from '@/components/ui/checkbox'
 import { ChildActionKebabMenu } from '@/components/wizard/ChildActionKebabMenu'
 import { ChildActionTimelineSheet } from '@/components/wizard/ChildActionTimelineSheet'
 import { childStatusConfig, deriveChildDisplayStatus } from '@/utils/childStatusDisplay'
@@ -15,6 +16,11 @@ import {
   getRegistrationDocuments,
   getDocSubTypes,
   partitionRegistrationDocumentsByFulfillment,
+  sortUploadDocumentsForOpenAccounts,
+  getPartyIdsRequiringGovernmentIdUpload,
+  getTrustOrganizationIdsForAccountOwners,
+  GOVERNMENT_ISSUED_ID_DOC_ID,
+  TRUST_VERIFICATION_DOC_ID,
 } from '@/utils/registrationDocuments'
 import type { RegistrationType } from '@/utils/registrationDocuments'
 import {
@@ -48,6 +54,7 @@ import { buildRequiredEsignFormRows } from '@/utils/buildEsignEnvelopeFormRows'
 import { downloadEnvelopeManifest } from '@/utils/downloadEsignEnvelopeManifest'
 import { getEnvelopeDisplayName } from '@/utils/deriveEnvelopeDisplayName'
 import { EsignEnvelopeDrawer } from '@/components/wizard/forms/EsignEnvelopeDrawer'
+import { getRegistrationTypesForOpenAccountsUploadSection } from '@/utils/openAccountsDocumentValidation'
 
 interface DocInstance {
   id: string
@@ -121,19 +128,17 @@ export function OpenAccountsForm() {
     return parties
   }, [accountOpeningChildren, state.taskData, state.relatedParties])
 
-  const childRegistrationTypes = useMemo<RegistrationType[]>(() => {
-    const types: RegistrationType[] = []
-    for (const c of accountOpeningChildren) {
-      const rt = (state.taskData[c.id] as Record<string, unknown> | undefined)?.registrationType as RegistrationType | undefined
-      if (rt) types.push(rt)
-    }
-    return types
-  }, [accountOpeningChildren, state.taskData])
-
-  const { upload: uploadDocs } = useMemo(
-    () => partitionRegistrationDocumentsByFulfillment(getRegistrationDocuments(childRegistrationTypes)),
-    [childRegistrationTypes],
+  const childRegistrationTypes = useMemo<RegistrationType[]>(
+    () => getRegistrationTypesForOpenAccountsUploadSection(accountOpeningChildren, state.taskData),
+    [accountOpeningChildren, state.taskData],
   )
+
+  const uploadDocs = useMemo(() => {
+    const { upload } = partitionRegistrationDocumentsByFulfillment(
+      getRegistrationDocuments(childRegistrationTypes, state.relatedParties),
+    )
+    return sortUploadDocumentsForOpenAccounts(upload)
+  }, [childRegistrationTypes, state.relatedParties])
 
   const ownerPartyIdsByAccountChild = useMemo(() => {
     const map = new Map<string, string[]>()
@@ -155,9 +160,29 @@ export function OpenAccountsForm() {
     return ids
   }, [ownerPartyIdsByAccountChild])
 
+  /** Owners ∪ trustees from trust org(s) only when that trust is selected as an account owner (trustParties read from that org). */
+  const partyIdsForGovIdUpload = useMemo(
+    () => getPartyIdsRequiringGovernmentIdUpload(state.relatedParties, allOwnerPartyIds),
+    [state.relatedParties, allOwnerPartyIds],
+  )
+
+  /** Trust entity(ies) selected as owner(s)—used to seed trust verification document rows. */
+  const partyIdsForTrustVerificationUpload = useMemo(
+    () => getTrustOrganizationIdsForAccountOwners(state.relatedParties, allOwnerPartyIds),
+    [state.relatedParties, allOwnerPartyIds],
+  )
+
+  const trustVerificationAssigneeParties = useMemo(
+    () =>
+      partyIdsForTrustVerificationUpload
+        .map((id) => state.relatedParties.find((p) => p.id === id))
+        .filter((p): p is RelatedParty => Boolean(p)),
+    [state.relatedParties, partyIdsForTrustVerificationUpload],
+  )
+
   const requiredEsignFormRows = useMemo(
-    () => buildRequiredEsignFormRows(accountOpeningChildren, state.taskData),
-    [accountOpeningChildren, state.taskData],
+    () => buildRequiredEsignFormRows(accountOpeningChildren, state.taskData, state.relatedParties),
+    [accountOpeningChildren, state.taskData, state.relatedParties],
   )
 
   const deriveEnvelopeSigners = (
@@ -232,6 +257,16 @@ export function OpenAccountsForm() {
     }
     setEnvelopeDraft(null)
     setEnvelopeDrawerOpen(false)
+  }
+
+  const updateEnvelopeSigningFlags = (
+    envelopeId: string,
+    patch: Partial<Pick<EsignEnvelope, 'sentToClient' | 'clientSignaturesComplete'>>,
+  ) => {
+    updateField(
+      'esignEnvelopes',
+      esignEnvelopes.map((e) => (e.id === envelopeId ? { ...e, ...patch } : e)),
+    )
   }
 
   const isAnnuity = (child: { name: string }) => child.name.includes(' - Annuity')
@@ -323,18 +358,28 @@ export function OpenAccountsForm() {
           <div className="rounded-lg border border-border p-1">
             {topLevelChildren.map((child) => {
               const annuities = getAnnuities(child.name)
+              const childMeta = state.taskData[child.id] as Record<string, unknown> | undefined
+              const accountNumber =
+                typeof childMeta?.accountNumber === 'string' && childMeta.accountNumber.trim()
+                  ? childMeta.accountNumber.trim()
+                  : undefined
+              const acctDigits = (accountNumber ?? '').replace(/\D/g, '')
+              const last4 = acctDigits.length ? acctDigits.slice(-4) : ''
+              const rowLabel = last4 ? `${child.name} ...${last4}` : child.name
               return (
                 <div key={child.id}>
                   {/* Account row */}
                   <div className="group flex items-center justify-between p-3 hover:bg-muted/50 transition-colors">
                     <button
                       onClick={() => dispatch({ type: 'ENTER_CHILD_ACTION', childId: child.id })}
-                      className="flex-1 flex items-center gap-3 text-left cursor-pointer"
+                      className="flex-1 flex items-center gap-3 text-left cursor-pointer min-w-0"
                     >
-                      <div className="flex h-8 w-8 items-center justify-center rounded-full bg-muted text-sm font-medium">
+                      <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-muted text-sm font-medium">
                         <Wallet className="h-4 w-4" />
                       </div>
-                      <span className="text-sm font-medium">{child.name}</span>
+                      <span className="text-sm font-medium truncate min-w-0" title={rowLabel}>
+                        {rowLabel}
+                      </span>
                     </button>
                     <div className="flex items-center gap-2">
                       {(() => {
@@ -462,8 +507,13 @@ export function OpenAccountsForm() {
                 input.click()
               }
 
-              // Auto-generate one row per unique owner if not already present
-              const ownerIds = Array.from(allOwnerPartyIds)
+              // Auto-generate rows: Gov ID = owners ∪ trustees; trust verification = trust entity owner(s); else = owners only
+              const ownerIds =
+                doc.id === GOVERNMENT_ISSUED_ID_DOC_ID
+                  ? partyIdsForGovIdUpload
+                  : doc.id === TRUST_VERIFICATION_DOC_ID
+                    ? partyIdsForTrustVerificationUpload
+                    : Array.from(allOwnerPartyIds)
               const existingAssignees = new Set(instances.map((i) => i.assignedTo))
               const missing = ownerIds.filter((id) => !existingAssignees.has(id))
               if (missing.length > 0) {
@@ -521,6 +571,10 @@ export function OpenAccountsForm() {
                         {instances.map((inst, idx) => {
                           const memberName = state.relatedParties.find((m) => m.id === inst.assignedTo)?.name
                           const subTypes = getDocSubTypes(doc.id)
+                          const assigneeParties =
+                            doc.id === TRUST_VERIFICATION_DOC_ID
+                              ? trustVerificationAssigneeParties
+                              : householdMembers
                           return (
                             <tr key={inst.id} className={idx < instances.length - 1 ? 'border-b border-border' : ''}>
                               <td className="px-4 py-2.5 min-w-0 align-top w-[36%] max-w-[36%] overflow-hidden">
@@ -564,7 +618,7 @@ export function OpenAccountsForm() {
                                       <SelectValue placeholder="Assign to..." />
                                     </SelectTrigger>
                                     <SelectContent>
-                                      {householdMembers.map((member) => (
+                                      {assigneeParties.map((member) => (
                                         <SelectItem key={member.id} value={member.id}>
                                           {member.name}
                                         </SelectItem>
@@ -844,7 +898,7 @@ export function OpenAccountsForm() {
                 key={env.id}
                 className="flex flex-col gap-3 rounded-lg border border-border bg-card p-4 sm:flex-row sm:items-center sm:justify-between"
               >
-                <div className="min-w-0">
+                <div className="min-w-0 space-y-2">
                   <p className="text-sm font-medium text-foreground truncate">{getEnvelopeDisplayName(env)}</p>
                   <p className="text-sm text-muted-foreground mt-1">
                     {env.formSelections.length} generated form{env.formSelections.length === 1 ? '' : 's'}
@@ -854,6 +908,26 @@ export function OpenAccountsForm() {
                     {env.uploadedFiles.length > 0 ? ` · ${env.uploadedFiles.length} uploaded` : ''} ·{' '}
                     {env.signers.length} signer{env.signers.length === 1 ? '' : 's'}
                   </p>
+                  <div className="flex flex-wrap gap-x-4 gap-y-2 pt-1">
+                    <label className="flex items-center gap-2 text-xs text-foreground cursor-pointer">
+                      <Checkbox
+                        checked={env.sentToClient ?? false}
+                        onCheckedChange={(v) =>
+                          updateEnvelopeSigningFlags(env.id, { sentToClient: v === true })
+                        }
+                      />
+                      Sent to client
+                    </label>
+                    <label className="flex items-center gap-2 text-xs text-foreground cursor-pointer">
+                      <Checkbox
+                        checked={env.clientSignaturesComplete ?? false}
+                        onCheckedChange={(v) =>
+                          updateEnvelopeSigningFlags(env.id, { clientSignaturesComplete: v === true })
+                        }
+                      />
+                      Client signed
+                    </label>
+                  </div>
                 </div>
                 <div className="flex flex-wrap items-center gap-2 shrink-0">
                   <Button

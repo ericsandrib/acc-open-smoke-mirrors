@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { useWorkflow, useTaskData } from '@/stores/workflowStore'
+import { useWorkflow } from '@/stores/workflowStore'
 import { Badge } from '@/components/ui/badge'
 import { Label } from '@/components/ui/label'
 import { Checkbox } from '@/components/ui/checkbox'
@@ -113,7 +113,12 @@ function PartyDetail({ party }: { party: RelatedParty }) {
 
 export function HomeOfficeViewContent() {
   const { state } = useWorkflow()
-  const { data: finalReviewData } = useTaskData('placeholder-2')
+  /** Demo: advisor attestations; no separate Final Review task in the wizard. */
+  const advisorConfirmations = {
+    termsAccepted: true,
+    regulatoryAccepted: true,
+    dataConsent: true,
+  }
   const journeyClientMeta = state.taskData['client-info'] as Record<string, unknown> | undefined
   const openAccountsData = state.taskData['open-accounts'] ?? {}
 
@@ -366,15 +371,15 @@ export function HomeOfficeViewContent() {
           <AccordionSection title="Advisor Confirmations" icon={ClipboardCheck}>
             <div className="space-y-3">
               <div className="flex items-center gap-3">
-                <Checkbox id="ho-terms" checked={!!(finalReviewData.termsAccepted ?? true)} disabled />
+                <Checkbox id="ho-terms" checked={!!advisorConfirmations.termsAccepted} disabled />
                 <Label htmlFor="ho-terms" className="text-sm">Information Accurate</Label>
               </div>
               <div className="flex items-center gap-3">
-                <Checkbox id="ho-reg" checked={!!(finalReviewData.regulatoryAccepted ?? true)} disabled />
+                <Checkbox id="ho-reg" checked={!!advisorConfirmations.regulatoryAccepted} disabled />
                 <Label htmlFor="ho-reg" className="text-sm">Regulatory Disclosures</Label>
               </div>
               <div className="flex items-center gap-3">
-                <Checkbox id="ho-data" checked={!!(finalReviewData.dataConsent ?? true)} disabled />
+                <Checkbox id="ho-data" checked={!!advisorConfirmations.dataConsent} disabled />
                 <Label htmlFor="ho-data" className="text-sm">Data Processing Consent</Label>
               </div>
             </div>

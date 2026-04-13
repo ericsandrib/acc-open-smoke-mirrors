@@ -95,15 +95,6 @@ function getTaskFieldProgress(state: WorkflowState, task: Task): { filled: numbe
         total: children.length,
       }
     }
-    case 'placeholder-2': {
-      const data = state.taskData['placeholder-2'] ?? {}
-      const total = 3
-      let filled = 0
-      if (data.termsAccepted) filled++
-      if (data.regulatoryAccepted) filled++
-      if (data.dataConsent) filled++
-      return { filled, total }
-    }
     default:
       return { filled: 0, total: 0 }
   }

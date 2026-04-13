@@ -462,12 +462,8 @@
             "conditional": "Required for Testamentary Trust accounts only"
           }
         ],
-        "cip_requirements": [
-          "Trust Instrument (Title and Signature Page)",
-          "Government Issued ID",
-          "Government Issued ID required for all Trustees."
-        ],
-        "notes": null
+        "cip_requirements": [],
+        "notes": "To open a trust account, firms typically verify legal existence with a Certificate of Trust (certification or abstract) or Trust Agreement excerpts or full instrument; testamentary trusts need will and probate evidence; trust EIN is documented separately. In the wizard, trust verification uploads are one grouped section with a per-row document-type selector. Government-issued ID for trustees is merged with other account owners when the same person appears in both roles."
       },
       {
         "id": "ESTATE",

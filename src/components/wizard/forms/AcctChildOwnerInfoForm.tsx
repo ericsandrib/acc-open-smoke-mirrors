@@ -17,6 +17,7 @@ import {
   AddHouseholdMemberSheet,
 } from '@/components/wizard/forms/AddPartySheet'
 import { AccountOwnerPartySheet } from '@/components/wizard/forms/AccountOwnerPartySheet'
+import { EditLegalEntitySheet } from '@/components/wizard/forms/EditLegalEntitySheet'
 import { PartySlotCard } from '@/components/wizard/forms/PartySlotCard'
 import { toast } from 'sonner'
 import { isTrustEntityParty } from '@/utils/trustEntityParty'
@@ -281,13 +282,23 @@ export function AcctChildOwnerInfoForm() {
           />
         )}
 
-        <AccountOwnerPartySheet
-          party={editingParty}
-          open={editingPartyId !== null}
-          onOpenChange={(o) => {
-            if (!o) setEditingPartyId(null)
-          }}
-        />
+        {editingParty?.type === 'related_organization' ? (
+          <EditLegalEntitySheet
+            party={editingParty}
+            open={editingPartyId !== null}
+            onOpenChange={(o) => {
+              if (!o) setEditingPartyId(null)
+            }}
+          />
+        ) : (
+          <AccountOwnerPartySheet
+            party={editingParty}
+            open={editingPartyId !== null}
+            onOpenChange={(o) => {
+              if (!o) setEditingPartyId(null)
+            }}
+          />
+        )}
       </section>
 
       <AccountAdditionalInformationSection data={data} updateField={updateField} />

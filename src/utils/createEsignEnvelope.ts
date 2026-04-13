@@ -13,5 +13,7 @@ export function createNewEnvelope(
     uploadedFiles: [],
     signers: signers.map((s) => ({ ...s })),
     createdAt: new Date().toISOString(),
+    sentToClient: false,
+    clientSignaturesComplete: false,
   }
 }

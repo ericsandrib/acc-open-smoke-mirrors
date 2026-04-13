@@ -46,13 +46,13 @@ export function AcctChildDocumentsReviewForm() {
 
   const ruleDrivenDocs = useMemo(() => {
     if (!registrationType) return { clientUpload: [], firmCustodianEsign: [] }
-    const docs = getRegistrationDocumentsForType(registrationType)
+    const docs = getRegistrationDocumentsForType(registrationType, { relatedParties: state.relatedParties })
     const { upload, esign } = partitionRegistrationDocumentsByFulfillment(docs)
     return {
       clientUpload: upload,
       firmCustodianEsign: esign,
     }
-  }, [registrationType])
+  }, [registrationType, state.relatedParties])
 
   const ownersTaskId = `${ctx.child.id}-account-owners`
   const ownersData = state.taskData[ownersTaskId] as Record<string, unknown> | undefined

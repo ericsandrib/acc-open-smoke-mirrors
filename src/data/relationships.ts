@@ -130,6 +130,15 @@ export const relationships: Relationship[] = [
           sourceOfFunds: 'Trust corpus / investment proceeds',
           annualRevenueRange: 'N/A',
         },
+        beneficialOwners: [
+          { name: 'John Smith', ownershipPercent: '40' },
+          { name: 'Jane Smith', ownershipPercent: '40' },
+          { name: 'Robert Smith', ownershipPercent: '20' },
+        ],
+        trustParties: [
+          { id: 'trustee-smith-1', partyId: 'member-1', displayName: 'John Smith', role: 'Trustee' },
+          { id: 'trustee-smith-2', partyId: 'member-2', displayName: 'Jane Smith', role: 'Co-trustee' },
+        ],
       },
     ],
     financialAccounts: [...initialFinancialAccounts],

@@ -17,7 +17,10 @@ const FOUR_OWNER_529 = new Set<RegistrationType>(['529_ON_PLATFORM', '529_OFF_PL
 /** Entity types with a single controlling individual (demo simplification). */
 const ENTITY_SINGLE_CONTROL = new Set<RegistrationType>(['SOLE_PROPRIETORSHIP'])
 
-/** Default cap for trusts, estates, corps, LLCs, plans — trustees, signers, control persons. */
+/** Trust registration: one titling trust entity as account owner (demo). */
+const TRUST_SINGLE_OWNER = new Set<RegistrationType>(['TRUST'])
+
+/** Default cap for estates, corps, LLCs, plans — trustees, signers, control persons. */
 const ENTITY_MULTI_OWNER_CAP = 8
 
 function findRegistrationEntry(type: RegistrationType) {
@@ -44,6 +47,7 @@ export function getMaxAccountOwnersForRegistration(
 
   if (entry.category === 'entity') {
     if (ENTITY_SINGLE_CONTROL.has(registrationType)) return 1
+    if (TRUST_SINGLE_OWNER.has(registrationType)) return 1
     return ENTITY_MULTI_OWNER_CAP
   }
 

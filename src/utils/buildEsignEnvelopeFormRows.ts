@@ -1,3 +1,4 @@
+import type { RelatedParty } from '@/types/workflow'
 import { getRegistrationDocumentsForType, partitionRegistrationDocumentsByFulfillment } from '@/utils/registrationDocuments'
 import type { RegistrationType } from '@/utils/registrationDocuments'
 import type { EnvelopeFormSelection } from '@/types/esignEnvelope'
@@ -9,15 +10,19 @@ import type { EnvelopeFormSelection } from '@/types/esignEnvelope'
 export function buildRequiredEsignFormRows(
   accountOpeningChildren: { id: string; name: string }[],
   taskData: Record<string, unknown>,
+  relatedParties?: RelatedParty[],
 ): EnvelopeFormSelection[] {
   const rows: EnvelopeFormSelection[] = []
+  const docOpts = relatedParties ? { relatedParties } : undefined
 
   for (const child of accountOpeningChildren) {
     const meta = taskData[child.id] as Record<string, unknown> | undefined
     const rt = meta?.registrationType as RegistrationType | undefined
     if (!rt) continue
 
-    const { esign } = partitionRegistrationDocumentsByFulfillment(getRegistrationDocumentsForType(rt))
+    const { esign } = partitionRegistrationDocumentsByFulfillment(
+      getRegistrationDocumentsForType(rt, docOpts),
+    )
     const acct = String(meta?.accountNumber ?? '').trim()
     const short = String(meta?.shortName ?? '').trim()
     const accountNumberLabel = acct || short || 'Not assigned'

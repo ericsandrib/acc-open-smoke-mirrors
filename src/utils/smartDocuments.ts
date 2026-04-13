@@ -84,7 +84,7 @@ export function computeSmartDocuments(state: WorkflowState, childId: string): Sm
 
   if (!fundingLineOnly && !featureLineOnly) {
     if (regType) {
-      const regDocs = getRegistrationDocumentsForType(regType)
+      const regDocs = getRegistrationDocumentsForType(regType, { relatedParties: state.relatedParties })
       const { upload: uploadRegDocs, esign: esignRegDocs } = partitionRegistrationDocumentsByFulfillment(regDocs)
       for (const d of uploadRegDocs.slice(0, 4)) {
         requiredNow.push(

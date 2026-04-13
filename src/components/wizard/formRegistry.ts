@@ -4,7 +4,6 @@ import { KycForm } from './forms/KycForm'
 import { KycChildInfoForm } from './forms/KycChildInfoForm'
 import { KycChildDocumentsForm } from './forms/KycChildDocumentsForm'
 
-import { Placeholder2Form } from './forms/PlaceholderForm'
 import { OpenAccountsForm } from './forms/OpenAccountsForm'
 import { AcctChildOwnerInfoForm } from './forms/AcctChildOwnerInfoForm'
 import { FundChildFundingForm } from './forms/FundChildFundingForm'
@@ -26,7 +25,6 @@ export const formComponents: Record<string, React.ComponentType> = {
   'acct-child-features-services': FundChildFeaturesForm,
   'feature-service-line-child-setup': FeatureServiceLineSetupForm,
   'acct-child-documents-review': AcctChildDocumentsReviewForm,
-  'placeholder-2': Placeholder2Form,
 }
 
 export const taskDescriptions: Partial<Record<string, string>> = {
@@ -54,6 +52,4 @@ export const taskDescriptions: Partial<Record<string, string>> = {
     'Capture status, routing, dates, and notes for this feature or service workflow line.',
   'acct-child-documents-review':
     'Finalize account documentation and collect required client documents',
-  'placeholder-2':
-    'Review the information gathered during onboarding and confirm everything is accurate before submitting.',
 }

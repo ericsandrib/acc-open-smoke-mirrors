@@ -74,28 +74,24 @@ export const seededJourneys: Journey[] = [
     'related-parties': 'complete',
     'kyc-review': 'complete',
     'open-accounts': 'complete',
-    'placeholder-2': 'complete',
   }),
   buildJourney('journey-johnson', 'Johnson Trust Onboarding', 'Onboarding', 'Johnson Trust', 'Bob Martinez', 'Alice Chen', '2026-03-05', {
     'existing-accounts': 'complete',
     'related-parties': 'complete',
     'kyc-review': 'blocked',
     'open-accounts': 'not_started',
-    'placeholder-2': 'not_started',
   }),
   buildJourney('journey-davis', 'Davis Household Onboarding', 'Onboarding', 'Davis Household', 'Carol Williams', 'Bob Martinez', '2026-03-20', {
     'existing-accounts': 'in_progress',
     'related-parties': 'not_started',
     'kyc-review': 'not_started',
     'open-accounts': 'not_started',
-    'placeholder-2': 'not_started',
   }),
   buildJourney('journey-garcia', 'Garcia Family Onboarding', 'Onboarding', 'The Garcia Family', 'Diana Torres', 'Carol Williams', '2026-03-28', {
     'existing-accounts': 'complete',
     'related-parties': 'in_progress',
     'kyc-review': 'not_started',
     'open-accounts': 'not_started',
-    'placeholder-2': 'not_started',
   }),
 
   // Account Transfer journeys
@@ -104,14 +100,12 @@ export const seededJourneys: Journey[] = [
     'related-parties': 'complete',
     'kyc-review': 'not_started',
     'open-accounts': 'not_started',
-    'placeholder-2': 'not_started',
   }),
   buildJourney('journey-chen', 'Chen 401k Rollover', 'Account Transfer', 'Wei Chen', 'Bob Martinez', 'Diana Torres', '2026-03-15', {
     'existing-accounts': 'complete',
     'related-parties': 'complete',
     'kyc-review': 'complete',
     'open-accounts': 'in_progress',
-    'placeholder-2': 'not_started',
   }),
 
   // Investment Review journeys
@@ -120,14 +114,12 @@ export const seededJourneys: Journey[] = [
     'related-parties': 'complete',
     'kyc-review': 'complete',
     'open-accounts': 'complete',
-    'placeholder-2': 'complete',
   }),
   buildJourney('journey-thompson', 'Thompson Asset Rebalance', 'Investment Review', 'Mark Thompson', 'Diana Torres', 'Alice Chen', '2026-03-10', {
     'existing-accounts': 'complete',
     'related-parties': 'complete',
     'kyc-review': 'not_started',
     'open-accounts': 'not_started',
-    'placeholder-2': 'not_started',
   }),
 
   // Tax Planning journeys
@@ -136,7 +128,6 @@ export const seededJourneys: Journey[] = [
     'related-parties': 'complete',
     'kyc-review': 'complete',
     'open-accounts': 'in_progress',
-    'placeholder-2': 'not_started',
   }),
 
   // Consolidation journeys
@@ -145,14 +136,12 @@ export const seededJourneys: Journey[] = [
     'related-parties': 'in_progress',
     'kyc-review': 'not_started',
     'open-accounts': 'not_started',
-    'placeholder-2': 'not_started',
   }),
   buildJourney('journey-nguyen', 'Nguyen Multi-Custodian Consolidation', 'Consolidation', 'Nguyen Trust', 'Diana Torres', 'Edward Kim', '2026-03-25', {
     'existing-accounts': 'in_progress',
     'related-parties': 'not_started',
     'kyc-review': 'not_started',
     'open-accounts': 'not_started',
-    'placeholder-2': 'not_started',
   }),
 
   // Estate Planning journeys
@@ -161,6 +150,5 @@ export const seededJourneys: Journey[] = [
     'related-parties': 'complete',
     'kyc-review': 'in_progress',
     'open-accounts': 'not_started',
-    'placeholder-2': 'not_started',
   }),
 ]

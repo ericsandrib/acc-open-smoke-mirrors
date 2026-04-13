@@ -1,4 +1,5 @@
 import type { DocumentRequirement } from './accountDocuments'
+import type { RelatedParty } from '@/types/workflow'
 import pasData from '../data/pasRequiredDocuments.json'
 
 type PasRegistrationEntry =
@@ -45,6 +46,31 @@ export interface DocumentRequirementWithSubTypes extends DocumentRequirement {
 /** Stable id for merged CIP lines that require government-issued ID. */
 export const GOVERNMENT_ISSUED_ID_DOC_ID = 'cip-government-issued-id'
 
+/** Prefix for per-trustee government ID rows (`${prefix}${TrustPartyRef.id}`). Legacy; merged into {@link GOVERNMENT_ISSUED_ID_DOC_ID} for open accounts. */
+export const TRUSTEE_GOVERNMENT_ID_DOC_ID_PREFIX = 'cip-gov-id-trustee-'
+
+/** Single trust CIP upload card: choose document type per row (replaces separate PAS lines). */
+export const TRUST_VERIFICATION_DOC_ID = 'cip-trust-verification-bundle'
+
+export const TRUST_VERIFICATION_SUBTYPES: DocumentSubType[] = [
+  {
+    value: 'cert-or-trust-agreement',
+    label: 'Certificate of Trust or Trust Agreement (excerpts or full)',
+  },
+  {
+    value: 'testamentary-probate',
+    label: 'Testamentary trust: will and probate evidence',
+  },
+  {
+    value: 'trust-ein-tax-id',
+    label: 'Trust EIN / tax ID documentation',
+  },
+]
+
+export type RegistrationDocumentsOptions = {
+  relatedParties?: RelatedParty[]
+}
+
 export const GOVERNMENT_ID_SUBTYPES: DocumentSubType[] = [
   { value: 'drivers-license', label: "Driver's license" },
   { value: 'passport', label: 'Passport' },
@@ -67,6 +93,104 @@ function governmentIssuedIdRequirement(): DocumentRequirementWithSubTypes {
     subTypes: GOVERNMENT_ID_SUBTYPES,
     fulfillment: 'upload',
   }
+}
+
+function isTrustEntityForTrusteeDocs(p: RelatedParty): boolean {
+  if (p.type !== 'related_organization') return false
+  if ((p.entityType ?? '').toLowerCase() === 'trust') return true
+  if ((p.role ?? '').toLowerCase() === 'trust') return true
+  return false
+}
+
+/**
+ * Household party IDs for trustees listed on trust org(s) the user selected as account owner(s).
+ * Only reads `trustParties` from those org records—does not infer from registration type or other trusts in related parties.
+ */
+export function getTrusteePartyIdsForSelectedTrustOwners(
+  relatedParties: RelatedParty[] | undefined,
+  selectedOwnerPartyIds: Iterable<string>,
+): string[] {
+  if (!relatedParties?.length) return []
+  const seen = new Set<string>()
+  const out: string[] = []
+  for (const ownerId of selectedOwnerPartyIds) {
+    const party = relatedParties.find((p) => p.id === ownerId)
+    if (!party || !isTrustEntityForTrusteeDocs(party) || !party.trustParties?.length) continue
+    for (const tp of party.trustParties) {
+      if (tp.partyId && !seen.has(tp.partyId)) {
+        seen.add(tp.partyId)
+        out.push(tp.partyId)
+      }
+    }
+  }
+  return out
+}
+
+/**
+ * Deduped party IDs for government ID uploads: **natural-person** account owners (household / related contact)
+ * plus trustees from any selected trust legal-entity owner. Legal entities (e.g. a trust LLC) are excluded—CIP for
+ * trusts is via trustees; entity-level docs use trust verification and other uploads.
+ */
+export function getPartyIdsRequiringGovernmentIdUpload(
+  relatedParties: RelatedParty[] | undefined,
+  accountOwnerPartyIds: Iterable<string>,
+): string[] {
+  const s = new Set<string>()
+  if (relatedParties?.length) {
+    for (const id of accountOwnerPartyIds) {
+      const party = relatedParties.find((p) => p.id === id)
+      if (!party || party.type === 'related_organization') continue
+      s.add(id)
+    }
+  }
+  for (const id of getTrusteePartyIdsForSelectedTrustOwners(relatedParties, accountOwnerPartyIds)) {
+    s.add(id)
+  }
+  return Array.from(s)
+}
+
+/**
+ * Trust legal-entity party IDs among selected account owners. Seeds trust verification uploads (Certificate of
+ * Trust, EIN docs, etc.) at the entity level—distinct from trustee government ID rows.
+ */
+export function getTrustOrganizationIdsForAccountOwners(
+  relatedParties: RelatedParty[] | undefined,
+  accountOwnerPartyIds: Iterable<string>,
+): string[] {
+  if (!relatedParties?.length) return []
+  const seen = new Set<string>()
+  const out: string[] = []
+  for (const id of accountOwnerPartyIds) {
+    if (seen.has(id)) continue
+    const party = relatedParties.find((p) => p.id === id)
+    if (!party || !isTrustEntityForTrusteeDocs(party)) continue
+    seen.add(id)
+    out.push(id)
+  }
+  return out
+}
+
+function trustVerificationBundleRequirement(): DocumentRequirementWithSubTypes {
+  return {
+    id: TRUST_VERIFICATION_DOC_ID,
+    label: 'Trust verification documents',
+    description:
+      'Trust-related client uploads in one place. Add a row per file and pick the document type (Certificate of Trust or Trust Agreement; testamentary / probate; or trust EIN / tax ID).',
+    subTypes: TRUST_VERIFICATION_SUBTYPES,
+    fulfillment: 'upload',
+  }
+}
+
+/** Puts Government-issued ID first (most common accounts), then trust verification, then other uploads. */
+export function sortUploadDocumentsForOpenAccounts(
+  docs: DocumentRequirementWithSubTypes[],
+): DocumentRequirementWithSubTypes[] {
+  const order: string[] = [GOVERNMENT_ISSUED_ID_DOC_ID, TRUST_VERIFICATION_DOC_ID]
+  const rank = (id: string) => {
+    const i = order.indexOf(id)
+    return i === -1 ? order.length + 1 : i
+  }
+  return [...docs].sort((a, b) => rank(a.id) - rank(b.id) || a.label.localeCompare(b.label))
 }
 
 export function partitionRegistrationDocumentsByFulfillment(
@@ -122,8 +246,17 @@ function formToRequirement(f: PasFormRow): DocumentRequirementWithSubTypes {
 function cipToRequirement(text: string, index: number): DocumentRequirementWithSubTypes {
   const base = slugify(text)
   let description = 'Client-provided supporting documentation (upload).'
-  // PAS CIP line — title + signature pages; not the same row as the full “Executed Trust Agreement” e-sign form.
-  if (/trust instrument/i.test(text)) {
+  // Trust registration — verification options (PAS CIP); trustee ID and trust tax ID may be separate rows.
+  if (/certificate of trust|trust agreement/i.test(text)) {
+    description =
+      'Verify the trust’s legal existence using one of the usual paths: (1) Certificate of Trust (certification or abstract)—a condensed, legally recognized summary that confirms the trust exists and identifies trustee authority without disclosing sensitive beneficiary or asset detail; or (2) Trust Agreement—relevant excerpts (often first and last pages: trust name, effective date, trustee signatures) or the full agreement if your firm or custodian requires it. Distinct from any e-sign “Executed Trust Agreement” package when that fulfillment is electronic.'
+  } else if (/testamentary|probate|\bwill\b/i.test(text)) {
+    description =
+      'Only when the trust was created under a will (testamentary trust): provide the will and evidence it was filed in probate court—such as a court stamp on the will, Letters Testamentary, or comparable court documentation your firm accepts.'
+  } else if (/tax id|ein|tax identification/i.test(text)) {
+    description =
+      'Documentation of the trust’s taxpayer identification number (for example EIN assignment letter, CP 575, or SS-4 acknowledgment), consistent with the trust profile on the account.'
+  } else if (/trust instrument/i.test(text)) {
     description =
       'Title and signature pages from the governing trust instrument (CIP). Separate from the full executed trust agreement when that is satisfied via e-sign forms.'
   }
@@ -145,10 +278,15 @@ function mergeDocs(list: DocumentRequirementWithSubTypes[]): DocumentRequirement
 
 export function getDocSubTypes(docId: string): DocumentSubType[] {
   if (docId === GOVERNMENT_ISSUED_ID_DOC_ID) return GOVERNMENT_ID_SUBTYPES
+  if (docId === TRUST_VERIFICATION_DOC_ID) return TRUST_VERIFICATION_SUBTYPES
+  if (docId.startsWith(TRUSTEE_GOVERNMENT_ID_DOC_ID_PREFIX)) return GOVERNMENT_ID_SUBTYPES
   return []
 }
 
-export function getRegistrationDocumentsForType(type: RegistrationType): DocumentRequirementWithSubTypes[] {
+export function getRegistrationDocumentsForType(
+  type: RegistrationType,
+  options?: RegistrationDocumentsOptions,
+): DocumentRequirementWithSubTypes[] {
   const entry = findRegistrationEntry(type)
   if (!entry) return []
 
@@ -178,13 +316,26 @@ export function getRegistrationDocumentsForType(type: RegistrationType): Documen
     cipUploadIndex += 1
   }
 
+  if (type === 'TRUST') {
+    // PAS lists no CIP upload lines for TRUST (trust verification is a separate bundle below), but trustee /
+    // owner government ID is still required—Open Accounts merges assignees with trustees from selected trust owners.
+    if (!govIdAdded) {
+      list.push(governmentIssuedIdRequirement())
+    }
+    list.push(trustVerificationBundleRequirement())
+  }
+
   return mergeDocs(list)
 }
 
-export function getRegistrationDocuments(registrationTypes: RegistrationType[]): DocumentRequirementWithSubTypes[] {
+export function getRegistrationDocuments(
+  registrationTypes: RegistrationType[],
+  relatedParties?: RelatedParty[],
+): DocumentRequirementWithSubTypes[] {
+  const opts: RegistrationDocumentsOptions | undefined = relatedParties ? { relatedParties } : undefined
   const list: DocumentRequirementWithSubTypes[] = []
   for (const type of registrationTypes) {
-    list.push(...getRegistrationDocumentsForType(type))
+    list.push(...getRegistrationDocumentsForType(type, opts))
   }
   return mergeDocs(list)
 }

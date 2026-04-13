@@ -13,7 +13,6 @@ import {
   AddHouseholdMemberSheet,
   AddClientInfoIndividualSheet,
   AddClientInfoLegalEntitySheet,
-  entityTypes,
 } from './AddPartySheet'
 import {
   hydrateIndividualFormFromParty,
@@ -21,6 +20,7 @@ import {
   type IndividualAccountOwnerFormState,
 } from '@/types/accountOwnerIndividual'
 import { isTrustEntityParty } from '@/utils/trustEntityParty'
+import { EditLegalEntitySheet } from './EditLegalEntitySheet'
 
 const householdRelationships = ['Spouse', 'Child', 'Parent', 'Sibling']
 const contactRelationships = ['Attorney', 'Accountant', 'Financial Advisor', 'Parent', 'Guardian', 'Power of Attorney']
@@ -153,7 +153,6 @@ function ContactCard({ party, onClick }: { party: RelatedParty; onClick: () => v
 // --- Edit party sheet (buffered save) ---
 
 const ID_TYPES = ['Driver\'s License', 'Passport', 'State ID', 'Military ID'] as const
-const REVENUE_RANGES = ['Under $500K', '$500K – $1M', '$1M – $5M', '$5M – $25M', '$25M+'] as const
 const sectionCls = 'text-sm font-semibold text-foreground'
 const fieldCls = 'text-xs font-medium text-foreground'
 
@@ -180,7 +179,7 @@ function EditPartySheet({
   const isMember = party.type === 'household_member'
 
   if (isOrg) {
-    return <EditEntitySheet party={party} open={open} onOpenChange={onOpenChange} />
+    return <EditLegalEntitySheet party={party} open={open} onOpenChange={onOpenChange} />
   }
   if (isMember) {
     return <EditIndividualSheet key={party.id} party={party} open={open} onOpenChange={onOpenChange} />
@@ -461,275 +460,6 @@ function EditIndividualSheet({
               </Button>
             </>
           )}
-        </div>
-        <div className="px-6 py-4 border-t border-border shrink-0 flex justify-end">
-          <Button onClick={handleSave} disabled={!isDirty}>Save</Button>
-        </div>
-      </SheetContent>
-    </Sheet>
-  )
-}
-
-// ─── Entity / organization edit ───
-
-function EditEntitySheet({
-  party,
-  open,
-  onOpenChange,
-}: {
-  party: RelatedParty
-  open: boolean
-  onOpenChange: (open: boolean) => void
-}) {
-  const { dispatch } = useWorkflow()
-
-  const [legalName, setLegalName] = useState('')
-  const [entityType, setEntityType] = useState('')
-  const [taxId, setTaxId] = useState('')
-  const [jurisdiction, setJurisdiction] = useState('')
-  const [email, setEmail] = useState('')
-  const [phone, setPhone] = useState('')
-
-  const [cpFirstName, setCpFirstName] = useState('')
-  const [cpLastName, setCpLastName] = useState('')
-  const [cpDob, setCpDob] = useState('')
-  const [cpSsn, setCpSsn] = useState('')
-  const [cpAddress, setCpAddress] = useState('')
-  const [cpRelationship, setCpRelationship] = useState('')
-
-  const [beneficialOwners, setBeneficialOwners] = useState<Array<{ name: string; ownershipPercent: string }>>([
-    { name: '', ownershipPercent: '' },
-  ])
-
-  const [bizIndustry, setBizIndustry] = useState('')
-  const [bizSourceOfFunds, setBizSourceOfFunds] = useState('')
-  const [bizRevenueRange, setBizRevenueRange] = useState('')
-
-  const [snapshot, setSnapshot] = useState('')
-
-  useEffect(() => {
-    if (open) {
-      setLegalName(party.organizationName ?? party.name ?? '')
-      setEntityType(party.entityType ?? '')
-      setTaxId(party.taxId ?? '')
-      setJurisdiction(party.jurisdiction ?? '')
-      setEmail(party.email ?? '')
-      setPhone(party.phone ?? '')
-
-      const cp = party.controlPerson
-      setCpFirstName(cp?.firstName ?? '')
-      setCpLastName(cp?.lastName ?? '')
-      setCpDob(cp?.dob ?? '')
-      setCpSsn(cp?.ssn ?? '')
-      setCpAddress(cp?.address ?? '')
-      setCpRelationship(cp?.relationship ?? '')
-
-      const bo = party.beneficialOwners
-      setBeneficialOwners(bo && bo.length > 0 ? bo.map((o) => ({ ...o })) : [{ name: '', ownershipPercent: '' }])
-
-      const bp = party.businessProfile
-      setBizIndustry(bp?.industry ?? '')
-      setBizSourceOfFunds(bp?.sourceOfFunds ?? '')
-      setBizRevenueRange(bp?.annualRevenueRange ?? '')
-
-      setSnapshot(JSON.stringify({
-        legalName: party.organizationName ?? party.name ?? '',
-        entityType: party.entityType ?? '',
-        taxId: party.taxId ?? '',
-        jurisdiction: party.jurisdiction ?? '',
-        email: party.email ?? '',
-        phone: party.phone ?? '',
-        cp, bo, bp,
-      }))
-    }
-  }, [party.id, open])
-
-  const addOwner = () => setBeneficialOwners((prev) => [...prev, { name: '', ownershipPercent: '' }])
-  const removeOwner = (idx: number) => setBeneficialOwners((prev) => prev.filter((_, i) => i !== idx))
-  const updateOwner = (idx: number, field: 'name' | 'ownershipPercent', value: string) =>
-    setBeneficialOwners((prev) => prev.map((o, i) => (i === idx ? { ...o, [field]: value } : o)))
-
-  const currentState = JSON.stringify({
-    legalName, entityType, taxId, jurisdiction, email, phone,
-    cp: { firstName: cpFirstName, lastName: cpLastName, dob: cpDob, ssn: cpSsn, address: cpAddress, relationship: cpRelationship },
-    bo: beneficialOwners,
-    bp: { industry: bizIndustry, sourceOfFunds: bizSourceOfFunds, annualRevenueRange: bizRevenueRange },
-  })
-  const isDirty = currentState !== snapshot
-
-  const handleSave = () => {
-    const validOwners = beneficialOwners.filter((o) => o.name.trim())
-    dispatch({
-      type: 'UPDATE_RELATED_PARTY',
-      partyId: party.id,
-      updates: {
-        name: legalName.trim() || party.name,
-        organizationName: legalName.trim() || undefined,
-        entityType: entityType || undefined,
-        taxId: taxId || undefined,
-        jurisdiction: jurisdiction || undefined,
-        contactPerson: cpFirstName.trim() ? `${cpFirstName.trim()} ${cpLastName.trim()}` : undefined,
-        email: email || undefined,
-        phone: phone || undefined,
-        controlPerson: cpFirstName.trim()
-          ? {
-              firstName: cpFirstName.trim(),
-              lastName: cpLastName.trim(),
-              dob: cpDob || undefined,
-              ssn: cpSsn || undefined,
-              address: cpAddress || undefined,
-              relationship: cpRelationship || undefined,
-            }
-          : undefined,
-        beneficialOwners: validOwners.length > 0 ? validOwners : undefined,
-        businessProfile:
-          bizIndustry || bizSourceOfFunds || bizRevenueRange
-            ? {
-                industry: bizIndustry || undefined,
-                sourceOfFunds: bizSourceOfFunds || undefined,
-                annualRevenueRange: bizRevenueRange || undefined,
-              }
-            : undefined,
-      },
-    })
-    onOpenChange(false)
-  }
-
-  return (
-    <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent side="right" className="sm:max-w-[488px] flex flex-col gap-0 p-0">
-        <SheetHeader className="px-6 pt-6 pb-4 border-b border-border shrink-0">
-          <SheetTitle>{party.name}</SheetTitle>
-          <SheetDescription>Edit legal entity details.</SheetDescription>
-        </SheetHeader>
-        <div className="flex-1 overflow-y-auto px-6 py-5 space-y-6">
-          {/* 1. Entity Information */}
-          <section className="space-y-3">
-            <h4 className={sectionCls}>1. Entity Information</h4>
-            <div className="space-y-3">
-              <div className="space-y-1.5">
-                <Label className={fieldCls}>Legal name</Label>
-                <Input value={legalName} onChange={(e) => setLegalName(e.target.value)} />
-              </div>
-              <div className="space-y-1.5">
-                <Label className={fieldCls}>Entity type</Label>
-                <Select value={entityType} onValueChange={setEntityType}>
-                  <SelectTrigger><SelectValue placeholder="Select type" /></SelectTrigger>
-                  <SelectContent>
-                    {entityTypes.map((t) => <SelectItem key={t} value={t}>{t}</SelectItem>)}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="space-y-1.5">
-                <Label className={fieldCls}>EIN / Tax ID</Label>
-                <SensitiveTaxIdInput value={taxId} onChange={(e) => setTaxId(e.target.value)} placeholder="XX-XXXXXXX" />
-              </div>
-              <div className="space-y-1.5">
-                <Label className={fieldCls}>Jurisdiction of formation</Label>
-                <Input value={jurisdiction} onChange={(e) => setJurisdiction(e.target.value)} placeholder="Delaware, USA" />
-              </div>
-              <div className="space-y-1.5">
-                <Label className={fieldCls}>Email</Label>
-                <Input type="email" value={email} onChange={(e) => setEmail(e.target.value)} />
-              </div>
-              <div className="space-y-1.5">
-                <Label className={fieldCls}>Phone</Label>
-                <Input type="tel" value={phone} onChange={(e) => setPhone(e.target.value)} />
-              </div>
-            </div>
-          </section>
-
-          <hr className="border-border" />
-
-          {/* 2. Control Person (CIP) */}
-          <section className="space-y-3">
-            <h4 className={sectionCls}>2. Control Person</h4>
-            <p className="text-xs text-muted-foreground">Required for Customer Identification Program (CIP) compliance.</p>
-            <div className="space-y-3">
-              <div className="space-y-1.5">
-                <Label className={fieldCls}>First name</Label>
-                <Input value={cpFirstName} onChange={(e) => setCpFirstName(e.target.value)} />
-              </div>
-              <div className="space-y-1.5">
-                <Label className={fieldCls}>Last name</Label>
-                <Input value={cpLastName} onChange={(e) => setCpLastName(e.target.value)} />
-              </div>
-              <div className="space-y-1.5">
-                <Label className={fieldCls}>Date of birth</Label>
-                <Input type="date" value={cpDob} max={new Date().toISOString().split('T')[0]} onChange={(e) => setCpDob(e.target.value)} />
-              </div>
-              <div className="space-y-1.5">
-                <Label className={fieldCls}>SSN</Label>
-                <SensitiveTaxIdInput value={cpSsn} onChange={(e) => setCpSsn(e.target.value)} placeholder="XXX-XX-XXXX" />
-              </div>
-              <div className="space-y-1.5">
-                <Label className={fieldCls}>Address</Label>
-                <Input value={cpAddress} onChange={(e) => setCpAddress(e.target.value)} placeholder="Full address" />
-              </div>
-              <div className="space-y-1.5">
-                <Label className={fieldCls}>Relationship to entity</Label>
-                <Input value={cpRelationship} onChange={(e) => setCpRelationship(e.target.value)} placeholder="e.g. Trustee, Managing Member" />
-              </div>
-            </div>
-          </section>
-
-          <hr className="border-border" />
-
-          {/* 3. Beneficial Owners */}
-          <section className="space-y-3">
-            <h4 className={sectionCls}>3. Beneficial Owners (&ge;25%)</h4>
-            <p className="text-xs text-muted-foreground">List all individuals who directly or indirectly own 25% or more of the entity.</p>
-            <div className="space-y-2">
-              {beneficialOwners.map((owner, idx) => (
-                <div key={idx} className="flex items-end gap-2">
-                  <div className="flex-1 space-y-1.5">
-                    <Label className={fieldCls}>Name</Label>
-                    <Input value={owner.name} onChange={(e) => updateOwner(idx, 'name', e.target.value)} placeholder="Full name" />
-                  </div>
-                  <div className="w-28 space-y-1.5">
-                    <Label className={fieldCls}>Ownership %</Label>
-                    <Input value={owner.ownershipPercent} onChange={(e) => updateOwner(idx, 'ownershipPercent', e.target.value)} placeholder="e.g. 50" />
-                  </div>
-                  {beneficialOwners.length > 1 && (
-                    <Button type="button" variant="ghost" size="sm" className="text-destructive h-9" onClick={() => removeOwner(idx)}>
-                      &times;
-                    </Button>
-                  )}
-                </div>
-              ))}
-            </div>
-            <Button type="button" variant="outline" size="sm" onClick={addOwner} className="mt-1">
-              <Plus className="h-3.5 w-3.5 mr-1.5" />
-              Add owner
-            </Button>
-          </section>
-
-          <hr className="border-border" />
-
-          {/* 4. Business Profile */}
-          <section className="space-y-3">
-            <h4 className={sectionCls}>4. Business Profile</h4>
-            <p className="text-xs text-muted-foreground">Information used for AML risk assessment.</p>
-            <div className="space-y-3">
-              <div className="space-y-1.5">
-                <Label className={fieldCls}>Industry</Label>
-                <Input value={bizIndustry} onChange={(e) => setBizIndustry(e.target.value)} placeholder="e.g. Financial Services, Real Estate" />
-              </div>
-              <div className="space-y-1.5">
-                <Label className={fieldCls}>Source of funds</Label>
-                <Input value={bizSourceOfFunds} onChange={(e) => setBizSourceOfFunds(e.target.value)} placeholder="e.g. Business operations, Investment returns" />
-              </div>
-              <div className="space-y-1.5">
-                <Label className={fieldCls}>Annual revenue range</Label>
-                <Select value={bizRevenueRange || undefined} onValueChange={setBizRevenueRange}>
-                  <SelectTrigger><SelectValue placeholder="Select range" /></SelectTrigger>
-                  <SelectContent>
-                    {REVENUE_RANGES.map((r) => <SelectItem key={r} value={r}>{r}</SelectItem>)}
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-          </section>
         </div>
         <div className="px-6 py-4 border-t border-border shrink-0 flex justify-end">
           <Button onClick={handleSave} disabled={!isDirty}>Save</Button>

@@ -104,12 +104,12 @@ function workflowReducer(state: WorkflowState, action: WorkflowAction): Workflow
         ? state.submittedTaskIds
         : [...state.submittedTaskIds, action.taskId]
 
-      // Check if this is the last task in the flat order (Final Review)
+      // Last task in journey flat order (Open Accounts) completes the onboarding submission
       const lastTaskId = state.flatTaskOrder[state.flatTaskOrder.length - 1]
       const isFinalTask = action.taskId === lastTaskId
 
       if (isFinalTask) {
-        // Final Review completed — transition all tasks to awaiting_review
+        // Journey complete — transition all tasks to awaiting_review
         const newTasks = state.tasks.map((t) => {
           const updatedTask = { ...t, status: 'awaiting_review' as const }
           if (updatedTask.children) {

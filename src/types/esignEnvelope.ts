@@ -51,4 +51,8 @@ export interface EsignEnvelope {
   uploadedFiles: EnvelopeUploadedFile[]
   signers: EsignEnvelopeSigner[]
   createdAt: string
+  /** Demo: advisor has delivered the signing package to the client. */
+  sentToClient?: boolean
+  /** Demo: client has completed required signatures on the package. */
+  clientSignaturesComplete?: boolean
 }

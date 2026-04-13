@@ -2,6 +2,15 @@ export type TaskStatus = 'not_started' | 'in_progress' | 'complete' | 'blocked' 
 
 export type RelatedPartyType = 'household_member' | 'related_contact' | 'related_organization'
 
+/** Trustee or trust owner linked to a trust entity (CIP / required documents). */
+export interface TrustPartyRef {
+  id: string
+  /** When set, resolves to an existing household or contact party for display and deduplication. */
+  partyId?: string
+  displayName: string
+  role?: string
+}
+
 /** Suitability / regulatory extension for account-owner individuals (wizard). */
 export interface AccountOwnerIndividualProfile {
   middleName?: string
@@ -88,6 +97,8 @@ export interface RelatedParty {
     sourceOfFunds?: string
     annualRevenueRange?: string
   }
+  /** For trust organizations: trustees / trust owners requiring government-issued ID for CIP. */
+  trustParties?: TrustPartyRef[]
 }
 
 export type AccountType = 'brokerage' | 'ira' | 'roth_ira' | '401k' | 'trust' | 'checking' | 'savings'
