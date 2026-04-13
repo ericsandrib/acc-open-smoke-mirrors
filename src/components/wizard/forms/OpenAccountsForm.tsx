@@ -504,11 +504,15 @@ export function OpenAccountsForm() {
                   </div>
 
                   {instances.length > 0 ? (
-                    <table className="w-full text-sm">
+                    <table className="w-full text-sm table-fixed">
                       <thead>
                         <tr className="border-b border-border bg-muted/20">
-                          <th className="text-left font-medium text-muted-foreground px-4 py-2 text-xs">Specification</th>
-                          <th className="text-left font-medium text-muted-foreground px-4 py-2 text-xs">Assigned To</th>
+                          <th className="text-left font-medium text-muted-foreground px-4 py-2 text-xs w-[36%]">
+                            Specification
+                          </th>
+                          <th className="text-left font-medium text-muted-foreground px-4 py-2 text-xs w-[11rem] max-w-[11rem]">
+                            Assigned To
+                          </th>
                           <th className="text-left font-medium text-muted-foreground px-4 py-2 text-xs">File</th>
                           <th className="w-[40px]" />
                         </tr>
@@ -519,13 +523,13 @@ export function OpenAccountsForm() {
                           const subTypes = getDocSubTypes(doc.id)
                           return (
                             <tr key={inst.id} className={idx < instances.length - 1 ? 'border-b border-border' : ''}>
-                              <td className="px-4 py-2.5">
+                              <td className="px-4 py-2.5 min-w-0 align-top w-[36%] max-w-[36%] overflow-hidden">
                                 {subTypes.length > 0 ? (
                                   <Select
                                     value={inst.subType ?? ''}
                                     onValueChange={(v) => updateInstance(inst.id, { subType: v })}
                                   >
-                                    <SelectTrigger className="h-8 text-xs">
+                                    <SelectTrigger className="h-8 text-xs w-full max-w-full min-w-0">
                                       <SelectValue placeholder="Select type..." />
                                     </SelectTrigger>
                                     <SelectContent>
@@ -537,22 +541,26 @@ export function OpenAccountsForm() {
                                     </SelectContent>
                                   </Select>
                                 ) : (
-                                  <div className="flex items-center gap-1.5 h-8 px-3 rounded-md border border-border bg-muted/30">
-                                    <span className="text-xs text-foreground">{doc.label}</span>
+                                  <div className="flex min-w-0 max-w-full items-center h-8 px-3 rounded-md border border-border bg-muted/30">
+                                    <span className="text-xs text-foreground truncate min-w-0" title={doc.label}>
+                                      {doc.label}
+                                    </span>
                                   </div>
                                 )}
                               </td>
-                              <td className="px-4 py-2.5 w-[180px]">
+                              <td className="px-4 py-2.5 w-[11rem] max-w-[11rem] align-top">
                                 {inst.assignedTo && memberName ? (
-                                  <div className="flex items-center gap-1.5 h-8 px-3 rounded-md border border-border bg-muted/30">
-                                    <span className="text-xs text-foreground">{memberName}</span>
+                                  <div className="flex min-w-0 items-center gap-1.5 h-8 px-3 rounded-md border border-border bg-muted/30">
+                                    <span className="text-xs text-foreground truncate min-w-0" title={memberName}>
+                                      {memberName}
+                                    </span>
                                   </div>
                                 ) : (
                                   <Select
                                     value={inst.assignedTo}
                                     onValueChange={(v) => updateInstance(inst.id, { assignedTo: v })}
                                   >
-                                    <SelectTrigger className="h-8 text-xs">
+                                    <SelectTrigger className="h-8 text-xs w-full max-w-full min-w-0">
                                       <SelectValue placeholder="Assign to..." />
                                     </SelectTrigger>
                                     <SelectContent>
@@ -627,19 +635,19 @@ export function OpenAccountsForm() {
         )}
       </section>
 
-      {/* Contacts for Verification */}
+      {/* KYC Verification */}
       <section>
         <div className="mb-4">
-          <h3 className="text-base font-semibold">Contacts for Verification</h3>
+          <h3 className="text-base font-semibold">KYC Verification</h3>
           <p className="text-base text-muted-foreground">
             Identity verification (KYC/KYB) must be completed by all account owners before accounts can be opened.
           </p>
         </div>
 
         <div className="mb-3">
-          <h4 className="text-sm font-semibold text-foreground">Owners on accounts</h4>
+          <h4 className="text-sm font-semibold text-foreground">Account Owners</h4>
           <p className="text-sm text-muted-foreground mt-1">
-            One row per owner from accounts. Start a KYC workflow for each.
+            One row per owner from accounts. Start KYC initiation for each.
           </p>
         </div>
         {kycOwnerParties.length > 0 ? (
@@ -703,7 +711,7 @@ export function OpenAccountsForm() {
                             }}
                           >
                             <Play className="h-3 w-3" />
-                            Start KYC workflow
+                            Start KYC initiation
                           </Button>
                         ) : null}
                       </td>
@@ -723,9 +731,9 @@ export function OpenAccountsForm() {
 
         <div className="mt-6">
           <div className="mb-3">
-            <h4 className="text-sm font-semibold text-foreground">KYC workflows</h4>
+            <h4 className="text-sm font-semibold text-foreground">KYC Initiation</h4>
             <p className="text-sm text-muted-foreground mt-1">
-              Each row is one KYC workflow—open it to complete and submit for review.
+              Each row is one KYC initiation—open it to complete and submit for review.
             </p>
           </div>
           <div className="rounded-lg border border-border p-1">
@@ -773,8 +781,8 @@ export function OpenAccountsForm() {
               </div>
               <p className="text-sm text-muted-foreground">
                 {kycOwnerParties.length > 0
-                  ? 'No workflows yet. Add a new contact if needed, then start a KYC workflow from the Owners on accounts table above.'
-                  : 'No KYC workflows started yet.'}
+                  ? 'No initiations yet. Add a new contact if needed, then start KYC initiation from the Account Owners table above.'
+                  : 'No KYC initiation started yet.'}
               </p>
               <Button type="button" className="mt-4" onClick={() => setKycAddSheetOpen(true)}>
                 <UserPlus className="h-4 w-4 mr-2" />

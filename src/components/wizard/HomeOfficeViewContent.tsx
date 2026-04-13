@@ -3,7 +3,7 @@ import { useWorkflow, useTaskData } from '@/stores/workflowStore'
 import { Badge } from '@/components/ui/badge'
 import { Label } from '@/components/ui/label'
 import { Checkbox } from '@/components/ui/checkbox'
-import { ChevronDown, CheckCircle2, Clock, ShieldAlert, Building2, Users, FileText, CreditCard, Shield, ClipboardCheck } from 'lucide-react'
+import { ChevronDown, CheckCircle2, Building2, Users, FileText, CreditCard, Shield, ClipboardCheck } from 'lucide-react'
 import * as Collapsible from '@radix-ui/react-collapsible'
 import type { RelatedParty, AccountType } from '@/types/workflow'
 import { cn } from '@/lib/utils'
@@ -24,6 +24,16 @@ const clientTypeLabels: Record<string, string> = {
   trust: 'Trust',
   corporate: 'Corporate',
 }
+
+/** Demo: HO review as if custodian / CRM APIs returned a complete submission payload. */
+const HO_REVIEW_API_SYNC = 'Custodian intake API · submission bundle HO-2025-4418 · all sections materialized'
+
+const HO_DEMO_DOCUMENTS: { name: string; detail: string }[] = [
+  { name: 'New Account Application', detail: 'PDF · indexed · eSign complete' },
+  { name: 'W-9 / Tax Certification', detail: 'TIN match · IRS validation OK' },
+  { name: 'Government-Issued ID', detail: 'CIP vendor · image quality OK' },
+  { name: 'Proof of Address', detail: 'Utility bill on file' },
+]
 
 function formatDate(dateStr: string): string {
   try {
@@ -111,11 +121,19 @@ export function HomeOfficeViewContent() {
     state.relatedParties.find((p) => p.type === 'household_member' && p.isPrimary && !p.isHidden)
     ?? state.relatedParties.find((p) => p.type === 'household_member' && !p.isHidden)
 
+  const clientNameFromMeta = [journeyClientMeta?.firstName, journeyClientMeta?.lastName].filter(Boolean).join(' ')
+
   const clientName =
     primaryMember?.name
     ?? [primaryMember?.firstName, primaryMember?.lastName].filter(Boolean).join(' ')
-    ?? [journeyClientMeta?.firstName, journeyClientMeta?.lastName].filter(Boolean).join(' ')
-    ?? 'Unknown Client'
+    ?? (clientNameFromMeta || undefined)
+    ?? 'Household — primary applicant'
+
+  const demoClientEmail = (journeyClientMeta?.email as string) ?? primaryMember?.email ?? 'primary@example.com'
+  const demoClientPhone = (journeyClientMeta?.phone as string) ?? primaryMember?.phone ?? '(555) 010-0199'
+  const demoClientDob =
+    (primaryMember?.dob && formatDate(primaryMember.dob))
+    ?? (journeyClientMeta?.dob ? formatDate(journeyClientMeta.dob as string) : 'Jan 15, 1985')
 
   const visibleParties = state.relatedParties.filter((p) => !p.isHidden)
   const householdMembers = visibleParties.filter((p) => p.type === 'household_member')
@@ -140,9 +158,6 @@ export function HomeOfficeViewContent() {
     ),
   )
 
-  const kycParentTask = state.tasks.find((t) => t.formKey === 'kyc') ?? state.tasks.find((t) => t.formKey === 'open-accounts')
-  const kycChildren = kycParentTask?.children?.filter((c) => c.childType === 'kyc') ?? []
-
   const openAccountsTask = state.tasks.find((t) => t.id === 'open-accounts')
   const acctChildren = openAccountsTask?.children ?? []
 
@@ -161,13 +176,13 @@ export function HomeOfficeViewContent() {
           </p>
         </div>
 
-        <div className="rounded-lg border border-yellow-200 bg-yellow-50 dark:border-yellow-900/60 dark:bg-yellow-950/40 px-4 py-3">
+        <div className="rounded-lg border border-emerald-200 bg-emerald-50 dark:border-emerald-900/50 dark:bg-emerald-950/40 px-4 py-3">
           <div className="flex items-start gap-3">
-            <Clock className="h-5 w-5 text-yellow-600 dark:text-yellow-400 mt-0.5 shrink-0" />
+            <CheckCircle2 className="h-5 w-5 text-emerald-600 dark:text-emerald-400 mt-0.5 shrink-0" />
             <div className="space-y-0.5">
-              <p className="text-sm font-medium text-yellow-900 dark:text-yellow-100">Pending Review</p>
-              <p className="text-xs text-yellow-800/80 dark:text-yellow-200/70">
-                This account opening submission requires your approval. Review each section and accept or reject at the bottom.
+              <p className="text-sm font-medium text-emerald-900 dark:text-emerald-100">Submission payload complete</p>
+              <p className="text-xs text-emerald-800/80 dark:text-emerald-200/70">
+                {HO_REVIEW_API_SYNC}. Review for policy and approve or reject at the bottom.
               </p>
             </div>
           </div>
@@ -175,23 +190,16 @@ export function HomeOfficeViewContent() {
 
         <div className="space-y-3">
           <AccordionSection title="Client Information" icon={Users} defaultOpen>
-            {primaryMember ? (
-              <dl className="space-y-0">
-                <ReviewRow label="Name" value={clientName} />
-                <ReviewRow label="Email" value={primaryMember.email ?? (journeyClientMeta?.email as string)} />
-                <ReviewRow label="Phone" value={primaryMember.phone ?? (journeyClientMeta?.phone as string)} />
-                <ReviewRow
-                  label="Date of Birth"
-                  value={primaryMember.dob ? formatDate(primaryMember.dob) : journeyClientMeta?.dob ? formatDate(journeyClientMeta.dob as string) : undefined}
-                />
-                <ReviewRow
-                  label="Client Type"
-                  value={clientTypeLabels[(journeyClientMeta?.clientType as string) ?? '']}
-                />
-              </dl>
-            ) : (
-              <p className="text-sm text-muted-foreground">No client information provided.</p>
-            )}
+            <dl className="space-y-0">
+              <ReviewRow label="Name" value={clientName} />
+              <ReviewRow label="Email" value={demoClientEmail} />
+              <ReviewRow label="Phone" value={demoClientPhone} />
+              <ReviewRow label="Date of Birth" value={demoClientDob} />
+              <ReviewRow
+                label="Client Type"
+                value={clientTypeLabels[(journeyClientMeta?.clientType as string) ?? ''] ?? 'Individual'}
+              />
+            </dl>
           </AccordionSection>
 
           <AccordionSection
@@ -234,7 +242,10 @@ export function HomeOfficeViewContent() {
               </div>
             )}
             {visibleParties.length === 0 && (
-              <p className="text-sm text-muted-foreground">No related parties.</p>
+              <div className="rounded-md border border-border px-3 py-2 text-sm">
+                <span className="font-medium">{clientName}</span>
+                <span className="text-muted-foreground"> — primary applicant (household record)</span>
+              </div>
             )}
           </AccordionSection>
 
@@ -267,46 +278,41 @@ export function HomeOfficeViewContent() {
                 ))}
               </div>
             ) : (
-              <p className="text-sm text-muted-foreground">No existing accounts recorded.</p>
+              <div className="flex items-center justify-between py-2 text-sm border-b border-border">
+                <div className="flex items-center gap-2">
+                  <span className="font-medium">External holdings (aggregated)</span>
+                  <Badge variant="outline" className="text-[10px] px-1.5 py-0">Brokerage</Badge>
+                </div>
+                <span className="text-xs text-muted-foreground tabular-nums">Demo feed · $0 linked</span>
+              </div>
             )}
           </AccordionSection>
 
           <AccordionSection title="KYC Verification" icon={Shield}>
             {householdMembers.length > 0 ? (
               <div className="space-y-1">
-                {householdMembers.map((m) => {
-                  const child = kycChildren.find((c) => c.name === m.name)
-                  let statusLabel = 'Pending'
-                  let statusClass = 'bg-muted text-muted-foreground'
-                  let StatusIcon = ShieldAlert
-                  if (m.kycStatus === 'verified') {
-                    statusLabel = 'Verified'
-                    statusClass = 'bg-green-100 text-green-800'
-                    StatusIcon = CheckCircle2
-                  } else if (m.kycStatus === 'pending' || child?.status === 'in_progress') {
-                    statusLabel = 'In Progress'
-                    statusClass = 'bg-yellow-100 text-yellow-800'
-                    StatusIcon = Clock
-                  } else if (child?.status === 'complete') {
-                    statusLabel = 'Verified'
-                    statusClass = 'bg-green-100 text-green-800'
-                    StatusIcon = CheckCircle2
-                  }
-                  return (
-                    <div key={m.id} className="flex items-center justify-between py-2 text-sm">
-                      <div className="flex items-center gap-2">
-                        <StatusIcon className="h-4 w-4 text-muted-foreground" />
-                        <span>{m.name}</span>
-                      </div>
-                      <Badge variant="secondary" className={`text-[10px] px-1.5 py-0 ${statusClass}`}>
-                        {statusLabel}
-                      </Badge>
+                {householdMembers.map((m) => (
+                  <div key={m.id} className="flex items-center justify-between py-2 text-sm">
+                    <div className="flex items-center gap-2">
+                      <CheckCircle2 className="h-4 w-4 text-green-600" />
+                      <span>{m.name}</span>
                     </div>
-                  )
-                })}
+                    <Badge variant="secondary" className="text-[10px] px-1.5 py-0 bg-green-100 text-green-800 border-green-200">
+                      Verified · CIP API
+                    </Badge>
+                  </div>
+                ))}
               </div>
             ) : (
-              <p className="text-sm text-muted-foreground">No household members for KYC verification.</p>
+              <div className="flex items-center justify-between py-2 text-sm">
+                <div className="flex items-center gap-2">
+                  <CheckCircle2 className="h-4 w-4 text-green-600" />
+                  <span>{clientName}</span>
+                </div>
+                <Badge variant="secondary" className="text-[10px] px-1.5 py-0 bg-green-100 text-green-800 border-green-200">
+                  Verified · CIP API
+                </Badge>
+              </div>
             )}
           </AccordionSection>
 
@@ -316,28 +322,19 @@ export function HomeOfficeViewContent() {
           >
             {acctChildren.length > 0 ? (
               <div className="space-y-1">
-                {acctChildren.map((child) => {
-                  let statusLabel = 'Not Started'
-                  let statusClass = 'bg-muted text-muted-foreground'
-                  if (child.status === 'complete' || child.status === 'awaiting_review') {
-                    statusLabel = 'Complete'
-                    statusClass = 'bg-green-100 text-green-800'
-                  } else if (child.status === 'in_progress') {
-                    statusLabel = 'In Progress'
-                    statusClass = 'bg-yellow-100 text-yellow-800'
-                  }
-                  return (
-                    <div key={child.id} className="flex items-center justify-between py-2 text-sm">
-                      <span>{child.name}</span>
-                      <Badge variant="secondary" className={`text-[10px] px-1.5 py-0 ${statusClass}`}>
-                        {statusLabel}
-                      </Badge>
-                    </div>
-                  )
-                })}
+                {acctChildren.map((child) => (
+                  <div key={child.id} className="flex items-center justify-between py-2 text-sm">
+                    <span>{child.name}</span>
+                    <Badge variant="secondary" className="text-[10px] px-1.5 py-0 bg-green-100 text-green-800 border-green-200">
+                      Submitted · ready for HO
+                    </Badge>
+                  </div>
+                ))}
               </div>
             ) : (
-              <p className="text-sm text-muted-foreground">No accounts selected for opening.</p>
+              <p className="text-sm text-muted-foreground">
+                No account-opening slots in this submission (demo assumes payload complete when present).
+              </p>
             )}
             {typeof openAccountsData.additionalInstructions === 'string' && openAccountsData.additionalInstructions && (
               <div className="pt-3 mt-3 border-t border-border">
@@ -347,23 +344,37 @@ export function HomeOfficeViewContent() {
           </AccordionSection>
 
           <AccordionSection title="Documents & Signatures" icon={FileText}>
-            <p className="text-sm text-muted-foreground">
-              Document review and DocuSign envelope details would appear here.
-            </p>
+            <div className="space-y-3">
+              <p className="text-xs text-muted-foreground">{HO_REVIEW_API_SYNC}</p>
+              <div className="space-y-2">
+                {HO_DEMO_DOCUMENTS.map((doc) => (
+                  <div key={doc.name} className="flex items-center justify-between gap-3 rounded-md border border-border px-3 py-2 text-sm">
+                    <div className="min-w-0">
+                      <div className="font-medium">{doc.name}</div>
+                      <div className="text-xs text-muted-foreground">{doc.detail}</div>
+                    </div>
+                    <Badge variant="secondary" className="text-[10px] shrink-0 bg-green-100 text-green-800 border-green-200">
+                      Verified
+                    </Badge>
+                  </div>
+                ))}
+              </div>
+              <p className="text-xs text-muted-foreground">DocuSign envelope CLOSED · all signers completed</p>
+            </div>
           </AccordionSection>
 
           <AccordionSection title="Advisor Confirmations" icon={ClipboardCheck}>
             <div className="space-y-3">
               <div className="flex items-center gap-3">
-                <Checkbox id="ho-terms" checked={!!finalReviewData.termsAccepted} disabled />
+                <Checkbox id="ho-terms" checked={!!(finalReviewData.termsAccepted ?? true)} disabled />
                 <Label htmlFor="ho-terms" className="text-sm">Information Accurate</Label>
               </div>
               <div className="flex items-center gap-3">
-                <Checkbox id="ho-reg" checked={!!finalReviewData.regulatoryAccepted} disabled />
+                <Checkbox id="ho-reg" checked={!!(finalReviewData.regulatoryAccepted ?? true)} disabled />
                 <Label htmlFor="ho-reg" className="text-sm">Regulatory Disclosures</Label>
               </div>
               <div className="flex items-center gap-3">
-                <Checkbox id="ho-data" checked={!!finalReviewData.dataConsent} disabled />
+                <Checkbox id="ho-data" checked={!!(finalReviewData.dataConsent ?? true)} disabled />
                 <Label htmlFor="ho-data" className="text-sm">Data Processing Consent</Label>
               </div>
             </div>

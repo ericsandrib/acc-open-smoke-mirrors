@@ -30,7 +30,7 @@ export function HomeOfficeReviewFooter() {
         <footer className="border-t border-border bg-background px-6 py-3 min-h-14 flex items-center justify-center shrink-0 box-border">
           <div className="flex items-center gap-2 text-sm">
             <CheckCircle2 className="h-4 w-4 text-green-600" />
-            <span className="text-green-700 font-medium">IGO — Passed to Principal Review</span>
+            <span className="text-green-700 font-medium">Accepted — Passed to Principal Review</span>
             <span className="text-muted-foreground ml-1">at {docReview.decidedAt}</span>
           </div>
         </footer>
@@ -42,7 +42,7 @@ export function HomeOfficeReviewFooter() {
         <footer className="border-t border-border bg-background px-6 py-3 min-h-14 flex items-center justify-center shrink-0 box-border">
           <div className="flex items-center gap-2 text-sm">
             <XCircle className="h-4 w-4 text-destructive" />
-            <span className="text-destructive font-medium">NIGO — Sent back to advisor</span>
+            <span className="text-destructive font-medium">Rejected — Sent back to advisor</span>
             <span className="text-muted-foreground ml-1">at {docReview.decidedAt}</span>
           </div>
         </footer>
@@ -71,7 +71,7 @@ export function HomeOfficeReviewFooter() {
               onClick={() => setShowNigoModal(true)}
             >
               <XCircle className="h-4 w-4" />
-              NIGO
+              Reject
             </Button>
             <Button
               size="sm"
@@ -80,7 +80,7 @@ export function HomeOfficeReviewFooter() {
               onClick={() => setShowApproveConfirm(true)}
             >
               <CheckCircle2 className="h-4 w-4" />
-              IGO
+              Accept
             </Button>
           </div>
         </footer>
@@ -94,7 +94,7 @@ export function HomeOfficeReviewFooter() {
                   <CheckCircle2 className="h-5 w-5 text-green-600" />
                 </div>
                 <div className="space-y-1">
-                  <h3 className="text-base font-semibold">Mark as In Good Order</h3>
+                  <h3 className="text-base font-semibold">Accept document review</h3>
                   <p className="text-sm text-muted-foreground">
                     All documents for <span className="font-medium text-foreground">{child?.name}</span> have been
                     verified. This will pass the submission to the Principal Review team.
@@ -110,7 +110,7 @@ export function HomeOfficeReviewFooter() {
                     setShowApproveConfirm(false)
                   }}
                 >
-                  Confirm IGO
+                  Confirm accept
                 </Button>
               </div>
             </div>
@@ -121,6 +121,7 @@ export function HomeOfficeReviewFooter() {
           open={showNigoModal}
           onClose={() => setShowNigoModal(false)}
           teamLabel="Document Review Team"
+          variant="reject"
           onSubmit={(reason, feedback) => {
             dispatch({ type: 'DOCUMENT_REVIEW_NIGO', reason, feedback: feedback || undefined })
             setShowNigoModal(false)
@@ -167,8 +168,10 @@ export function HomeOfficeReviewFooter() {
     }
 
     const docIgo = docReview?.status === 'igo'
+    /** Account opening has no AML gate; KYC / legacy flows may still require AML cleared before principal approval. */
+    const amlGateApplies = amlReview != null
     const amlCleared = amlReview?.status === 'cleared'
-    const blocked = !docIgo || !amlCleared
+    const blocked = !docIgo || (amlGateApplies && !amlCleared)
 
     return (
       <>

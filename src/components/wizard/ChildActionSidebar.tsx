@@ -101,8 +101,8 @@ export function ChildActionSidebar() {
   const isHoKycView = viewMode === 'ho-kyc'
   const isHoPrincipalKycView = viewMode === 'ho-principal-kyc'
 
-  // Only collapse to one pseudo-step for KYC Home Office / Principal KYC modes. AML Team, HO
-  // Document, and HO Principal account-opening views use the same numbered subtasks as Advisor
+  // Only collapse to one pseudo-step for KYC Home Office / Principal KYC modes. HO Document and
+  // HO Principal account-opening views use the same numbered subtasks as Advisor (AML is KYC-only).
   // (e.g. Account & owners → Documents).
   const showSingleReviewStep =
     child.childType === 'kyc' && (isHoKycView || isHoPrincipalKycView)

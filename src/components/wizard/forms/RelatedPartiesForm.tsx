@@ -16,25 +16,16 @@ import {
   entityTypes,
 } from './AddPartySheet'
 import {
-  createEmptyIndividualAccountOwnerForm,
   hydrateIndividualFormFromParty,
   splitFormIntoPartyUpdate,
   type IndividualAccountOwnerFormState,
 } from '@/types/accountOwnerIndividual'
+import { isTrustEntityParty } from '@/utils/trustEntityParty'
 
 const householdRelationships = ['Spouse', 'Child', 'Parent', 'Sibling']
 const contactRelationships = ['Attorney', 'Accountant', 'Financial Advisor', 'Parent', 'Guardian', 'Power of Attorney']
 const contactCategories = ['Family', 'Professional', 'Other']
 const householdRoles = ['Client', 'Spouse', 'Dependent', 'Trustee', 'Beneficiary']
-
-function isTrustOrganization(party: RelatedParty): boolean {
-  const isOrgLike = party.type === 'related_organization' || (party.type === 'related_contact' && Boolean(party.organizationName))
-  if (!isOrgLike) return false
-  if ((party.entityType ?? '').toLowerCase() === 'trust') return true
-  if ((party.role ?? '').toLowerCase() === 'trust') return true
-  if ((party.organizationName ?? party.name ?? '').toLowerCase().includes('trust')) return true
-  return false
-}
 
 // --- Delete confirmation button ---
 
@@ -192,7 +183,7 @@ function EditPartySheet({
     return <EditEntitySheet party={party} open={open} onOpenChange={onOpenChange} />
   }
   if (isMember) {
-    return <EditIndividualSheet party={party} open={open} onOpenChange={onOpenChange} />
+    return <EditIndividualSheet key={party.id} party={party} open={open} onOpenChange={onOpenChange} />
   }
   return <EditContactSheet party={party} open={open} onOpenChange={onOpenChange} />
 }
@@ -210,25 +201,24 @@ function EditIndividualSheet({
 }) {
   const { dispatch } = useWorkflow()
   const [form, setForm] = useState<IndividualAccountOwnerFormState>(() =>
-    createEmptyIndividualAccountOwnerForm(),
+    hydrateIndividualFormFromParty(party),
   )
-  const [snapshot, setSnapshot] = useState('')
+  const [snapshot, setSnapshot] = useState(() => JSON.stringify(hydrateIndividualFormFromParty(party)))
   const [idType, setIdType] = useState('')
   const [idNumber, setIdNumber] = useState('')
   const [idState, setIdState] = useState('')
   const [idExpiration, setIdExpiration] = useState('')
 
   useEffect(() => {
-    if (open) {
-      const hydrated = hydrateIndividualFormFromParty(party)
-      setForm(hydrated)
-      setSnapshot(JSON.stringify(hydrated))
-      setIdType('')
-      setIdNumber('')
-      setIdState('')
-      setIdExpiration('')
-    }
-  }, [party.id, open])
+    if (!open) return
+    const hydrated = hydrateIndividualFormFromParty(party)
+    setForm(hydrated)
+    setSnapshot(JSON.stringify(hydrated))
+    setIdType('')
+    setIdNumber('')
+    setIdState('')
+    setIdExpiration('')
+  }, [open, party])
 
   const patch = (p: Partial<IndividualAccountOwnerFormState>) => setForm((prev) => ({ ...prev, ...p }))
 
@@ -892,8 +882,8 @@ export function RelatedPartiesForm() {
   )
   const professionalContacts = allContacts.filter((p) => p.relationshipCategory === 'Professional')
   const relatedIndividuals = allContacts.filter((p) => p.relationshipCategory !== 'Professional')
-  const trustOrganizations = allOrganizations.filter(isTrustOrganization)
-  const otherOrganizations = allOrganizations.filter((p) => !isTrustOrganization(p))
+  const trustOrganizations = allOrganizations.filter(isTrustEntityParty)
+  const otherOrganizations = allOrganizations.filter((p) => !isTrustEntityParty(p))
   const editingParty = editingPartyId ? state.relatedParties.find((p) => p.id === editingPartyId) ?? null : null
 
   return (

@@ -20,7 +20,6 @@ const ACCOUNT_OPENING_STAGES: TimelineStage[] = [
   { label: 'Pending Client Signature', description: 'Combined eSign package generated and sent to client for signature.', matchStatuses: [] },
   { label: 'Pending Advisor Signature', description: 'Awaiting advisor counter-signature on the application.', matchStatuses: [] },
   { label: 'Submitted', description: 'Account application submitted to Home Office for review.', matchStatuses: ['awaiting_review'] },
-  { label: 'AML Review', description: 'AML Team reviews account owners against OFAC sanctions and watchlists.', matchStatuses: ['aml_pending', 'aml_flagged'] },
   { label: 'Document Review', description: 'Document Review Team verifies completeness of all account documents.', matchStatuses: ['doc_review_pending'] },
   { label: 'Principal Review', description: 'Principal Review Team performs final approval and oversight.', matchStatuses: ['principal_review_pending', 'rejected'] },
   { label: 'Pending Release', description: 'Both reviews passed — account approved (IGO). Preparing for release to Pershing.', matchStatuses: [] },
@@ -90,6 +89,13 @@ function deriveEffectiveStatus(
     if (principalStatus === 'nigo') return 'rejected'
     if (docStatus === 'nigo') return 'rejected'
     return 'rejected'
+  }
+
+  // Account opening: home office review starts at Document Review (AML is KYC-only in this demo).
+  if (childType === 'account-opening') {
+    if (docStatus === 'igo' && principalStatus === 'igo') return 'complete'
+    if (docStatus === 'igo') return 'principal_review_pending'
+    return 'doc_review_pending'
   }
 
   if (amlStatus === 'pending') return 'aml_pending'
@@ -166,8 +172,8 @@ export function ChildActionTimeline({
 
         let stageAnnotation: string | null = null
         if (stage.label === 'Document Review' && docReview) {
-          if (docReview.status === 'igo') stageAnnotation = `IGO at ${docReview.decidedAt}`
-          else if (docReview.status === 'nigo') stageAnnotation = `NIGO at ${docReview.decidedAt}`
+          if (docReview.status === 'igo') stageAnnotation = `Accepted at ${docReview.decidedAt}`
+          else if (docReview.status === 'nigo') stageAnnotation = `Rejected at ${docReview.decidedAt}`
         }
         if (stage.label === 'Principal Review' && principalReview) {
           if (principalReview.status === 'igo') stageAnnotation = `Approved at ${principalReview.decidedAt}`

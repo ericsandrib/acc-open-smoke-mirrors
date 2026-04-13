@@ -1448,11 +1448,24 @@ export function AddHouseholdMemberSheet({
   /** For Client Info household, create flow is individual-only. */
   individualCreateOnly?: boolean
 }) {
-  const { dispatch } = useWorkflow()
+  const { state, dispatch } = useWorkflow()
   const [tab, setTab] = useState<'search' | 'create'>('search')
 
   const handleSelectPerson = useCallback(
     (person: DirectoryPerson) => {
+      if (person.clientId) {
+        const existing = state.relatedParties.find(
+          (p) =>
+            p.type === 'household_member' &&
+            !p.isHidden &&
+            p.clientId === person.clientId,
+        )
+        if (existing) {
+          onPartyAdded?.(existing.id)
+          onOpenChange(false)
+          return
+        }
+      }
       const id = `household-${Date.now()}`
       dispatch({
         type: 'ADD_RELATED_PARTY',
@@ -1475,7 +1488,7 @@ export function AddHouseholdMemberSheet({
       onPartyAdded?.(id)
       onOpenChange(false)
     },
-    [dispatch, onOpenChange, onPartyAdded]
+    [dispatch, onOpenChange, onPartyAdded, state.relatedParties]
   )
 
   const resetAndClose = useCallback(() => {

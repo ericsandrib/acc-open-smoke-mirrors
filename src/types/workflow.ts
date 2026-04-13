@@ -39,6 +39,11 @@ export interface AccountOwnerIndividualProfile {
   trustedContactName?: string
   trustedContactRelationship?: string
   trustedContactPhoneEmail?: string
+  /** Optional seed for KYC child ID verification (wizard prepopulation). */
+  kycIdType?: string
+  kycIdNumber?: string
+  kycIdState?: string
+  kycIdExpiration?: string
 }
 
 export interface RelatedParty {

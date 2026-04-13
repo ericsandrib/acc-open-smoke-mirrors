@@ -412,12 +412,12 @@ function workflowReducer(state: WorkflowState, action: WorkflowAction): Workflow
       return {
         actions: [...baseActions],
         tasks: freshTasks,
-        relatedParties: action.relatedParties,
-        financialAccounts: action.financialAccounts,
+        relatedParties: structuredClone(action.relatedParties),
+        financialAccounts: structuredClone(action.financialAccounts),
         activeTaskId: freshTasks[0].id,
         flatTaskOrder: newOrder,
         taskData: {
-          'client-info': action.clientInfo,
+          'client-info': structuredClone(action.clientInfo),
           'open-accounts': {
             additionalInstructions: seedOpenAccountsAdditionalInstructions,
           },
@@ -460,12 +460,17 @@ function workflowReducer(state: WorkflowState, action: WorkflowAction): Workflow
         .flatMap((t) => t.children ?? [])
         .find((c) => c.id === action.childId)
       const isAwaitingReview = enteredChild?.status === 'awaiting_review'
+      const isAccountOpeningAwaiting = isAwaitingReview && enteredChild?.childType === 'account-opening'
       return {
         ...state,
         activeChildActionId: action.childId,
         activeChildSubTaskIndex: action.subTaskIndex ?? 0,
         childActionResume: action.resumeAfterExit,
-        demoViewMode: isAwaitingReview ? (state.demoViewMode ?? 'advisor') : state.demoViewMode,
+        demoViewMode: isAwaitingReview
+          ? isAccountOpeningAwaiting
+            ? (state.demoViewMode ?? 'ho-documents')
+            : (state.demoViewMode ?? 'advisor')
+          : state.demoViewMode,
         submittedAt: isAwaitingReview
           ? (state.submittedAt ?? new Date().toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' }))
           : state.submittedAt,
@@ -596,6 +601,7 @@ function workflowReducer(state: WorkflowState, action: WorkflowAction): Workflow
         .flatMap((t) => t.children ?? [])
         .find((c) => c.id === cid)
       const isKycChild = submittedChild?.childType === 'kyc'
+      const isAccountOpeningChild = submittedChild?.childType === 'account-opening'
       const updTasks = state.tasks.map((t) => {
         if (!t.children) return t
         return {
@@ -623,7 +629,16 @@ function workflowReducer(state: WorkflowState, action: WorkflowAction): Workflow
                 hoKycReview: { status: 'pending' as const },
                 validationErrors: [],
               }
-            : { amlReview: { status: 'pending' as const }, documentReview: { status: 'pending' }, principalReview: { status: 'pending' } }
+            : isAccountOpeningChild
+              ? {
+                  documentReview: { status: 'pending' },
+                  principalReview: { status: 'pending' },
+                }
+              : {
+                  amlReview: { status: 'pending' as const },
+                  documentReview: { status: 'pending' },
+                  principalReview: { status: 'pending' },
+                }
           ),
         },
       }

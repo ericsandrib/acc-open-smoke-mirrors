@@ -1,5 +1,6 @@
 import type { WorkflowState } from '@/types/workflow'
 import { computeSmartDocuments } from '@/utils/smartDocuments'
+import { getAccountOwnersMissingKyc } from '@/utils/accountOpeningOwnerKyc'
 
 export type MissingDataEntry = {
   taskId: string
@@ -62,7 +63,7 @@ export function computeWorkflowMissingData(state: WorkflowState): MissingDataEnt
     )
     const issues: string[] = []
     if (needsKycMembers.length > 0) {
-      issues.push(`Start KYC workflows for: ${needsKycMembers.map((m) => m.name).join(', ')}`)
+      issues.push(`Start KYC initiation for: ${needsKycMembers.map((m) => m.name).join(', ')}`)
     }
     for (const c of children) {
       if (c.status === 'complete') continue
@@ -111,6 +112,13 @@ export function computeWorkflowMissingData(state: WorkflowState): MissingDataEnt
         issues.push(`${c.name}: add at least one account owner`)
       } else if (owners.some((o) => o.type === 'existing' && !o.partyId)) {
         issues.push(`${c.name}: finish assigning each owner slot`)
+      } else {
+        const kycGap = getAccountOwnersMissingKyc(state, c.id)
+        if (kycGap.names.length > 0) {
+          issues.push(
+            `${c.name}: KYC not verified for — ${kycGap.names.join(', ')}`,
+          )
+        }
       }
       const sd = computeSmartDocuments(state, c.id)
       if (sd.counts.missing > 0) {

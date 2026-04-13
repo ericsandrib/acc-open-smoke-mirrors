@@ -78,7 +78,7 @@ export function AmlReviewFooter() {
             onClick={() => setShowFlagModal(true)}
           >
             <AlertTriangle className="h-4 w-4" />
-            Flag
+            Flag for Further Review
           </Button>
           <Button
             variant="destructive"
@@ -86,7 +86,7 @@ export function AmlReviewFooter() {
             onClick={() => setShowSarConfirm(true)}
           >
             <ShieldAlert className="h-4 w-4" />
-            Escalate SAR
+            Escalate
           </Button>
           <Button
             size="sm"
@@ -184,7 +184,7 @@ export function AmlReviewFooter() {
                 <ShieldAlert className="h-5 w-5 text-red-600" />
               </div>
               <div className="space-y-1">
-                <h3 className="text-base font-semibold">Escalate SAR</h3>
+                <h3 className="text-base font-semibold">Escalate for Suspicious Activity</h3>
                 <p className="text-sm text-muted-foreground">
                   Escalate <span className="font-medium text-foreground">{child?.name}</span> for
                   Suspicious Activity Report (SAR) filing. This will mark the KYC as <span className="font-medium text-foreground">Rejected — AML Review</span>. This action cannot be undone.
@@ -197,7 +197,7 @@ export function AmlReviewFooter() {
               <textarea
                 value={sarReason}
                 onChange={(e) => setSarReason(e.target.value)}
-                placeholder="Describe the reason for SAR escalation..."
+                placeholder="Describe the reason for the escalation..."
                 className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm min-h-[80px] resize-none focus:outline-none focus:ring-2 focus:ring-ring"
               />
             </div>

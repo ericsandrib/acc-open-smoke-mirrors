@@ -4,6 +4,52 @@ import { useWorkflow, useChildActionContext, useAdvisorUnlocked } from '@/stores
 import { Button } from '@/components/ui/button'
 import { CheckCircle2, ChevronLeft, ChevronRight, Clock, ShieldAlert, RotateCcw } from 'lucide-react'
 import { getKycValidationErrors } from './forms/KycChildInfoForm'
+import { getAccountOwnersMissingKyc } from '@/utils/accountOpeningOwnerKyc'
+
+function KycRequiredForOwnersModal({
+  ownerNames,
+  onAcknowledge,
+}: {
+  ownerNames: string[]
+  onAcknowledge: () => void
+}) {
+  return (
+    <div className="fixed inset-0 z-[70] flex items-center justify-center p-4">
+      <div className="fixed inset-0 bg-black/50" aria-hidden />
+      <div
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="kyc-block-title"
+        className="relative z-10 bg-background rounded-lg border border-border shadow-lg max-w-md w-full p-6 space-y-4"
+      >
+        <div className="flex items-start gap-3">
+          <div className="rounded-full bg-amber-50 dark:bg-amber-950/50 p-2 shrink-0">
+            <ShieldAlert className="h-5 w-5 text-amber-600" />
+          </div>
+          <div className="space-y-2 min-w-0">
+            <h3 id="kyc-block-title" className="text-base font-semibold">
+              Cannot submit for review yet
+            </h3>
+            <p className="text-sm text-muted-foreground">
+              Every account owner must complete KYC verification before this application can be submitted. Finish KYC under{' '}
+              <span className="font-medium text-foreground">Collect Client Data</span> for each person listed below, then return here.
+            </p>
+            <ul className="list-disc pl-5 text-sm text-foreground space-y-1">
+              {ownerNames.map((name) => (
+                <li key={name}>{name}</li>
+              ))}
+            </ul>
+          </div>
+        </div>
+        <div className="flex justify-end pt-1">
+          <Button type="button" onClick={onAcknowledge}>
+            I understand
+          </Button>
+        </div>
+      </div>
+    </div>
+  )
+}
 
 function SubmitConfirmModal({ childName, onConfirm, onCancel }: { childName: string; onConfirm: () => void; onCancel: () => void }) {
   return (
@@ -39,6 +85,7 @@ export function ChildActionFooter() {
   const ctx = useChildActionContext()
   const [showConfirmModal, setShowConfirmModal] = useState(false)
   const [showResubmitModal, setShowResubmitModal] = useState(false)
+  const [kycBlockOwnerNames, setKycBlockOwnerNames] = useState<string[] | null>(null)
   const advisorUnlocked = useAdvisorUnlocked()
 
   if (!ctx) return null
@@ -67,13 +114,30 @@ export function ChildActionFooter() {
         dispatch({ type: 'SET_CHILD_SUB_TASK', index: 0 })
         return
       }
+    } else if (child.childType === 'account-opening') {
+      const { names } = getAccountOwnersMissingKyc(state, child.id)
+      if (names.length > 0) {
+        setKycBlockOwnerNames(names)
+        return
+      }
     }
     setShowResubmitModal(true)
   }
 
   const handleConfirmResubmit = () => {
+    if (child.childType === 'account-opening') {
+      const { names } = getAccountOwnersMissingKyc(state, child.id)
+      if (names.length > 0) {
+        setShowResubmitModal(false)
+        setKycBlockOwnerNames(names)
+        return
+      }
+    }
     dispatch({ type: 'SUBMIT_CHILD_FOR_REVIEW' })
-    dispatch({ type: 'SET_DEMO_VIEW', mode: 'advisor' })
+    dispatch({
+      type: 'SET_DEMO_VIEW',
+      mode: child.childType === 'account-opening' ? 'ho-documents' : 'advisor',
+    })
     setShowResubmitModal(false)
   }
 
@@ -132,6 +196,12 @@ export function ChildActionFooter() {
             onCancel={() => setShowResubmitModal(false)}
           />
         )}
+        {kycBlockOwnerNames && kycBlockOwnerNames.length > 0 && (
+          <KycRequiredForOwnersModal
+            ownerNames={kycBlockOwnerNames}
+            onAcknowledge={() => setKycBlockOwnerNames(null)}
+          />
+        )}
       </>
     )
   }
@@ -156,10 +226,22 @@ export function ChildActionFooter() {
       }
 
       setShowConfirmModal(true)
-    } else {
-      dispatch({ type: 'SUBMIT_CHILD_FOR_REVIEW' })
-      dispatch({ type: 'SET_DEMO_VIEW', mode: 'advisor' })
+      return
     }
+
+    if (child.childType === 'account-opening') {
+      const { names } = getAccountOwnersMissingKyc(state, child.id)
+      if (names.length > 0) {
+        setKycBlockOwnerNames(names)
+        return
+      }
+    }
+
+    dispatch({ type: 'SUBMIT_CHILD_FOR_REVIEW' })
+    dispatch({
+      type: 'SET_DEMO_VIEW',
+      mode: child.childType === 'account-opening' ? 'ho-documents' : 'advisor',
+    })
   }
 
   const handleConfirmSubmit = () => {
@@ -202,6 +284,12 @@ export function ChildActionFooter() {
           childName={child.name}
           onConfirm={handleConfirmSubmit}
           onCancel={() => setShowConfirmModal(false)}
+        />
+      )}
+      {kycBlockOwnerNames && kycBlockOwnerNames.length > 0 && (
+        <KycRequiredForOwnersModal
+          ownerNames={kycBlockOwnerNames}
+          onAcknowledge={() => setKycBlockOwnerNames(null)}
         />
       )}
     </>

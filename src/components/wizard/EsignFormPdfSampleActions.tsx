@@ -6,14 +6,25 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog'
-import { resolveEsignFormSample } from '@/constants/esignFormSamples'
+import { resolveEsignFormSampleWithFallback } from '@/constants/esignFormSamples'
 import { Eye, FileDown } from 'lucide-react'
 
-/** View / Download for demo PDFs mapped in `ESIGN_FORM_SAMPLE_DOWNLOADS` (returns null if none). */
-export function EsignFormPdfSampleActions({ formIdOrDocId }: { formIdOrDocId: string }) {
-  const sample = resolveEsignFormSample(formIdOrDocId)
+export type EsignPdfViewMode = 'signed' | 'preview'
+
+type Props = {
+  formIdOrDocId: string
+  /** Human label for fallback filenames when this form id has no explicit sample PDF */
+  displayLabel: string
+  /** Documents review shows executed copies; envelope builder shows pre-sign preview */
+  viewMode?: EsignPdfViewMode
+}
+
+/** View / Download for firm/custodian demo PDFs (explicit map or fallback). */
+export function EsignFormPdfSampleActions({ formIdOrDocId, displayLabel, viewMode = 'signed' }: Props) {
+  const sample = resolveEsignFormSampleWithFallback(formIdOrDocId, displayLabel)
   const [viewer, setViewer] = useState<{ href: string; title: string } | null>(null)
-  if (!sample) return null
+  const titlePrefix = viewMode === 'signed' ? 'Signed' : 'Preview'
+
   return (
     <>
       <div className="flex shrink-0 items-center gap-1">
@@ -42,12 +53,12 @@ export function EsignFormPdfSampleActions({ formIdOrDocId }: { formIdOrDocId: st
         <DialogContent className="grid h-[min(90vh,820px)] max-h-[90vh] w-[min(96vw,56rem)] max-w-5xl grid-rows-[auto_1fr] gap-0 overflow-hidden p-0 sm:max-w-5xl">
           <DialogHeader className="shrink-0 border-b border-border px-6 pb-3 pt-12 text-left">
             <DialogTitle className="pr-8 text-base">
-              {viewer ? `View: ${viewer.title}` : 'PDF'}
+              {viewer ? `${titlePrefix}: ${viewer.title}` : 'PDF'}
             </DialogTitle>
           </DialogHeader>
           {viewer ? (
             <iframe
-              key={viewer.href}
+              key={viewer.href + viewer.title}
               title={viewer.title}
               src={viewer.href}
               className="h-full min-h-[50vh] w-full border-0 bg-muted"

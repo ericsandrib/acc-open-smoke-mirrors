@@ -265,9 +265,7 @@ export function PartySlotCard({
             ))}
           </dl>
 
-          {!isDesignationPreview &&
-            matchedParty.type !== 'related_organization' &&
-            (kycDisplayStatus || matchedParty.kycStatus) && (
+          {!isDesignationPreview && (kycDisplayStatus || matchedParty.kycStatus) && (
             <div className="flex flex-wrap items-center gap-2 text-sm pt-1 border-t border-border/60">
               <span className="text-muted-foreground">KYC status:</span>
               {kycDisplayStatus && (

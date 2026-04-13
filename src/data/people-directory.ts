@@ -217,8 +217,6 @@ export const peopleDirectory: DirectoryPerson[] = [
     lastName: 'Smith',
     type: 'individual',
     accountNumber: 'FL0001002',
-    ssn: '***-**-6790',
-    taxId: '12-3456790',
     clientId: 'CLN-7482911',
     household: 'Smith Household',
     email: 'jane.smith@example.com',

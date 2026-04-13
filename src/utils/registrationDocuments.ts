@@ -121,10 +121,16 @@ function formToRequirement(f: PasFormRow): DocumentRequirementWithSubTypes {
 
 function cipToRequirement(text: string, index: number): DocumentRequirementWithSubTypes {
   const base = slugify(text)
+  let description = 'Client-provided supporting documentation (upload).'
+  // PAS CIP line — title + signature pages; not the same row as the full “Executed Trust Agreement” e-sign form.
+  if (/trust instrument/i.test(text)) {
+    description =
+      'Title and signature pages from the governing trust instrument (CIP). Separate from the full executed trust agreement when that is satisfied via e-sign forms.'
+  }
   return {
     id: `cip-${base}-${index}`,
     label: text,
-    description: 'Client-provided supporting documentation (upload).',
+    description,
     fulfillment: 'upload',
   }
 }

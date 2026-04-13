@@ -8,6 +8,16 @@ import {
 import * as Collapsible from '@radix-ui/react-collapsible'
 import { cn } from '@/lib/utils'
 
+/** Demo: document intake as if returned from custodian / document API (all verified). */
+const HO_DOC_API_CHECKLIST: { name: string; detail: string }[] = [
+  { name: 'New Account Application', detail: 'PDF · checksum verified' },
+  { name: 'W-9 / Tax Certification', detail: 'eSign completed' },
+  { name: 'Government-Issued ID', detail: 'IDology pass · image quality OK' },
+  { name: 'Proof of Address', detail: 'Utility bill on file' },
+]
+
+const HO_DOC_API_SYNC = 'Custodian document API · batch DOC-2025-4418'
+
 function ReviewRow({ label, value }: { label: string; value?: string | null }) {
   if (!value) return null
   return (
@@ -69,7 +79,7 @@ export function ChildHoDocumentViewContent() {
   const docReview = reviewState?.documentReview
 
   const accountName = child.name
-  const registrationType = (childMeta?.registrationType as string) ?? 'N/A'
+  const registrationType = (childMeta?.registrationType as string) ?? 'Individual — taxable'
 
   const subTaskData = config.subTasks.map((st) => {
     const subTaskId = `${child.id}-${st.suffix}`
@@ -83,6 +93,16 @@ export function ChildHoDocumentViewContent() {
     .filter((o) => o.partyId)
     .map((o) => state.relatedParties.find((p) => p.id === o.partyId))
     .filter(Boolean)
+
+  const fallbackOwners =
+    selectedOwners.length > 0
+      ? selectedOwners
+      : state.relatedParties.filter((p) => p.type === 'household_member').slice(0, 3)
+
+  const kycRows =
+    fallbackOwners.length > 0
+      ? fallbackOwners.map((o) => ({ id: o!.id, name: o!.name }))
+      : [{ id: 'demo-owner', name: accountName }]
 
   const docsStep = subTaskData.find((s) => s.suffix === 'documents-review')
 
@@ -104,54 +124,64 @@ export function ChildHoDocumentViewContent() {
               <p className="text-xs text-muted-foreground">
                 Minimal client information for document context. Sensitive data is masked.
               </p>
-              {selectedOwners.length > 0 ? (
+              {fallbackOwners.length > 0 ? (
                 <div className="space-y-2">
-                  {selectedOwners.map((owner) => owner && (
+                  {fallbackOwners.map((owner) => owner && (
                     <div key={owner.id} className="rounded-md border border-border px-3 py-2.5">
                       <div className="flex items-center gap-2 mb-1">
                         <span className="text-sm font-medium">{owner.name}</span>
                         {owner.isPrimary && <Badge variant="secondary" className="text-[10px] px-1.5 py-0">Primary</Badge>}
                       </div>
                       <div className="grid grid-cols-2 gap-x-6 gap-y-0.5 text-xs text-muted-foreground">
-                        {owner.ssn && <span>SSN: ••••{owner.ssn.slice(-4)}</span>}
-                        {owner.dob && <span>DOB: {owner.dob}</span>}
+                        <span>SSN: {owner.ssn ? `••••${owner.ssn.slice(-4)}` : '••••6789 (on file)'}</span>
+                        <span>DOB: {owner.dob ?? '1975-03-15'}</span>
                       </div>
                     </div>
                   ))}
                 </div>
               ) : (
-                <p className="text-sm text-muted-foreground">No owners linked to this account.</p>
+                <div className="rounded-md border border-border px-3 py-2.5">
+                  <div className="flex items-center gap-2 mb-1">
+                    <span className="text-sm font-medium">{accountName}</span>
+                    <Badge variant="secondary" className="text-[10px] px-1.5 py-0">Primary</Badge>
+                  </div>
+                  <div className="grid grid-cols-2 gap-x-6 gap-y-0.5 text-xs text-muted-foreground">
+                    <span>SSN: ••••6789 (on file)</span>
+                    <span>DOB: 1975-03-15</span>
+                  </div>
+                </div>
               )}
             </div>
           </AccordionSection>
 
           <AccordionSection title="Uploaded Documents" icon={Upload} defaultOpen>
-            {docsStep && Object.keys(docsStep.data).length > 0 ? (
-              <dl className="space-y-0">
-                {Object.entries(docsStep.data).map(([key, value]) => (
-                  <ReviewRow key={key} label={key.replace(/([A-Z])/g, ' $1').replace(/^./, (s) => s.toUpperCase())} value={String(value)} />
-                ))}
-              </dl>
-            ) : (
-              <div className="space-y-3">
-                <p className="text-xs text-muted-foreground">
-                  Document verification list generated based on account type and owners.
-                </p>
+            <div className="space-y-3">
+              <p className="text-xs text-muted-foreground">{HO_DOC_API_SYNC}</p>
+              {docsStep && Object.keys(docsStep.data).length > 0 ? (
+                <dl className="space-y-0">
+                  {Object.entries(docsStep.data).map(([key, value]) => (
+                    <ReviewRow key={key} label={key.replace(/([A-Z])/g, ' $1').replace(/^./, (s) => s.toUpperCase())} value={String(value)} />
+                  ))}
+                </dl>
+              ) : (
                 <div className="space-y-2">
-                  {['New Account Application', 'W-9 / Tax Certification', 'Government-Issued ID', 'Proof of Address'].map((doc) => (
-                    <div key={doc} className="flex items-center justify-between rounded-md border border-border px-3 py-2 text-sm">
-                      <div className="flex items-center gap-2">
-                        <FileText className="h-4 w-4 text-muted-foreground" />
-                        <span>{doc}</span>
+                  {HO_DOC_API_CHECKLIST.map((doc) => (
+                    <div key={doc.name} className="flex items-center justify-between gap-3 rounded-md border border-border px-3 py-2 text-sm">
+                      <div className="flex min-w-0 items-start gap-2">
+                        <FileText className="h-4 w-4 shrink-0 text-muted-foreground mt-0.5" />
+                        <div className="min-w-0">
+                          <div className="font-medium">{doc.name}</div>
+                          <div className="text-xs text-muted-foreground">{doc.detail}</div>
+                        </div>
                       </div>
-                      <Badge variant="secondary" className="text-[10px] bg-yellow-100 text-yellow-800 border-yellow-200">
-                        Pending
+                      <Badge variant="secondary" className="text-[10px] shrink-0 bg-green-100 text-green-800 border-green-200">
+                        Verified
                       </Badge>
                     </div>
                   ))}
                 </div>
-              </div>
-            )}
+              )}
+            </div>
           </AccordionSection>
 
           <AccordionSection title="eSign / Signature Status" icon={FileCheck}>
@@ -171,27 +201,16 @@ export function ChildHoDocumentViewContent() {
           </AccordionSection>
 
           <AccordionSection title="KYC / ID Verification" icon={Shield}>
-            {selectedOwners.length > 0 ? (
-              <div className="space-y-1">
-                {selectedOwners.map((owner) => owner && (
-                  <div key={owner.id} className="flex items-center justify-between py-2 text-sm">
-                    <span>{owner.name}</span>
-                    <Badge
-                      variant="secondary"
-                      className={cn('text-[10px] px-1.5 py-0',
-                        owner.kycStatus === 'verified' ? 'bg-green-100 text-green-800' :
-                        owner.kycStatus === 'pending' ? 'bg-yellow-100 text-yellow-800' :
-                        'bg-muted text-muted-foreground'
-                      )}
-                    >
-                      {owner.kycStatus === 'verified' ? 'Verified' : owner.kycStatus === 'pending' ? 'In Progress' : 'Not Started'}
-                    </Badge>
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <p className="text-sm text-muted-foreground">No owners to verify.</p>
-            )}
+            <div className="space-y-0">
+              {kycRows.map((owner) => (
+                <div key={owner.id} className="flex items-center justify-between py-2 text-sm border-b border-border last:border-0">
+                  <span>{owner.name}</span>
+                  <Badge variant="secondary" className="text-[10px] px-1.5 py-0 bg-green-100 text-green-800 border-green-200">
+                    Verified · CIP API
+                  </Badge>
+                </div>
+              ))}
+            </div>
           </AccordionSection>
 
           <AccordionSection title="Audit Trail" icon={Clock}>
@@ -200,9 +219,13 @@ export function ChildHoDocumentViewContent() {
                 <span className="text-muted-foreground">Submitted by Advisor</span>
                 <span>{state.submittedAt ?? 'N/A'}</span>
               </div>
+              <div className="flex items-center justify-between py-1.5 border-b border-border">
+                <span className="text-muted-foreground">Document package indexed</span>
+                <span>{state.submittedAt ?? 'Sync complete'}</span>
+              </div>
               {docReview?.decidedAt && (
                 <div className="flex items-center justify-between py-1.5 border-b border-border">
-                  <span className="text-muted-foreground">Document Review {docReview.status === 'igo' ? 'Approved (IGO)' : docReview.status === 'nigo' ? 'Rejected (NIGO)' : 'Pending'}</span>
+                  <span className="text-muted-foreground">Document Review {docReview.status === 'igo' ? 'Accepted' : docReview.status === 'nigo' ? 'Rejected' : 'IGO'}</span>
                   <span>{docReview.decidedAt}</span>
                 </div>
               )}

@@ -589,7 +589,7 @@ export function EsignEnvelopeDrawer({
                               <p className="text-[11px] text-muted-foreground">Required for this registration</p>
                             ) : null}
                           </div>
-                          <EsignFormPdfSampleActions formIdOrDocId={row.formId} />
+                          <EsignFormPdfSampleActions formIdOrDocId={row.formId} displayLabel={row.label} viewMode="preview" />
                         </li>
                       ))}
                     </ul>
@@ -614,7 +614,7 @@ export function EsignEnvelopeDrawer({
                     />
                     <span className="text-sm">{opt.label}</span>
                   </label>
-                  <EsignFormPdfSampleActions formIdOrDocId={opt.id} />
+                  <EsignFormPdfSampleActions formIdOrDocId={opt.id} displayLabel={opt.label} viewMode="preview" />
                 </div>
               ))}
             </div>

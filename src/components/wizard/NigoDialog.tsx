@@ -26,9 +26,11 @@ interface NigoDialogProps {
   onClose: () => void
   teamLabel: string
   onSubmit: (reason: string, feedback?: string) => void
+  /** `reject` uses Accept/Reject-style copy for HO Document Team; default keeps NIGO terminology (e.g. Principal). */
+  variant?: 'nigo' | 'reject'
 }
 
-export function NigoDialog({ open, onClose, teamLabel, onSubmit }: NigoDialogProps) {
+export function NigoDialog({ open, onClose, teamLabel, onSubmit, variant = 'nigo' }: NigoDialogProps) {
   const [reason, setReason] = useState('')
   const [feedback, setFeedback] = useState('')
 
@@ -51,15 +53,25 @@ export function NigoDialog({ open, onClose, teamLabel, onSubmit }: NigoDialogPro
             <ShieldAlert className="h-5 w-5 text-red-600" />
           </div>
           <div className="space-y-1">
-            <h3 className="text-base font-semibold">Not In Good Order (NIGO)</h3>
+            <h3 className="text-base font-semibold">
+              {variant === 'reject' ? 'Reject submission' : 'Not In Good Order (NIGO)'}
+            </h3>
             <p className="text-sm text-muted-foreground">
-              As the {teamLabel}, flag this submission as NIGO. It will be returned to the advisor for corrections.
+              {variant === 'reject' ? (
+                <>
+                  As the {teamLabel}, reject this submission. It will be returned to the advisor for corrections.
+                </>
+              ) : (
+                <>
+                  As the {teamLabel}, flag this submission as NIGO. It will be returned to the advisor for corrections.
+                </>
+              )}
             </p>
           </div>
         </div>
 
         <div className="space-y-2">
-          <Label>NIGO Reason</Label>
+          <Label>{variant === 'reject' ? 'Rejection reason' : 'NIGO Reason'}</Label>
           <Select value={reason} onValueChange={setReason}>
             <SelectTrigger>
               <SelectValue placeholder="Select a reason..." />
@@ -87,7 +99,7 @@ export function NigoDialog({ open, onClose, teamLabel, onSubmit }: NigoDialogPro
         <div className="flex items-center justify-end gap-3 pt-1">
           <Button variant="outline" onClick={onClose}>Cancel</Button>
           <Button variant="destructive" onClick={handleSubmit} disabled={!reason}>
-            Submit NIGO
+            {variant === 'reject' ? 'Submit rejection' : 'Submit NIGO'}
           </Button>
         </div>
       </div>

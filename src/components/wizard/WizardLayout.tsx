@@ -111,19 +111,6 @@ export function WizardLayout() {
                 <>
                   <button
                     type="button"
-                    onClick={() => dispatch({ type: 'SET_DEMO_VIEW', mode: 'aml' })}
-                    className={cn(
-                      'flex items-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-medium transition-colors',
-                      isAmlView
-                        ? 'bg-primary text-primary-foreground shadow-sm'
-                        : 'text-muted-foreground hover:text-foreground hover:bg-muted/50',
-                    )}
-                  >
-                    <ShieldAlert className="h-3.5 w-3.5" />
-                    AML Team
-                  </button>
-                  <button
-                    type="button"
                     onClick={() => dispatch({ type: 'SET_DEMO_VIEW', mode: 'ho-documents' })}
                     className={cn(
                       'flex items-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-medium transition-colors',
@@ -155,34 +142,19 @@ export function WizardLayout() {
         )}
         <div className="flex flex-1 overflow-hidden">
           {inChildAction ? (
-            isAmlView ? (
-              activeChild?.childType === 'account-opening' ? (
-                <div className="flex-1 flex flex-col min-h-0 min-w-0 overflow-hidden">
-                  <div className="flex flex-1 min-h-0 overflow-hidden">
-                    <ChildActionSidebar />
-                    <div className="flex flex-1 min-h-0 overflow-hidden min-w-0">
-                      <div className="flex-1 flex flex-col overflow-hidden min-w-0">
-                        <ChildActionContent />
-                      </div>
-                      <ChildActionRightSidebar />
+            isAmlView && isKycChild ? (
+              <div className="flex-1 flex flex-col min-h-0 min-w-0 overflow-hidden">
+                <div className="flex flex-1 min-h-0 overflow-hidden">
+                  <ChildActionSidebar />
+                  <div className="flex flex-1 min-h-0 overflow-hidden min-w-0">
+                    <div className="flex-1 flex flex-col overflow-hidden min-w-0">
+                      <ChildAmlReviewContent />
                     </div>
+                    <ChildActionRightSidebar />
                   </div>
-                  <AmlReviewFooter />
                 </div>
-              ) : (
-                <div className="flex-1 flex flex-col min-h-0 min-w-0 overflow-hidden">
-                  <div className="flex flex-1 min-h-0 overflow-hidden">
-                    <ChildActionSidebar />
-                    <div className="flex flex-1 min-h-0 overflow-hidden min-w-0">
-                      <div className="flex-1 flex flex-col overflow-hidden min-w-0">
-                        <ChildAmlReviewContent />
-                      </div>
-                      <ChildActionRightSidebar />
-                    </div>
-                  </div>
-                  <AmlReviewFooter />
-                </div>
-              )
+                <AmlReviewFooter />
+              </div>
             ) : isHoKycView ? (
               <>
                 <ChildActionSidebar />

@@ -62,6 +62,31 @@ const AML_SECTION_DEFAULTS = [
   'case-notes',
 ] as const
 
+/**
+ * Demo: values as if returned from an AML screening API (complete — no pending placeholders).
+ * When `amlReview.status === 'flagged'`, section-specific flagged copy still overrides in the UI.
+ */
+const AML_API_SCREENING = {
+  ofacSdn: 'No match',
+  consolidatedSanctions: 'No match',
+  euSanctions: 'No match',
+  unSanctions: 'No match',
+  pep: 'Not a PEP',
+  pepLevel: 'N/A',
+  adverseMedia: 'No adverse media found',
+  negativeNews: 'None found',
+  customerRiskRating: 'Low',
+  riskScore: '12 / 100',
+  geographicRisk: 'Low — Domestic',
+  productRisk: 'Standard',
+  declaredSourceFallback: 'Salary, savings, and prior-year investment proceeds',
+  employmentFallback: 'Employed — full-time',
+  annualIncomeFallback: '$150,000–$249,999',
+  netWorthFallback: '$500,000–$999,999',
+  caseNotesFallback:
+    'Automated screening batch AML-2025-18492. Watchlist queries: clear. Last refresh: sync with vendor API.',
+} as const
+
 export function ChildAmlReviewContent() {
   const { state, dispatch } = useWorkflow()
   const ctx = useChildActionContext()
@@ -72,7 +97,7 @@ export function ChildAmlReviewContent() {
   const amlReview = reviewState?.amlReview
   const amlFlagged = reviewState?.amlFlagged
   const amlNotes = reviewState?.amlNotes
-  const [caseNotes, setCaseNotes] = useState(amlNotes ?? '')
+  const [caseNotes, setCaseNotes] = useState(amlNotes ?? AML_API_SCREENING.caseNotesFallback)
 
   const party = state.relatedParties.find((p) => p.name === child.name)
   const taskData = state.taskData[`${child.id}-info`] ?? {}
@@ -125,13 +150,14 @@ export function ChildAmlReviewContent() {
         )}
 
         {amlReview?.status === 'pending' && (
-          <div className="rounded-lg border border-amber-200 bg-amber-50 px-4 py-3">
+          <div className="rounded-lg border border-emerald-200 bg-emerald-50 dark:border-emerald-900/40 dark:bg-emerald-950/30 px-4 py-3">
             <div className="flex items-start gap-3">
-              <ShieldAlert className="h-5 w-5 text-amber-600 mt-0.5 shrink-0" />
+              <CheckCircle2 className="h-5 w-5 text-emerald-600 mt-0.5 shrink-0" />
               <div className="space-y-0.5">
-                <p className="text-sm font-medium text-amber-900">Pending AML Review</p>
-                <p className="text-xs text-amber-800/80">
-                  This individual is awaiting AML/sanctions screening. Review the information below and take action.
+                <p className="text-sm font-medium text-emerald-900 dark:text-emerald-100">Screening results received</p>
+                <p className="text-xs text-emerald-800/90 dark:text-emerald-200/80">
+                  Automated OFAC, PEP, and risk data loaded from the screening vendor. Review the sections below and
+                  record a disposition (Clear, Flag for Further Review, or Escalate).
                 </p>
               </div>
             </div>
@@ -207,12 +233,12 @@ export function ChildAmlReviewContent() {
 
         <Accordion type="multiple" defaultValue={[...AML_SECTION_DEFAULTS]} className="space-y-3">
           <AccordionSection value="individual" title="Individual Information" icon={User}>
-            <ReviewRow label="Full Name" value={fullName} />
-            <ReviewRow label="Date of Birth" value={dob} />
-            <ReviewRow label="SSN / Tax ID" value={ssn ? `***-**-${ssn.slice(-4)}` : undefined} />
-            <ReviewRow label="Email" value={email} />
-            <ReviewRow label="Phone" value={phone} />
-            <ReviewRow label="Relationship" value={party?.relationship} />
+            <ReviewRow label="Full Name" value={fullName || '—'} />
+            <ReviewRow label="Date of Birth" value={dob || '—'} />
+            <ReviewRow label="SSN / Tax ID" value={ssn ? `***-**-${ssn.slice(-4)}` : '***-**-**** (verified)'} />
+            <ReviewRow label="Email" value={email || '—'} />
+            <ReviewRow label="Phone" value={phone || '—'} />
+            <ReviewRow label="Relationship" value={party?.relationship || party?.role || 'Client'} />
           </AccordionSection>
 
           <AccordionSection
@@ -220,28 +246,37 @@ export function ChildAmlReviewContent() {
             title="OFAC / Sanctions Screening"
             icon={Globe}
             badge={
-              amlReview?.status === 'cleared' ? (
-                <Badge variant="outline" className="text-green-700 border-green-200 bg-green-50 text-[10px]">
-                  <CheckCircle2 className="h-3 w-3 mr-1" />
-                  No Match
-                </Badge>
-              ) : amlReview?.status === 'flagged' ? (
+              amlReview?.status === 'flagged' ? (
                 <Badge variant="outline" className="text-red-700 border-red-200 bg-red-50 text-[10px]">
                   <XCircle className="h-3 w-3 mr-1" />
                   Match Found
                 </Badge>
               ) : (
-                <Badge variant="outline" className="text-amber-700 border-amber-200 bg-amber-50 text-[10px]">
-                  <Clock className="h-3 w-3 mr-1" />
-                  Pending
+                <Badge variant="outline" className="text-green-700 border-green-200 bg-green-50 text-[10px]">
+                  <CheckCircle2 className="h-3 w-3 mr-1" />
+                  No Match
                 </Badge>
               )
             }
           >
-            <ReviewRow label="SDN List (OFAC)" value={amlReview?.status === 'cleared' ? 'No match' : amlReview?.status === 'flagged' ? 'Potential match — 87% similarity' : 'Pending screening'} />
-            <ReviewRow label="Consolidated Sanctions List" value={amlReview?.status === 'cleared' ? 'No match' : 'Pending screening'} />
-            <ReviewRow label="EU Sanctions List" value={amlReview?.status === 'cleared' ? 'No match' : 'Pending screening'} />
-            <ReviewRow label="UN Sanctions List" value={amlReview?.status === 'cleared' ? 'No match' : 'Pending screening'} />
+            <ReviewRow
+              label="SDN List (OFAC)"
+              value={
+                amlReview?.status === 'flagged' ? 'Potential match — 87% similarity' : AML_API_SCREENING.ofacSdn
+              }
+            />
+            <ReviewRow
+              label="Consolidated Sanctions List"
+              value={amlReview?.status === 'flagged' ? 'Under review' : AML_API_SCREENING.consolidatedSanctions}
+            />
+            <ReviewRow
+              label="EU Sanctions List"
+              value={amlReview?.status === 'flagged' ? 'Under review' : AML_API_SCREENING.euSanctions}
+            />
+            <ReviewRow
+              label="UN Sanctions List"
+              value={amlReview?.status === 'flagged' ? 'Under review' : AML_API_SCREENING.unSanctions}
+            />
             {amlReview?.status === 'flagged' && (
               <>
                 <ReviewRow label="Similarity Score" value="87% — Requires manual review" />
@@ -251,10 +286,30 @@ export function ChildAmlReviewContent() {
           </AccordionSection>
 
           <AccordionSection value="pep" title="PEP & Adverse Media Check" icon={Search}>
-            <ReviewRow label="Politically Exposed Person (PEP)" value={amlReview?.status === 'cleared' ? 'Not a PEP' : amlReview?.status === 'flagged' ? 'Level 2 — Family member of PEP' : 'Pending review'} />
-            <ReviewRow label="PEP Level" value={amlReview?.status === 'flagged' ? 'Level 2 — Relative / Close Associate' : amlReview?.status === 'cleared' ? 'N/A' : 'Pending'} />
-            <ReviewRow label="Adverse Media Screening" value={amlReview?.status === 'cleared' ? 'No adverse media found' : amlReview?.status === 'flagged' ? '2 potential matches found' : 'Pending review'} />
-            <ReviewRow label="Negative News" value={amlReview?.status === 'cleared' ? 'None found' : amlReview?.status === 'flagged' ? 'Financial fraud allegations (2023)' : 'Pending review'} />
+            <ReviewRow
+              label="Politically Exposed Person (PEP)"
+              value={
+                amlReview?.status === 'flagged' ? 'Level 2 — Family member of PEP' : AML_API_SCREENING.pep
+              }
+            />
+            <ReviewRow
+              label="PEP Level"
+              value={
+                amlReview?.status === 'flagged'
+                  ? 'Level 2 — Relative / Close Associate'
+                  : AML_API_SCREENING.pepLevel
+              }
+            />
+            <ReviewRow
+              label="Adverse Media Screening"
+              value={
+                amlReview?.status === 'flagged' ? '2 potential matches found' : AML_API_SCREENING.adverseMedia
+              }
+            />
+            <ReviewRow
+              label="Negative News"
+              value={amlReview?.status === 'flagged' ? 'Financial fraud allegations (2023)' : AML_API_SCREENING.negativeNews}
+            />
           </AccordionSection>
 
           <AccordionSection
@@ -262,26 +317,60 @@ export function ChildAmlReviewContent() {
             title="Risk Assessment"
             icon={ShieldCheck}
             badge={
-              amlReview?.status === 'cleared' ? (
-                <Badge variant="outline" className="text-green-700 border-green-200 bg-green-50 text-[10px]">Low Risk</Badge>
-              ) : amlReview?.status === 'flagged' ? (
-                <Badge variant="outline" className="text-red-700 border-red-200 bg-red-50 text-[10px]">High Risk</Badge>
+              amlReview?.status === 'flagged' ? (
+                <Badge variant="outline" className="text-red-700 border-red-200 bg-red-50 text-[10px]">
+                  High Risk
+                </Badge>
               ) : (
-                <Badge variant="outline" className="text-muted-foreground text-[10px]">Not Assessed</Badge>
+                <Badge variant="outline" className="text-green-700 border-green-200 bg-green-50 text-[10px]">
+                  Low Risk
+                </Badge>
               )
             }
           >
-            <ReviewRow label="Customer Risk Rating" value={amlReview?.status === 'cleared' ? 'Low' : amlReview?.status === 'flagged' ? 'High' : 'Pending'} />
-            <ReviewRow label="Risk Score" value={amlReview?.status === 'cleared' ? '12 / 100' : amlReview?.status === 'flagged' ? '78 / 100' : 'Pending assessment'} />
-            <ReviewRow label="Geographic Risk" value={amlReview?.status === 'cleared' ? 'Low — Domestic' : 'Pending assessment'} />
-            <ReviewRow label="Product Risk" value={amlReview?.status === 'cleared' ? 'Standard' : 'Pending assessment'} />
+            <ReviewRow
+              label="Customer Risk Rating"
+              value={amlReview?.status === 'flagged' ? 'High' : AML_API_SCREENING.customerRiskRating}
+            />
+            <ReviewRow
+              label="Risk Score"
+              value={amlReview?.status === 'flagged' ? '78 / 100' : AML_API_SCREENING.riskScore}
+            />
+            <ReviewRow
+              label="Geographic Risk"
+              value={amlReview?.status === 'flagged' ? 'Elevated — review jurisdiction' : AML_API_SCREENING.geographicRisk}
+            />
+            <ReviewRow
+              label="Product Risk"
+              value={amlReview?.status === 'flagged' ? 'Elevated' : AML_API_SCREENING.productRisk}
+            />
           </AccordionSection>
 
           <AccordionSection value="source-funds" title="Source of Funds" icon={Landmark}>
-            <ReviewRow label="Declared Source" value={taskData.sourceOfFunds as string || party?.accountOwnerIndividual?.sourceOfFunds || 'Not provided'} />
-            <ReviewRow label="Employment Status" value={taskData.employmentStatus as string || party?.accountOwnerIndividual?.employmentStatus || 'Not provided'} />
-            <ReviewRow label="Annual Income" value={party?.accountOwnerIndividual?.annualIncomeRange || 'Not provided'} />
-            <ReviewRow label="Net Worth" value={party?.accountOwnerIndividual?.netWorthRange || 'Not provided'} />
+            <ReviewRow
+              label="Declared Source"
+              value={
+                (taskData.sourceOfFunds as string) ||
+                party?.accountOwnerIndividual?.sourceOfFunds ||
+                AML_API_SCREENING.declaredSourceFallback
+              }
+            />
+            <ReviewRow
+              label="Employment Status"
+              value={
+                (taskData.employmentStatus as string) ||
+                party?.accountOwnerIndividual?.employmentStatus ||
+                AML_API_SCREENING.employmentFallback
+              }
+            />
+            <ReviewRow
+              label="Annual Income"
+              value={party?.accountOwnerIndividual?.annualIncomeRange || AML_API_SCREENING.annualIncomeFallback}
+            />
+            <ReviewRow
+              label="Net Worth"
+              value={party?.accountOwnerIndividual?.netWorthRange || AML_API_SCREENING.netWorthFallback}
+            />
           </AccordionSection>
 
           <AccordionSection value="case-notes" title="Internal Case Notes" icon={FileText}>
@@ -292,7 +381,7 @@ export function ChildAmlReviewContent() {
                   setCaseNotes(e.target.value)
                   dispatch({ type: 'SET_AML_FLAG', flagged: reviewState?.amlFlagged ?? false, notes: e.target.value })
                 }}
-                placeholder="Add internal notes about this AML case..."
+                placeholder="Add internal notes about this AML case (optional)…"
                 className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm min-h-[100px] resize-none focus:outline-none focus:ring-2 focus:ring-ring"
                 disabled={amlReview?.status === 'cleared' || amlReview?.status === 'flagged' || amlReview?.status === 'escalated'}
               />

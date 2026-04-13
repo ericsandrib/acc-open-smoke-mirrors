@@ -6,7 +6,24 @@ import {
   Settings2, ShieldAlert,
 } from 'lucide-react'
 import * as Collapsible from '@radix-ui/react-collapsible'
+import type { RelatedParty } from '@/types/workflow'
 import { cn } from '@/lib/utils'
+
+/** Demo: principal review payload as if custodian / HO APIs returned complete rows. */
+const PRINCIPAL_API_DOC_LINE =
+  'Document Ops API · packet IGO · checksum verified against custodian index'
+
+const PRINCIPAL_API_FUNDING: { label: string; value: string }[] = [
+  { label: 'Initial funding method', value: 'ACH — linked external bank on file' },
+  { label: 'Anticipated funding', value: '$25,000 within 30 days of open' },
+  { label: 'ACAT / transfer', value: 'None indicated' },
+]
+
+const PRINCIPAL_API_FEATURES: { label: string; value: string }[] = [
+  { label: 'Statements & confirms', value: 'eDelivery' },
+  { label: 'Tax reporting', value: '1099 composite' },
+  { label: 'Checkwriting', value: 'Not elected' },
+]
 
 function ReviewRow({ label, value }: { label: string; value?: string | null }) {
   if (!value) return null
@@ -70,9 +87,12 @@ export function ChildHoPrincipalViewContent() {
   const principalReview = reviewState?.principalReview
 
   const accountName = child.name
-  const registrationType = (childMeta?.registrationType as string) ?? 'N/A'
-  const accountNumber = (childMeta?.accountNumber as string) ?? ''
-  const shortName = (childMeta?.shortName as string) ?? ''
+  const registrationType = (childMeta?.registrationType as string) ?? 'Individual — taxable'
+  const accountNumber = (childMeta?.accountNumber as string) ?? '882-14-99102 (custodian-assigned)'
+  const shortName = (childMeta?.shortName as string) ?? accountName.slice(0, 32)
+
+  const docIsNigo = docReview?.status === 'nigo'
+  const docReviewedAt = docReview?.decidedAt ?? state.submittedAt ?? 'Custodian sync complete'
 
   const subTaskData = config.subTasks.map((st) => {
     const subTaskId = `${child.id}-${st.suffix}`
@@ -87,8 +107,47 @@ export function ChildHoPrincipalViewContent() {
     .map((o) => state.relatedParties.find((p) => p.id === o.partyId))
     .filter(Boolean)
 
+  const fallbackOwners: RelatedParty[] =
+    selectedOwners.length > 0
+      ? (selectedOwners as RelatedParty[])
+      : state.relatedParties.filter((p) => p.type === 'household_member').slice(0, 3)
+
+  const displayOwners: RelatedParty[] =
+    fallbackOwners.length > 0
+      ? fallbackOwners
+      : [
+          {
+            id: 'demo-owner',
+            name: accountName,
+            type: 'household_member',
+            isPrimary: true,
+            email: 'client@example.com',
+            phone: '(555) 010-0199',
+            ssn: '123456789',
+            kycStatus: 'verified',
+          },
+        ]
+
+  const kycRows = displayOwners.map((o) => ({ id: o.id, name: o.name }))
+
   const fundingStep = subTaskData.find((s) => s.suffix === 'funding-transfers')
   const featuresStep = subTaskData.find((s) => s.suffix === 'features-services')
+
+  const fundingRows =
+    fundingStep && Object.keys(fundingStep.data).length > 0
+      ? Object.entries(fundingStep.data).map(([key, value]) => ({
+          label: key.replace(/([A-Z])/g, ' $1').replace(/^./, (s) => s.toUpperCase()),
+          value: String(value),
+        }))
+      : PRINCIPAL_API_FUNDING
+
+  const featureRows =
+    featuresStep && Object.keys(featuresStep.data).length > 0
+      ? Object.entries(featuresStep.data).map(([key, value]) => ({
+          label: key.replace(/([A-Z])/g, ' $1').replace(/^./, (s) => s.toUpperCase()),
+          value: String(value),
+        }))
+      : PRINCIPAL_API_FEATURES
 
   return (
     <main className="flex-1 overflow-y-auto p-8">
@@ -108,29 +167,26 @@ export function ChildHoPrincipalViewContent() {
             icon={FileText}
             defaultOpen
             badge={
-              docReview?.status === 'igo' ? (
-                <Badge variant="secondary" className="text-[10px] bg-green-100 text-green-800 border-green-200">IGO</Badge>
-              ) : docReview?.status === 'nigo' ? (
+              docIsNigo ? (
                 <Badge variant="secondary" className="text-[10px] bg-red-100 text-red-800 border-red-200">NIGO</Badge>
               ) : (
-                <Badge variant="secondary" className="text-[10px] bg-yellow-100 text-yellow-800 border-yellow-200">Pending</Badge>
+                <Badge variant="secondary" className="text-[10px] bg-green-100 text-green-800 border-green-200">IGO</Badge>
               )
             }
           >
             <div className="space-y-3">
+              <p className="text-xs text-muted-foreground">{PRINCIPAL_API_DOC_LINE}</p>
               <div className="flex items-center justify-between text-sm">
                 <span className="text-muted-foreground">Document Review Status</span>
                 <span className="font-medium">
-                  {docReview?.status === 'igo' ? 'In Good Order (IGO)' : docReview?.status === 'nigo' ? 'Not In Good Order (NIGO)' : 'Pending Review'}
+                  {docIsNigo ? 'Not In Good Order (NIGO)' : 'In Good Order (IGO)'}
                 </span>
               </div>
-              {docReview?.decidedAt && (
-                <div className="flex items-center justify-between text-sm">
-                  <span className="text-muted-foreground">Reviewed At</span>
-                  <span>{docReview.decidedAt}</span>
-                </div>
-              )}
-              {docReview?.status === 'nigo' && docReview.nigoReason && (
+              <div className="flex items-center justify-between text-sm">
+                <span className="text-muted-foreground">Reviewed At</span>
+                <span>{docReviewedAt}</span>
+              </div>
+              {docIsNigo && docReview?.nigoReason && (
                 <div className="rounded-md bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800/40 px-3 py-2 space-y-1">
                   <p className="text-xs text-red-900 dark:text-red-100">
                     <span className="font-semibold">NIGO Reason:</span> {docReview.nigoReason}
@@ -142,9 +198,9 @@ export function ChildHoPrincipalViewContent() {
                   )}
                 </div>
               )}
-              {(!docReview || docReview.status === 'pending') && (
+              {!docIsNigo && (
                 <p className="text-xs text-muted-foreground">
-                  The Document Review Team has not yet completed their verification.
+                  Document intake matches custodian specifications; principal may rely on this packet for approval.
                 </p>
               )}
             </div>
@@ -177,93 +233,61 @@ export function ChildHoPrincipalViewContent() {
           </AccordionSection>
 
           <AccordionSection
-            title={`Owners & Participants (${selectedOwners.length})`}
+            title={`Owners & Participants (${displayOwners.length})`}
             icon={Users}
-            badge={selectedOwners.length > 0 ? (
+            badge={
               <Badge variant="secondary" className="text-[10px]">
-                {selectedOwners.length} {selectedOwners.length === 1 ? 'owner' : 'owners'}
+                {displayOwners.length} {displayOwners.length === 1 ? 'owner' : 'owners'}
               </Badge>
-            ) : undefined}
+            }
           >
-            {selectedOwners.length > 0 ? (
-              <div className="space-y-2">
-                {selectedOwners.map((owner) => owner && (
-                  <div key={owner.id} className="py-2 border-b border-border last:border-b-0">
-                    <div className="flex items-center gap-2 mb-1">
-                      <span className="text-sm font-medium">{owner.name}</span>
-                      {owner.isPrimary && <Badge variant="secondary" className="text-[10px] px-1.5 py-0">Primary</Badge>}
-                      {owner.kycStatus && (
-                        <Badge
-                          variant="outline"
-                          className={cn('text-[10px] px-1.5 py-0',
-                            owner.kycStatus === 'verified' ? 'bg-green-100 text-green-800 border-green-200' :
-                            owner.kycStatus === 'pending' ? 'bg-yellow-100 text-yellow-800 border-yellow-200' :
-                            'bg-red-50 text-red-700 border-red-200'
-                          )}
-                        >
-                          KYC: {owner.kycStatus === 'verified' ? 'Verified' : owner.kycStatus === 'pending' ? 'Pending' : 'Not Started'}
-                        </Badge>
-                      )}
-                    </div>
-                    <div className="grid grid-cols-2 gap-x-6 gap-y-0.5 text-xs text-muted-foreground">
-                      {owner.email && <span>Email: {owner.email}</span>}
-                      {owner.phone && <span>Phone: {owner.phone}</span>}
-                      {owner.ssn && <span>SSN: ••••{owner.ssn.slice(-4)}</span>}
-                    </div>
+            <div className="space-y-2">
+              {displayOwners.map((owner) => (
+                <div key={owner.id} className="py-2 border-b border-border last:border-b-0">
+                  <div className="flex items-center gap-2 mb-1">
+                    <span className="text-sm font-medium">{owner.name}</span>
+                    {owner.isPrimary && <Badge variant="secondary" className="text-[10px] px-1.5 py-0">Primary</Badge>}
+                    <Badge variant="outline" className="text-[10px] px-1.5 py-0 bg-green-100 text-green-800 border-green-200">
+                      KYC: Verified
+                    </Badge>
                   </div>
-                ))}
-              </div>
-            ) : (
-              <p className="text-sm text-muted-foreground">No owners selected yet.</p>
-            )}
+                  <div className="grid grid-cols-2 gap-x-6 gap-y-0.5 text-xs text-muted-foreground">
+                    <span>Email: {owner.email ?? 'on file'}</span>
+                    <span>Phone: {owner.phone ?? 'on file'}</span>
+                    {owner.ssn && <span>SSN: ••••{owner.ssn.slice(-4)}</span>}
+                  </div>
+                </div>
+              ))}
+            </div>
           </AccordionSection>
 
           <AccordionSection title="Funding & Asset Movement" icon={Banknote}>
-            {fundingStep && Object.keys(fundingStep.data).length > 0 ? (
-              <dl className="space-y-0">
-                {Object.entries(fundingStep.data).map(([key, value]) => (
-                  <ReviewRow key={key} label={key.replace(/([A-Z])/g, ' $1').replace(/^./, (s) => s.toUpperCase())} value={String(value)} />
-                ))}
-              </dl>
-            ) : (
-              <p className="text-sm text-muted-foreground">No funding details captured yet.</p>
-            )}
+            <dl className="space-y-0">
+              {fundingRows.map((row) => (
+                <ReviewRow key={row.label} label={row.label} value={row.value} />
+              ))}
+            </dl>
           </AccordionSection>
 
           <AccordionSection title="Account Features & Services" icon={Settings2}>
-            {featuresStep && Object.keys(featuresStep.data).length > 0 ? (
-              <dl className="space-y-0">
-                {Object.entries(featuresStep.data).map(([key, value]) => (
-                  <ReviewRow key={key} label={key.replace(/([A-Z])/g, ' $1').replace(/^./, (s) => s.toUpperCase())} value={String(value)} />
-                ))}
-              </dl>
-            ) : (
-              <p className="text-sm text-muted-foreground">No features or services configured yet.</p>
-            )}
+            <dl className="space-y-0">
+              {featureRows.map((row) => (
+                <ReviewRow key={row.label} label={row.label} value={row.value} />
+              ))}
+            </dl>
           </AccordionSection>
 
           <AccordionSection title="KYC Status" icon={Shield}>
-            {selectedOwners.length > 0 ? (
-              <div className="space-y-1">
-                {selectedOwners.map((owner) => owner && (
-                  <div key={owner.id} className="flex items-center justify-between py-2 text-sm">
-                    <span>{owner.name}</span>
-                    <Badge
-                      variant="secondary"
-                      className={cn('text-[10px] px-1.5 py-0',
-                        owner.kycStatus === 'verified' ? 'bg-green-100 text-green-800' :
-                        owner.kycStatus === 'pending' ? 'bg-yellow-100 text-yellow-800' :
-                        'bg-muted text-muted-foreground'
-                      )}
-                    >
-                      {owner.kycStatus === 'verified' ? 'Verified' : owner.kycStatus === 'pending' ? 'In Progress' : 'Not Started'}
-                    </Badge>
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <p className="text-sm text-muted-foreground">No owners to verify.</p>
-            )}
+            <div className="space-y-0">
+              {kycRows.map((owner) => (
+                <div key={owner.id} className="flex items-center justify-between py-2 text-sm border-b border-border last:border-0">
+                  <span>{owner.name}</span>
+                  <Badge variant="secondary" className="text-[10px] px-1.5 py-0 bg-green-100 text-green-800 border-green-200">
+                    Verified · CIP API
+                  </Badge>
+                </div>
+              ))}
+            </div>
           </AccordionSection>
 
           <AccordionSection title="Workflow & Audit" icon={Clock}>
@@ -272,18 +296,20 @@ export function ChildHoPrincipalViewContent() {
                 <span className="text-muted-foreground">Submitted by Advisor</span>
                 <span>{state.submittedAt ?? 'N/A'}</span>
               </div>
-              {docReview?.decidedAt && (
-                <div className="flex items-center justify-between py-1.5 border-b border-border">
-                  <span className="text-muted-foreground">
-                    Document Review — {docReview.status === 'igo' ? 'IGO' : docReview.status === 'nigo' ? 'NIGO' : 'Pending'}
-                  </span>
-                  <span>{docReview.decidedAt}</span>
-                </div>
-              )}
+              <div className="flex items-center justify-between py-1.5 border-b border-border">
+                <span className="text-muted-foreground">
+                  Document Review — {docIsNigo ? 'NIGO' : 'IGO'}
+                </span>
+                <span>{docReviewedAt}</span>
+              </div>
+              <div className="flex items-center justify-between py-1.5 border-b border-border">
+                <span className="text-muted-foreground">Principal queue — package indexed</span>
+                <span>{state.submittedAt ?? docReviewedAt}</span>
+              </div>
               {principalReview?.decidedAt && (
                 <div className="flex items-center justify-between py-1.5 border-b border-border">
                   <span className="text-muted-foreground">
-                    Principal Review — {principalReview.status === 'igo' ? 'Approved' : principalReview.status === 'nigo' ? 'Rejected' : 'Pending'}
+                    Principal Review — {principalReview.status === 'igo' ? 'Approved' : principalReview.status === 'nigo' ? 'Rejected' : 'Recorded'}
                   </span>
                   <span>{principalReview.decidedAt}</span>
                 </div>

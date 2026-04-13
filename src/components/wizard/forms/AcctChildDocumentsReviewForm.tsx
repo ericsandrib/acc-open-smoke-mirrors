@@ -10,8 +10,8 @@ import {
   SelectItem,
 } from '@/components/ui/select'
 import { Plus, Trash2, FileText, Paperclip, Upload, X } from 'lucide-react'
-import { resolveEsignFormSample } from '@/constants/esignFormSamples'
 import { EsignFormPdfSampleActions } from '@/components/wizard/EsignFormPdfSampleActions'
+import { EsignDocumentsBundleViewerButton } from '@/components/wizard/EsignDocumentsBundleViewer'
 import type { RegistrationType } from '@/utils/registrationDocuments'
 import {
   getRegistrationDocumentsForType,
@@ -179,37 +179,44 @@ export function AcctChildDocumentsReviewForm() {
           as the Documents panel and eSign envelope builder.
         </p>
 
-        <div className="rounded-md border border-border bg-card p-3 space-y-2">
-          <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Firm / custodian forms (eSign)</p>
+        <div className="rounded-md border border-border bg-card p-3 space-y-3">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+              Firm / custodian forms (signed)
+            </p>
+            {ruleDrivenDocs.firmCustodianEsign.length > 0 ? (
+              <EsignDocumentsBundleViewerButton
+                items={ruleDrivenDocs.firmCustodianEsign.map((d) => ({ id: d.id, label: d.label }))}
+              />
+            ) : null}
+          </div>
+          <p className="text-[11px] text-muted-foreground leading-snug">
+            After the client completes eSign, use View / Download for each form, or open the bundle viewer to review the
+            full signed package in one place. Demo PDFs are placeholders; drafts are edited in the eSign envelope step
+            — this list shows executed copies only.
+          </p>
           {ruleDrivenDocs.firmCustodianEsign.length > 0 ? (
             <ul className="space-y-2">
-              {ruleDrivenDocs.firmCustodianEsign.map((doc) => {
-                const sample = resolveEsignFormSample(doc.id)
-                const titleLine = sample?.fileName ?? doc.label
-                const subLine = sample ? doc.label : 'Included in your e-sign envelope'
-                return (
-                  <li
-                    key={doc.id}
-                    className="flex items-center gap-3 rounded-lg border border-border bg-background px-3 py-2.5 shadow-sm"
+              {ruleDrivenDocs.firmCustodianEsign.map((doc) => (
+                <li
+                  key={doc.id}
+                  className="flex items-center gap-3 rounded-lg border border-border bg-background px-3 py-2.5 shadow-sm"
+                >
+                  <div
+                    className="flex h-11 w-11 shrink-0 items-center justify-center rounded-md border border-red-200 bg-red-50 text-red-700 dark:border-red-900/60 dark:bg-red-950/40 dark:text-red-300"
+                    aria-hidden
                   >
-                    <div
-                      className="flex h-11 w-11 shrink-0 items-center justify-center rounded-md border border-red-200 bg-red-50 text-red-700 dark:border-red-900/60 dark:bg-red-950/40 dark:text-red-300"
-                      aria-hidden
-                    >
-                      <FileText className="h-5 w-5" strokeWidth={1.75} />
-                    </div>
-                    <div className="min-w-0 flex-1">
-                      <p className="text-sm font-medium text-foreground truncate">{titleLine}</p>
-                      <p className="text-[11px] text-muted-foreground line-clamp-2">{subLine}</p>
-                    </div>
-                    {sample ? (
-                      <EsignFormPdfSampleActions formIdOrDocId={doc.id} />
-                    ) : (
-                      <span className="shrink-0 text-[11px] text-muted-foreground">E-sign package</span>
-                    )}
-                  </li>
-                )
-              })}
+                    <FileText className="h-5 w-5" strokeWidth={1.75} />
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <p className="text-sm font-medium text-foreground truncate">{doc.label}</p>
+                    <p className="text-[11px] text-muted-foreground line-clamp-2">
+                      Fully executed · client eSign complete (demo PDF)
+                    </p>
+                  </div>
+                  <EsignFormPdfSampleActions formIdOrDocId={doc.id} displayLabel={doc.label} viewMode="signed" />
+                </li>
+              ))}
             </ul>
           ) : (
             <p className="text-xs text-muted-foreground">No eSign firm/custodian forms required for this registration type.</p>
@@ -258,11 +265,15 @@ export function AcctChildDocumentsReviewForm() {
                   </div>
 
                   {instancesForDoc.length > 0 ? (
-                    <table className="w-full text-sm">
+                    <table className="w-full text-sm table-fixed">
                       <thead>
                         <tr className="border-b border-border bg-muted/20">
-                          <th className="text-left font-medium text-muted-foreground px-4 py-2 text-xs">Specification</th>
-                          <th className="text-left font-medium text-muted-foreground px-4 py-2 text-xs">Owner</th>
+                          <th className="text-left font-medium text-muted-foreground px-4 py-2 text-xs w-[36%]">
+                            Specification
+                          </th>
+                          <th className="text-left font-medium text-muted-foreground px-4 py-2 text-xs w-[11rem] max-w-[11rem]">
+                            Owner
+                          </th>
                           <th className="text-left font-medium text-muted-foreground px-4 py-2 text-xs">File</th>
                           <th className="w-[40px]" />
                         </tr>
@@ -272,7 +283,7 @@ export function AcctChildDocumentsReviewForm() {
                           const isUpstream = inst.source === 'upstream'
                           return (
                             <tr key={inst.id} className={idx < instancesForDoc.length - 1 ? 'border-b border-border' : ''}>
-                              <td className="px-4 py-2.5">
+                              <td className="px-4 py-2.5 min-w-0 align-top w-[36%] max-w-[36%] overflow-hidden">
                                 {subTypes.length > 0 ? (
                                   <Select
                                     value={inst.subType ?? ''}
@@ -287,7 +298,7 @@ export function AcctChildDocumentsReviewForm() {
                                       }
                                     }}
                                   >
-                                    <SelectTrigger className="h-8 text-xs">
+                                    <SelectTrigger className="h-8 text-xs w-full max-w-full min-w-0">
                                       <SelectValue placeholder="Select type..." />
                                     </SelectTrigger>
                                     <SelectContent>
@@ -299,14 +310,21 @@ export function AcctChildDocumentsReviewForm() {
                                     </SelectContent>
                                   </Select>
                                 ) : (
-                                  <div className="flex items-center gap-1.5 h-8 px-3 rounded-md border border-border bg-muted/30">
-                                    <span className="text-xs text-foreground">{doc.label}</span>
+                                  <div className="flex min-w-0 max-w-full items-center h-8 px-3 rounded-md border border-border bg-muted/30">
+                                    <span className="text-xs text-foreground truncate min-w-0" title={doc.label}>
+                                      {doc.label}
+                                    </span>
                                   </div>
                                 )}
                               </td>
-                              <td className="px-4 py-2.5 w-[180px]">
-                                <div className="flex items-center gap-1.5 h-8 px-3 rounded-md border border-border bg-muted/30">
-                                  <span className="text-xs text-foreground">{inst.ownerName || 'Unassigned'}</span>
+                              <td className="px-4 py-2.5 w-[11rem] max-w-[11rem] align-top">
+                                <div className="flex min-w-0 items-center gap-1.5 h-8 px-3 rounded-md border border-border bg-muted/30">
+                                  <span
+                                    className="text-xs text-foreground truncate min-w-0"
+                                    title={inst.ownerName || 'Unassigned'}
+                                  >
+                                    {inst.ownerName || 'Unassigned'}
+                                  </span>
                                 </div>
                               </td>
                               <td className="px-4 py-2.5">
