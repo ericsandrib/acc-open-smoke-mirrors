@@ -285,7 +285,7 @@ export function getDocSubTypes(docId: string): DocumentSubType[] {
 
 export function getRegistrationDocumentsForType(
   type: RegistrationType,
-  options?: RegistrationDocumentsOptions,
+  _options?: RegistrationDocumentsOptions,
 ): DocumentRequirementWithSubTypes[] {
   const entry = findRegistrationEntry(type)
   if (!entry) return []
