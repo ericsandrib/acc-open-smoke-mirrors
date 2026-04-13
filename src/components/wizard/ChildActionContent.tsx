@@ -2,7 +2,7 @@ import type { WorkflowState } from '@/types/workflow'
 import { useWorkflow, useChildActionContext, useAdvisorUnlocked } from '@/stores/workflowStore'
 import { formComponents, taskDescriptions } from './formRegistry'
 import { Badge } from '@/components/ui/badge'
-import { ShieldCheck, Lock, AlertTriangle, CheckCircle2, Clock, FileText, FileSearch } from 'lucide-react'
+import { ShieldCheck, Lock, AlertTriangle, CheckCircle2, FileText, FileSearch } from 'lucide-react'
 
 type ChildReviewState = NonNullable<WorkflowState['childReviewState']>
 
