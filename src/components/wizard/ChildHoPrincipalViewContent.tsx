@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { useWorkflow, useChildActionContext } from '@/stores/workflowStore'
+import { useWorkflow, useChildActionContext, getChildReviewState } from '@/stores/workflowStore'
 import { Badge } from '@/components/ui/badge'
 import {
   ChevronDown, Clock, Users, FileText, CreditCard, Shield, Banknote,
@@ -82,7 +82,7 @@ export function ChildHoPrincipalViewContent() {
 
   const { child, config } = ctx
   const childMeta = state.taskData[child.id] as Record<string, unknown> | undefined
-  const reviewState = state.childReviewState
+  const reviewState = getChildReviewState(state, child.id)
   const docReview = reviewState?.documentReview
   const principalReview = reviewState?.principalReview
 

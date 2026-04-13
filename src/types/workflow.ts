@@ -152,6 +152,26 @@ export interface ReviewState {
   rejectionFeedback?: string
 }
 
+/** Review / compliance state for one child workflow (KYC vs account opening are isolated per child id). */
+export interface ChildReviewState {
+  documentReview?: { status: 'pending' | 'igo' | 'nigo'; decidedAt?: string; nigoReason?: string; nigoFeedback?: string }
+  principalReview?: { status: 'pending' | 'igo' | 'nigo'; decidedAt?: string; nigoReason?: string; nigoFeedback?: string }
+  amlFlagged?: boolean
+  amlNotes?: string
+  amlReview?: { status: 'pending' | 'cleared' | 'flagged' | 'info_requested' | 'escalated'; decidedAt?: string; findings?: string; infoRequestComments?: string; reason?: string }
+  cipStatus?: {
+    idVerification: 'pass' | 'fail' | 'pending'
+    addressMatch: 'pass' | 'fail' | 'pending'
+    dobMatch: 'pass' | 'fail' | 'pending'
+    overallStatus: 'pass' | 'fail' | 'pending'
+  }
+  hoKycReview?: { status: 'pending' | 'approved' | 'changes_requested'; decidedAt?: string; comments?: string }
+  principalKycReview?: { status: 'pending' | 'approved' | 'rejected'; decidedAt?: string; reason?: string }
+  validationErrors?: string[]
+}
+
+export type ChildReviewDecision = { outcome: 'approved' | 'rejected'; decidedAt: string }
+
 export interface WorkflowState {
   actions: Action[]
   tasks: Task[]
@@ -171,23 +191,10 @@ export interface WorkflowState {
   reviewState?: ReviewState
   demoViewMode?: 'advisor' | 'ho-documents' | 'ho-principal' | 'ho-kyc' | 'ho-principal-kyc' | 'aml'
   submittedAt?: string
-  childReviewDecision?: { outcome: 'approved' | 'rejected'; decidedAt: string }
-  childReviewState?: {
-    documentReview?: { status: 'pending' | 'igo' | 'nigo'; decidedAt?: string; nigoReason?: string; nigoFeedback?: string }
-    principalReview?: { status: 'pending' | 'igo' | 'nigo'; decidedAt?: string; nigoReason?: string; nigoFeedback?: string }
-    amlFlagged?: boolean
-    amlNotes?: string
-    amlReview?: { status: 'pending' | 'cleared' | 'flagged' | 'info_requested' | 'escalated'; decidedAt?: string; findings?: string; infoRequestComments?: string; reason?: string }
-    cipStatus?: {
-      idVerification: 'pass' | 'fail' | 'pending'
-      addressMatch: 'pass' | 'fail' | 'pending'
-      dobMatch: 'pass' | 'fail' | 'pending'
-      overallStatus: 'pass' | 'fail' | 'pending'
-    }
-    hoKycReview?: { status: 'pending' | 'approved' | 'changes_requested'; decidedAt?: string; comments?: string }
-    principalKycReview?: { status: 'pending' | 'approved' | 'rejected'; decidedAt?: string; reason?: string }
-    validationErrors?: string[]
-  }
+  /** Last review outcome per child id (demo / footer messaging). */
+  childReviewDecisionsByChildId?: Record<string, ChildReviewDecision>
+  /** AML, document, principal, and KYC review substeps keyed by {@link ChildTask.id}. */
+  childReviewsByChildId?: Record<string, ChildReviewState>
 }
 
 export type WorkflowAction =
@@ -209,7 +216,15 @@ export type WorkflowAction =
   | { type: 'UPDATE_FINANCIAL_ACCOUNT'; accountId: string; updates: Partial<Omit<FinancialAccount, 'id'>> }
   | { type: 'REMOVE_FINANCIAL_ACCOUNT'; accountId: string }
   | { type: 'SET_TASK_DATA'; taskId: string; fields: Record<string, unknown> }
-  | { type: 'INITIALIZE_FROM_RELATIONSHIP'; relatedParties: RelatedParty[]; financialAccounts: FinancialAccount[]; clientInfo: Record<string, unknown>; journeyName?: string; assignedTo?: string }
+  | {
+      type: 'INITIALIZE_FROM_RELATIONSHIP'
+      relatedParties: RelatedParty[]
+      financialAccounts: FinancialAccount[]
+      clientInfo: Record<string, unknown>
+      journeyName?: string
+      journeyId?: string
+      assignedTo?: string
+    }
   | { type: 'SET_JOURNEY_ASSIGNEE'; assignee: string }
   | { type: 'GO_NEXT' }
   | { type: 'GO_BACK' }

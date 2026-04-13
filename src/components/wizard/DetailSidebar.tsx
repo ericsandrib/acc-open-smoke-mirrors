@@ -1,5 +1,6 @@
+import { CollapsibleRightPanel } from '@/components/wizard/CollapsibleRightPanel'
 import { useWorkflow } from '@/stores/workflowStore'
-import { parseChildSubTaskId } from '@/utils/childTaskRegistry'
+import { parseChildSubTaskId, getSubTaskDisplayTitle } from '@/utils/childTaskRegistry'
 
 export function DetailSidebar() {
   const { state } = useWorkflow()
@@ -22,12 +23,8 @@ export function DetailSidebar() {
   const assignedTo = activeTask?.assignedTo ?? ''
 
   return (
-    <aside className="w-64 shrink-0 border-l border-border bg-sidebar-background flex flex-col min-h-0 h-full text-sm">
-      <div className="flex-1 min-h-0 overflow-y-auto p-4">
-        <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-4">
-          Details
-        </h3>
-        {activeTask && (
+    <CollapsibleRightPanel title="Details">
+      {activeTask && (
           <div className="space-y-3">
             <div>
               <span className="text-muted-foreground">Task</span>
@@ -44,8 +41,8 @@ export function DetailSidebar() {
               </p>
             </div>
           </div>
-        )}
-        {!activeTask && activeChild && (
+      )}
+      {!activeTask && activeChild && (
           <div className="space-y-3">
             <div>
               <span className="text-muted-foreground">Child Action</span>
@@ -58,8 +55,8 @@ export function DetailSidebar() {
               </p>
             </div>
           </div>
-        )}
-        {!activeTask && !activeChild && subTaskChild && subTaskDef && parsed && (
+      )}
+      {!activeTask && !activeChild && subTaskChild && subTaskDef && parsed && (
           <div className="space-y-3">
             <div>
               <span className="text-muted-foreground">{parsed.config.displayLabel}</span>
@@ -67,7 +64,9 @@ export function DetailSidebar() {
             </div>
             <div>
               <span className="text-muted-foreground">Task</span>
-              <p className="font-medium text-foreground">{subTaskDef.title}</p>
+              <p className="font-medium text-foreground">
+                {getSubTaskDisplayTitle(parsed.config.childType, subTaskDef, state.demoViewMode)}
+              </p>
             </div>
             <div>
               <span className="text-muted-foreground">Status</span>
@@ -76,8 +75,7 @@ export function DetailSidebar() {
               </p>
             </div>
           </div>
-        )}
-      </div>
-    </aside>
+      )}
+    </CollapsibleRightPanel>
   )
 }

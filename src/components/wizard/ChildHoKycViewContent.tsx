@@ -1,5 +1,5 @@
 import { useMemo } from 'react'
-import { useWorkflow, useChildActionContext } from '@/stores/workflowStore'
+import { useWorkflow, useChildActionContext, getChildReviewState } from '@/stores/workflowStore'
 import { Badge } from '@/components/ui/badge'
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion'
 import {
@@ -78,7 +78,7 @@ export function ChildHoKycViewContent() {
   if (!ctx) return null
 
   const { child } = ctx
-  const reviewState = state.childReviewState
+  const reviewState = getChildReviewState(state, child.id)
   const amlReview = reviewState?.amlReview
   const cipStatus = reviewState?.cipStatus
   const hoKycReview = reviewState?.hoKycReview

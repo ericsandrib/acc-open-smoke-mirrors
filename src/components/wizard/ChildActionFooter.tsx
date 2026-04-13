@@ -1,16 +1,16 @@
 import { useState } from 'react'
 import { toast } from 'sonner'
-import { useWorkflow, useChildActionContext, useAdvisorUnlocked } from '@/stores/workflowStore'
+import { useWorkflow, useChildActionContext, useAdvisorUnlocked, getChildReviewState, getChildReviewDecision } from '@/stores/workflowStore'
 import { Button } from '@/components/ui/button'
 import { CheckCircle2, ChevronLeft, ChevronRight, Clock, ShieldAlert, RotateCcw } from 'lucide-react'
 import { getKycValidationErrors } from './forms/KycChildInfoForm'
-import { getAccountOwnersMissingKyc } from '@/utils/accountOpeningOwnerKyc'
+import { getAccountOpeningChildSubmissionIssues } from '@/utils/accountOpeningChildProgress'
 
-function KycRequiredForOwnersModal({
-  ownerNames,
+function SubmissionBlockedModal({
+  issues,
   onAcknowledge,
 }: {
-  ownerNames: string[]
+  issues: string[]
   onAcknowledge: () => void
 }) {
   return (
@@ -19,28 +19,27 @@ function KycRequiredForOwnersModal({
       <div
         role="dialog"
         aria-modal="true"
-        aria-labelledby="kyc-block-title"
-        className="relative z-10 bg-background rounded-lg border border-border shadow-lg max-w-md w-full p-6 space-y-4"
+        aria-labelledby="submission-blocked-title"
+        className="relative z-10 bg-background rounded-lg border border-border shadow-lg max-w-2xl w-full p-6 space-y-4 max-h-[80vh] overflow-y-auto"
       >
         <div className="flex items-start gap-3">
           <div className="rounded-full bg-amber-50 dark:bg-amber-950/50 p-2 shrink-0">
             <ShieldAlert className="h-5 w-5 text-amber-600" />
           </div>
           <div className="space-y-2 min-w-0">
-            <h3 id="kyc-block-title" className="text-base font-semibold">
+            <h3 id="submission-blocked-title" className="text-base font-semibold">
               Cannot submit for review yet
             </h3>
             <p className="text-sm text-muted-foreground">
-              Every account owner must complete KYC verification before this application can be submitted. Finish KYC under{' '}
-              <span className="font-medium text-foreground">Collect Client Data</span> for each person listed below, then return here.
+              Resolve the issues below before submitting this account opening for review.
             </p>
-            <ul className="list-disc pl-5 text-sm text-foreground space-y-1">
-              {ownerNames.map((name) => (
-                <li key={name}>{name}</li>
-              ))}
-            </ul>
           </div>
         </div>
+        <ul className="list-disc pl-5 space-y-1.5 text-sm text-foreground">
+          {issues.map((issue, idx) => (
+            <li key={`${idx}-${issue}`}>{issue}</li>
+          ))}
+        </ul>
         <div className="flex justify-end pt-1">
           <Button type="button" onClick={onAcknowledge}>
             I understand
@@ -106,17 +105,50 @@ export function ChildActionFooter() {
   const [showConfirmModal, setShowConfirmModal] = useState(false)
   const [showResubmitModal, setShowResubmitModal] = useState(false)
   const [showCompleteStepModal, setShowCompleteStepModal] = useState(false)
-  const [kycBlockOwnerNames, setKycBlockOwnerNames] = useState<string[] | null>(null)
+  const [submissionIssues, setSubmissionIssues] = useState<string[] | null>(null)
   const advisorUnlocked = useAdvisorUnlocked()
 
   if (!ctx) return null
 
   const { isFirst, isLast, child } = ctx
   const isKyc = child.childType === 'kyc'
+  const isNestedAccountLineChild =
+    child.childType === 'funding-line' || child.childType === 'feature-service-line'
   const isAdvisorView = state.demoViewMode === 'advisor'
   const isAmlView = state.demoViewMode === 'aml'
   const isHoKycView = state.demoViewMode === 'ho-kyc'
   const isHoPrincipalKycView = state.demoViewMode === 'ho-principal-kyc'
+
+  if (isNestedAccountLineChild) {
+    return (
+      <footer className="border-t border-border bg-background px-6 py-3 min-h-14 flex justify-between items-center shrink-0 box-border">
+        <div>
+          {!isFirst && (
+            <Button
+              variant="outline"
+              onClick={() => dispatch({ type: 'CHILD_GO_BACK' })}
+            >
+              <ChevronLeft className="h-4 w-4" />
+              Back
+            </Button>
+          )}
+        </div>
+        <div className="flex items-center gap-2">
+          {isLast ? (
+            <Button onClick={() => dispatch({ type: 'EXIT_CHILD_ACTION' })}>
+              Next
+              <ChevronRight className="h-4 w-4" />
+            </Button>
+          ) : (
+            <Button onClick={() => dispatch({ type: 'CHILD_GO_NEXT' })}>
+              Next
+              <ChevronRight className="h-4 w-4" />
+            </Button>
+          )}
+        </div>
+      </footer>
+    )
+  }
 
   const handleResubmit = () => {
     if (isKyc) {
@@ -136,9 +168,9 @@ export function ChildActionFooter() {
         return
       }
     } else if (child.childType === 'account-opening') {
-      const { names } = getAccountOwnersMissingKyc(state, child.id)
-      if (names.length > 0) {
-        setKycBlockOwnerNames(names)
+      const issues = getAccountOpeningChildSubmissionIssues(state, child.id)
+      if (issues.length > 0) {
+        setSubmissionIssues(issues)
         return
       }
     }
@@ -147,10 +179,10 @@ export function ChildActionFooter() {
 
   const handleConfirmResubmit = () => {
     if (child.childType === 'account-opening') {
-      const { names } = getAccountOwnersMissingKyc(state, child.id)
-      if (names.length > 0) {
+      const issues = getAccountOpeningChildSubmissionIssues(state, child.id)
+      if (issues.length > 0) {
         setShowResubmitModal(false)
-        setKycBlockOwnerNames(names)
+        setSubmissionIssues(issues)
         return
       }
     }
@@ -160,6 +192,58 @@ export function ChildActionFooter() {
       mode: child.childType === 'account-opening' ? 'ho-documents' : 'advisor',
     })
     setShowResubmitModal(false)
+  }
+
+  const handleDone = () => {
+    if (isKyc) {
+      const infoTaskId = `${child.id}-info`
+      const infoData = state.taskData[infoTaskId] ?? {}
+      const errors = getKycValidationErrors(infoData)
+
+      if (errors.length > 0) {
+        toast.error('Please fix validation errors before submitting', {
+          description: `${errors.length} required field${errors.length === 1 ? '' : 's'} need attention. Review the summary at the top of the form.`,
+        })
+        dispatch({
+          type: 'SET_TASK_DATA',
+          taskId: infoTaskId,
+          fields: { _submitAttempted: true, _validationScrollNonce: Date.now() },
+        })
+        dispatch({ type: 'SET_CHILD_SUB_TASK', index: 0 })
+        return
+      }
+
+      setShowConfirmModal(true)
+      return
+    }
+
+    if (child.childType === 'account-opening') {
+      const issues = getAccountOpeningChildSubmissionIssues(state, child.id)
+      if (issues.length > 0) {
+        setSubmissionIssues(issues)
+        return
+      }
+      setShowCompleteStepModal(true)
+      return
+    }
+
+    dispatch({ type: 'SUBMIT_CHILD_FOR_REVIEW' })
+    dispatch({
+      type: 'SET_DEMO_VIEW',
+      mode: 'advisor',
+    })
+  }
+
+  const handleConfirmCompleteAccountStep = () => {
+    dispatch({ type: 'SUBMIT_CHILD_FOR_REVIEW' })
+    dispatch({ type: 'SET_DEMO_VIEW', mode: 'ho-documents' })
+    setShowCompleteStepModal(false)
+  }
+
+  const handleConfirmSubmit = () => {
+    dispatch({ type: 'SUBMIT_CHILD_FOR_REVIEW' })
+    dispatch({ type: 'SET_DEMO_VIEW', mode: 'advisor' })
+    setShowConfirmModal(false)
   }
 
   const hideNextInAdvisorAfterSubmit =
@@ -189,18 +273,23 @@ export function ChildActionFooter() {
                 <span>
                   Completed at{' '}
                   {(() => {
-                    const rs = state.childReviewState
+                    const rs = getChildReviewState(state, child.id)
+                    const dec = getChildReviewDecision(state, child.id)
                     if (isKyc) return rs?.principalKycReview?.decidedAt ?? rs?.hoKycReview?.decidedAt ?? state.submittedAt ?? 'N/A'
-                    return rs?.principalReview?.decidedAt ?? state.childReviewDecision?.decidedAt ?? state.submittedAt ?? 'N/A'
+                    return rs?.principalReview?.decidedAt ?? dec?.decidedAt ?? state.submittedAt ?? 'N/A'
                   })()}
                 </span>
               </div>
-            ) : (
+            ) : child.status === 'awaiting_review' ? (
               <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
                 <Clock className="h-3.5 w-3.5" />
                 <span>Submitted for {isKyc ? 'home office' : 'home office review'} at {state.submittedAt ?? 'N/A'}</span>
               </div>
-            )}
+            ) : isLast && (child.status === 'in_progress' || child.status === 'not_started') ? (
+              <Button onClick={handleDone}>
+                Submit for Review
+              </Button>
+            ) : null}
             {!isLast && !hideNextInAdvisorAfterSubmit && (
               <Button onClick={() => dispatch({ type: 'CHILD_GO_NEXT' })}>
                 Next
@@ -218,66 +307,30 @@ export function ChildActionFooter() {
             variant="submit"
           />
         )}
-        {kycBlockOwnerNames && kycBlockOwnerNames.length > 0 && (
-          <KycRequiredForOwnersModal
-            ownerNames={kycBlockOwnerNames}
-            onAcknowledge={() => setKycBlockOwnerNames(null)}
+        {showConfirmModal && (
+          <SubmitConfirmModal
+            childName={child.name}
+            onConfirm={handleConfirmSubmit}
+            onCancel={() => setShowConfirmModal(false)}
+            variant="submit"
+          />
+        )}
+        {showCompleteStepModal && (
+          <SubmitConfirmModal
+            childName={child.name}
+            onConfirm={handleConfirmCompleteAccountStep}
+            onCancel={() => setShowCompleteStepModal(false)}
+            variant="complete-step"
+          />
+        )}
+        {submissionIssues && submissionIssues.length > 0 && (
+          <SubmissionBlockedModal
+            issues={submissionIssues}
+            onAcknowledge={() => setSubmissionIssues(null)}
           />
         )}
       </>
     )
-  }
-
-  const handleDone = () => {
-    if (isKyc) {
-      const infoTaskId = `${child.id}-info`
-      const infoData = state.taskData[infoTaskId] ?? {}
-      const errors = getKycValidationErrors(infoData)
-
-      if (errors.length > 0) {
-        toast.error('Please fix validation errors before submitting', {
-          description: `${errors.length} required field${errors.length === 1 ? '' : 's'} need attention. Review the summary at the top of the form.`,
-        })
-        dispatch({
-          type: 'SET_TASK_DATA',
-          taskId: infoTaskId,
-          fields: { _submitAttempted: true, _validationScrollNonce: Date.now() },
-        })
-        dispatch({ type: 'SET_CHILD_SUB_TASK', index: 0 })
-        return
-      }
-
-      setShowConfirmModal(true)
-      return
-    }
-
-    if (child.childType === 'account-opening') {
-      const { names } = getAccountOwnersMissingKyc(state, child.id)
-      if (names.length > 0) {
-        setKycBlockOwnerNames(names)
-        return
-      }
-      setShowCompleteStepModal(true)
-      return
-    }
-
-    dispatch({ type: 'SUBMIT_CHILD_FOR_REVIEW' })
-    dispatch({
-      type: 'SET_DEMO_VIEW',
-      mode: 'advisor',
-    })
-  }
-
-  const handleConfirmCompleteAccountStep = () => {
-    dispatch({ type: 'SUBMIT_CHILD_FOR_REVIEW' })
-    dispatch({ type: 'SET_DEMO_VIEW', mode: 'ho-documents' })
-    setShowCompleteStepModal(false)
-  }
-
-  const handleConfirmSubmit = () => {
-    dispatch({ type: 'SUBMIT_CHILD_FOR_REVIEW' })
-    dispatch({ type: 'SET_DEMO_VIEW', mode: 'advisor' })
-    setShowConfirmModal(false)
   }
 
   return (
@@ -297,9 +350,27 @@ export function ChildActionFooter() {
 
         <div className="flex items-center gap-2">
           {isLast ? (
-            <Button onClick={handleDone}>
-              {child.childType === 'account-opening' ? 'Complete step' : 'Submit for Review'}
-            </Button>
+            child.status === 'complete' ? (
+              <div className="flex items-center gap-1.5 text-sm text-green-700">
+                <CheckCircle2 className="h-3.5 w-3.5" />
+                <span>
+                  Completed at{' '}
+                  {isKyc
+                    ? getChildReviewState(state, child.id)?.principalKycReview?.decidedAt ??
+                      getChildReviewState(state, child.id)?.hoKycReview?.decidedAt ??
+                      state.submittedAt ??
+                      'N/A'
+                    : getChildReviewState(state, child.id)?.principalReview?.decidedAt ??
+                      getChildReviewDecision(state, child.id)?.decidedAt ??
+                      state.submittedAt ??
+                      'N/A'}
+                </span>
+              </div>
+            ) : (
+              <Button onClick={handleDone}>
+                Submit for Review
+              </Button>
+            )
           ) : (
             <Button onClick={() => dispatch({ type: 'CHILD_GO_NEXT' })}>
               Next
@@ -325,10 +396,10 @@ export function ChildActionFooter() {
           variant="complete-step"
         />
       )}
-      {kycBlockOwnerNames && kycBlockOwnerNames.length > 0 && (
-        <KycRequiredForOwnersModal
-          ownerNames={kycBlockOwnerNames}
-          onAcknowledge={() => setKycBlockOwnerNames(null)}
+      {submissionIssues && submissionIssues.length > 0 && (
+        <SubmissionBlockedModal
+          issues={submissionIssues}
+          onAcknowledge={() => setSubmissionIssues(null)}
         />
       )}
     </>

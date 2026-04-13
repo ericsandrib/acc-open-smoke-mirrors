@@ -1,4 +1,4 @@
-import type { ChildType } from '@/types/workflow'
+import type { ChildType, WorkflowState } from '@/types/workflow'
 
 export interface SubTaskDefinition {
   suffix: string
@@ -19,7 +19,7 @@ const CHILD_TYPE_CONFIGS: Record<ChildType, ChildTypeConfig> = {
     idPrefix: 'kyc-child',
     displayLabel: 'KYC Review',
     subTasks: [
-      { suffix: 'info', title: 'Collect Client Info', formKey: 'kyc-child-info' },
+      { suffix: 'info', title: 'Client Information', formKey: 'kyc-child-info' },
     ],
   },
   'account-opening': {
@@ -61,6 +61,18 @@ const CHILD_TYPE_CONFIGS: Record<ChildType, ChildTypeConfig> = {
 
 export function getChildTypeConfig(childType: ChildType): ChildTypeConfig {
   return CHILD_TYPE_CONFIGS[childType]
+}
+
+/** Sidebar / header label for a sub-task; AML view renames the KYC info step for reviewers. */
+export function getSubTaskDisplayTitle(
+  childType: ChildType,
+  subTask: SubTaskDefinition,
+  demoViewMode: WorkflowState['demoViewMode'],
+): string {
+  if (childType === 'kyc' && subTask.formKey === 'kyc-child-info' && demoViewMode === 'aml') {
+    return 'AML Team Review'
+  }
+  return subTask.title
 }
 
 /** Sub-step index for a child type + form key (e.g. switching siblings on the same step). */

@@ -170,6 +170,26 @@ export function getTrustOrganizationIdsForAccountOwners(
   return out
 }
 
+/**
+ * Party IDs that should have client-upload rows for this document on an account—the same rules as Open Accounts
+ * seeding: government ID → natural-person owners and trust trustees (not the trust entity); trust verification →
+ * trust legal-entity owner(s); other uploads → all selected account owner parties.
+ */
+export function getAssigneePartyIdsForClientUploadDoc(
+  docId: string,
+  relatedParties: RelatedParty[] | undefined,
+  accountOwnerPartyIds: Iterable<string>,
+): string[] {
+  const owners = Array.from(new Set(accountOwnerPartyIds))
+  if (docId === GOVERNMENT_ISSUED_ID_DOC_ID) {
+    return getPartyIdsRequiringGovernmentIdUpload(relatedParties, accountOwnerPartyIds)
+  }
+  if (docId === TRUST_VERIFICATION_DOC_ID) {
+    return getTrustOrganizationIdsForAccountOwners(relatedParties, accountOwnerPartyIds)
+  }
+  return owners
+}
+
 function trustVerificationBundleRequirement(): DocumentRequirementWithSubTypes {
   return {
     id: TRUST_VERIFICATION_DOC_ID,

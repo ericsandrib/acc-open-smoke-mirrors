@@ -1,67 +1,97 @@
 import { useWorkflow, useChildActionContext, useAdvisorUnlocked } from '@/stores/workflowStore'
-import type { TaskStatus } from '@/types/workflow'
 import { cn } from '@/lib/utils'
 import { Badge } from '@/components/ui/badge'
-import { ArrowLeft, Circle, Loader, CheckCircle2, Ban, Clock, XCircle } from 'lucide-react'
+import { ArrowLeft } from 'lucide-react'
 import {
   Tooltip,
   TooltipContent,
   TooltipProvider,
   TooltipTrigger,
 } from '@/components/ui/tooltip'
-import { resumeDrillInBackLabel } from '@/utils/childTaskRegistry'
+import { resumeDrillInBackLabel, getSubTaskDisplayTitle } from '@/utils/childTaskRegistry'
+import { getAccountOpeningSubTaskProgress } from '@/utils/accountOpeningChildProgress'
+import { childStatusConfig, deriveChildDisplayStatus } from '@/utils/childStatusDisplay'
+import type { ChildDisplayStatus } from '@/utils/childStatusDisplay'
 
-const statusColors: Record<TaskStatus, string> = {
-  not_started: 'text-text-tertiary',
-  in_progress: 'text-text-category1-primary',
-  complete: 'text-text-success-primary',
-  blocked: 'text-text-danger-primary',
-  awaiting_review: 'text-text-warning-primary',
-  rejected: 'text-text-danger-primary',
-}
+const DONUT_R = 7
+const DONUT_CIRCUMFERENCE = 2 * Math.PI * DONUT_R
 
-const statusLabels: Record<TaskStatus, string> = {
-  not_started: 'Ready to Begin',
-  in_progress: 'In Progress',
-  complete: 'Complete',
-  blocked: 'Blocked',
-  awaiting_review: 'Awaiting Review',
-  rejected: 'Rejected',
-}
-
-const StatusIcon: Record<TaskStatus, React.ComponentType<{ className?: string }>> = {
-  not_started: Circle,
-  in_progress: Loader,
-  complete: CheckCircle2,
-  blocked: Ban,
-  awaiting_review: Clock,
-  rejected: XCircle,
-}
-
-function SubTaskStatusBadge({ subTaskId }: { subTaskId: string }) {
+function SubTaskStatusBadge({
+  subTaskId,
+  accountOpeningChildId,
+  subTaskSuffix,
+}: {
+  subTaskId: string
+  accountOpeningChildId?: string
+  subTaskSuffix?: string
+}) {
   const { state } = useWorkflow()
   const hasData = !!state.taskData[subTaskId] && Object.keys(state.taskData[subTaskId]).length > 0
   const isSubmitted = state.submittedTaskIds.includes(subTaskId)
 
-  const status: TaskStatus = isSubmitted ? 'complete' : hasData ? 'in_progress' : 'not_started'
-  const Icon = StatusIcon[status]
+  const accountChild =
+    accountOpeningChildId &&
+    state.tasks.flatMap((t) => t.children ?? []).find((c) => c.id === accountOpeningChildId)
+  const lockedComplete =
+    accountChild &&
+    (accountChild.status === 'awaiting_review' || accountChild.status === 'complete')
+
+  let filled = 0
+  let total = 1
+  if (accountOpeningChildId && subTaskSuffix && !lockedComplete) {
+    const progress = getAccountOpeningSubTaskProgress(state, accountOpeningChildId, subTaskSuffix)
+    filled = progress.filled
+    total = Math.max(progress.total, 1)
+  } else if (lockedComplete) {
+    filled = 1
+  } else {
+    filled = isSubmitted || hasData ? 1 : 0
+  }
+  const progress = Math.min(1, Math.max(0, filled / total))
+  const edited = hasData
+  const rawPct = Math.round(progress * 100)
+  const displayProgress = edited && rawPct === 0 ? 0.05 : progress
+  const displayPct = Math.round(displayProgress * 100)
+  const stroke = displayProgress * DONUT_CIRCUMFERENCE
+  const tooltip = accountOpeningChildId && subTaskSuffix && !lockedComplete
+    ? `${displayPct}% complete · ${filled}/${total} fields`
+    : `${displayPct}% complete${edited ? ' · Edited' : ''}`
 
   return (
     <Tooltip>
       <TooltipTrigger asChild>
-        <span className={cn('shrink-0 flex items-center', statusColors[status])}>
-          <Icon className="h-3.5 w-3.5" />
+        <span className="shrink-0 flex items-center justify-center h-3.5 w-3.5">
+          <svg className="h-3.5 w-3.5" viewBox="0 0 20 20">
+            <circle
+              cx="10"
+              cy="10"
+              r={DONUT_R}
+              fill="none"
+              strokeWidth="3"
+              stroke="var(--color-border-secondary)"
+            />
+            {displayProgress > 0 && (
+              <circle
+                cx="10"
+                cy="10"
+                r={DONUT_R}
+                fill="none"
+                strokeWidth="3"
+                stroke="var(--color-fill-category1-primary)"
+                strokeDasharray={`${stroke} ${DONUT_CIRCUMFERENCE}`}
+                strokeLinecap="round"
+                transform="rotate(-90 10 10)"
+              />
+            )}
+          </svg>
         </span>
       </TooltipTrigger>
       <TooltipContent side="right">
-        <p>{statusLabels[status]}</p>
+        <p>{tooltip}</p>
       </TooltipContent>
     </Tooltip>
   )
 }
-
-import { childStatusConfig, deriveChildDisplayStatus } from '@/utils/childStatusDisplay'
-import type { ChildDisplayStatus } from '@/utils/childStatusDisplay'
 
 function useChildOverallStatus(childId: string): ChildDisplayStatus {
   const { state } = useWorkflow()
@@ -70,7 +100,7 @@ function useChildOverallStatus(childId: string): ChildDisplayStatus {
     .flatMap((t) => t.children ?? [])
     .find((c) => c.id === childId)
 
-  return deriveChildDisplayStatus(child?.status ?? 'not_started', state.childReviewState)
+  return deriveChildDisplayStatus(child?.status ?? 'not_started', state.childReviewsByChildId?.[childId])
 }
 
 function backLabelForParent(formKey: string | undefined): string {
@@ -96,7 +126,9 @@ export function ChildActionSidebar() {
   if (!ctx) return null
 
   const { child, config, subTaskIndex, parentTask } = ctx
-  const showSubTaskNumbers = child.childType !== 'account-opening'
+  /** Match account opening: no "1." prefixes on sub-task labels (KYC has a single step today). */
+  const showSubTaskNumbers =
+    child.childType !== 'account-opening' && child.childType !== 'kyc'
   const viewMode = state.demoViewMode
   const isHoKycView = viewMode === 'ho-kyc'
   const isHoPrincipalKycView = viewMode === 'ho-principal-kyc'
@@ -156,9 +188,13 @@ export function ChildActionSidebar() {
                       {showSubTaskNumbers && (
                         <span className="text-xs text-muted-foreground w-4 shrink-0">{idx + 1}.</span>
                       )}
-                      {subTask.title}
+                      {getSubTaskDisplayTitle(child.childType, subTask, viewMode)}
                     </span>
-                    <SubTaskStatusBadge subTaskId={subTaskId} />
+                    <SubTaskStatusBadge
+                      subTaskId={subTaskId}
+                      accountOpeningChildId={child.childType === 'account-opening' ? child.id : undefined}
+                      subTaskSuffix={child.childType === 'account-opening' ? subTask.suffix : undefined}
+                    />
                   </button>
                 </li>
               )

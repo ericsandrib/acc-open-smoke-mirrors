@@ -17,7 +17,14 @@ import {
   getRegistrationDocumentsForType,
   getDocSubTypes,
   partitionRegistrationDocumentsByFulfillment,
+  getAssigneePartyIdsForClientUploadDoc,
 } from '@/utils/registrationDocuments'
+import { WetSignedFirmUploadsGroup } from '@/components/wizard/forms/WetSignedFirmUploadsGroup'
+import {
+  parseWetSignedFirmUploads,
+  WET_SIGNED_FIRM_UPLOADS_KEY,
+  type WetSignedFirmUpload,
+} from '@/utils/wetSignedFirmUploads'
 
 interface DocInstance {
   id: string
@@ -37,11 +44,9 @@ export function AcctChildDocumentsReviewForm() {
   const { data, updateField } = useTaskData(taskId || '__no_child__')
   const { data: openAccountsData, updateField: updateOpenAccountsField } = useTaskData('open-accounts')
 
-  if (!ctx) {
-    return <p className="text-sm text-muted-foreground">Open this step from account opening.</p>
-  }
-
-  const childMeta = (state.taskData[ctx.child.id] as Record<string, unknown> | undefined) ?? undefined
+  const childMeta = ctx
+    ? ((state.taskData[ctx.child.id] as Record<string, unknown> | undefined) ?? undefined)
+    : undefined
   const registrationType = (childMeta?.registrationType as RegistrationType | undefined) ?? undefined
 
   const ruleDrivenDocs = useMemo(() => {
@@ -54,7 +59,44 @@ export function AcctChildDocumentsReviewForm() {
     }
   }, [registrationType, state.relatedParties])
 
-  const ownersTaskId = `${ctx.child.id}-account-owners`
+  const openAccountsTask = state.tasks.find((t) => t.formKey === 'open-accounts')
+  const accountOpeningChildren = (openAccountsTask?.children ?? []).filter((c) => c.childType === 'account-opening')
+
+  const wetSignedAccountOptions = useMemo(() => {
+    return accountOpeningChildren.map((c) => {
+      const childMeta = state.taskData[c.id] as Record<string, unknown> | undefined
+      const accountNumber =
+        typeof childMeta?.accountNumber === 'string' && childMeta.accountNumber.trim()
+          ? childMeta.accountNumber.trim()
+          : undefined
+      const acctDigits = (accountNumber ?? '').replace(/\D/g, '')
+      const last4 = acctDigits.length ? acctDigits.slice(-4) : ''
+      const label = last4 ? `${c.name} …${last4}` : c.name
+      return { childId: c.id, label, accountNumber }
+    })
+  }, [accountOpeningChildren, state.taskData])
+
+  const wetSignedFirmUploads = useMemo(
+    () => parseWetSignedFirmUploads(openAccountsData as Record<string, unknown>),
+    [openAccountsData],
+  )
+
+  const wetSignedFirmUploadsForChild = useMemo(() => {
+    if (!ctx) return []
+    const cid = ctx.child.id
+    return wetSignedFirmUploads.filter((u) => !u.accountChildId || u.accountChildId === cid)
+  }, [wetSignedFirmUploads, ctx])
+
+  const mergeWetSignedFirmUploadsForChild = (next: WetSignedFirmUpload[]) => {
+    if (!ctx) return
+    const cid = ctx.child.id
+    const taggedOtherAccounts = wetSignedFirmUploads.filter(
+      (u) => u.accountChildId != null && u.accountChildId !== cid,
+    )
+    updateOpenAccountsField(WET_SIGNED_FIRM_UPLOADS_KEY, [...taggedOtherAccounts, ...next])
+  }
+
+  const ownersTaskId = ctx ? `${ctx.child.id}-account-owners` : ''
   const ownersData = state.taskData[ownersTaskId] as Record<string, unknown> | undefined
   const owners = (ownersData?.owners as OwnerRow[] | undefined) ?? []
   const selectedOwnerPartyIds = useMemo(
@@ -65,12 +107,16 @@ export function AcctChildDocumentsReviewForm() {
   const allDocInstances = useMemo(() => {
     if (selectedOwnerPartyIds.size === 0 || ruleDrivenDocs.clientUpload.length === 0) return []
     const results: (DocInstance & { docLabel: string; ownerName: string })[] = []
-    const ownerIds = Array.from(selectedOwnerPartyIds)
 
     for (const doc of ruleDrivenDocs.clientUpload) {
       const parentInstances = (openAccountsData[`doc-instances-${doc.id}`] as DocInstance[] | undefined) ?? []
+      const assigneeIds = getAssigneePartyIdsForClientUploadDoc(
+        doc.id,
+        state.relatedParties,
+        selectedOwnerPartyIds,
+      )
 
-      for (const ownerId of ownerIds) {
+      for (const ownerId of assigneeIds) {
         const member = state.relatedParties.find((p) => p.id === ownerId)
         const ownerName = member?.name ?? 'Unknown'
         const parentMatch = parentInstances.find((inst) => inst.assignedTo === ownerId)
@@ -168,6 +214,10 @@ export function AcctChildDocumentsReviewForm() {
     input.click()
   }
 
+  if (!ctx) {
+    return <p className="text-sm text-muted-foreground">Open this step from account opening.</p>
+  }
+
   return (
     <div className="space-y-8">
       <section className="space-y-4">
@@ -192,32 +242,50 @@ export function AcctChildDocumentsReviewForm() {
           </div>
           <p className="text-[11px] text-muted-foreground leading-snug">
             After the client completes eSign, use View / Download for each form, or open the bundle viewer to review the
-            full signed package in one place. Demo PDFs are placeholders; drafts are edited in the eSign envelope step
-            — this list shows executed copies only.
+            full signed package in one place. Demo PDFs are placeholders; drafts are edited in the eSign envelope step—this
+            list shows executed copies for this registration type. Wet-signed scans are added in the group below with
+            document type, account, and notes; data is stored once on{' '}
+            <span className="font-medium text-foreground">Open accounts</span> for the whole application.
           </p>
           {ruleDrivenDocs.firmCustodianEsign.length > 0 ? (
-            <ul className="space-y-2">
-              {ruleDrivenDocs.firmCustodianEsign.map((doc) => (
-                <li
-                  key={doc.id}
-                  className="flex items-center gap-3 rounded-lg border border-border bg-background px-3 py-2.5 shadow-sm"
-                >
-                  <div
-                    className="flex h-11 w-11 shrink-0 items-center justify-center rounded-md border border-red-200 bg-red-50 text-red-700 dark:border-red-900/60 dark:bg-red-950/40 dark:text-red-300"
-                    aria-hidden
+            <>
+              <ul className="space-y-2">
+                {ruleDrivenDocs.firmCustodianEsign.map((doc) => (
+                  <li
+                    key={doc.id}
+                    className="rounded-lg border border-border bg-background px-3 py-2.5 shadow-sm"
                   >
-                    <FileText className="h-5 w-5" strokeWidth={1.75} />
-                  </div>
-                  <div className="min-w-0 flex-1">
-                    <p className="text-sm font-medium text-foreground truncate">{doc.label}</p>
-                    <p className="text-[11px] text-muted-foreground line-clamp-2">
-                      Fully executed · client eSign complete (demo PDF)
-                    </p>
-                  </div>
-                  <EsignFormPdfSampleActions formIdOrDocId={doc.id} displayLabel={doc.label} viewMode="signed" />
-                </li>
-              ))}
-            </ul>
+                    <div className="flex items-center gap-3">
+                      <div
+                        className="flex h-11 w-11 shrink-0 items-center justify-center rounded-md border border-red-200 bg-red-50 text-red-700 dark:border-red-900/60 dark:bg-red-950/40 dark:text-red-300"
+                        aria-hidden
+                      >
+                        <FileText className="h-5 w-5" strokeWidth={1.75} />
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <p className="text-sm font-medium text-foreground truncate">{doc.label}</p>
+                        <p className="text-[11px] text-muted-foreground line-clamp-2">
+                          Fully executed · client eSign complete (demo PDF)
+                        </p>
+                      </div>
+                      <EsignFormPdfSampleActions formIdOrDocId={doc.id} displayLabel={doc.label} viewMode="signed" />
+                    </div>
+                  </li>
+                ))}
+              </ul>
+              <div className="border-t border-border pt-4 mt-4 space-y-2">
+                <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                  Wet-signed document uploads
+                </p>
+                <WetSignedFirmUploadsGroup
+                  documentTypes={ruleDrivenDocs.firmCustodianEsign.map((d) => ({ id: d.id, label: d.label }))}
+                  accountOptions={wetSignedAccountOptions}
+                  uploads={wetSignedFirmUploadsForChild}
+                  onChange={mergeWetSignedFirmUploadsForChild}
+                  defaultAccountChildId={ctx.child.id}
+                />
+              </div>
+            </>
           ) : (
             <p className="text-xs text-muted-foreground">No eSign firm/custodian forms required for this registration type.</p>
           )}

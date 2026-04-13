@@ -1,6 +1,6 @@
 import { useWorkflow } from '@/stores/workflowStore'
 import { formComponents, taskDescriptions } from './formRegistry'
-import { parseChildSubTaskId } from '@/utils/childTaskRegistry'
+import { parseChildSubTaskId, getSubTaskDisplayTitle } from '@/utils/childTaskRegistry'
 import { Clock, AlertTriangle } from 'lucide-react'
 
 function ReviewBanner() {
@@ -69,7 +69,9 @@ export function TaskContent() {
 
   const formKey = activeTask?.formKey ?? activeChild?.formKey ?? subTaskDef?.formKey
   const title = activeTask?.title
-    ?? (subTaskChild && subTaskDef ? `${subTaskChild.name} — ${subTaskDef.title}` : null)
+    ?? (subTaskChild && subTaskDef && parsed
+      ? `${subTaskChild.name} — ${getSubTaskDisplayTitle(parsed.config.childType, subTaskDef, state.demoViewMode)}`
+      : null)
     ?? activeChild?.name
     ?? ''
 

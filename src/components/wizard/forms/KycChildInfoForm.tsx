@@ -200,6 +200,7 @@ export function KycChildInfoForm() {
 
   const statusLocked = child.status === 'awaiting_review' || child.status === 'complete' || child.status === 'rejected'
   const isLocked = statusLocked && !advisorUnlocked
+  const isApproved = child.status === 'complete'
   const str = (key: string) => (data[key] as string) ?? ''
   const mailingSame = str('mailingSameAsLegal') !== 'false'
 
@@ -217,14 +218,25 @@ export function KycChildInfoForm() {
   return (
     <div className="space-y-6" ref={topRef}>
       {isLocked && (
-        <div className="rounded-md border border-amber-200 bg-amber-50 dark:border-amber-900/60 dark:bg-amber-950/40 px-3 py-2.5">
-          <div className="flex items-center gap-2">
-            <Lock className="h-4 w-4 text-amber-600 dark:text-amber-400 shrink-0" />
-            <p className="text-xs font-medium text-amber-900 dark:text-amber-100">
-              This submission is under review. Fields are locked and cannot be edited.
-            </p>
+        isApproved ? (
+          <div className="rounded-md border border-green-200 bg-green-50 dark:border-green-900/60 dark:bg-green-950/40 px-3 py-2.5">
+            <div className="flex items-center gap-2">
+              <CheckCircle2 className="h-4 w-4 text-green-600 dark:text-green-400 shrink-0" />
+              <p className="text-xs font-medium text-green-900 dark:text-green-100">
+                This KYC package has been approved. Fields are read-only.
+              </p>
+            </div>
           </div>
-        </div>
+        ) : (
+          <div className="rounded-md border border-amber-200 bg-amber-50 dark:border-amber-900/60 dark:bg-amber-950/40 px-3 py-2.5">
+            <div className="flex items-center gap-2">
+              <Lock className="h-4 w-4 text-amber-600 dark:text-amber-400 shrink-0" />
+              <p className="text-xs font-medium text-amber-900 dark:text-amber-100">
+                This submission is under review. Fields are locked and cannot be edited.
+              </p>
+            </div>
+          </div>
+        )
       )}
 
       {!isLocked && submitAttempted && allErrors.length > 0 && (

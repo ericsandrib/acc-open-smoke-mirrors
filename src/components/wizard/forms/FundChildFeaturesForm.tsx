@@ -5,8 +5,12 @@ import { Badge } from '@/components/ui/badge'
 import { FeatureServiceLinePickerDialog } from '@/components/wizard/forms/FeatureServiceLinePickerDialog'
 import { spawnFeatureServiceLineChildren, type FeatureServiceLineRowInput } from '@/utils/spawnFeatureServiceLineChildren'
 import { getSubTaskIndexByFormKey } from '@/utils/childTaskRegistry'
-import { LayoutGrid, Plus, ChevronRight } from 'lucide-react'
+import { LayoutGrid, Plus } from 'lucide-react'
 import type { ChildTask } from '@/types/workflow'
+import { ChildActionKebabMenu } from '@/components/wizard/ChildActionKebabMenu'
+import { ChildActionTimelineSheet } from '@/components/wizard/ChildActionTimelineSheet'
+import { childStatusConfig, deriveChildDisplayStatus } from '@/utils/childStatusDisplay'
+import { cn } from '@/lib/utils'
 
 /**
  * Hub step (per account child): list account feature / service workflows—mirrors Funding & asset movement on the same account.
@@ -15,6 +19,7 @@ export function FundChildFeaturesForm() {
   const { state, dispatch } = useWorkflow()
   const ctx = useChildActionContext()
   const [pickerOpen, setPickerOpen] = useState(false)
+  const [timelineChild, setTimelineChild] = useState<ChildTask | null>(null)
 
   const openAccountsTask = state.tasks.find((t) => t.formKey === 'open-accounts')
   const featuresSubTaskIndex = getSubTaskIndexByFormKey('account-opening', 'acct-child-features-services')
@@ -75,7 +80,7 @@ export function FundChildFeaturesForm() {
             {linesForAccount.map((line) => (
               <div
                 key={line.id}
-                className="flex items-center justify-between rounded-lg border border-border p-3 hover:bg-muted/50 transition-colors"
+                className="group flex items-center justify-between rounded-lg border border-border p-3 hover:bg-muted/50 transition-colors"
               >
                 <button
                   type="button"
@@ -88,16 +93,30 @@ export function FundChildFeaturesForm() {
                   <span className="text-sm font-medium truncate">{line.name}</span>
                 </button>
                 <div className="flex items-center gap-2 shrink-0">
-                  <Badge variant="secondary" className="capitalize text-xs">
-                    {line.status.replace('_', ' ')}
-                  </Badge>
-                  <button
-                    type="button"
-                    onClick={() => enterLine(line)}
-                    className="cursor-pointer p-0.5 rounded-md hover:bg-muted"
-                  >
-                    <ChevronRight className="h-4 w-4 text-muted-foreground" aria-hidden />
-                  </button>
+                  {(() => {
+                    const displayStatus = deriveChildDisplayStatus(line.status)
+                    const cfg = childStatusConfig[displayStatus]
+                    return (
+                      <Badge
+                        variant="outline"
+                        className={cn('text-xs capitalize group-hover:hidden', cfg.className)}
+                      >
+                        {cfg.label}
+                      </Badge>
+                    )
+                  })()}
+                  <div className="hidden group-hover:block">
+                    <ChildActionKebabMenu
+                      onViewDetails={() => setTimelineChild(line)}
+                      onDelete={() =>
+                        dispatch({
+                          type: 'REMOVE_CHILD',
+                          parentTaskId: openAccountsTask.id,
+                          childId: line.id,
+                        })
+                      }
+                    />
+                  </div>
                 </div>
               </div>
             ))}
@@ -118,6 +137,12 @@ export function FundChildFeaturesForm() {
 
         <FeatureServiceLinePickerDialog open={pickerOpen} onOpenChange={setPickerOpen} onConfirm={handleConfirm} />
       </section>
+
+      <ChildActionTimelineSheet
+        open={!!timelineChild}
+        onOpenChange={(open) => !open && setTimelineChild(null)}
+        child={timelineChild}
+      />
     </div>
   )
 }

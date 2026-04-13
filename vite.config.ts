@@ -5,6 +5,16 @@ import path from 'path'
 
 export default defineConfig({
   plugins: [react(), tailwindcss()],
+  server: {
+    watch: {
+      // Polling is more reliable in some virtualized/dev-container environments where FS events drop.
+      usePolling: true,
+      interval: 120,
+    },
+    hmr: {
+      overlay: true,
+    },
+  },
   resolve: {
     alias: {
       '@': path.resolve(__dirname, './src'),

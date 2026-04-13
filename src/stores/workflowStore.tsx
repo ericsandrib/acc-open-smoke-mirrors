@@ -1,5 +1,5 @@
 import { createContext, useContext, useReducer, useCallback, type ReactNode } from 'react'
-import type { WorkflowState, WorkflowAction, Task } from '@/types/workflow'
+import type { WorkflowState, WorkflowAction, Task, ChildReviewState, ChildType } from '@/types/workflow'
 import {
   actions,
   tasks,
@@ -10,7 +10,40 @@ import {
 import { getChildSubTaskIds, getChildTypeConfig, parseChildSubTaskId } from '@/utils/childTaskRegistry'
 import { generateAccountOpenIdentifiers } from '@/utils/accountOpenIdentifiers'
 
+export function getChildReviewState(state: WorkflowState, childId: string | undefined): ChildReviewState | undefined {
+  if (!childId) return undefined
+  return state.childReviewsByChildId?.[childId]
+}
+
+export function getChildReviewDecision(state: WorkflowState, childId: string | undefined) {
+  if (!childId) return undefined
+  return state.childReviewDecisionsByChildId?.[childId]
+}
+
 let childIdCounter = 0
+
+/** KYC-only demo views — invalid when drilling into account opening (or similar) children. */
+const KYC_DEMO_VIEW_MODES = new Set(['aml', 'ho-kyc', 'ho-principal-kyc'])
+/** Account HO demo views — invalid when drilling into a KYC child. */
+const ACCOUNT_HO_DEMO_VIEW_MODES = new Set(['ho-documents', 'ho-principal'])
+
+function sanitizeDemoViewModeForChild(
+  mode: WorkflowState['demoViewMode'] | undefined,
+  childType: ChildType | undefined,
+): WorkflowState['demoViewMode'] | undefined {
+  if (childType == null || mode == null) return mode
+  if (childType === 'kyc') {
+    return ACCOUNT_HO_DEMO_VIEW_MODES.has(mode) ? 'advisor' : mode
+  }
+  if (
+    childType === 'account-opening' ||
+    childType === 'funding-line' ||
+    childType === 'feature-service-line'
+  ) {
+    return KYC_DEMO_VIEW_MODES.has(mode) ? 'advisor' : mode
+  }
+  return mode
+}
 
 function computeFlatTaskOrder(allTasks: Task[], allActions: typeof actions): string[] {
   const order: string[] = []
@@ -268,13 +301,22 @@ function workflowReducer(state: WorkflowState, action: WorkflowAction): Workflow
         for (const id of subTaskIds) {
           delete remainingTaskData[id]
         }
+        delete remainingTaskData[action.childId]
       }
+      const removedWasActiveChild = state.activeChildActionId === action.childId
       return {
         ...state,
         tasks: newTasks,
         flatTaskOrder: newOrder,
         activeTaskId: activeStillExists ? state.activeTaskId : action.parentTaskId,
         taskData: remainingTaskData,
+        ...(removedWasActiveChild
+          ? {
+              activeChildActionId: undefined,
+              activeChildSubTaskIndex: undefined,
+              childActionResume: undefined,
+            }
+          : {}),
       }
     }
 
@@ -423,7 +465,7 @@ function workflowReducer(state: WorkflowState, action: WorkflowAction): Workflow
           },
         },
         journeyName: action.journeyName,
-        journeyId: `journey-${Date.now()}`,
+        journeyId: action.journeyId ?? `journey-${Date.now()}`,
         assignedTo: assignee,
         submittedTaskIds: [],
         activeChildActionId: undefined,
@@ -461,19 +503,30 @@ function workflowReducer(state: WorkflowState, action: WorkflowAction): Workflow
         .find((c) => c.id === action.childId)
       const isAwaitingReview = enteredChild?.status === 'awaiting_review'
       const isAccountOpeningAwaiting = isAwaitingReview && enteredChild?.childType === 'account-opening'
+      const kycEnteredWithPipeline =
+        enteredChild?.childType === 'kyc' &&
+        (enteredChild.status === 'awaiting_review' ||
+          enteredChild.status === 'complete' ||
+          enteredChild.status === 'rejected')
+      const seedTime = new Date().toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })
+      const nextDemoRaw =
+        isAwaitingReview
+          ? isAccountOpeningAwaiting
+            ? (state.demoViewMode ?? 'ho-documents')
+            : (state.demoViewMode ?? 'advisor')
+          : kycEnteredWithPipeline
+            ? (state.demoViewMode ?? 'advisor')
+            : state.demoViewMode
       return {
         ...state,
         activeChildActionId: action.childId,
         activeChildSubTaskIndex: action.subTaskIndex ?? 0,
         childActionResume: action.resumeAfterExit,
-        demoViewMode: isAwaitingReview
-          ? isAccountOpeningAwaiting
-            ? (state.demoViewMode ?? 'ho-documents')
-            : (state.demoViewMode ?? 'advisor')
-          : state.demoViewMode,
-        submittedAt: isAwaitingReview
-          ? (state.submittedAt ?? new Date().toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' }))
-          : state.submittedAt,
+        demoViewMode: sanitizeDemoViewModeForChild(nextDemoRaw, enteredChild?.childType),
+        submittedAt:
+          isAwaitingReview || kycEnteredWithPipeline
+            ? (state.submittedAt ?? seedTime)
+            : state.submittedAt,
       }
     }
 
@@ -492,10 +545,6 @@ function workflowReducer(state: WorkflowState, action: WorkflowAction): Workflow
         activeChildActionId: undefined,
         activeChildSubTaskIndex: undefined,
         childActionResume: undefined,
-        demoViewMode: undefined,
-        submittedAt: undefined,
-        childReviewDecision: undefined,
-        childReviewState: undefined,
       }
     }
 
@@ -611,35 +660,36 @@ function workflowReducer(state: WorkflowState, action: WorkflowAction): Workflow
           ),
         }
       })
+      const initialForChild: ChildReviewState = isKycChild
+        ? {
+            amlReview: { status: 'pending' as const },
+            cipStatus: {
+              idVerification: 'pass' as const,
+              addressMatch: 'pass' as const,
+              dobMatch: 'pass' as const,
+              overallStatus: 'pass' as const,
+            },
+            hoKycReview: { status: 'pending' as const },
+            validationErrors: [],
+          }
+        : isAccountOpeningChild
+          ? {
+              documentReview: { status: 'pending' },
+              principalReview: { status: 'pending' },
+            }
+          : {
+              amlReview: { status: 'pending' as const },
+              documentReview: { status: 'pending' },
+              principalReview: { status: 'pending' },
+            }
+
       return {
         ...state,
         tasks: updTasks,
         activeChildSubTaskIndex: 0,
-        childReviewState: {
-          ...state.childReviewState,
-          ...(isKycChild
-            ? {
-                amlReview: { status: 'pending' as const },
-                cipStatus: {
-                  idVerification: 'pass' as const,
-                  addressMatch: 'pass' as const,
-                  dobMatch: 'pass' as const,
-                  overallStatus: 'pass' as const,
-                },
-                hoKycReview: { status: 'pending' as const },
-                validationErrors: [],
-              }
-            : isAccountOpeningChild
-              ? {
-                  documentReview: { status: 'pending' },
-                  principalReview: { status: 'pending' },
-                }
-              : {
-                  amlReview: { status: 'pending' as const },
-                  documentReview: { status: 'pending' },
-                  principalReview: { status: 'pending' },
-                }
-          ),
+        childReviewsByChildId: {
+          ...state.childReviewsByChildId,
+          [cid]: initialForChild,
         },
       }
     }
@@ -647,6 +697,7 @@ function workflowReducer(state: WorkflowState, action: WorkflowAction): Workflow
     case 'ACCEPT_CHILD_REVIEW': {
       if (!state.activeChildActionId) return state
       const acId = state.activeChildActionId
+      const decidedAt = new Date().toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })
       const acTasks = state.tasks.map((t) => {
         if (!t.children) return t
         return {
@@ -659,9 +710,9 @@ function workflowReducer(state: WorkflowState, action: WorkflowAction): Workflow
       return {
         ...state,
         tasks: acTasks,
-        childReviewDecision: {
-          outcome: 'approved',
-          decidedAt: new Date().toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' }),
+        childReviewDecisionsByChildId: {
+          ...state.childReviewDecisionsByChildId,
+          [acId]: { outcome: 'approved', decidedAt },
         },
       }
     }
@@ -669,6 +720,7 @@ function workflowReducer(state: WorkflowState, action: WorkflowAction): Workflow
     case 'REJECT_CHILD_REVIEW': {
       if (!state.activeChildActionId) return state
       const rcId = state.activeChildActionId
+      const decidedAt = new Date().toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })
       const rcTasks = state.tasks.map((t) => {
         if (!t.children) return t
         return {
@@ -688,31 +740,36 @@ function workflowReducer(state: WorkflowState, action: WorkflowAction): Workflow
             rejectionFeedback: action.feedback,
           },
         },
-        childReviewDecision: {
-          outcome: 'rejected',
-          decidedAt: new Date().toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' }),
+        childReviewDecisionsByChildId: {
+          ...state.childReviewDecisionsByChildId,
+          [rcId]: { outcome: 'rejected', decidedAt },
         },
       }
     }
 
     case 'SET_AML_FLAG': {
+      const cid = state.activeChildActionId
+      if (!cid) return state
+      const prev = state.childReviewsByChildId?.[cid] ?? {}
       return {
         ...state,
-        childReviewState: {
-          ...state.childReviewState,
-          amlFlagged: action.flagged,
-          amlNotes: action.notes,
+        childReviewsByChildId: {
+          ...state.childReviewsByChildId,
+          [cid]: { ...prev, amlFlagged: action.flagged, amlNotes: action.notes },
         },
       }
     }
 
     case 'DOCUMENT_REVIEW_IGO': {
+      const cid = state.activeChildActionId
+      if (!cid) return state
       const ts = new Date().toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })
+      const prev = state.childReviewsByChildId?.[cid] ?? {}
       return {
         ...state,
-        childReviewState: {
-          ...state.childReviewState,
-          documentReview: { status: 'igo', decidedAt: ts },
+        childReviewsByChildId: {
+          ...state.childReviewsByChildId,
+          [cid]: { ...prev, documentReview: { status: 'igo', decidedAt: ts } },
         },
       }
     }
@@ -730,14 +787,21 @@ function workflowReducer(state: WorkflowState, action: WorkflowAction): Workflow
           ),
         }
       })
+      const prevDnigo = state.childReviewsByChildId?.[dnigoId] ?? {}
       return {
         ...state,
         tasks: dnigoTasks,
-        childReviewState: {
-          ...state.childReviewState,
-          documentReview: { status: 'nigo', decidedAt: ts, nigoReason: action.reason, nigoFeedback: action.feedback },
+        childReviewsByChildId: {
+          ...state.childReviewsByChildId,
+          [dnigoId]: {
+            ...prevDnigo,
+            documentReview: { status: 'nigo', decidedAt: ts, nigoReason: action.reason, nigoFeedback: action.feedback },
+          },
         },
-        childReviewDecision: { outcome: 'rejected', decidedAt: ts },
+        childReviewDecisionsByChildId: {
+          ...state.childReviewDecisionsByChildId,
+          [dnigoId]: { outcome: 'rejected', decidedAt: ts },
+        },
         taskData: {
           ...state.taskData,
           [`${dnigoId}-review`]: {
@@ -753,7 +817,8 @@ function workflowReducer(state: WorkflowState, action: WorkflowAction): Workflow
       if (!state.activeChildActionId) return state
       const pigoId = state.activeChildActionId
       const ts = new Date().toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })
-      const docIgo = state.childReviewState?.documentReview?.status === 'igo'
+      const prevPigo = state.childReviewsByChildId?.[pigoId] ?? {}
+      const docIgo = prevPigo.documentReview?.status === 'igo'
       const pigoTasks = state.tasks.map((t) => {
         if (!t.children) return t
         return {
@@ -766,11 +831,13 @@ function workflowReducer(state: WorkflowState, action: WorkflowAction): Workflow
       return {
         ...state,
         tasks: pigoTasks,
-        childReviewState: {
-          ...state.childReviewState,
-          principalReview: { status: 'igo', decidedAt: ts },
+        childReviewsByChildId: {
+          ...state.childReviewsByChildId,
+          [pigoId]: { ...prevPigo, principalReview: { status: 'igo', decidedAt: ts } },
         },
-        childReviewDecision: docIgo ? { outcome: 'approved', decidedAt: ts } : state.childReviewDecision,
+        childReviewDecisionsByChildId: docIgo
+          ? { ...state.childReviewDecisionsByChildId, [pigoId]: { outcome: 'approved', decidedAt: ts } }
+          : state.childReviewDecisionsByChildId,
       }
     }
 
@@ -778,6 +845,7 @@ function workflowReducer(state: WorkflowState, action: WorkflowAction): Workflow
       if (!state.activeChildActionId) return state
       const pnigoId = state.activeChildActionId
       const ts = new Date().toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })
+      const prevPnigo = state.childReviewsByChildId?.[pnigoId] ?? {}
       const pnigoTasks = state.tasks.map((t) => {
         if (!t.children) return t
         return {
@@ -790,11 +858,17 @@ function workflowReducer(state: WorkflowState, action: WorkflowAction): Workflow
       return {
         ...state,
         tasks: pnigoTasks,
-        childReviewState: {
-          ...state.childReviewState,
-          principalReview: { status: 'nigo', decidedAt: ts, nigoReason: action.reason, nigoFeedback: action.feedback },
+        childReviewsByChildId: {
+          ...state.childReviewsByChildId,
+          [pnigoId]: {
+            ...prevPnigo,
+            principalReview: { status: 'nigo', decidedAt: ts, nigoReason: action.reason, nigoFeedback: action.feedback },
+          },
         },
-        childReviewDecision: { outcome: 'rejected', decidedAt: ts },
+        childReviewDecisionsByChildId: {
+          ...state.childReviewDecisionsByChildId,
+          [pnigoId]: { outcome: 'rejected', decidedAt: ts },
+        },
         taskData: {
           ...state.taskData,
           [`${pnigoId}-review`]: {
@@ -809,11 +883,13 @@ function workflowReducer(state: WorkflowState, action: WorkflowAction): Workflow
     case 'AML_REVIEW_CLEAR': {
       if (!state.activeChildActionId) return state
       const amlClearTs = new Date().toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })
+      const cid = state.activeChildActionId
+      const prev = state.childReviewsByChildId?.[cid] ?? {}
       return {
         ...state,
-        childReviewState: {
-          ...state.childReviewState,
-          amlReview: { status: 'cleared', decidedAt: amlClearTs },
+        childReviewsByChildId: {
+          ...state.childReviewsByChildId,
+          [cid]: { ...prev, amlReview: { status: 'cleared', decidedAt: amlClearTs } },
         },
       }
     }
@@ -822,6 +898,7 @@ function workflowReducer(state: WorkflowState, action: WorkflowAction): Workflow
       if (!state.activeChildActionId) return state
       const amlFlagTs = new Date().toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })
       const amlFlagId = state.activeChildActionId
+      const prevFlag = state.childReviewsByChildId?.[amlFlagId] ?? {}
       const amlFlagTasks = state.tasks.map((t) => {
         if (!t.children) return t
         return {
@@ -834,11 +911,17 @@ function workflowReducer(state: WorkflowState, action: WorkflowAction): Workflow
       return {
         ...state,
         tasks: amlFlagTasks,
-        childReviewState: {
-          ...state.childReviewState,
-          amlReview: { status: 'flagged', decidedAt: amlFlagTs, findings: action.findings },
+        childReviewsByChildId: {
+          ...state.childReviewsByChildId,
+          [amlFlagId]: {
+            ...prevFlag,
+            amlReview: { status: 'flagged', decidedAt: amlFlagTs, findings: action.findings },
+          },
         },
-        childReviewDecision: { outcome: 'rejected', decidedAt: amlFlagTs },
+        childReviewDecisionsByChildId: {
+          ...state.childReviewDecisionsByChildId,
+          [amlFlagId]: { outcome: 'rejected', decidedAt: amlFlagTs },
+        },
       }
     }
 
@@ -846,6 +929,7 @@ function workflowReducer(state: WorkflowState, action: WorkflowAction): Workflow
       if (!state.activeChildActionId) return state
       const hoApproveTs = new Date().toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })
       const hoApproveId = state.activeChildActionId
+      const prevHo = state.childReviewsByChildId?.[hoApproveId] ?? {}
       const hoApproveTasks = state.tasks.map((t) => {
         if (!t.children) return t
         return {
@@ -858,11 +942,14 @@ function workflowReducer(state: WorkflowState, action: WorkflowAction): Workflow
       return {
         ...state,
         tasks: hoApproveTasks,
-        childReviewState: {
-          ...state.childReviewState,
-          hoKycReview: { status: 'approved', decidedAt: hoApproveTs },
+        childReviewsByChildId: {
+          ...state.childReviewsByChildId,
+          [hoApproveId]: { ...prevHo, hoKycReview: { status: 'approved', decidedAt: hoApproveTs } },
         },
-        childReviewDecision: { outcome: 'approved', decidedAt: hoApproveTs },
+        childReviewDecisionsByChildId: {
+          ...state.childReviewDecisionsByChildId,
+          [hoApproveId]: { outcome: 'approved', decidedAt: hoApproveTs },
+        },
       }
     }
 
@@ -870,6 +957,7 @@ function workflowReducer(state: WorkflowState, action: WorkflowAction): Workflow
       if (!state.activeChildActionId) return state
       const hoReqTs = new Date().toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })
       const hoReqId = state.activeChildActionId
+      const prevReq = state.childReviewsByChildId?.[hoReqId] ?? {}
       const hoReqTasks = state.tasks.map((t) => {
         if (!t.children) return t
         return {
@@ -882,11 +970,17 @@ function workflowReducer(state: WorkflowState, action: WorkflowAction): Workflow
       return {
         ...state,
         tasks: hoReqTasks,
-        childReviewState: {
-          ...state.childReviewState,
-          hoKycReview: { status: 'changes_requested', decidedAt: hoReqTs, comments: action.comments },
+        childReviewsByChildId: {
+          ...state.childReviewsByChildId,
+          [hoReqId]: {
+            ...prevReq,
+            hoKycReview: { status: 'changes_requested', decidedAt: hoReqTs, comments: action.comments },
+          },
         },
-        childReviewDecision: { outcome: 'rejected', decidedAt: hoReqTs },
+        childReviewDecisionsByChildId: {
+          ...state.childReviewDecisionsByChildId,
+          [hoReqId]: { outcome: 'rejected', decidedAt: hoReqTs },
+        },
         demoViewMode: 'advisor',
       }
     }
@@ -894,15 +988,20 @@ function workflowReducer(state: WorkflowState, action: WorkflowAction): Workflow
     case 'AML_REQUEST_MORE_INFO': {
       if (!state.activeChildActionId) return state
       const amlInfoTs = new Date().toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })
+      const amlInfoId = state.activeChildActionId
+      const prevInfo = state.childReviewsByChildId?.[amlInfoId] ?? {}
       return {
         ...state,
-        childReviewState: {
-          ...state.childReviewState,
-          amlReview: {
-            ...state.childReviewState?.amlReview,
-            status: 'info_requested' as const,
-            decidedAt: amlInfoTs,
-            infoRequestComments: action.comments,
+        childReviewsByChildId: {
+          ...state.childReviewsByChildId,
+          [amlInfoId]: {
+            ...prevInfo,
+            amlReview: {
+              ...prevInfo.amlReview,
+              status: 'info_requested' as const,
+              decidedAt: amlInfoTs,
+              infoRequestComments: action.comments,
+            },
           },
         },
       }
@@ -912,6 +1011,7 @@ function workflowReducer(state: WorkflowState, action: WorkflowAction): Workflow
       if (!state.activeChildActionId) return state
       const sarTs = new Date().toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })
       const sarId = state.activeChildActionId
+      const prevSar = state.childReviewsByChildId?.[sarId] ?? {}
       const sarTasks = state.tasks.map((t) => {
         if (!t.children) return t
         return {
@@ -924,16 +1024,22 @@ function workflowReducer(state: WorkflowState, action: WorkflowAction): Workflow
       return {
         ...state,
         tasks: sarTasks,
-        childReviewState: {
-          ...state.childReviewState,
-          amlReview: {
-            ...state.childReviewState?.amlReview,
-            status: 'escalated' as const,
-            decidedAt: sarTs,
-            reason: action.reason,
+        childReviewsByChildId: {
+          ...state.childReviewsByChildId,
+          [sarId]: {
+            ...prevSar,
+            amlReview: {
+              ...prevSar.amlReview,
+              status: 'escalated' as const,
+              decidedAt: sarTs,
+              reason: action.reason,
+            },
           },
         },
-        childReviewDecision: { outcome: 'rejected', decidedAt: sarTs },
+        childReviewDecisionsByChildId: {
+          ...state.childReviewDecisionsByChildId,
+          [sarId]: { outcome: 'rejected', decidedAt: sarTs },
+        },
       }
     }
 
@@ -941,6 +1047,7 @@ function workflowReducer(state: WorkflowState, action: WorkflowAction): Workflow
       if (!state.activeChildActionId) return state
       const pkApproveTs = new Date().toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })
       const pkApproveId = state.activeChildActionId
+      const prevPk = state.childReviewsByChildId?.[pkApproveId] ?? {}
       const pkApproveTasks = state.tasks.map((t) => {
         if (!t.children) return t
         return {
@@ -953,11 +1060,17 @@ function workflowReducer(state: WorkflowState, action: WorkflowAction): Workflow
       return {
         ...state,
         tasks: pkApproveTasks,
-        childReviewState: {
-          ...state.childReviewState,
-          principalKycReview: { status: 'approved', decidedAt: pkApproveTs },
+        childReviewsByChildId: {
+          ...state.childReviewsByChildId,
+          [pkApproveId]: {
+            ...prevPk,
+            principalKycReview: { status: 'approved', decidedAt: pkApproveTs },
+          },
         },
-        childReviewDecision: { outcome: 'approved', decidedAt: pkApproveTs },
+        childReviewDecisionsByChildId: {
+          ...state.childReviewDecisionsByChildId,
+          [pkApproveId]: { outcome: 'approved', decidedAt: pkApproveTs },
+        },
       }
     }
 
@@ -965,6 +1078,7 @@ function workflowReducer(state: WorkflowState, action: WorkflowAction): Workflow
       if (!state.activeChildActionId) return state
       const pkRejectTs = new Date().toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })
       const pkRejectId = state.activeChildActionId
+      const prevReject = state.childReviewsByChildId?.[pkRejectId] ?? {}
       const pkRejectTasks = state.tasks.map((t) => {
         if (!t.children) return t
         return {
@@ -977,11 +1091,17 @@ function workflowReducer(state: WorkflowState, action: WorkflowAction): Workflow
       return {
         ...state,
         tasks: pkRejectTasks,
-        childReviewState: {
-          ...state.childReviewState,
-          principalKycReview: { status: 'rejected', decidedAt: pkRejectTs, reason: action.reason },
+        childReviewsByChildId: {
+          ...state.childReviewsByChildId,
+          [pkRejectId]: {
+            ...prevReject,
+            principalKycReview: { status: 'rejected', decidedAt: pkRejectTs, reason: action.reason },
+          },
         },
-        childReviewDecision: { outcome: 'rejected', decidedAt: pkRejectTs },
+        childReviewDecisionsByChildId: {
+          ...state.childReviewDecisionsByChildId,
+          [pkRejectId]: { outcome: 'rejected', decidedAt: pkRejectTs },
+        },
       }
     }
 
@@ -1087,7 +1207,7 @@ export function useChildActionContext() {
 export function useAdvisorUnlocked(): boolean {
   const { state } = useWorkflow()
   if (state.demoViewMode !== 'advisor') return false
-  const rs = state.childReviewState
+  const rs = getChildReviewState(state, state.activeChildActionId)
   if (!rs) return false
 
   const child = state.tasks

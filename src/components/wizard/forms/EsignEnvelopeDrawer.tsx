@@ -6,6 +6,15 @@ import {
   type DragEvent as ReactDragEvent,
   type PointerEvent as ReactPointerEvent,
 } from 'react'
+import { useWorkflow } from '@/stores/workflowStore'
+import type { ChildTask } from '@/types/workflow'
+import { getRegistrationTypesForOpenAccountsUploadSection } from '@/utils/openAccountsDocumentValidation'
+import {
+  getRegistrationDocuments,
+  partitionRegistrationDocumentsByFulfillment,
+} from '@/utils/registrationDocuments'
+import type { RegistrationType } from '@/utils/registrationDocuments'
+import { EsignDocumentsBundleViewerButton } from '@/components/wizard/EsignDocumentsBundleViewer'
 import {
   Sheet,
   SheetContent,
@@ -38,7 +47,7 @@ import {
   OPTIONAL_ESIGN_FORM_CATALOG,
   PAPERWORK_DELIVERY_OPTIONS,
 } from '@/data/esignEnvelopeOptions'
-import type { EsignEnvelope } from '@/types/esignEnvelope'
+import type { EsignEnvelope, EsignEnvelopeSigner } from '@/types/esignEnvelope'
 import { groupFormSelectionsByAccountChild } from '@/utils/buildEsignEnvelopeFormRows'
 import { deriveDefaultEnvelopeName } from '@/utils/deriveEnvelopeDisplayName'
 import { downloadEnvelopeManifest } from '@/utils/downloadEsignEnvelopeManifest'
@@ -149,6 +158,29 @@ export function EsignEnvelopeDrawer({
   placedFieldsByFileRef.current = placedFieldsByFile
 
   const grouped = groupFormSelectionsByAccountChild(local.formSelections)
+
+  const { state } = useWorkflow()
+
+  const accountOpeningChildren = useMemo(() => {
+    const t = state.tasks.find((x) => x.formKey === 'open-accounts')
+    return (t?.children ?? []).filter((c: ChildTask) => c.childType === 'account-opening')
+  }, [state.tasks])
+
+  const childRegistrationTypesForFirm = useMemo<RegistrationType[]>(
+    () => getRegistrationTypesForOpenAccountsUploadSection(accountOpeningChildren, state.taskData),
+    [accountOpeningChildren, state.taskData],
+  )
+
+  const registrationDocsBundleForFirm = useMemo(
+    () => getRegistrationDocuments(childRegistrationTypesForFirm, state.relatedParties),
+    [childRegistrationTypesForFirm, state.relatedParties],
+  )
+
+  const firmCustodianEsignDocs = useMemo(() => {
+    const { esign } = partitionRegistrationDocumentsByFulfillment(registrationDocsBundleForFirm)
+    const byId = new Map(esign.map((d) => [d.id, d]))
+    return Array.from(byId.values())
+  }, [registrationDocsBundleForFirm])
 
   const toggleOptional = (id: string, checked: boolean) => {
     setLocal((prev) => ({
@@ -467,12 +499,12 @@ export function EsignEnvelopeDrawer({
     if (droppedLabel) dropPlacedFieldFromPalette(droppedLabel, e.clientX, e.clientY, rect)
   }
 
-  const accountLabelById = new Map(
-    Array.from(grouped.entries()).map(([accountChildId, rows]) => {
-      const head = rows[0]
-      return [accountChildId, head?.accountOpeningName ?? head?.accountNumberLabel ?? 'Account']
-    }),
-  )
+  const updateSigner = (signerId: string, patch: Partial<Pick<EsignEnvelopeSigner, 'email' | 'phone'>>) => {
+    setLocal((prev) => ({
+      ...prev,
+      signers: prev.signers.map((s) => (s.id === signerId ? { ...s, ...patch } : s)),
+    }))
+  }
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
@@ -618,6 +650,72 @@ export function EsignEnvelopeDrawer({
                 </div>
               ))}
             </div>
+
+            <Separator />
+
+            <div className="space-y-3">
+              <div>
+                <p className="text-sm font-medium">Executed firm / custodian forms</p>
+                <p className="text-xs text-muted-foreground mt-1">
+                  After eSign completes, use View / Download for each form or open the bundle viewer. Demo PDFs are
+                  placeholders. Wet-signed paper scans are captured in each account&apos;s Documents step.
+                </p>
+              </div>
+              {accountOpeningChildren.length === 0 ? (
+                <div className="rounded-lg border border-dashed border-border p-4 text-center">
+                  <FileText className="mx-auto mb-2 h-8 w-8 text-muted-foreground/50" />
+                  <p className="text-sm text-muted-foreground">
+                    Add accounts with registration types in Open Accounts to see required firm and custodian forms.
+                  </p>
+                </div>
+              ) : firmCustodianEsignDocs.length === 0 ? (
+                <div className="rounded-lg border border-dashed border-border p-4 text-center">
+                  <FileText className="mx-auto mb-2 h-8 w-8 text-muted-foreground/50" />
+                  <p className="text-sm text-muted-foreground">
+                    No eSign firm/custodian forms are required for the account types on this application.
+                  </p>
+                </div>
+              ) : (
+                <div className="rounded-md border border-border bg-card p-3 space-y-3">
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                      Executed forms (demo)
+                    </p>
+                    <EsignDocumentsBundleViewerButton
+                      items={firmCustodianEsignDocs.map((d) => ({ id: d.id, label: d.label }))}
+                    />
+                  </div>
+                  <ul className="space-y-2">
+                    {firmCustodianEsignDocs.map((doc) => (
+                      <li
+                        key={doc.id}
+                        className="rounded-lg border border-border bg-background px-3 py-2.5 shadow-sm"
+                      >
+                        <div className="flex items-center gap-3">
+                          <div
+                            className="flex h-11 w-11 shrink-0 items-center justify-center rounded-md border border-red-200 bg-red-50 text-red-700 dark:border-red-900/60 dark:bg-red-950/40 dark:text-red-300"
+                            aria-hidden
+                          >
+                            <FileText className="h-5 w-5" strokeWidth={1.75} />
+                          </div>
+                          <div className="min-w-0 flex-1">
+                            <p className="text-sm font-medium text-foreground truncate">{doc.label}</p>
+                            <p className="text-[11px] text-muted-foreground line-clamp-2">
+                              Fully executed · client eSign complete (demo PDF)
+                            </p>
+                          </div>
+                          <EsignFormPdfSampleActions
+                            formIdOrDocId={doc.id}
+                            displayLabel={doc.label}
+                            viewMode="signed"
+                          />
+                        </div>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+            </div>
           </div>
 
           <Separator />
@@ -625,26 +723,43 @@ export function EsignEnvelopeDrawer({
           <div className="space-y-3">
             <p className="text-sm font-medium">Envelope signers</p>
             <p className="text-xs text-muted-foreground">
-              Signers are pulled from account owners and deduplicated across accounts.
+              Signers are pulled from account owners and deduplicated across accounts. Edit email and phone used for
+              delivery and signing notifications.
             </p>
             <div className="rounded-lg border border-border overflow-hidden">
-              <table className="w-full text-sm">
+              <table className="w-full text-sm table-fixed">
                 <thead>
                   <tr className="border-b border-border bg-muted/30">
-                    <th className="text-left font-medium px-3 py-2 text-xs text-muted-foreground">Name</th>
-                    <th className="text-left font-medium px-3 py-2 text-xs text-muted-foreground">Email</th>
-                    <th className="text-left font-medium px-3 py-2 text-xs text-muted-foreground">Signs forms for</th>
+                    <th className="text-left font-medium px-3 py-2 text-xs text-muted-foreground w-[28%]">Name</th>
+                    <th className="text-left font-medium px-3 py-2 text-xs text-muted-foreground w-[36%]">Email</th>
+                    <th className="text-left font-medium px-3 py-2 text-xs text-muted-foreground w-[36%]">Phone</th>
                   </tr>
                 </thead>
                 <tbody>
                   {local.signers.map((s) => (
                     <tr key={s.id} className="border-b border-border last:border-0">
-                      <td className="px-3 py-2 align-top text-xs text-foreground">{s.name || 'Account owner'}</td>
-                      <td className="px-3 py-2 align-top text-xs text-foreground">{s.email || 'No email on file'}</td>
-                      <td className="px-3 py-2 align-top text-xs text-muted-foreground">
-                        {(s.accountChildIds ?? [])
-                          .map((id) => accountLabelById.get(id) ?? 'Account')
-                          .join(', ') || 'No account owner assignments'}
+                      <td className="px-3 py-2 align-middle text-xs text-foreground">{s.name || 'Account owner'}</td>
+                      <td className="px-3 py-2 align-middle">
+                        <Input
+                          type="email"
+                          autoComplete="email"
+                          className="h-8 text-xs"
+                          value={s.email}
+                          onChange={(e) => updateSigner(s.id, { email: e.target.value })}
+                          placeholder="name@example.com"
+                          aria-label={`Email for ${s.name || 'signer'}`}
+                        />
+                      </td>
+                      <td className="px-3 py-2 align-middle">
+                        <Input
+                          type="tel"
+                          autoComplete="tel"
+                          className="h-8 text-xs"
+                          value={s.phone ?? ''}
+                          onChange={(e) => updateSigner(s.id, { phone: e.target.value })}
+                          placeholder="Phone number"
+                          aria-label={`Phone for ${s.name || 'signer'}`}
+                        />
                       </td>
                     </tr>
                   ))}

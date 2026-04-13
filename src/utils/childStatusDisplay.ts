@@ -1,4 +1,4 @@
-import type { WorkflowState } from '@/types/workflow'
+import type { ChildReviewState } from '@/types/workflow'
 
 export type ChildDisplayStatus =
   | 'draft'
@@ -77,7 +77,7 @@ export const childStatusConfig: Record<ChildDisplayStatus, { label: string; clas
  */
 export function deriveChildDisplayStatus(
   rawStatus: string,
-  reviewState?: WorkflowState['childReviewState'],
+  reviewState?: ChildReviewState,
 ): ChildDisplayStatus {
   if (rawStatus === 'complete') return 'complete'
 

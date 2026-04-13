@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { useWorkflow } from '@/stores/workflowStore'
+import { useWorkflow, getChildReviewState } from '@/stores/workflowStore'
 import { Button } from '@/components/ui/button'
 import { Label } from '@/components/ui/label'
 import { CheckCircle2, XCircle, AlertTriangle, ShieldAlert } from 'lucide-react'
@@ -12,7 +12,7 @@ export function AmlReviewFooter() {
   const [findings, setFindings] = useState('')
   const [sarReason, setSarReason] = useState('')
 
-  const reviewState = state.childReviewState
+  const reviewState = getChildReviewState(state, state.activeChildActionId)
   const amlReview = reviewState?.amlReview
 
   const child = state.tasks

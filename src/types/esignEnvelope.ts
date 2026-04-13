@@ -10,6 +10,8 @@ export interface EsignEnvelopeSigner {
   partyId?: string
   name: string
   email: string
+  /** Signing notifications / authentication (demo). */
+  phone?: string
   /** Account-opening children this signer should sign for. */
   accountChildIds?: string[]
 }

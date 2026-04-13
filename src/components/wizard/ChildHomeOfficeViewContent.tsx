@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { useWorkflow, useChildActionContext } from '@/stores/workflowStore'
+import { useWorkflow, useChildActionContext, getChildReviewDecision } from '@/stores/workflowStore'
 import { Badge } from '@/components/ui/badge'
 import { ChevronDown, Clock, Users, FileText, CreditCard, Shield, Banknote, Settings2, AlertTriangle, CheckCircle2 } from 'lucide-react'
 import * as Collapsible from '@radix-ui/react-collapsible'
@@ -96,7 +96,7 @@ export function ChildHomeOfficeViewContent() {
         </div>
 
         {(() => {
-          const decision = state.childReviewDecision
+          const decision = getChildReviewDecision(state, child.id)
           const reviewData = state.taskData[`${child.id}-review`] as Record<string, unknown> | undefined
 
           if (decision?.outcome === 'rejected') {

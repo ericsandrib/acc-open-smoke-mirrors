@@ -4,7 +4,7 @@ import {
   SheetHeader,
   SheetTitle,
 } from '@/components/ui/sheet'
-import type { ChildTask, ChildType, WorkflowState } from '@/types/workflow'
+import type { ChildTask, ChildType, ChildReviewState } from '@/types/workflow'
 import { CheckCircle2, XCircle } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useWorkflow } from '@/stores/workflowStore'
@@ -43,7 +43,7 @@ function getStagesForType(childType: ChildType): TimelineStage[] {
 function deriveEffectiveStatus(
   rawStatus: string,
   childType: ChildType,
-  reviewState?: WorkflowState['childReviewState'],
+  reviewState?: ChildReviewState,
 ): string {
   if (rawStatus === 'complete') return 'complete'
 
@@ -120,7 +120,7 @@ function getActiveStageIndex(stages: TimelineStage[], status: string): number {
 export function getActiveStageLabel(
   rawStatus: string,
   childType: ChildType,
-  reviewState?: WorkflowState['childReviewState'],
+  reviewState?: ChildReviewState,
 ): string {
   const effectiveStatus = deriveEffectiveStatus(rawStatus, childType, reviewState)
   const stages = getStagesForType(childType)
@@ -148,7 +148,7 @@ export function ChildActionTimeline({
   childType: ChildType
   status: string
   compact?: boolean
-  reviewState?: WorkflowState['childReviewState']
+  reviewState?: ChildReviewState
 }) {
   const effectiveStatus = deriveEffectiveStatus(status, childType, reviewState)
   const stages = getStagesForType(childType)
@@ -288,7 +288,7 @@ export function ChildActionTimelineSheet({ open, onOpenChange, child }: ChildAct
             <ChildActionTimeline
               childType={child.childType}
               status={child.status}
-              reviewState={state.childReviewState}
+              reviewState={state.childReviewsByChildId?.[child.id]}
             />
           </div>
         </div>

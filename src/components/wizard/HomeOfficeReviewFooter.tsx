@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { useWorkflow } from '@/stores/workflowStore'
+import { useWorkflow, getChildReviewState, getChildReviewDecision } from '@/stores/workflowStore'
 import { Button } from '@/components/ui/button'
 import { CheckCircle2, XCircle, ShieldAlert } from 'lucide-react'
 import { NigoDialog } from './NigoDialog'
@@ -11,12 +11,12 @@ export function HomeOfficeReviewFooter() {
 
   const isDocView = state.demoViewMode === 'ho-documents'
   const isPrincipalView = state.demoViewMode === 'ho-principal'
-  const reviewState = state.childReviewState
-  const decision = state.childReviewDecision
-
   const child = state.tasks
     .flatMap((t) => t.children ?? [])
     .find((c) => c.id === state.activeChildActionId)
+
+  const reviewState = getChildReviewState(state, state.activeChildActionId)
+  const decision = getChildReviewDecision(state, state.activeChildActionId)
 
   const docReview = reviewState?.documentReview
   const principalReview = reviewState?.principalReview

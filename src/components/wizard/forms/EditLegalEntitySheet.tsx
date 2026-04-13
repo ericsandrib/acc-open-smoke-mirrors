@@ -328,10 +328,7 @@ export function EditLegalEntitySheet({
               <>
                 <hr className="border-border" />
                 <section className="space-y-3">
-                  <h4 className={sectionCls}>2. Trustees (CIP)</h4>
-                  <p className="text-xs text-muted-foreground">
-                    For trusts, natural-person CIP is satisfied by the trustees you list here—there is no separate control-person section. Government-issued ID is requested per trustee when opening a trust-registered account. Choose an existing household member or create a new individual.
-                  </p>
+                  <h4 className={sectionCls}>2. Trustees</h4>
                   <div className="space-y-3">
                     {trustParties.map((t, idx) => (
                       <div key={t.id} className="rounded-lg border border-border p-3 space-y-2">

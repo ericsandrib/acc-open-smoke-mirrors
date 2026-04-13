@@ -1,10 +1,9 @@
-import type { WorkflowState } from '@/types/workflow'
-import { useWorkflow, useChildActionContext, useAdvisorUnlocked } from '@/stores/workflowStore'
+import type { ChildReviewState } from '@/types/workflow'
+import { useWorkflow, useChildActionContext, useAdvisorUnlocked, getChildReviewState, getChildReviewDecision } from '@/stores/workflowStore'
+import { getSubTaskDisplayTitle } from '@/utils/childTaskRegistry'
 import { formComponents, taskDescriptions } from './formRegistry'
 import { Badge } from '@/components/ui/badge'
 import { ShieldCheck, Lock, AlertTriangle, CheckCircle2, FileText, FileSearch } from 'lucide-react'
-
-type ChildReviewState = NonNullable<WorkflowState['childReviewState']>
 
 function HoDocumentAccountOpeningBanners({
   docReview,
@@ -149,8 +148,9 @@ function HoPrincipalAccountOpeningBanners({
 function AdvisorViewBanner() {
   const { state } = useWorkflow()
   const ctx = useChildActionContext()
-  const decision = state.childReviewDecision
-  const reviewState = state.childReviewState
+  const childId = ctx?.child.id
+  const decision = getChildReviewDecision(state, childId)
+  const reviewState = getChildReviewState(state, childId)
   const docReview = reviewState?.documentReview
   const principalReview = reviewState?.principalReview
   const amlReview = reviewState?.amlReview
@@ -158,6 +158,12 @@ function AdvisorViewBanner() {
 
   const hoKycReview = reviewState?.hoKycReview
   const principalKycReview = reviewState?.principalKycReview
+
+  if (!ctx) return null
+  const { child } = ctx
+  if (child.status === 'in_progress' || child.status === 'not_started') {
+    return null
+  }
 
   if (decision?.outcome === 'rejected') {
     let teamLabel = 'Home Office'
@@ -286,6 +292,10 @@ function AdvisorViewBanner() {
     )
   }
 
+  if (child.status !== 'awaiting_review') {
+    return null
+  }
+
   const progressParts: string[] = []
   if (isKyc) {
     if (amlReview?.status === 'pending') progressParts.push('AML Screening: In Progress')
@@ -340,7 +350,7 @@ export function ChildActionContent() {
   const isHoPrincipalAccountOpening =
     state.demoViewMode === 'ho-principal' && child.childType === 'account-opening'
   const isHoTeamAccountOpening = isHoDocAccountOpening || isHoPrincipalAccountOpening
-  const reviewState = state.childReviewState
+  const reviewState = getChildReviewState(state, child.id)
   const amlFlagged = reviewState?.amlFlagged
   const amlNotes = reviewState?.amlNotes
   const formReadOnly = advisorDisabled || isHoTeamAccountOpening
@@ -390,7 +400,7 @@ export function ChildActionContent() {
           </div>
         )}
         <h2 className="text-3xl font-semibold text-foreground mb-6">
-          {currentSubTask.title}
+          {getSubTaskDisplayTitle(child.childType, currentSubTask, state.demoViewMode)}
         </h2>
         {description && (
           <p className="text-base text-muted-foreground mb-6">{description}</p>

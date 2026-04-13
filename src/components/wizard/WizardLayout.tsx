@@ -21,13 +21,27 @@ import { VerticalNav } from '@/components/navigation/vertical-nav'
 import { ComposeDialog } from '@/components/dashboard/ComposeDialog'
 import { useWorkflow } from '@/stores/workflowStore'
 import { cn } from '@/lib/utils'
+import { WizardRightPanelProvider } from '@/components/wizard/wizardRightPanelContext'
 
 export function WizardLayout() {
   const { state, dispatch } = useWorkflow()
   const [composeOpen, setComposeOpen] = useState(false)
   const inChildAction = !!state.activeChildActionId
   const viewMode = state.demoViewMode
-  const isSubmitted = !!state.submittedAt
+
+  const activeChild = inChildAction
+    ? state.tasks.flatMap((t) => t.children ?? []).find((c) => c.id === state.activeChildActionId)
+    : null
+  const isKycChild = activeChild?.childType === 'kyc'
+
+  /** Reviewer demo tabs only for this child once it is submitted / in review / complete — not from global `submittedAt` (e.g. after KYC approval elsewhere). */
+  const childInReviewerPipeline =
+    !!activeChild &&
+    (activeChild.status === 'awaiting_review' ||
+      activeChild.status === 'complete' ||
+      activeChild.status === 'rejected')
+  const childSupportsReviewerDemoTabs =
+    activeChild?.childType === 'kyc' || activeChild?.childType === 'account-opening'
 
   const isAdvisorView = viewMode === 'advisor'
   const isHoDocView = viewMode === 'ho-documents'
@@ -36,17 +50,18 @@ export function WizardLayout() {
   const isHoPrincipalKycView = viewMode === 'ho-principal-kyc'
   const isAmlView = viewMode === 'aml'
   const isHomeOfficeView = isHoDocView || isHoPrincipalView
+  /** Stale `ho-documents` / `ho-principal` after KYC must not put a draft account child into HO reviewer layout. */
+  const showHomeOfficeAccountLayout =
+    isHomeOfficeView &&
+    (activeChild?.childType !== 'account-opening' || childInReviewerPipeline)
 
-  const showViewToggle = inChildAction && isSubmitted
-
-  const activeChild = inChildAction
-    ? state.tasks.flatMap((t) => t.children ?? []).find((c) => c.id === state.activeChildActionId)
-    : null
-  const isKycChild = activeChild?.childType === 'kyc'
+  const showViewToggle =
+    inChildAction && childSupportsReviewerDemoTabs && childInReviewerPipeline
 
   return (
     <div className="flex h-screen bg-background">
       <VerticalNav defaultCollapsed onCreateClick={() => setComposeOpen(true)} />
+      <WizardRightPanelProvider>
       <div className="flex flex-col flex-1 min-w-0">
         {showViewToggle && (
           <header className="border-b border-border px-4 py-2 flex items-center justify-end shrink-0">
@@ -140,7 +155,7 @@ export function WizardLayout() {
             </div>
           </header>
         )}
-        <div className="flex flex-1 overflow-hidden">
+      <div className="flex flex-1 overflow-hidden">
           {inChildAction ? (
             isAmlView && isKycChild ? (
               <div className="flex-1 flex flex-col min-h-0 min-w-0 overflow-hidden">
@@ -155,25 +170,33 @@ export function WizardLayout() {
                 </div>
                 <AmlReviewFooter />
               </div>
-            ) : isHoKycView ? (
-              <>
-                <ChildActionSidebar />
-                <div className="flex-1 flex flex-col overflow-hidden">
-                  <ChildHoKycViewContent />
-                  <HoKycReviewFooter />
+            ) : isHoKycView && isKycChild ? (
+              <div className="flex-1 flex flex-col min-h-0 min-w-0 overflow-hidden">
+                <div className="flex flex-1 min-h-0 overflow-hidden">
+                  <ChildActionSidebar />
+                  <div className="flex flex-1 min-h-0 overflow-hidden min-w-0">
+                    <div className="flex-1 flex flex-col overflow-hidden min-w-0">
+                      <ChildHoKycViewContent />
+                    </div>
+                    <ChildActionRightSidebar />
+                  </div>
                 </div>
-                <ChildActionRightSidebar />
-              </>
-            ) : isHoPrincipalKycView ? (
-              <>
-                <ChildActionSidebar />
-                <div className="flex-1 flex flex-col overflow-hidden">
-                  <ChildHoPrincipalKycContent />
-                  <HoPrincipalKycFooter />
+                <HoKycReviewFooter />
+              </div>
+            ) : isHoPrincipalKycView && isKycChild ? (
+              <div className="flex-1 flex flex-col min-h-0 min-w-0 overflow-hidden">
+                <div className="flex flex-1 min-h-0 overflow-hidden">
+                  <ChildActionSidebar />
+                  <div className="flex flex-1 min-h-0 overflow-hidden min-w-0">
+                    <div className="flex-1 flex flex-col overflow-hidden min-w-0">
+                      <ChildHoPrincipalKycContent />
+                    </div>
+                    <ChildActionRightSidebar />
+                  </div>
                 </div>
-                <ChildActionRightSidebar />
-              </>
-            ) : isHomeOfficeView ? (
+                <HoPrincipalKycFooter />
+              </div>
+            ) : showHomeOfficeAccountLayout ? (
               activeChild?.childType === 'account-opening' ? (
                 <div className="flex-1 flex flex-col min-h-0 min-w-0 overflow-hidden">
                   <div className="flex flex-1 min-h-0 overflow-hidden">
@@ -221,8 +244,9 @@ export function WizardLayout() {
               <DetailSidebar />
             </>
           )}
-        </div>
       </div>
+      </div>
+      </WizardRightPanelProvider>
       {composeOpen && <ComposeDialog onClose={() => setComposeOpen(false)} />}
     </div>
   )

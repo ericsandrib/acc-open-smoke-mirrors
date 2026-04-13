@@ -17,9 +17,8 @@ import {
   getDocSubTypes,
   partitionRegistrationDocumentsByFulfillment,
   sortUploadDocumentsForOpenAccounts,
-  getPartyIdsRequiringGovernmentIdUpload,
+  getAssigneePartyIdsForClientUploadDoc,
   getTrustOrganizationIdsForAccountOwners,
-  GOVERNMENT_ISSUED_ID_DOC_ID,
   TRUST_VERIFICATION_DOC_ID,
 } from '@/utils/registrationDocuments'
 import type { RegistrationType } from '@/utils/registrationDocuments'
@@ -55,6 +54,7 @@ import { downloadEnvelopeManifest } from '@/utils/downloadEsignEnvelopeManifest'
 import { getEnvelopeDisplayName } from '@/utils/deriveEnvelopeDisplayName'
 import { EsignEnvelopeDrawer } from '@/components/wizard/forms/EsignEnvelopeDrawer'
 import { getRegistrationTypesForOpenAccountsUploadSection } from '@/utils/openAccountsDocumentValidation'
+import { getAccountPartiesRequiringKyc } from '@/utils/accountOpeningOwnerKyc'
 
 interface DocInstance {
   id: string
@@ -109,23 +109,14 @@ export function OpenAccountsForm() {
   const accountOpeningChildren = (openAccountsTask?.children ?? []).filter((c) => c.childType === 'account-opening')
   const householdMembers = state.relatedParties.filter((p) => p.type === 'household_member' && !p.isHidden)
 
-  type OwnerRow = { id: string; type: string; partyId?: string }
   const kycOwnerParties = useMemo(() => {
-    const seenIds = new Set<string>()
-    const parties: RelatedParty[] = []
+    const byId = new Map<string, RelatedParty>()
     for (const child of accountOpeningChildren) {
-      const subTaskId = `${child.id}-account-owners`
-      const td = state.taskData[subTaskId] as Record<string, unknown> | undefined
-      const owners = (td?.owners as OwnerRow[] | undefined) ?? []
-      for (const owner of owners) {
-        if (owner.partyId && !seenIds.has(owner.partyId)) {
-          seenIds.add(owner.partyId)
-          const party = state.relatedParties.find((p) => p.id === owner.partyId)
-          if (party) parties.push(party)
-        }
+      for (const party of getAccountPartiesRequiringKyc(state, child.id)) {
+        byId.set(party.id, party)
       }
     }
-    return parties
+    return Array.from(byId.values())
   }, [accountOpeningChildren, state.taskData, state.relatedParties])
 
   const childRegistrationTypes = useMemo<RegistrationType[]>(
@@ -133,12 +124,15 @@ export function OpenAccountsForm() {
     [accountOpeningChildren, state.taskData],
   )
 
+  const registrationDocsBundle = useMemo(
+    () => getRegistrationDocuments(childRegistrationTypes, state.relatedParties),
+    [childRegistrationTypes, state.relatedParties],
+  )
+
   const uploadDocs = useMemo(() => {
-    const { upload } = partitionRegistrationDocumentsByFulfillment(
-      getRegistrationDocuments(childRegistrationTypes, state.relatedParties),
-    )
+    const { upload } = partitionRegistrationDocumentsByFulfillment(registrationDocsBundle)
     return sortUploadDocumentsForOpenAccounts(upload)
-  }, [childRegistrationTypes, state.relatedParties])
+  }, [registrationDocsBundle])
 
   const ownerPartyIdsByAccountChild = useMemo(() => {
     const map = new Map<string, string[]>()
@@ -160,24 +154,13 @@ export function OpenAccountsForm() {
     return ids
   }, [ownerPartyIdsByAccountChild])
 
-  /** Owners ∪ trustees from trust org(s) only when that trust is selected as an account owner (trustParties read from that org). */
-  const partyIdsForGovIdUpload = useMemo(
-    () => getPartyIdsRequiringGovernmentIdUpload(state.relatedParties, allOwnerPartyIds),
-    [state.relatedParties, allOwnerPartyIds],
-  )
-
-  /** Trust entity(ies) selected as owner(s)—used to seed trust verification document rows. */
-  const partyIdsForTrustVerificationUpload = useMemo(
-    () => getTrustOrganizationIdsForAccountOwners(state.relatedParties, allOwnerPartyIds),
-    [state.relatedParties, allOwnerPartyIds],
-  )
-
+  /** Trust entity(ies) selected as owner(s)—assignee dropdown for trust verification uploads. */
   const trustVerificationAssigneeParties = useMemo(
     () =>
-      partyIdsForTrustVerificationUpload
+      getTrustOrganizationIdsForAccountOwners(state.relatedParties, allOwnerPartyIds)
         .map((id) => state.relatedParties.find((p) => p.id === id))
         .filter((p): p is RelatedParty => Boolean(p)),
-    [state.relatedParties, partyIdsForTrustVerificationUpload],
+    [state.relatedParties, allOwnerPartyIds],
   )
 
   const requiredEsignFormRows = useMemo(
@@ -212,6 +195,7 @@ export function OpenAccountsForm() {
         partyId,
         name: party?.name ?? existing?.name ?? 'Account owner',
         email: existing?.email ?? party?.email ?? '',
+        phone: existing?.phone ?? party?.phone ?? '',
         accountChildIds: Array.from(accounts),
       })
     }
@@ -507,13 +491,12 @@ export function OpenAccountsForm() {
                 input.click()
               }
 
-              // Auto-generate rows: Gov ID = owners ∪ trustees; trust verification = trust entity owner(s); else = owners only
-              const ownerIds =
-                doc.id === GOVERNMENT_ISSUED_ID_DOC_ID
-                  ? partyIdsForGovIdUpload
-                  : doc.id === TRUST_VERIFICATION_DOC_ID
-                    ? partyIdsForTrustVerificationUpload
-                    : Array.from(allOwnerPartyIds)
+              // Auto-generate rows: same rules as account-opening Documents step (per doc type).
+              const ownerIds = getAssigneePartyIdsForClientUploadDoc(
+                doc.id,
+                state.relatedParties,
+                allOwnerPartyIds,
+              )
               const existingAssignees = new Set(instances.map((i) => i.assignedTo))
               const missing = ownerIds.filter((id) => !existingAssignees.has(id))
               if (missing.length > 0) {
@@ -694,7 +677,8 @@ export function OpenAccountsForm() {
         <div className="mb-4">
           <h3 className="text-base font-semibold">KYC Verification</h3>
           <p className="text-base text-muted-foreground">
-            Identity verification (KYC/KYB) must be completed by all account owners before accounts can be opened.
+            Identity verification (KYC/KYB) must be completed before accounts can be opened. For trust-owned accounts,
+            this includes trustees and beneficial owners in addition to account owners.
           </p>
         </div>
 
@@ -875,8 +859,8 @@ export function OpenAccountsForm() {
           <h4 className="text-sm font-semibold text-foreground">eSign Envelopes</h4>
           <p className="text-sm text-muted-foreground mt-1">
             Create one or more signing envelopes for this application. Required firm and custodian forms are grouped by
-            account number. Data captured in the wizard maps onto generated forms automatically—those forms are not uploaded
-            as attachments.
+            account number. When you create or edit an envelope, you can view executed PDFs; wet-signed uploads are
+            managed in each account&apos;s Documents step.
           </p>
         </div>
         {esignEnvelopes.length === 0 ? (

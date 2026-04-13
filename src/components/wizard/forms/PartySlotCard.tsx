@@ -65,23 +65,28 @@ export function PartySlotCard({
   const { state } = useWorkflow()
   const matchedParty = partyId ? parties.find((p) => p.id === partyId) ?? null : null
 
-  const kycDisplayStatus = useMemo(() => {
-    if (!matchedParty) return null
+  const getPartyKycDisplayStatus = (party: RelatedParty | undefined) => {
+    if (!party) return null
     const kycParentTask = state.tasks.find((t) => t.formKey === 'kyc') ?? state.tasks.find((t) => t.formKey === 'open-accounts')
-    const kycChild = kycParentTask?.children?.find((c) => c.childType === 'kyc' && c.name === matchedParty.name)
+    const kycChild = kycParentTask?.children?.find((c) => c.childType === 'kyc' && c.name === party.name)
     if (kycChild) {
       const ds = deriveChildDisplayStatus(kycChild.status)
       return ds === 'complete'
         ? { label: 'Verified', className: 'bg-green-50 text-green-700 border-green-200' }
         : childStatusConfig[ds]
     }
-    if (matchedParty.kycStatus === 'verified') {
+    if (party.kycStatus === 'verified') {
       return { label: 'Verified', className: 'bg-green-100 text-green-800 border-green-200' }
     }
-    if (matchedParty.kycStatus === 'needs_kyc') {
+    if (party.kycStatus === 'needs_kyc') {
       return { label: 'Not Started', className: 'bg-red-50 text-red-700 border-red-200' }
     }
     return null
+  }
+
+  const kycDisplayStatus = useMemo(() => {
+    if (!matchedParty) return null
+    return getPartyKycDisplayStatus(matchedParty)
   }, [matchedParty, state.tasks])
   const ownerPreview = matchedParty
     ? previewVariant === 'designation'
@@ -89,6 +94,37 @@ export function PartySlotCard({
       : buildAccountOwnerPreview(matchedParty)
     : null
   const isDesignationPreview = previewVariant === 'designation'
+  const trustPeopleKycSummary = useMemo(() => {
+    if (!matchedParty || matchedParty.type !== 'related_organization') return null
+
+    const linkedTrustees = (matchedParty.trustParties ?? [])
+      .map((t) => (t.partyId ? parties.find((p) => p.id === t.partyId) : undefined))
+      .filter((p): p is RelatedParty => Boolean(p))
+    const linkedBeneficialOwners = (matchedParty.beneficialOwners ?? [])
+      .map((b) => parties.find((p) => p.type !== 'related_organization' && p.name === b.name))
+      .filter((p): p is RelatedParty => Boolean(p))
+
+    const byId = new Map<string, RelatedParty>()
+    for (const p of [...linkedTrustees, ...linkedBeneficialOwners]) byId.set(p.id, p)
+    const people = Array.from(byId.values())
+    if (people.length === 0) return null
+
+    const verifiedCount = people.filter((p) => getPartyKycDisplayStatus(p)?.label === 'Verified').length
+    const pendingNames = people
+      .filter((p) => getPartyKycDisplayStatus(p)?.label !== 'Verified')
+      .map((p) => p.name)
+
+    return { total: people.length, verifiedCount, pendingNames }
+  }, [matchedParty, parties, state.tasks])
+  const trustOverallKyc = useMemo(() => {
+    if (!matchedParty || matchedParty.type !== 'related_organization') return null
+    const entityVerified = getPartyKycDisplayStatus(matchedParty)?.label === 'Verified'
+    const peopleComplete = !trustPeopleKycSummary || trustPeopleKycSummary.pendingNames.length === 0
+    const verified = entityVerified && peopleComplete
+    return verified
+      ? { label: 'Verified', className: 'bg-green-50 text-green-700 border-green-200' }
+      : { label: 'Incomplete', className: 'bg-amber-50 text-amber-700 border-amber-200' }
+  }, [matchedParty, trustPeopleKycSummary, state.tasks])
 
   return (
     <div className="rounded-lg border border-border p-4 space-y-4">
@@ -185,6 +221,11 @@ export function PartySlotCard({
                     Legal entity
                   </Badge>
                 )}
+                {!isDesignationPreview && matchedParty.type === 'related_organization' && kycDisplayStatus && (
+                  <Badge variant="outline" className={cn('text-[10px] px-1.5 py-0', kycDisplayStatus.className)}>
+                    Trust entity KYC: {kycDisplayStatus.label}
+                  </Badge>
+                )}
                 {matchedParty.isPrimary && (
                   <Badge variant="secondary" className="text-[10px] px-1.5 py-0">
                     Primary
@@ -271,33 +312,81 @@ export function PartySlotCard({
             matchedParty.trustParties.length > 0 && (
               <div className="rounded-md border border-border bg-muted/30 px-3 py-2.5 space-y-1.5">
                 <p className="text-[10px] font-medium text-muted-foreground uppercase tracking-wide">
-                  Trustees (CIP)
+                  Trustees
                 </p>
                 <ul className="text-xs text-foreground space-y-1">
                   {matchedParty.trustParties.map((t) => {
                     const linked = t.partyId ? parties.find((p) => p.id === t.partyId) : undefined
+                    const trusteeKycStatus = getPartyKycDisplayStatus(linked)
                     const line = [linked?.name ?? t.displayName, t.role].filter(Boolean).join(' · ')
-                    return <li key={t.id}>{line}</li>
+                    return (
+                      <li key={t.id} className="flex items-center justify-between gap-2">
+                        <span className="truncate">{line}</span>
+                        {trusteeKycStatus ? (
+                          <Badge variant="outline" className={cn('text-[10px] shrink-0', trusteeKycStatus.className)}>
+                            {trusteeKycStatus.label}
+                          </Badge>
+                        ) : null}
+                      </li>
+                    )
                   })}
                 </ul>
-                <p className="text-[11px] text-muted-foreground leading-snug">
-                  Same trustee list as in{' '}
-                  <span className="font-medium text-foreground">Collect client data → Related parties → Trusts</span> for
-                  this entity. Government ID for these people applies when this trust is an account owner.
+              </div>
+            )}
+
+          {!isDesignationPreview &&
+            matchedParty.type === 'related_organization' &&
+            matchedParty.beneficialOwners &&
+            matchedParty.beneficialOwners.length > 0 && (
+              <div className="rounded-md border border-border bg-muted/30 px-3 py-2.5 space-y-1.5">
+                <p className="text-[10px] font-medium text-muted-foreground uppercase tracking-wide">
+                  Beneficial owners
                 </p>
+                <ul className="text-xs text-foreground space-y-1">
+                  {matchedParty.beneficialOwners.map((b, idx) => {
+                    const linked = parties.find((p) => p.type !== 'related_organization' && p.name === b.name)
+                    const boKycStatus = getPartyKycDisplayStatus(linked)
+                    const line = [b.name, b.ownershipPercent ? `${b.ownershipPercent}%` : undefined]
+                      .filter(Boolean)
+                      .join(' · ')
+                    return (
+                      <li key={`${b.name}-${idx}`} className="flex items-center justify-between gap-2">
+                        <span className="truncate">{line}</span>
+                        {boKycStatus ? (
+                          <Badge variant="outline" className={cn('text-[10px] shrink-0', boKycStatus.className)}>
+                            {boKycStatus.label}
+                          </Badge>
+                        ) : null}
+                      </li>
+                    )
+                  })}
+                </ul>
               </div>
             )}
 
           {!isDesignationPreview && (kycDisplayStatus || matchedParty.kycStatus) && (
             <div className="flex flex-wrap items-center gap-2 text-sm pt-1 border-t border-border/60">
-              <span className="text-muted-foreground">KYC status:</span>
-              {kycDisplayStatus && (
-                <Badge
-                  variant="outline"
-                  className={cn('text-xs', kycDisplayStatus.className)}
-                >
-                  {kycDisplayStatus.label}
-                </Badge>
+              <span className="text-muted-foreground">
+                {matchedParty.type === 'related_organization' ? 'Overall trust KYC status:' : 'KYC status:'}
+              </span>
+              {matchedParty.type === 'related_organization' ? (
+                trustOverallKyc ? (
+                  <Badge
+                    variant="outline"
+                    className={cn('text-xs', trustOverallKyc.className)}
+                  >
+                    {trustOverallKyc.label}
+                  </Badge>
+                ) : null
+              ) : (
+                kycDisplayStatus && (
+                  <Badge
+                    variant="outline"
+                    className={cn('text-xs', kycDisplayStatus.className)}
+                  >
+                    {kycDisplayStatus.label}
+                  </Badge>
+                )
               )}
               {matchedParty.kycStatus === 'needs_kyc' && onStartKyc && (
                 <Button

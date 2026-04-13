@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useLocation, useNavigate } from 'react-router-dom'
 import { X } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -47,6 +47,7 @@ export function ComposeDialog({ onClose }: ComposeDialogProps) {
   const [relationshipId, setRelationshipId] = useState('')
   const { dispatch } = useWorkflow()
   const { currentLiveJourney, saveCurrentJourney } = useServicing()
+  const location = useLocation()
   const navigate = useNavigate()
 
   const canSubmit = actionType === 'client-onboarding' && relationshipId !== ''
@@ -60,6 +61,7 @@ export function ComposeDialog({ onClose }: ComposeDialogProps) {
     }
 
     const name = journeyName || 'Client Onboarding'
+    const newJourneyId = `journey-${Date.now()}`
 
     dispatch({
       type: 'INITIALIZE_FROM_RELATIONSHIP',
@@ -74,9 +76,14 @@ export function ComposeDialog({ onClose }: ComposeDialogProps) {
         clientType: relationship.primaryContact.clientType ?? '',
       },
       journeyName: name,
+      journeyId: newJourneyId,
     })
     toast.success(`Journey "${name}" created for ${relationship.name}`)
-    navigate('/wizard', { state: { collapseMainNav: true } })
+    const inServicingView = location.pathname.startsWith('/onboarding') || location.pathname.startsWith('/servicing')
+    navigate(
+      inServicingView ? `/servicing/${newJourneyId}` : '/wizard',
+      inServicingView ? undefined : { state: { collapseMainNav: true } },
+    )
   }
 
   return (
