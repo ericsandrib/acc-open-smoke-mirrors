@@ -14,6 +14,7 @@ const statusColors: Record<TaskStatus, string> = {
   not_started: 'text-text-tertiary',
   in_progress: 'text-text-category1-primary',
   complete: 'text-text-success-primary',
+  canceled: 'text-text-tertiary',
   blocked: 'text-text-danger-primary',
   awaiting_review: 'text-text-warning-primary',
   rejected: 'text-text-danger-primary',
@@ -23,6 +24,7 @@ const statusLabels: Record<TaskStatus, string> = {
   not_started: 'Ready to Begin',
   in_progress: 'In Progress',
   complete: 'Complete',
+  canceled: 'Canceled',
   blocked: 'Blocked',
   awaiting_review: 'Awaiting Review',
   rejected: 'Rejected',
@@ -32,6 +34,7 @@ const StatusIcon: Record<TaskStatus, React.ComponentType<{ className?: string }>
   not_started: Circle,
   in_progress: Loader,
   complete: CheckCircle2,
+  canceled: XCircle,
   blocked: Ban,
   awaiting_review: Clock,
   rejected: XCircle,
@@ -91,7 +94,7 @@ function getTaskFieldProgress(state: WorkflowState, task: Task): { filled: numbe
       )
       if (children.length === 0) return { filled: 0, total: 1 }
       return {
-        filled: children.filter((c) => c.status === 'complete').length,
+        filled: children.filter((c) => c.status === 'complete' || c.status === 'canceled').length,
         total: children.length,
       }
     }

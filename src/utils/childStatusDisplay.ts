@@ -13,6 +13,7 @@ export type ChildDisplayStatus =
   | 'nigo_principal'
   | 'rejected_aml'
   | 'awaiting_documents'
+  | 'canceled'
   | 'complete'
 
 export const childStatusConfig: Record<ChildDisplayStatus, { label: string; className: string }> = {
@@ -64,6 +65,10 @@ export const childStatusConfig: Record<ChildDisplayStatus, { label: string; clas
     label: 'Awaiting Documents',
     className: 'bg-yellow-50 text-yellow-700 border-yellow-200',
   },
+  canceled: {
+    label: 'Canceled',
+    className: 'bg-muted text-muted-foreground border-border',
+  },
   complete: {
     label: 'Complete',
     className: 'bg-green-50 text-green-700 border-green-200',
@@ -80,6 +85,7 @@ export function deriveChildDisplayStatus(
   reviewState?: ChildReviewState,
 ): ChildDisplayStatus {
   if (rawStatus === 'complete') return 'complete'
+  if (rawStatus === 'canceled') return 'canceled'
 
   if (rawStatus === 'rejected') {
     if (!reviewState) return 'nigo'

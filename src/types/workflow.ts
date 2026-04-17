@@ -1,4 +1,11 @@
-export type TaskStatus = 'not_started' | 'in_progress' | 'complete' | 'blocked' | 'awaiting_review' | 'rejected'
+export type TaskStatus =
+  | 'not_started'
+  | 'in_progress'
+  | 'complete'
+  | 'canceled'
+  | 'blocked'
+  | 'awaiting_review'
+  | 'rejected'
 
 export type RelatedPartyType = 'household_member' | 'related_contact' | 'related_organization'
 
@@ -172,6 +179,16 @@ export interface ChildReviewState {
 
 export type ChildReviewDecision = { outcome: 'approved' | 'rejected'; decidedAt: string }
 
+/** Captured when creating an onboarding journey (Compose / new journey flow). */
+export interface JourneyOnboardingConfig {
+  /** Branch / office identifier (demo: office code). */
+  office: string
+  /** Selected investment professional (team member id). */
+  investmentProfessionalId: string
+  /** Whether the client will open an account that includes an annuity. */
+  openAnnuityAccount: boolean
+}
+
 export interface WorkflowState {
   actions: Action[]
   tasks: Task[]
@@ -183,6 +200,8 @@ export interface WorkflowState {
   journeyName?: string
   journeyId?: string
   assignedTo?: string
+  /** Optional onboarding journey configuration from the new-journey modal. */
+  journeyOnboardingConfig?: JourneyOnboardingConfig
   submittedTaskIds: string[]
   activeChildActionId?: string
   activeChildSubTaskIndex?: number
@@ -224,6 +243,7 @@ export type WorkflowAction =
       journeyName?: string
       journeyId?: string
       assignedTo?: string
+      journeyOnboardingConfig?: JourneyOnboardingConfig
     }
   | { type: 'SET_JOURNEY_ASSIGNEE'; assignee: string }
   | { type: 'GO_NEXT' }

@@ -470,6 +470,7 @@ function workflowReducer(state: WorkflowState, action: WorkflowAction): Workflow
         journeyName: action.journeyName,
         journeyId: action.journeyId ?? `journey-${Date.now()}`,
         assignedTo: assignee,
+        journeyOnboardingConfig: action.journeyOnboardingConfig,
         submittedTaskIds: [],
         activeChildActionId: undefined,
         activeChildSubTaskIndex: undefined,
@@ -508,6 +509,7 @@ function workflowReducer(state: WorkflowState, action: WorkflowAction): Workflow
         !!enteredChild &&
         (enteredChild.status === 'awaiting_review' ||
           enteredChild.status === 'complete' ||
+          enteredChild.status === 'canceled' ||
           enteredChild.status === 'rejected')
       const isAwaitingReview = enteredChild?.status === 'awaiting_review'
       const isAccountOpeningAwaiting = isAwaitingReview && enteredChild?.childType === 'account-opening'
@@ -1256,6 +1258,7 @@ export function useAdvisorFormsEditable(): boolean {
   const inReviewerPipeline =
     child.status === 'awaiting_review' ||
     child.status === 'complete' ||
+    child.status === 'canceled' ||
     child.status === 'rejected'
 
   if (!inReviewerPipeline) return true

@@ -6,6 +6,7 @@ const statusColors: Record<TaskStatus, string> = {
   not_started: 'bg-fill-neutral-secondary text-text-secondary',
   in_progress: 'bg-fill-category1-tertiary text-text-category1-primary',
   complete: 'bg-fill-success-tertiary text-text-success-primary',
+  canceled: 'bg-muted text-muted-foreground',
   blocked: 'bg-fill-danger-tertiary text-text-danger-primary',
   awaiting_review: 'bg-yellow-100 text-yellow-800',
   rejected: 'bg-fill-danger-tertiary text-text-danger-primary',

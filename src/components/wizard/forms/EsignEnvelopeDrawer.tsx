@@ -52,6 +52,7 @@ import { groupFormSelectionsByAccountChild } from '@/utils/buildEsignEnvelopeFor
 import { deriveDefaultEnvelopeName } from '@/utils/deriveEnvelopeDisplayName'
 import { downloadEnvelopeManifest } from '@/utils/downloadEsignEnvelopeManifest'
 import { flattenPdfForPreview } from '@/utils/flattenPdfForPreview'
+import { getEsignEnvelopeStatus } from '@/utils/esignEnvelopeStatus'
 import { cn } from '@/lib/utils'
 import { EsignFormPdfSampleActions } from '@/components/wizard/EsignFormPdfSampleActions'
 import {
@@ -357,6 +358,8 @@ export function EsignEnvelopeDrawer({
   const customFields = ['Account Number', 'Registration Type', 'Advisor Notes']
   const dataVerificationFields = ['ID Check', 'Knowledge-based Auth', 'SMS Verification']
   const mappedCount = viewerFile ? (placedFieldsByFile[viewerFile.id] ?? []).length : 0
+  const envelopeStatus = getEsignEnvelopeStatus(local)
+  const showExecutedForms = envelopeStatus === 'completed'
 
   const addPlacedFieldFromPalette = (paletteLabel: string) => {
     if (!viewerFile) return
@@ -699,8 +702,8 @@ export function EsignEnvelopeDrawer({
               <div>
                 <p className="text-sm font-medium">Executed firm / custodian forms</p>
                 <p className="text-xs text-muted-foreground mt-1">
-                  After eSign completes, use View / Download for each form or open the bundle viewer. Demo PDFs are
-                  placeholders. Wet-signed paper scans are captured in each account&apos;s Documents step.
+                  Executed copies are available after the envelope is completed in DocuSign. Wet-signed paper scans are
+                  captured in each account&apos;s Documents step.
                 </p>
               </div>
               {accountOpeningChildren.length === 0 ? (
@@ -715,6 +718,13 @@ export function EsignEnvelopeDrawer({
                   <FileText className="mx-auto mb-2 h-8 w-8 text-muted-foreground/50" />
                   <p className="text-sm text-muted-foreground">
                     No eSign firm/custodian forms are required for the account types on this application.
+                  </p>
+                </div>
+              ) : !showExecutedForms ? (
+                <div className="rounded-lg border border-dashed border-border p-4 text-center">
+                  <FileText className="mx-auto mb-2 h-8 w-8 text-muted-foreground/50" />
+                  <p className="text-sm text-muted-foreground">
+                    Executed forms will appear here after this envelope is completed.
                   </p>
                 </div>
               ) : (

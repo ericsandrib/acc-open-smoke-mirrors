@@ -83,7 +83,10 @@ export function FundingLinePickerDialog({ open, onOpenChange, onConfirm }: Fundi
 
   return (
     <Sheet open={open} onOpenChange={handleOpenChange}>
-      <SheetContent side="right" className="sm:max-w-[560px] flex flex-col gap-0 p-0">
+      <SheetContent
+        side="right"
+        className="flex h-full w-[min(560px,calc(100vw-1rem))] max-w-[min(560px,calc(100vw-1rem))] flex-col gap-0 p-0 sm:max-w-[min(560px,calc(100vw-1rem))]"
+      >
         <SheetHeader className="px-6 pt-6 pb-4 border-b border-border shrink-0">
           <SheetTitle>Add funding & asset movement</SheetTitle>
           <SheetDescription>

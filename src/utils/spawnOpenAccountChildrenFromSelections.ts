@@ -8,30 +8,15 @@ export function spawnOpenAccountChildrenFromSelections(
   selections: Selection[],
 ) {
   for (const sel of selections) {
-    const totalPlain = sel.count
-    const totalAnnuity = sel.withAnnuityCount
-    const totalForType = totalPlain + totalAnnuity
+    const totalForType = sel.count
 
-    let idx = 0
-    for (let i = 0; i < totalPlain; i++) {
-      idx++
+    for (let i = 0; i < totalForType; i++) {
+      const idx = i + 1
       const name = totalForType > 1 ? `${sel.label} Account ${idx}` : `${sel.label} Account`
       dispatch({
         type: 'SPAWN_CHILD',
         parentTaskId,
         childName: name,
-        childType: 'account-opening',
-        metadata: { registrationType: sel.registrationType },
-      })
-    }
-
-    for (let i = 0; i < totalAnnuity; i++) {
-      idx++
-      const base = totalForType > 1 ? `${sel.label} Account ${idx}` : `${sel.label} Account`
-      dispatch({
-        type: 'SPAWN_CHILD',
-        parentTaskId,
-        childName: `${base} - Annuity`,
         childType: 'account-opening',
         metadata: { registrationType: sel.registrationType },
       })

@@ -30,11 +30,14 @@ function CompleteAccountOpeningConfirmModal({
   onConfirm,
   onCancel,
   warnings,
+  mode = 'submit-children',
 }: {
   onConfirm: () => void
   onCancel: () => void
   warnings: string[]
+  mode?: 'submit-children' | 'complete-parent'
 }) {
+  const isCompleteParent = mode === 'complete-parent'
   return (
     <div className="fixed inset-0 z-[60] flex items-center justify-center p-4">
       <div className="fixed inset-0 bg-black/50" onClick={onCancel} aria-hidden />
@@ -50,11 +53,12 @@ function CompleteAccountOpeningConfirmModal({
           </div>
           <div className="space-y-1 min-w-0">
             <h3 id="complete-account-opening-title" className="text-base font-semibold">
-              Submit Open Accounts for review?
+              {isCompleteParent ? 'Complete Open Accounts task?' : 'Submit account workflows for review?'}
             </h3>
             <p className="text-sm text-muted-foreground">
-              This submits all account workflows under Accounts to be Opened for home office review and marks the
-              Open Accounts task complete.
+              {isCompleteParent
+                ? 'All account workflows are in terminal states (approved or canceled). Confirm to complete the Open Accounts task.'
+                : 'This submits ready account workflows under Accounts to be Opened for home office review. Each account is reviewed independently in its child workflow.'}
             </p>
           </div>
         </div>
@@ -76,7 +80,7 @@ function CompleteAccountOpeningConfirmModal({
             Cancel
           </Button>
           <Button type="button" onClick={onConfirm}>
-            Submit for review
+            {isCompleteParent ? 'Complete task' : 'Submit accounts for review'}
           </Button>
         </div>
       </div>
@@ -93,6 +97,15 @@ export function WizardFooter() {
   const isLast = idx === state.flatTaskOrder.length - 1
   const activeStatus = getActiveTaskStatus(state)
   const isSubmitted = state.submittedTaskIds.includes(state.activeTaskId)
+  const active = state.tasks.find((t) => t.id === state.activeTaskId)
+  const isOpenAccountsTask = active?.formKey === 'open-accounts'
+  const openAccountsChildren = active?.children ?? []
+  const accountOpeningChildren = openAccountsChildren.filter((c) => c.childType === 'account-opening')
+  const allAccountChildrenTerminal =
+    accountOpeningChildren.length > 0 &&
+    accountOpeningChildren.every((c) =>
+      c.status === 'complete' || c.status === 'canceled',
+    )
 
   return (
     <>
@@ -138,10 +151,18 @@ export function WizardFooter() {
               setCompleteAccountOpeningWarnings([])
               setCompleteAccountOpeningOpen(true)
             }}
-            disabled={activeStatus === 'complete' || isSubmitted}
+            disabled={
+              isOpenAccountsTask
+                ? false
+                : activeStatus === 'complete' || isSubmitted
+            }
           >
             <Check className="h-4 w-4" />
-            Submit for review
+            {isOpenAccountsTask
+              ? allAccountChildrenTerminal
+                ? 'Complete'
+                : 'Submit accounts for review'
+              : 'Complete'}
           </Button>
         ) : (
           <Button
@@ -156,19 +177,32 @@ export function WizardFooter() {
     {completeAccountOpeningOpen && (
       <CompleteAccountOpeningConfirmModal
         warnings={completeAccountOpeningWarnings}
+        mode={
+          isOpenAccountsTask && allAccountChildrenTerminal
+            ? 'complete-parent'
+            : 'submit-children'
+        }
         onCancel={() => {
           setCompleteAccountOpeningOpen(false)
           setCompleteAccountOpeningWarnings([])
         }}
         onConfirm={() => {
-          const active = state.tasks.find((t) => t.id === state.activeTaskId)
-          if (active?.formKey === 'open-accounts') {
+          if (isOpenAccountsTask) {
+            if (allAccountChildrenTerminal) {
+              dispatch({ type: 'CONFIRM_TASK', taskId: state.activeTaskId })
+              setCompleteAccountOpeningOpen(false)
+              setCompleteAccountOpeningWarnings([])
+              return
+            }
             const blockers = getOpenAccountsSubmitForReviewBlockers(state)
             if (blockers.length > 0) {
               setCompleteAccountOpeningWarnings(blockers)
               return
             }
             dispatch({ type: 'SUBMIT_ALL_ACCOUNT_OPENING_CHILDREN_FOR_REVIEW' })
+            setCompleteAccountOpeningOpen(false)
+            setCompleteAccountOpeningWarnings([])
+            return
           }
           dispatch({ type: 'CONFIRM_TASK', taskId: state.activeTaskId })
           setCompleteAccountOpeningOpen(false)

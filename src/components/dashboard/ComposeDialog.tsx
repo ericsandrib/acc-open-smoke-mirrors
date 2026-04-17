@@ -1,10 +1,16 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
-import { X } from 'lucide-react'
+import { Clock, MoreHorizontal, ThumbsUp, X } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Badge } from '@/components/ui/badge'
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu'
 import {
   Select,
   SelectTrigger,
@@ -16,9 +22,13 @@ import { toast } from 'sonner'
 import { useWorkflow } from '@/stores/workflowStore'
 import { useServicing } from '@/stores/servicingStore'
 import { relationships } from '@/data/relationships'
+import { teamMembers } from '@/data/teamMembers'
+
 interface ComposeDialogProps {
   onClose: () => void
 }
+
+const JOURNEY_COMPOSE_DRAFT_KEY = 'journey-compose-draft'
 
 const actionTypes = [
   { value: 'client-onboarding', label: 'Client Onboarding', enabled: true },
@@ -30,6 +40,52 @@ const actionTypes = [
   { value: 'beneficiary-update', label: 'Beneficiary Update', enabled: false },
 ]
 
+function RequiredMark() {
+  return <span className="text-destructive ml-0.5" aria-hidden>*</span>
+}
+
+type ComposeDraftFields = {
+  journeyName: string
+  actionType: string
+  relationshipId: string
+  officeCode: string
+  investmentProfessionalId: string
+  openAnnuityAccount: 'yes' | 'no' | ''
+  createMore: boolean
+}
+
+function loadComposeDraft(): ComposeDraftFields {
+  const empty: ComposeDraftFields = {
+    journeyName: '',
+    actionType: '',
+    relationshipId: '',
+    officeCode: '',
+    investmentProfessionalId: '',
+    openAnnuityAccount: '',
+    createMore: false,
+  }
+  try {
+    const raw = sessionStorage.getItem(JOURNEY_COMPOSE_DRAFT_KEY)
+    if (!raw) return empty
+    const d = JSON.parse(raw) as Record<string, unknown>
+    return {
+      journeyName: typeof d.journeyName === 'string' ? d.journeyName : '',
+      actionType: typeof d.actionType === 'string' ? d.actionType : '',
+      relationshipId: typeof d.relationshipId === 'string' ? d.relationshipId : '',
+      officeCode: typeof d.officeCode === 'string' ? d.officeCode : '',
+      investmentProfessionalId:
+        typeof d.investmentProfessionalId === 'string' ? d.investmentProfessionalId : '',
+      openAnnuityAccount:
+        d.openAnnuityAccount === 'yes' || d.openAnnuityAccount === 'no' || d.openAnnuityAccount === ''
+          ? d.openAnnuityAccount
+          : '',
+      createMore: typeof d.createMore === 'boolean' ? d.createMore : false,
+    }
+  } catch {
+    return empty
+  }
+}
+
 export function ComposeDialog({ onClose }: ComposeDialogProps) {
   const [visible, setVisible] = useState(false)
 
@@ -37,24 +93,81 @@ export function ComposeDialog({ onClose }: ComposeDialogProps) {
     requestAnimationFrame(() => setVisible(true))
   }, [])
 
+  const draftInitial = useMemo(() => loadComposeDraft(), [])
+  const [journeyName, setJourneyName] = useState(draftInitial.journeyName)
+  const [actionType, setActionType] = useState(draftInitial.actionType)
+  const [relationshipId, setRelationshipId] = useState(draftInitial.relationshipId)
+  const [officeCode, setOfficeCode] = useState(draftInitial.officeCode)
+  const [investmentProfessionalId, setInvestmentProfessionalId] = useState(
+    draftInitial.investmentProfessionalId,
+  )
+  const [openAnnuityAccount, setOpenAnnuityAccount] = useState<'yes' | 'no' | ''>(
+    draftInitial.openAnnuityAccount,
+  )
+  const [createMore, setCreateMore] = useState(draftInitial.createMore)
+
   function handleClose() {
     setVisible(false)
     setTimeout(onClose, 250)
   }
 
-  const [journeyName, setJourneyName] = useState('')
-  const [actionType, setActionType] = useState('')
-  const [relationshipId, setRelationshipId] = useState('')
   const { dispatch } = useWorkflow()
   const { currentLiveJourney, saveCurrentJourney } = useServicing()
   const location = useLocation()
   const navigate = useNavigate()
 
-  const canSubmit = actionType === 'client-onboarding' && relationshipId !== ''
+  const officeOptions = useMemo(
+    () =>
+      [...new Set(teamMembers.map((m) => m.officeCode))]
+        .sort()
+        .map((code) => ({ value: code, label: `Office ${code}` })),
+    [],
+  )
 
-  function handleSubmit() {
+  const selectedIp = useMemo(
+    () => teamMembers.find((m) => m.id === investmentProfessionalId),
+    [investmentProfessionalId],
+  )
+
+  const canSubmit =
+    actionType === 'client-onboarding' &&
+    relationshipId !== '' &&
+    officeCode !== '' &&
+    investmentProfessionalId !== '' &&
+    (openAnnuityAccount === 'yes' || openAnnuityAccount === 'no')
+
+  function handleSnooze() {
+    toast.message('Snooze scheduled (demo)', {
+      description: 'You would pick a date and time in a full workflow.',
+    })
+  }
+
+  function handleRecommend() {
+    toast.success('Recommendation recorded (demo)')
+  }
+
+  function handleSaveDraft() {
+    const draft = {
+      journeyName,
+      actionType,
+      relationshipId,
+      officeCode,
+      investmentProfessionalId,
+      openAnnuityAccount,
+      createMore,
+      savedAt: new Date().toISOString(),
+    }
+    try {
+      sessionStorage.setItem(JOURNEY_COMPOSE_DRAFT_KEY, JSON.stringify(draft))
+      toast.success('Draft saved')
+    } catch {
+      toast.error('Could not save draft')
+    }
+  }
+
+  function handleStart() {
     const relationship = relationships.find((r) => r.id === relationshipId)
-    if (!relationship) return
+    if (!relationship || !selectedIp) return
 
     if (currentLiveJourney) {
       saveCurrentJourney(currentLiveJourney)
@@ -77,8 +190,27 @@ export function ComposeDialog({ onClose }: ComposeDialogProps) {
       },
       journeyName: name,
       journeyId: newJourneyId,
+      assignedTo: selectedIp.name,
+      journeyOnboardingConfig: {
+        office: officeCode,
+        investmentProfessionalId: selectedIp.id,
+        openAnnuityAccount: openAnnuityAccount === 'yes',
+      },
     })
     toast.success(`Journey "${name}" created for ${relationship.name}`)
+
+    if (createMore) {
+      setJourneyName('')
+      setActionType('')
+      setRelationshipId('')
+      setOfficeCode('')
+      setInvestmentProfessionalId('')
+      setOpenAnnuityAccount('')
+      setCreateMore(false)
+      toast.message('Add another journey, or close when you are done.')
+      return
+    }
+
     const inServicingView = location.pathname.startsWith('/onboarding') || location.pathname.startsWith('/servicing')
     navigate(
       inServicingView ? `/servicing/${newJourneyId}` : '/wizard',
@@ -97,87 +229,235 @@ export function ComposeDialog({ onClose }: ComposeDialogProps) {
 
       {/* Slide-out panel */}
       <div
-        className="fixed inset-y-0 right-0 z-50 w-[460px] bg-card border-l border-border shadow-2xl flex flex-col transition-transform duration-300 ease-out"
+        className="fixed inset-y-0 right-0 z-50 flex w-[520px] max-w-[calc(100vw-1rem)] flex-col border-l border-border bg-card shadow-2xl transition-transform duration-300 ease-out"
         style={{ transform: visible ? 'translateX(0)' : 'translateX(100%)' }}
       >
         {/* Header */}
-        <div className="flex items-center justify-between px-6 py-5 border-b border-border">
-          <h2 className="text-lg font-semibold text-[var(--text-primary)]">New Journey</h2>
+        <div className="flex shrink-0 items-start justify-between gap-4 border-b border-border px-6 py-5">
+          <div className="min-w-0 flex-1">
+            <h2 className="text-lg font-semibold text-[var(--text-primary)]">New journey</h2>
+            <p className="mt-1 text-sm text-muted-foreground">
+              Select the relationship and action type, then complete any settings that appear for that action before you
+              start.
+            </p>
+          </div>
           <Button
             variant="ghost"
             size="icon"
             onClick={handleClose}
-            className="h-8 w-8 text-[var(--text-secondary)] hover:text-[var(--text-primary)]"
+            className="h-8 w-8 shrink-0 text-[var(--text-secondary)] hover:text-[var(--text-primary)]"
           >
             <X className="h-4 w-4" />
           </Button>
         </div>
 
-        {/* Body */}
-        <div className="flex-1 overflow-y-auto px-6 py-6 space-y-5">
-          <div className="space-y-2">
-            <Label>Journey Name</Label>
-            <Input
-              value={journeyName}
-              onChange={(e) => setJourneyName(e.target.value)}
-              placeholder="e.g. Smith Family Onboarding"
-            />
-          </div>
+        {/* Body — stacked sections */}
+        <div className="flex-1 overflow-y-auto px-6 py-6">
+          <div className="mx-auto max-w-2xl space-y-8">
+            {/* Journey details */}
+            <section className="space-y-4">
+              <div>
+                <h3 className="text-sm font-semibold text-foreground">Journey details</h3>
+                <p className="mt-0.5 text-xs text-muted-foreground">
+                  Label this journey, choose the action, and select the client relationship.
+                </p>
+              </div>
+              <div className="space-y-4 rounded-xl border border-border bg-background/80 p-4 shadow-sm sm:p-5">
+                <div className="space-y-2">
+                  <Label htmlFor="journey-name">Journey name</Label>
+                  <Input
+                    id="journey-name"
+                    value={journeyName}
+                    onChange={(e) => setJourneyName(e.target.value)}
+                    placeholder="e.g. Smith Family Onboarding"
+                    maxLength={80}
+                  />
+                  <p className="text-[11px] text-muted-foreground">Optional — defaults to &ldquo;Client Onboarding&rdquo; if empty.</p>
+                </div>
 
-          <div className="space-y-2">
-            <Label>Action Type</Label>
-            <Select value={actionType} onValueChange={setActionType}>
-              <SelectTrigger>
-                <SelectValue placeholder="Select an action..." />
-              </SelectTrigger>
-              <SelectContent>
-                {actionTypes.map((action) => (
-                  <SelectItem
-                    key={action.value}
-                    value={action.value}
-                    disabled={!action.enabled}
-                  >
-                    <span className="flex items-center gap-2">
-                      {action.label}
-                      {!action.enabled && (
-                        <Badge variant="secondary" className="text-[10px]">
-                          Coming soon
-                        </Badge>
-                      )}
-                    </span>
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
+                <div className="space-y-2">
+                  <Label>
+                    Action type
+                    <RequiredMark />
+                  </Label>
+                  <Select value={actionType} onValueChange={setActionType}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select an action…" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {actionTypes.map((action) => (
+                        <SelectItem
+                          key={action.value}
+                          value={action.value}
+                          disabled={!action.enabled}
+                        >
+                          <span className="flex items-center gap-2">
+                            {action.label}
+                            {!action.enabled && (
+                              <Badge variant="secondary" className="text-[10px]">
+                                Coming soon
+                              </Badge>
+                            )}
+                          </span>
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
 
-          <div className="space-y-2">
-            <Label>Relationship</Label>
-            <Select value={relationshipId} onValueChange={setRelationshipId}>
-              <SelectTrigger>
-                <SelectValue placeholder="Select a relationship..." />
-              </SelectTrigger>
-              <SelectContent>
-                {relationships.map((r) => (
-                  <SelectItem key={r.id} value={r.id}>
-                    {r.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
+                <div className="space-y-2">
+                  <Label>
+                    Relationship
+                    <RequiredMark />
+                  </Label>
+                  <Select value={relationshipId} onValueChange={setRelationshipId}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select a relationship…" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {relationships.map((r) => (
+                        <SelectItem key={r.id} value={r.id}>
+                          {r.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+            </section>
 
+            {/* Settings vary by action type — client onboarding fields shown when that action is selected */}
+            <section className="space-y-4">
+              <div>
+                <h3 className="text-sm font-semibold text-foreground">Action settings</h3>
+                <p className="mt-0.5 text-xs text-muted-foreground">
+                  Fields here depend on the action type. Different actions may ask for routing, product details, or other
+                  options.
+                </p>
+              </div>
+              {actionType === 'client-onboarding' && (
+                <div className="space-y-4 rounded-xl border border-border bg-background/80 p-4 shadow-sm sm:p-5">
+                  <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 sm:gap-5">
+                    <div className="space-y-2">
+                      <Label htmlFor="compose-office">
+                        Office
+                        <RequiredMark />
+                      </Label>
+                      <Select value={officeCode} onValueChange={setOfficeCode}>
+                        <SelectTrigger id="compose-office">
+                          <SelectValue placeholder="Select office…" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {officeOptions.map((o) => (
+                            <SelectItem key={o.value} value={o.value}>
+                              {o.label}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label htmlFor="compose-ip">
+                        Advisor
+                        <RequiredMark />
+                      </Label>
+                      <Select value={investmentProfessionalId} onValueChange={setInvestmentProfessionalId}>
+                        <SelectTrigger id="compose-ip">
+                          <SelectValue placeholder="Select advisor…" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {teamMembers.map((m) => (
+                            <SelectItem key={m.id} value={m.id}>
+                              {m.name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="compose-annuity">
+                      Will this client open an account that includes an annuity?
+                      <RequiredMark />
+                    </Label>
+                    <Select
+                      value={openAnnuityAccount}
+                      onValueChange={(v) => setOpenAnnuityAccount(v as 'yes' | 'no' | '')}
+                    >
+                      <SelectTrigger id="compose-annuity">
+                        <SelectValue placeholder="Select…" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="yes">Yes</SelectItem>
+                        <SelectItem value="no">No</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+              )}
+              {actionType === '' && (
+                <div className="rounded-xl border border-dashed border-border bg-muted/20 px-4 py-8 text-center text-sm text-muted-foreground">
+                  Select an action type to see which settings apply to this journey.
+                </div>
+              )}
+              {actionType !== '' && actionType !== 'client-onboarding' && (
+                <div className="rounded-xl border border-dashed border-border bg-muted/20 px-4 py-8 text-center text-sm text-muted-foreground">
+                  No additional settings for this action type in the demo yet.
+                </div>
+              )}
+            </section>
+          </div>
         </div>
 
-        {/* Footer */}
-        <div className="border-t border-border px-6 py-4">
-          <Button
-            onClick={handleSubmit}
-            disabled={!canSubmit}
-            className="w-full"
-          >
-            Start Onboarding
-          </Button>
+        {/* Footer — Cancel + More options (icon menu) + Start */}
+        <div className="shrink-0 border-t border-border">
+          <div className="flex flex-wrap items-center justify-between gap-3 px-6 py-4">
+            <Button type="button" variant="outline" onClick={handleClose}>
+              Cancel
+            </Button>
+            <div className="flex min-w-0 flex-1 flex-wrap items-center justify-end gap-2 sm:gap-3">
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="icon"
+                    className="h-9 w-9 shrink-0 text-muted-foreground"
+                    aria-label="More options"
+                  >
+                    <MoreHorizontal className="h-4 w-4" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" sideOffset={6} className="z-[120] w-48">
+                  <DropdownMenuItem onSelect={() => handleSnooze()}>
+                    <Clock className="mr-2 h-4 w-4 opacity-70" />
+                    Snooze
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onSelect={() => handleRecommend()}>
+                    <ThumbsUp className="mr-2 h-4 w-4 opacity-70" />
+                    Recommend
+                  </DropdownMenuItem>
+                  <div className="my-1 h-px bg-border" role="separator" />
+                  <DropdownMenuItem onSelect={() => handleSaveDraft()}>Save draft</DropdownMenuItem>
+                  <div className="my-1 h-px bg-border" role="separator" />
+                  <DropdownMenuItem
+                    disabled={createMore}
+                    onSelect={() => {
+                      setCreateMore(true)
+                      toast.message('After you start, this form will stay open for another journey.')
+                    }}
+                  >
+                    Create more
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+              <Button type="button" onClick={handleStart} disabled={!canSubmit}>
+                Start
+              </Button>
+            </div>
+          </div>
         </div>
       </div>
     </>

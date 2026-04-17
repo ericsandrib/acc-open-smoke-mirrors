@@ -200,7 +200,19 @@ export function AcctChildDocumentsReviewForm() {
   }
 
   const localDocs = (data['child-local-docs'] as DocInstance[] | undefined) ?? []
-  const executedEsignForms = (data.esignExecutedForms as ExecutedEsignForm[] | undefined) ?? []
+  const executedEsignForms = useMemo(
+    () => (data.esignExecutedForms as ExecutedEsignForm[] | undefined) ?? [],
+    [data.esignExecutedForms],
+  )
+  const executedFormsByFormId = useMemo(
+    () => new Map(executedEsignForms.map((f) => [f.formId, f])),
+    [executedEsignForms],
+  )
+  const executedRequiredForms = useMemo(
+    () =>
+      ruleDrivenDocs.firmCustodianEsign.filter((doc) => executedFormsByFormId.has(doc.id)),
+    [ruleDrivenDocs.firmCustodianEsign, executedFormsByFormId],
+  )
 
   const updateLocalDocs = (next: DocInstance[]) => {
     updateField('child-local-docs', next)
@@ -247,9 +259,9 @@ export function AcctChildDocumentsReviewForm() {
             <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
               Firm / custodian forms (signed)
             </p>
-            {ruleDrivenDocs.firmCustodianEsign.length > 0 ? (
+            {executedRequiredForms.length > 0 ? (
               <EsignDocumentsBundleViewerButton
-                items={ruleDrivenDocs.firmCustodianEsign.map((d) => ({ id: d.id, label: d.label }))}
+                items={executedRequiredForms.map((d) => ({ id: d.id, label: d.label }))}
               />
             ) : null}
           </div>
@@ -262,46 +274,49 @@ export function AcctChildDocumentsReviewForm() {
           </p>
           {ruleDrivenDocs.firmCustodianEsign.length > 0 ? (
             <>
-              <ul className="space-y-2">
-                {ruleDrivenDocs.firmCustodianEsign.map((doc) => (
-                  <li
-                    key={doc.id}
-                    className="rounded-lg border border-border bg-background px-3 py-2.5 shadow-sm"
-                  >
-                    <div className="flex items-center gap-3">
-                      <div
-                        className="flex h-11 w-11 shrink-0 items-center justify-center rounded-md border border-red-200 bg-red-50 text-red-700 dark:border-red-900/60 dark:bg-red-950/40 dark:text-red-300"
-                        aria-hidden
-                      >
-                        <FileText className="h-5 w-5" strokeWidth={1.75} />
-                      </div>
-                      <div className="min-w-0 flex-1">
-                        <p className="text-sm font-medium text-foreground truncate">{doc.label}</p>
-                        {(() => {
-                          const executed = executedEsignForms.find((f) => f.formId === doc.id)
-                          if (executed) {
+              {executedRequiredForms.length > 0 ? (
+                <ul className="space-y-2">
+                  {executedRequiredForms.map((doc) => (
+                    <li
+                      key={doc.id}
+                      className="rounded-lg border border-border bg-background px-3 py-2.5 shadow-sm"
+                    >
+                      <div className="flex items-center gap-3">
+                        <div
+                          className="flex h-11 w-11 shrink-0 items-center justify-center rounded-md border border-red-200 bg-red-50 text-red-700 dark:border-red-900/60 dark:bg-red-950/40 dark:text-red-300"
+                          aria-hidden
+                        >
+                          <FileText className="h-5 w-5" strokeWidth={1.75} />
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <p className="text-sm font-medium text-foreground truncate">{doc.label}</p>
+                          {(() => {
+                            const executed = executedFormsByFormId.get(doc.id)
+                            if (!executed) return null
                             return (
                               <p className="text-[11px] text-muted-foreground line-clamp-2">
                                 Fully executed · {new Date(executed.executedAt).toLocaleString()}
                               </p>
                             )
-                          }
-                          return (
-                            <p className="text-[11px] text-muted-foreground line-clamp-2">
-                              Awaiting eSign completion from envelope workflow
-                            </p>
-                          )
-                        })()}
+                          })()}
+                        </div>
+                        <EsignFormPdfSampleActions
+                          formIdOrDocId={doc.id}
+                          displayLabel={doc.label}
+                          viewMode="signed"
+                        />
                       </div>
-                      <EsignFormPdfSampleActions
-                        formIdOrDocId={doc.id}
-                        displayLabel={doc.label}
-                        viewMode={executedEsignForms.some((f) => f.formId === doc.id) ? 'signed' : 'preview'}
-                      />
-                    </div>
-                  </li>
-                ))}
-              </ul>
+                    </li>
+                  ))}
+                </ul>
+              ) : (
+                <div className="rounded-lg border border-dashed border-border p-4 text-center">
+                  <FileText className="mx-auto mb-2 h-8 w-8 text-muted-foreground/50" />
+                  <p className="text-sm text-muted-foreground">
+                    No executed forms yet. Send and complete an eSign envelope to populate this section.
+                  </p>
+                </div>
+              )}
               <div className="border-t border-border pt-4 mt-4 space-y-2">
                 <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
                   Wet-signed document uploads
