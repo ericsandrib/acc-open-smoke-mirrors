@@ -1,10 +1,17 @@
 import { createContext, useContext, useState, useCallback, type ReactNode } from 'react'
-import type { Journey, JourneyAction, JourneyTask } from '@/types/servicing'
-import type { WorkflowState } from '@/types/workflow'
+import type { Journey, JourneyAction, JourneyStatus, JourneyTask } from '@/types/servicing'
+import type { TaskStatus, WorkflowState } from '@/types/workflow'
 import { seededJourneys } from '@/data/servicingSeed'
 import { useWorkflow } from './workflowStore'
 import { getActionStatus } from '@/utils/getActionStatus'
 import { getChildTypeConfig } from '@/utils/childTaskRegistry'
+
+/** Map workflow task status to servicing journey action status (spelling + blocked). */
+function toJourneyActionStatus(s: TaskStatus): JourneyStatus {
+  if (s === 'blocked') return 'in_progress'
+  if (s === 'canceled') return 'cancelled'
+  return s
+}
 
 function deriveLiveJourney(state: WorkflowState): Journey | null {
   const primaryParty = state.relatedParties.find((p) => p.isPrimary)
@@ -33,7 +40,7 @@ function deriveLiveJourney(state: WorkflowState): Journey | null {
       id: `${journeyId}-${action.id}`,
       journeyId,
       title: action.title,
-      status: actionStatus === 'blocked' ? 'in_progress' as const : actionStatus,
+      status: toJourneyActionStatus(actionStatus),
       nickname: `${journeyName} - ${action.title}`,
       tasks: parentJourneyTasks,
     }
@@ -55,7 +62,7 @@ function deriveLiveJourney(state: WorkflowState): Journey | null {
           id: `${journeyId}-${action.id}-${c.id}`,
           journeyId,
           title: action.title,
-          status: c.status === 'blocked' ? 'in_progress' as const : c.status,
+          status: toJourneyActionStatus(c.status),
           nickname: `${journeyName} - ${childConfig.displayLabel}: ${c.name}`,
           parentActionId: `${journeyId}-${action.id}`,
           tasks: childTasks,
