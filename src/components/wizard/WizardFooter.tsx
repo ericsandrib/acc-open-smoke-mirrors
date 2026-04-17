@@ -80,7 +80,7 @@ function CompleteAccountOpeningConfirmModal({
             Cancel
           </Button>
           <Button type="button" onClick={onConfirm}>
-            {isCompleteParent ? 'Complete task' : 'Submit accounts for review'}
+            {isCompleteParent ? 'Complete task' : 'Submit for review'}
           </Button>
         </div>
       </div>
@@ -161,7 +161,7 @@ export function WizardFooter() {
             {isOpenAccountsTask
               ? allAccountChildrenTerminal
                 ? 'Complete'
-                : 'Submit accounts for review'
+                : 'Submit for review'
               : 'Complete'}
           </Button>
         ) : (
