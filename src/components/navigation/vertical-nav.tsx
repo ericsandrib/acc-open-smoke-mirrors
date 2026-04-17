@@ -355,7 +355,7 @@ export function VerticalNav({
                       setIsMobileMenuOpen(false);
                       onCreateClick();
                     }}
-                    className="w-full h-10 gap-2 bg-foreground text-background hover:bg-foreground/90 rounded-lg font-medium"
+                    className="w-full h-9 gap-2 bg-foreground text-background hover:bg-foreground/90 rounded-md font-medium"
                   >
                     Create
                   </Button>
@@ -455,7 +455,7 @@ export function VerticalNav({
                 {isExpanded ? (
                   <Button
                     onClick={onCreateClick}
-                    className="w-full h-10 gap-2 bg-foreground text-background hover:bg-foreground/90 rounded-lg font-medium"
+                    className="w-full h-9 gap-2 bg-foreground text-background hover:bg-foreground/90 rounded-md font-medium"
                   >
                     Create
                   </Button>
@@ -465,7 +465,7 @@ export function VerticalNav({
                       <Button
                         onClick={onCreateClick}
                         size="icon"
-                        className="w-full h-10 bg-foreground text-background hover:bg-foreground/90 rounded-lg"
+                        className="w-full h-9 bg-foreground text-background hover:bg-foreground/90 rounded-md"
                       >
                         <Plus className="h-4 w-4" />
                       </Button>

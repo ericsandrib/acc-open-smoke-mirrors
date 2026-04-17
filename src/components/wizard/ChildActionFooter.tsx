@@ -10,7 +10,7 @@ import {
 } from '@/stores/workflowStore'
 import { Button } from '@/components/ui/button'
 import { CheckCircle2, ChevronLeft, ChevronRight, Clock, ShieldAlert, RotateCcw } from 'lucide-react'
-import { getKycValidationErrors } from './forms/KycChildInfoForm'
+import { getKycValidationErrors, kycChildHasOptionalIdVerification } from './forms/KycChildInfoForm'
 import {
   getAccountOpeningChildSubmissionIssues,
   hasAccountOpeningChildBeenSubmittedForReview,
@@ -165,7 +165,9 @@ export function ChildActionFooter() {
     if (isKyc) {
       const infoTaskId = `${child.id}-info`
       const infoData = state.taskData[infoTaskId] ?? {}
-      const errors = getKycValidationErrors(infoData)
+      const errors = getKycValidationErrors(infoData, {
+        optionalIdVerification: kycChildHasOptionalIdVerification(child),
+      })
       if (errors.length > 0) {
         toast.error('Please fix validation errors before resubmitting', {
           description: `${errors.length} required field${errors.length === 1 ? '' : 's'} need attention.`,
@@ -209,7 +211,9 @@ export function ChildActionFooter() {
     if (isKyc) {
       const infoTaskId = `${child.id}-info`
       const infoData = state.taskData[infoTaskId] ?? {}
-      const errors = getKycValidationErrors(infoData)
+      const errors = getKycValidationErrors(infoData, {
+        optionalIdVerification: kycChildHasOptionalIdVerification(child),
+      })
 
       if (errors.length > 0) {
         toast.error('Please fix validation errors before submitting', {

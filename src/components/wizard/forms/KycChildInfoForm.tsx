@@ -35,6 +35,8 @@ interface ValidationError {
   message: string
 }
 
+const KYC_ID_VERIFICATION_FIELDS = new Set(['idType', 'idNumber', 'idExpiration'])
+
 const REQUIRED_RULES: { field: string; label: string }[] = [
   { field: 'firstName', label: 'First name' },
   { field: 'lastName', label: 'Last name' },
@@ -48,9 +50,25 @@ const REQUIRED_RULES: { field: string; label: string }[] = [
   { field: 'sourceOfFunds', label: 'Source of funds' },
 ]
 
-export function getKycValidationErrors(data: Record<string, unknown>): ValidationError[] {
+export type GetKycValidationErrorsOptions = {
+  /** When true, ID type / number / expiration are not required (e.g. Jane Smith KYC in demo). */
+  optionalIdVerification?: boolean
+}
+
+/** KYC child display name matches Jane Smith — ID verification fields are optional in the demo. */
+export function kycChildHasOptionalIdVerification(child: { name: string } | null): boolean {
+  if (!child?.name) return false
+  return child.name.trim().toLowerCase() === 'jane smith'
+}
+
+export function getKycValidationErrors(
+  data: Record<string, unknown>,
+  options?: GetKycValidationErrorsOptions,
+): ValidationError[] {
+  const optionalId = options?.optionalIdVerification === true
   const errors: ValidationError[] = []
   for (const rule of REQUIRED_RULES) {
+    if (optionalId && KYC_ID_VERIFICATION_FIELDS.has(rule.field)) continue
     if (!data[rule.field]) {
       errors.push({ field: rule.field, message: `${rule.label} is required` })
     }
@@ -174,16 +192,18 @@ export function KycChildInfoForm() {
   }, [party, data, updateFields])
 
   const validationScrollNonce = data._validationScrollNonce as number | undefined
+  const idVerificationOptional = kycChildHasOptionalIdVerification(child)
+
   useEffect(() => {
     if (!submitAttempted || validationScrollNonce == null) return
-    const errors = getKycValidationErrors(data)
+    const errors = getKycValidationErrors(data, { optionalIdVerification: idVerificationOptional })
     if (errors.length === 0) return
     requestAnimationFrame(() => {
       topRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
     })
     // Intentionally omit `data`: only scroll when a new submit validation is triggered (nonce), not on every field edit.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [submitAttempted, validationScrollNonce])
+  }, [submitAttempted, validationScrollNonce, idVerificationOptional])
 
   const markTouched = useCallback((field: string) => {
     setTouched((prev) => {
@@ -204,7 +224,7 @@ export function KycChildInfoForm() {
   const str = (key: string) => (data[key] as string) ?? ''
   const mailingSame = str('mailingSameAsLegal') !== 'false'
 
-  const allErrors = getKycValidationErrors(data)
+  const allErrors = getKycValidationErrors(data, { optionalIdVerification: idVerificationOptional })
   const errorMap = new Map(allErrors.map((e) => [e.field, e.message]))
 
   const showError = (field: string) => {
@@ -435,10 +455,17 @@ export function KycChildInfoForm() {
 
       {/* ID Verification */}
       <section className="space-y-3">
-        <h4 className={sectionCls}>ID Verification</h4>
+        <div>
+          <h4 className={sectionCls}>ID Verification</h4>
+          {idVerificationOptional && (
+            <p className="mt-1 text-xs text-muted-foreground">
+              Optional for this member — add ID details when available.
+            </p>
+          )}
+        </div>
         <div className="space-y-3">
           <div className="space-y-1.5" data-field="idType">
-            <Label className={fieldCls}>ID type<RequiredStar /></Label>
+            <Label className={fieldCls}>ID type{idVerificationOptional ? ' (optional)' : <RequiredStar />}</Label>
             <Select value={str('idType') || undefined} onValueChange={(v) => { updateField('idType', v); markTouched('idType') }} disabled={isLocked}>
               <SelectTrigger className={inputErrorCls('idType')}><SelectValue placeholder="Select" /></SelectTrigger>
               <SelectContent>
@@ -448,7 +475,7 @@ export function KycChildInfoForm() {
             {showError('idType') && <InlineError message={errorMap.get('idType')!} />}
           </div>
           <div className="space-y-1.5" data-field="idNumber">
-            <Label className={fieldCls}>ID number<RequiredStar /></Label>
+            <Label className={fieldCls}>ID number{idVerificationOptional ? ' (optional)' : <RequiredStar />}</Label>
             <Input
               value={str('idNumber')}
               onChange={(e) => updateField('idNumber', e.target.value)}
@@ -464,7 +491,7 @@ export function KycChildInfoForm() {
             <Input value={str('idState')} onChange={(e) => updateField('idState', e.target.value)} placeholder="e.g. California" disabled={isLocked} />
           </div>
           <div className="space-y-1.5" data-field="idExpiration">
-            <Label className={fieldCls}>Expiration date<RequiredStar /></Label>
+            <Label className={fieldCls}>Expiration date{idVerificationOptional ? ' (optional)' : <RequiredStar />}</Label>
             <Input
               type="date"
               value={str('idExpiration')}
