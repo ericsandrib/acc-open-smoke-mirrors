@@ -8,7 +8,6 @@ import {
 import type { AccountType } from '@/types/workflow'
 import type { RegistrationType } from '@/utils/registrationDocuments'
 import {
-  getAccountOwnerLimitDescription,
   getMaxAccountOwnersForRegistration,
 } from '@/utils/registrationOwnerLimits'
 import { Plus, UserPlus } from 'lucide-react'
@@ -19,6 +18,7 @@ import {
 import { AccountOwnerPartySheet } from '@/components/wizard/forms/AccountOwnerPartySheet'
 import { EditLegalEntitySheet } from '@/components/wizard/forms/EditLegalEntitySheet'
 import { PartySlotCard } from '@/components/wizard/forms/PartySlotCard'
+import { AccountFeatureRequestsSection } from '@/components/wizard/forms/AccountFeatureRequestsSection'
 import { toast } from 'sonner'
 import { isTrustEntityParty } from '@/utils/trustEntityParty'
 
@@ -164,16 +164,6 @@ export function AcctChildOwnerInfoForm() {
 
   return (
     <div className="space-y-8">
-      <AccountProfileSection
-        data={data}
-        updateField={updateField}
-        registrationType={childRegType}
-        productAccountTypeOverride={productAccountTypeOverride}
-        prefilledShortName={(childMeta?.shortName as string) ?? ''}
-        prefilledAccountNumber={(childMeta?.accountNumber as string) ?? ''}
-      />
-
-      {/* Owners section — above additional account fields so parties are picked before schema-style extras */}
       <section className="space-y-6">
         <div>
           <h3 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground flex items-center gap-2 mb-1">
@@ -183,21 +173,15 @@ export function AcctChildOwnerInfoForm() {
           <p className="text-sm text-muted-foreground">
             {trustEntityOwnersOnly ? (
               <>
-                Add the trust legal entity that will appear on the registration. Ownership here sets verification scope
-                and required documents. Search for an existing trust or create a trust profile—individuals cannot be
-                account owners on a trust registration. Beneficiaries and duplicate-statement contacts belong in{' '}
-                <span className="font-medium text-foreground">Account features &amp; services</span>, not on this step.
+                Add the trust legal entity for this registration. Search for an existing trust or create one if needed.
+                Individuals cannot be account owners on trust registrations.
               </>
             ) : (
               <>
-                Add everyone who will appear on the account registration. Ownership here sets verification scope and which
-                documents each person must provide. Choose an existing household member from the list, or search and add someone new.{' '}
-                Beneficiaries and duplicate-statement contacts belong in{' '}
-                <span className="font-medium text-foreground">Account features &amp; services</span>, not on this step.
+                Add the owner(s) for this account. Select an existing person or entity, or add someone new.
               </>
             )}
           </p>
-          <p className="text-sm text-muted-foreground mt-2">{getAccountOwnerLimitDescription(maxOwners)}</p>
         </div>
 
         {owners.length === 0 && (
@@ -300,6 +284,20 @@ export function AcctChildOwnerInfoForm() {
           />
         )}
       </section>
+
+      <AccountProfileSection
+        data={data}
+        updateField={updateField}
+        registrationType={childRegType}
+        productAccountTypeOverride={productAccountTypeOverride}
+        prefilledAccountNumber={(childMeta?.accountNumber as string) ?? ''}
+      />
+
+      {childId ? (
+        <section className="space-y-6">
+          <AccountFeatureRequestsSection accountChildId={childId} />
+        </section>
+      ) : null}
 
       <AccountAdditionalInformationSection data={data} updateField={updateField} />
     </div>

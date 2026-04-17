@@ -1,4 +1,4 @@
-import { useCallback, useMemo } from 'react'
+import { useCallback, useEffect, useMemo } from 'react'
 import { useChildActionContext, useTaskData, useWorkflow } from '@/stores/workflowStore'
 import { Label } from '@/components/ui/label'
 import { Input } from '@/components/ui/input'
@@ -10,6 +10,7 @@ import {
   SelectItem,
 } from '@/components/ui/select'
 import { FUNDING_OPTIONS } from '@/data/fundingOptions'
+import { FinancialAccountSlotCard } from '@/components/wizard/forms/FinancialAccountSlotCard'
 
 const servicingModels = [
   { value: 'advisory', label: 'Advisory (Fee-based)' },
@@ -24,8 +25,6 @@ const dividendOptions = [
   { value: 'transfer', label: 'Transfer to Another Account' },
 ]
 
-const PREFILL_NONE = '__prefill_none__'
-
 /** Detail form for a single funding / asset movement workflow line. */
 export function FundingLineSetupForm() {
   const { state } = useWorkflow()
@@ -36,12 +35,6 @@ export function FundingLineSetupForm() {
   const childRoot = ctx ? ((state.taskData[ctx.child.id] as Record<string, unknown> | undefined) ?? undefined) : undefined
   const fundingSource =
     (data.fundingSource as string | undefined) ?? (childRoot?.fundingMethod as string | undefined) ?? ''
-
-  if (!ctx || ctx.child.childType !== 'funding-line') {
-    return (
-      <p className="text-sm text-muted-foreground">Open this step from Funding & asset movement on an account.</p>
-    )
-  }
 
   const needsBank = fundingSource === 'ach' || fundingSource === 'bank_send_receive' || fundingSource === 'fed_fund_wires'
   const isCheckMovement = fundingSource === 'check_deposits' || fundingSource === 'check_withdrawals'
@@ -63,28 +56,52 @@ export function FundingLineSetupForm() {
     [state.financialAccounts],
   )
 
-  const bankPrefillSelectValue = useMemo(() => {
-    const id = String((data.bankPrefillAccountId as string) ?? '').trim()
-    if (!id || !bankAccountsForPrefill.some((a) => a.id === id)) return PREFILL_NONE
-    return id
-  }, [data.bankPrefillAccountId, bankAccountsForPrefill])
+  const bankPrefillId = String((data.bankPrefillAccountId as string) ?? '').trim()
+  const transferPrefillId = String((data.transferPrefillAccountId as string) ?? '').trim()
 
-  const transferPrefillSelectValue = useMemo(() => {
-    const id = String((data.transferPrefillAccountId as string) ?? '').trim()
-    if (!id || !investmentAccountsForPrefill.some((a) => a.id === id)) return PREFILL_NONE
-    return id
-  }, [data.transferPrefillAccountId, investmentAccountsForPrefill])
+  const linkedBankAccount = useMemo(() => {
+    if (!bankPrefillId) return undefined
+    return state.financialAccounts.find((a) => a.id === bankPrefillId)
+  }, [bankPrefillId, state.financialAccounts])
 
-  const onBankPrefillChange = useCallback(
-    (value: string) => {
-      if (value === PREFILL_NONE) {
-        updateFields({ bankPrefillAccountId: '' })
+  const linkedTransferAccount = useMemo(() => {
+    if (!transferPrefillId) return undefined
+    return state.financialAccounts.find((a) => a.id === transferPrefillId)
+  }, [transferPrefillId, state.financialAccounts])
+
+  useEffect(() => {
+    if (!linkedBankAccount) return
+    if (linkedBankAccount.accountType !== 'checking' && linkedBankAccount.accountType !== 'savings') return
+    updateFields({
+      bankName: linkedBankAccount.custodian ?? '',
+      bankRouting: linkedBankAccount.routingNumber ?? '',
+      bankAccountNumber: linkedBankAccount.accountNumber ?? '',
+    })
+  }, [linkedBankAccount, updateFields])
+
+  useEffect(() => {
+    if (!linkedTransferAccount) return
+    updateFields({
+      deliveringFirm: linkedTransferAccount.custodian ?? '',
+      transferFromAccount: linkedTransferAccount.accountNumber ?? '',
+    })
+  }, [linkedTransferAccount, updateFields])
+
+  const onBankAccountLinkChange = useCallback(
+    (id: string) => {
+      if (!id) {
+        updateFields({
+          bankPrefillAccountId: '',
+          bankName: '',
+          bankRouting: '',
+          bankAccountNumber: '',
+        })
         return
       }
-      const acc = state.financialAccounts.find((a) => a.id === value)
+      const acc = state.financialAccounts.find((a) => a.id === id)
       if (!acc) return
       updateFields({
-        bankPrefillAccountId: value,
+        bankPrefillAccountId: id,
         bankName: acc.custodian ?? '',
         bankRouting: acc.routingNumber ?? '',
         bankAccountNumber: acc.accountNumber ?? '',
@@ -93,22 +110,32 @@ export function FundingLineSetupForm() {
     [state.financialAccounts, updateFields],
   )
 
-  const onTransferPrefillChange = useCallback(
-    (value: string) => {
-      if (value === PREFILL_NONE) {
-        updateFields({ transferPrefillAccountId: '' })
+  const onTransferAccountLinkChange = useCallback(
+    (id: string) => {
+      if (!id) {
+        updateFields({
+          transferPrefillAccountId: '',
+          deliveringFirm: '',
+          transferFromAccount: '',
+        })
         return
       }
-      const acc = state.financialAccounts.find((a) => a.id === value)
+      const acc = state.financialAccounts.find((a) => a.id === id)
       if (!acc) return
       updateFields({
-        transferPrefillAccountId: value,
+        transferPrefillAccountId: id,
         deliveringFirm: acc.custodian ?? '',
         transferFromAccount: acc.accountNumber ?? '',
       })
     },
     [state.financialAccounts, updateFields],
   )
+
+  if (!ctx || ctx.child.childType !== 'funding-line') {
+    return (
+      <p className="text-sm text-muted-foreground">Open this step from Funding & asset movement on an account.</p>
+    )
+  }
 
   return (
     <div className="space-y-8">
@@ -183,47 +210,17 @@ export function FundingLineSetupForm() {
       </section>
 
       {fundingSource === 'account_transfers' && (
-        <section className="space-y-4 rounded-lg border border-border p-4 bg-muted/20">
-          <h3 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
-            Account transfer
-          </h3>
-          {investmentAccountsForPrefill.length > 0 ? (
-            <div className="space-y-2">
-              <Label>Pre-fill from collected accounts</Label>
-              <Select value={transferPrefillSelectValue} onValueChange={onTransferPrefillChange}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Choose an account…" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value={PREFILL_NONE}>None (enter manually)</SelectItem>
-                  {investmentAccountsForPrefill.map((a) => (
-                    <SelectItem key={a.id} value={a.id}>
-                      {a.accountName}
-                      {a.custodian ? ` — ${a.custodian}` : ''}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              <p className="text-xs text-muted-foreground">
-                Fills delivering firm and transfer-from account # from Existing accounts (collect client data).
-              </p>
-            </div>
-          ) : null}
-          <div className="space-y-2">
-            <Label>Delivering firm</Label>
-            <Input
-              value={(data.deliveringFirm as string) ?? ''}
-              onChange={(e) => updateField('deliveringFirm', e.target.value)}
-              placeholder="Firm name / DTC as applicable"
-            />
-          </div>
-          <div className="space-y-2">
-            <Label>Transfer from (account #)</Label>
-            <Input
-              value={(data.transferFromAccount as string) ?? ''}
-              onChange={(e) => updateField('transferFromAccount', e.target.value)}
-            />
-          </div>
+        <div className="space-y-4">
+          <FinancialAccountSlotCard
+            title="Investment account"
+            selectLabel="Choose an account"
+            financialAccountId={transferPrefillId || undefined}
+            onFinancialAccountIdChange={onTransferAccountLinkChange}
+            allAccounts={state.financialAccounts}
+            selectCandidates={investmentAccountsForPrefill}
+            emptyCandidatesHint="No brokerage, retirement, or other investment accounts yet. Add one below."
+            addAccountItemDescription="Creates an account in Existing accounts (collect client data) and links it here."
+          />
           <div className="space-y-2">
             <Label>Transfer instructions</Label>
             <textarea
@@ -232,7 +229,7 @@ export function FundingLineSetupForm() {
               onChange={(e) => updateField('transferInstructions', e.target.value)}
             />
           </div>
-        </section>
+        </div>
       )}
 
       {isCheckMovement && (
@@ -280,57 +277,16 @@ export function FundingLineSetupForm() {
       )}
 
       {needsBank && (
-        <section className="space-y-4 rounded-lg border border-border p-4 bg-muted/20">
-          <h3 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
-            Bank details
-          </h3>
-          {bankAccountsForPrefill.length > 0 ? (
-            <div className="space-y-2">
-              <Label>Pre-fill from collected accounts</Label>
-              <Select value={bankPrefillSelectValue} onValueChange={onBankPrefillChange}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Choose a bank account…" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value={PREFILL_NONE}>None (enter manually)</SelectItem>
-                  {bankAccountsForPrefill.map((a) => (
-                    <SelectItem key={a.id} value={a.id}>
-                      {a.accountName}
-                      {a.custodian ? ` — ${a.custodian}` : ''}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              <p className="text-xs text-muted-foreground">
-                Fills institution, routing/ABA, and account # from checking or savings accounts in Existing accounts.
-              </p>
-            </div>
-          ) : null}
-          <div className="grid gap-4 sm:grid-cols-2">
-            <div className="space-y-2 sm:col-span-2">
-              <Label>Financial institution</Label>
-              <Input
-                value={(data.bankName as string) ?? ''}
-                onChange={(e) => updateField('bankName', e.target.value)}
-              />
-            </div>
-            <div className="space-y-2">
-              <Label>Routing / ABA</Label>
-              <Input
-                value={(data.bankRouting as string) ?? ''}
-                onChange={(e) => updateField('bankRouting', e.target.value)}
-              />
-            </div>
-            <div className="space-y-2">
-              <Label>Account # (masked in production)</Label>
-              <Input
-                value={(data.bankAccountNumber as string) ?? ''}
-                onChange={(e) => updateField('bankAccountNumber', e.target.value)}
-                autoComplete="off"
-              />
-            </div>
-          </div>
-        </section>
+        <FinancialAccountSlotCard
+          title="Bank details"
+          selectLabel="Choose an account"
+          financialAccountId={bankPrefillId || undefined}
+          onFinancialAccountIdChange={onBankAccountLinkChange}
+          allAccounts={state.financialAccounts}
+          selectCandidates={bankAccountsForPrefill}
+          emptyCandidatesHint="No checking or savings accounts yet. Add one below."
+          addAccountItemDescription="Creates an account in Existing accounts (collect client data) and links it here."
+        />
       )}
 
       <section className="space-y-4">

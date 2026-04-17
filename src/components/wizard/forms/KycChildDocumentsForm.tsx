@@ -1,4 +1,9 @@
-import { useTaskData, useChildActionContext, useAdvisorUnlocked } from '@/stores/workflowStore'
+import {
+  useTaskData,
+  useChildActionContext,
+  useAdvisorFormsEditable,
+  useAdvisorResubmitEligible,
+} from '@/stores/workflowStore'
 import { FileUpload, type FileWithStatus } from '@/components/ui/file-upload'
 import { Lock, AlertTriangle, CheckCircle2 } from 'lucide-react'
 
@@ -7,10 +12,11 @@ export function KycChildDocumentsForm() {
   const child = ctx?.child ?? null
   const taskId = ctx?.subTaskId ?? ''
   const { data, updateField } = useTaskData(taskId || '__no_child__')
-  const advisorUnlocked = useAdvisorUnlocked()
+  const advisorFormsEditable = useAdvisorFormsEditable()
+  const advisorResubmitEligible = useAdvisorResubmitEligible()
 
   const statusLocked = child ? (child.status === 'awaiting_review' || child.status === 'complete' || child.status === 'rejected') : false
-  const isLocked = statusLocked && !advisorUnlocked
+  const isLocked = statusLocked && !advisorFormsEditable
   const isApproved = child?.status === 'complete'
 
   const docs = [
@@ -30,7 +36,7 @@ export function KycChildDocumentsForm() {
 
   return (
     <div className="space-y-4">
-      {advisorUnlocked && (
+      {advisorResubmitEligible && (
         <div className="rounded-md border border-blue-200 bg-blue-50 dark:border-blue-900/60 dark:bg-blue-950/40 px-3 py-2.5">
           <div className="flex items-center gap-2">
             <AlertTriangle className="h-4 w-4 text-blue-600 dark:text-blue-400 shrink-0" />

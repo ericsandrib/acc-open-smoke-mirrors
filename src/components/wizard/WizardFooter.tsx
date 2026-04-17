@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button'
 import { ChevronLeft, ChevronRight, Check, Pencil, ShieldAlert } from 'lucide-react'
 import type { TaskStatus } from '@/types/workflow'
 import { parseChildSubTaskId } from '@/utils/childTaskRegistry'
-import { getOpenAccountsCompletionBlockers } from '@/utils/openAccountsDocumentValidation'
+import { getOpenAccountsSubmitForReviewBlockers } from '@/utils/openAccountsDocumentValidation'
 
 function getActiveTaskStatus(state: ReturnType<typeof useWorkflow>['state']): TaskStatus {
   // Check parent tasks
@@ -50,12 +50,11 @@ function CompleteAccountOpeningConfirmModal({
           </div>
           <div className="space-y-1 min-w-0">
             <h3 id="complete-account-opening-title" className="text-base font-semibold">
-              Complete account opening?
+              Submit Open Accounts for review?
             </h3>
             <p className="text-sm text-muted-foreground">
-              Submit each account for home office review from that account&apos;s workflow when it&apos;s ready. This only
-              marks the Account Opening task complete and locks this submission until review finishes—confirm when you&apos;re
-              done here.
+              This submits all account workflows under Accounts to be Opened for home office review and marks the
+              Open Accounts task complete.
             </p>
           </div>
         </div>
@@ -77,7 +76,7 @@ function CompleteAccountOpeningConfirmModal({
             Cancel
           </Button>
           <Button type="button" onClick={onConfirm}>
-            Complete
+            Submit for review
           </Button>
         </div>
       </div>
@@ -142,7 +141,7 @@ export function WizardFooter() {
             disabled={activeStatus === 'complete' || isSubmitted}
           >
             <Check className="h-4 w-4" />
-            Complete
+            Submit for review
           </Button>
         ) : (
           <Button
@@ -164,11 +163,12 @@ export function WizardFooter() {
         onConfirm={() => {
           const active = state.tasks.find((t) => t.id === state.activeTaskId)
           if (active?.formKey === 'open-accounts') {
-            const blockers = getOpenAccountsCompletionBlockers(state)
+            const blockers = getOpenAccountsSubmitForReviewBlockers(state)
             if (blockers.length > 0) {
               setCompleteAccountOpeningWarnings(blockers)
               return
             }
+            dispatch({ type: 'SUBMIT_ALL_ACCOUNT_OPENING_CHILDREN_FOR_REVIEW' })
           }
           dispatch({ type: 'CONFIRM_TASK', taskId: state.activeTaskId })
           setCompleteAccountOpeningOpen(false)

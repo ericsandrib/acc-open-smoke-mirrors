@@ -60,8 +60,6 @@ interface AccountProfileSectionProps {
   registrationType: RegistrationType | null
   /** Optional explicit product override (e.g. from custody); otherwise derived from registration. */
   productAccountTypeOverride?: AccountType | null
-  /** Set on the child when the account is created (read-only). */
-  prefilledShortName: string
   prefilledAccountNumber: string
 }
 
@@ -75,7 +73,6 @@ export function AccountProfileSection({
   updateField,
   registrationType,
   productAccountTypeOverride,
-  prefilledShortName: _prefilledShortName,
   prefilledAccountNumber,
 }: AccountProfileSectionProps) {
   const resolvedProduct =
@@ -90,8 +87,7 @@ export function AccountProfileSection({
             Account details
           </h3>
           <p className="text-sm text-muted-foreground">
-            Product type and servicing details for this account. Tax IDs, addresses, and KYC details are captured under{' '}
-            <span className="font-medium text-foreground">View / edit details</span> on each owner card.
+            Define the account itself: title, servicing details, assigned account number, and product-specific attributes.
           </p>
         </div>
 
@@ -124,6 +120,15 @@ export function AccountProfileSection({
               placeholder="As it should appear on statements and tax forms"
             />
           </div>
+
+          <div className="space-y-2">
+            <Label>Correspondent number</Label>
+            <Input
+              className="tabular-nums"
+              value={(data.correspondentNumber as string) ?? ''}
+              onChange={(e) => updateField('correspondentNumber', e.target.value)}
+            />
+          </div>
         </div>
       </section>
     </div>
@@ -139,20 +144,11 @@ export function AccountAdditionalInformationSection({ data, updateField }: Accou
             Additional account information
           </h3>
           <p className="text-sm text-muted-foreground">
-            Supplemental fields usually gathered at account opening for books and records, risk, and regulatory questionnaires.
+            Additional account-level regulatory, objective, liquidity, and internal/correspondent fields.
           </p>
         </div>
 
         <div className="space-y-4 max-w-xl">
-          <div className="space-y-2">
-            <Label>Correspondent number</Label>
-            <Input
-              className="tabular-nums"
-              value={(data.correspondentNumber as string) ?? ''}
-              onChange={(e) => updateField('correspondentNumber', e.target.value)}
-            />
-          </div>
-
           <div className="space-y-2">
             <Label>Retail investor indicator</Label>
             <Select

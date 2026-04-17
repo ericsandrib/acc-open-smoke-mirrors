@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, useCallback } from 'react'
-import { useWorkflow, useTaskData, useChildActionContext, useAdvisorUnlocked } from '@/stores/workflowStore'
+import { useWorkflow, useTaskData, useChildActionContext, useAdvisorFormsEditable } from '@/stores/workflowStore'
 import { Input } from '@/components/ui/input'
 import { SensitiveTaxIdInput } from '@/components/ui/sensitive-tax-id-input'
 import { Label } from '@/components/ui/label'
@@ -194,12 +194,12 @@ export function KycChildInfoForm() {
     })
   }, [])
 
-  const advisorUnlocked = useAdvisorUnlocked()
+  const advisorFormsEditable = useAdvisorFormsEditable()
 
   if (!child) return null
 
   const statusLocked = child.status === 'awaiting_review' || child.status === 'complete' || child.status === 'rejected'
-  const isLocked = statusLocked && !advisorUnlocked
+  const isLocked = statusLocked && !advisorFormsEditable
   const isApproved = child.status === 'complete'
   const str = (key: string) => (data[key] as string) ?? ''
   const mailingSame = str('mailingSameAsLegal') !== 'false'

@@ -3,9 +3,9 @@ export function taxIdDigitCount(raw: string): number {
   return raw.replace(/\D/g, '').length
 }
 
-/** When true, show obfuscated display with reveal toggle (more than 4 digits). */
+/** When true, show obfuscated display with reveal toggle (only after full 9-digit entry). */
 export function shouldMaskTaxIdInput(raw: string): boolean {
-  return taxIdDigitCount(raw) > 4
+  return taxIdDigitCount(raw) >= 9
 }
 
 /**
@@ -36,4 +36,12 @@ export function capTaxIdDigits(raw: string, maxDigits = MAX_TAX_ID_DIGITS): stri
     }
   }
   return out
+}
+
+/** Formats raw input as SSN while typing: XXX-XX-XXXX. */
+export function formatSsnInput(raw: string): string {
+  const digits = raw.replace(/\D/g, '').slice(0, MAX_TAX_ID_DIGITS)
+  if (digits.length <= 3) return digits
+  if (digits.length <= 5) return `${digits.slice(0, 3)}-${digits.slice(3)}`
+  return `${digits.slice(0, 3)}-${digits.slice(3, 5)}-${digits.slice(5)}`
 }

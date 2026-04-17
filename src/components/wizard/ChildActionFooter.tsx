@@ -1,10 +1,20 @@
 import { useState } from 'react'
 import { toast } from 'sonner'
-import { useWorkflow, useChildActionContext, useAdvisorUnlocked, getChildReviewState, getChildReviewDecision } from '@/stores/workflowStore'
+import {
+  useWorkflow,
+  useChildActionContext,
+  useAdvisorFormsEditable,
+  useAdvisorResubmitEligible,
+  getChildReviewState,
+  getChildReviewDecision,
+} from '@/stores/workflowStore'
 import { Button } from '@/components/ui/button'
 import { CheckCircle2, ChevronLeft, ChevronRight, Clock, ShieldAlert, RotateCcw } from 'lucide-react'
 import { getKycValidationErrors } from './forms/KycChildInfoForm'
-import { getAccountOpeningChildSubmissionIssues } from '@/utils/accountOpeningChildProgress'
+import {
+  getAccountOpeningChildSubmissionIssues,
+  hasAccountOpeningChildBeenSubmittedForReview,
+} from '@/utils/accountOpeningChildProgress'
 
 function SubmissionBlockedModal({
   issues,
@@ -106,7 +116,8 @@ export function ChildActionFooter() {
   const [showResubmitModal, setShowResubmitModal] = useState(false)
   const [showCompleteStepModal, setShowCompleteStepModal] = useState(false)
   const [submissionIssues, setSubmissionIssues] = useState<string[] | null>(null)
-  const advisorUnlocked = useAdvisorUnlocked()
+  const advisorFormsEditable = useAdvisorFormsEditable()
+  const advisorResubmitEligible = useAdvisorResubmitEligible()
 
   if (!ctx) return null
 
@@ -247,7 +258,7 @@ export function ChildActionFooter() {
   }
 
   const hideNextInAdvisorAfterSubmit =
-    isAdvisorView && child.status === 'awaiting_review' && !advisorUnlocked
+    isAdvisorView && child.status === 'awaiting_review' && !advisorFormsEditable
 
   if (isAdvisorView || isAmlView || isHoKycView || isHoPrincipalKycView) {
     return (
@@ -262,7 +273,7 @@ export function ChildActionFooter() {
             )}
           </div>
           <div className="flex items-center gap-3">
-            {advisorUnlocked && isLast ? (
+            {advisorResubmitEligible && isLast ? (
               <Button onClick={handleResubmit}>
                 <RotateCcw className="h-4 w-4" />
                 Resubmit for Review
@@ -286,9 +297,17 @@ export function ChildActionFooter() {
                 <span>Submitted for {isKyc ? 'home office' : 'home office review'} at {state.submittedAt ?? 'N/A'}</span>
               </div>
             ) : isLast && (child.status === 'in_progress' || child.status === 'not_started') ? (
-              <Button onClick={handleDone}>
-                Submit for Review
-              </Button>
+              child.childType === 'account-opening' &&
+              !hasAccountOpeningChildBeenSubmittedForReview(state, child.id) ? (
+                <Button onClick={() => dispatch({ type: 'EXIT_CHILD_ACTION' })}>
+                  Next
+                  <ChevronRight className="h-4 w-4" />
+                </Button>
+              ) : (
+                <Button onClick={handleDone}>
+                  Submit for Review
+                </Button>
+              )
             ) : null}
             {!isLast && !hideNextInAdvisorAfterSubmit && (
               <Button onClick={() => dispatch({ type: 'CHILD_GO_NEXT' })}>

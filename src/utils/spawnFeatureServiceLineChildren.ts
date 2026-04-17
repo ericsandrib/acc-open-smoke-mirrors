@@ -1,6 +1,6 @@
 import type { Dispatch } from 'react'
 import type { WorkflowAction } from '@/types/workflow'
-import { getAccountFeatureServiceLabel } from '@/data/accountFeatureServiceOptions'
+import { ACCOUNT_EMBEDDED_FEATURE_VALUES, getAccountFeatureServiceLabel } from '@/data/accountFeatureServiceOptions'
 
 export type FeatureServiceLineRowInput = { featureServiceType: string; quantity: number }
 
@@ -12,6 +12,7 @@ export function spawnFeatureServiceLineChildren(
 ) {
   for (const row of rows) {
     if (!row.featureServiceType) continue
+    if ((ACCOUNT_EMBEDDED_FEATURE_VALUES as readonly string[]).includes(row.featureServiceType)) continue
     const q = Math.min(10, Math.max(1, Math.floor(row.quantity) || 1))
     const base = getAccountFeatureServiceLabel(row.featureServiceType)
     for (let i = 1; i <= q; i++) {

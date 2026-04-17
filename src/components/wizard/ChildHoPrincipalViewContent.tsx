@@ -7,6 +7,7 @@ import {
 } from 'lucide-react'
 import * as Collapsible from '@radix-ui/react-collapsible'
 import type { RelatedParty } from '@/types/workflow'
+import { mergeFeatureRequests } from '@/types/featureRequests'
 import { cn } from '@/lib/utils'
 
 /** Demo: principal review payload as if custodian / HO APIs returned complete rows. */
@@ -149,6 +150,14 @@ export function ChildHoPrincipalViewContent() {
         }))
       : PRINCIPAL_API_FEATURES
 
+  const fr = mergeFeatureRequests(childMeta?.featureRequests)
+  const marginSummary = fr.margin?.requested
+    ? 'Requested'
+    : 'Not requested'
+  const optionsSummary = fr.options?.requested
+    ? `Requested · level ${fr.options.requestedLevel ?? '—'}`
+    : 'Not requested'
+
   return (
     <main className="flex-1 overflow-y-auto p-8">
       <div className="max-w-3xl mx-auto space-y-6">
@@ -229,6 +238,16 @@ export function ChildHoPrincipalViewContent() {
               <ReviewRow label="Registration Type" value={registrationType} />
               <ReviewRow label="Account Number" value={accountNumber} />
               <ReviewRow label="Short Name" value={shortName} />
+            </dl>
+          </AccordionSection>
+
+          <AccordionSection title="Feature requests (margin &amp; options)" icon={Settings2} defaultOpen={false}>
+            <p className="text-xs text-muted-foreground mb-2">
+              Captured on <strong>Account &amp; owners</strong> — separate from API/service workflows (eDelivery, transfers, ACH, etc.).
+            </p>
+            <dl className="space-y-0">
+              <ReviewRow label="Margin" value={marginSummary} />
+              <ReviewRow label="Options" value={optionsSummary} />
             </dl>
           </AccordionSection>
 

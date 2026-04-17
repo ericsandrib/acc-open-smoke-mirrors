@@ -4,7 +4,7 @@ import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import {
-  capTaxIdDigits,
+  formatSsnInput,
   maskTaxIdSensitiveDisplay,
   shouldMaskTaxIdInput,
 } from '@/utils/taxIdMask'
@@ -30,8 +30,9 @@ export function SensitiveTaxIdInput({
   ...rest
 }: SensitiveTaxIdInputProps) {
   const [showFull, setShowFull] = React.useState(false)
+  const [isFocused, setIsFocused] = React.useState(false)
   const needsMask = shouldMaskTaxIdInput(value)
-  const showMasked = needsMask && !showFull
+  const showMasked = needsMask && !showFull && !isFocused
 
   React.useEffect(() => {
     if (!needsMask) setShowFull(false)
@@ -47,16 +48,17 @@ export function SensitiveTaxIdInput({
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (showMasked) return
-    const next = capTaxIdDigits(e.target.value)
+    const next = formatSsnInput(e.target.value)
     emitChange(next, e)
   }
 
   const handleFocus = (e: React.FocusEvent<HTMLInputElement>) => {
-    if (needsMask) setShowFull(true)
+    setIsFocused(true)
     onFocus?.(e)
   }
 
   const handleBlur = (e: React.FocusEvent<HTMLInputElement>) => {
+    setIsFocused(false)
     if (needsMask) setShowFull(false)
     onBlur?.(e)
   }

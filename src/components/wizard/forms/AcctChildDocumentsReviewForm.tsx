@@ -35,6 +35,15 @@ interface DocInstance {
   source?: 'upstream' | 'local'
 }
 
+interface ExecutedEsignForm {
+  id: string
+  envelopeId: string
+  formId: string
+  label: string
+  fileName: string
+  executedAt: string
+}
+
 type OwnerRow = { id: string; type: 'existing'; partyId?: string }
 
 export function AcctChildDocumentsReviewForm() {
@@ -98,7 +107,10 @@ export function AcctChildDocumentsReviewForm() {
 
   const ownersTaskId = ctx ? `${ctx.child.id}-account-owners` : ''
   const ownersData = state.taskData[ownersTaskId] as Record<string, unknown> | undefined
-  const owners = (ownersData?.owners as OwnerRow[] | undefined) ?? []
+  const owners = useMemo(
+    () => (ownersData?.owners as OwnerRow[] | undefined) ?? [],
+    [ownersData?.owners],
+  )
   const selectedOwnerPartyIds = useMemo(
     () => new Set(owners.filter((o) => o.type === 'existing' && o.partyId).map((o) => o.partyId!)),
     [owners],
@@ -188,6 +200,7 @@ export function AcctChildDocumentsReviewForm() {
   }
 
   const localDocs = (data['child-local-docs'] as DocInstance[] | undefined) ?? []
+  const executedEsignForms = (data.esignExecutedForms as ExecutedEsignForm[] | undefined) ?? []
 
   const updateLocalDocs = (next: DocInstance[]) => {
     updateField('child-local-docs', next)
@@ -264,11 +277,27 @@ export function AcctChildDocumentsReviewForm() {
                       </div>
                       <div className="min-w-0 flex-1">
                         <p className="text-sm font-medium text-foreground truncate">{doc.label}</p>
-                        <p className="text-[11px] text-muted-foreground line-clamp-2">
-                          Fully executed · client eSign complete (demo PDF)
-                        </p>
+                        {(() => {
+                          const executed = executedEsignForms.find((f) => f.formId === doc.id)
+                          if (executed) {
+                            return (
+                              <p className="text-[11px] text-muted-foreground line-clamp-2">
+                                Fully executed · {new Date(executed.executedAt).toLocaleString()}
+                              </p>
+                            )
+                          }
+                          return (
+                            <p className="text-[11px] text-muted-foreground line-clamp-2">
+                              Awaiting eSign completion from envelope workflow
+                            </p>
+                          )
+                        })()}
                       </div>
-                      <EsignFormPdfSampleActions formIdOrDocId={doc.id} displayLabel={doc.label} viewMode="signed" />
+                      <EsignFormPdfSampleActions
+                        formIdOrDocId={doc.id}
+                        displayLabel={doc.label}
+                        viewMode={executedEsignForms.some((f) => f.formId === doc.id) ? 'signed' : 'preview'}
+                      />
                     </div>
                   </li>
                 ))}

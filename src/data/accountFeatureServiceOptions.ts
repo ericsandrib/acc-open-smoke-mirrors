@@ -1,3 +1,6 @@
+/** Margin & options are captured on the parent account (`featureRequests`), not spawned as service lines. */
+export const ACCOUNT_EMBEDDED_FEATURE_VALUES = ['margin', 'options'] as const
+
 /** Account features & services — administrative, setup, or lifecycle (not transactional movements). */
 export const ACCOUNT_FEATURE_SERVICE_OPTIONS = [
   { value: 'corestone_agreement_checking_accounts', label: 'Corestone Agreement — Checking Accounts' },
@@ -28,6 +31,11 @@ export const ACCOUNT_FEATURE_SERVICE_OPTIONS = [
 ] as const
 
 export type AccountFeatureServiceValue = (typeof ACCOUNT_FEATURE_SERVICE_OPTIONS)[number]['value']
+
+/** Options for spawning **separate** feature/service workflow lines (excludes margin & options). */
+export const ACCOUNT_FEATURE_SERVICE_SPAWN_OPTIONS = ACCOUNT_FEATURE_SERVICE_OPTIONS.filter(
+  (o) => !(ACCOUNT_EMBEDDED_FEATURE_VALUES as readonly string[]).includes(o.value),
+)
 
 export function getAccountFeatureServiceLabel(value: string): string {
   const found = ACCOUNT_FEATURE_SERVICE_OPTIONS.find((o) => o.value === value)

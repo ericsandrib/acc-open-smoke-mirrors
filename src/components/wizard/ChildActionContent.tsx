@@ -1,5 +1,5 @@
 import type { ChildReviewState } from '@/types/workflow'
-import { useWorkflow, useChildActionContext, useAdvisorUnlocked, getChildReviewState, getChildReviewDecision } from '@/stores/workflowStore'
+import { useWorkflow, useChildActionContext, useAdvisorFormsEditable, getChildReviewState, getChildReviewDecision } from '@/stores/workflowStore'
 import { getSubTaskDisplayTitle } from '@/utils/childTaskRegistry'
 import { formComponents, taskDescriptions } from './formRegistry'
 import { Badge } from '@/components/ui/badge'
@@ -336,7 +336,7 @@ export function ChildActionContent() {
   const { state } = useWorkflow()
   const ctx = useChildActionContext()
   const isAdvisorView = state.demoViewMode === 'advisor'
-  const advisorUnlocked = useAdvisorUnlocked()
+  const advisorFormsEditable = useAdvisorFormsEditable()
 
   if (!ctx) return null
 
@@ -344,11 +344,19 @@ export function ChildActionContent() {
   const FormComponent = formComponents[currentSubTask.formKey] ?? null
   const description = taskDescriptions[currentSubTask.formKey]
   const inReview = child.status === 'awaiting_review'
-  const advisorDisabled = isAdvisorView && !advisorUnlocked
+  const advisorDisabled = isAdvisorView && !advisorFormsEditable
+  const childInReviewerPipeline =
+    child.status === 'awaiting_review' ||
+    child.status === 'complete' ||
+    child.status === 'rejected'
   const isHoDocAccountOpening =
-    state.demoViewMode === 'ho-documents' && child.childType === 'account-opening'
+    state.demoViewMode === 'ho-documents' &&
+    child.childType === 'account-opening' &&
+    childInReviewerPipeline
   const isHoPrincipalAccountOpening =
-    state.demoViewMode === 'ho-principal' && child.childType === 'account-opening'
+    state.demoViewMode === 'ho-principal' &&
+    child.childType === 'account-opening' &&
+    childInReviewerPipeline
   const isHoTeamAccountOpening = isHoDocAccountOpening || isHoPrincipalAccountOpening
   const reviewState = getChildReviewState(state, child.id)
   const amlFlagged = reviewState?.amlFlagged

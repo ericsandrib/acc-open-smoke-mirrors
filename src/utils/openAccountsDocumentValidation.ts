@@ -1,6 +1,7 @@
 import type { ChildTask, WorkflowState } from '@/types/workflow'
 import type { EsignEnvelope } from '@/types/esignEnvelope'
 import { getAccountOwnersMissingKyc } from '@/utils/accountOpeningOwnerKyc'
+import { getAccountOpeningChildSubmissionIssues } from '@/utils/accountOpeningChildProgress'
 import { getEnvelopeDisplayName } from '@/utils/deriveEnvelopeDisplayName'
 import {
   getRegistrationDocuments,
@@ -9,6 +10,7 @@ import {
   sortUploadDocumentsForOpenAccounts,
 } from '@/utils/registrationDocuments'
 import type { RegistrationType } from '@/utils/registrationDocuments'
+import { getEsignEnvelopeStatus } from '@/utils/esignEnvelopeStatus'
 
 type OwnerSlot = { partyId?: string; type: string }
 
@@ -111,17 +113,82 @@ export function getOpenAccountsCompletionBlockers(state: WorkflowState): string[
   const envelopes = (openData.esignEnvelopes as EsignEnvelope[] | undefined) ?? []
 
   if (envelopes.length === 0) {
-    blockers.push('Create at least one eSign envelope and send it to the client for signature.')
+    blockers.push('Create at least one eSign envelope.')
   } else {
-    for (const env of envelopes) {
-      const name = getEnvelopeDisplayName(env)
-      if (!env.sentToClient && !env.clientSignaturesComplete) {
-        blockers.push(`${name}: mark the envelope as sent to the client and as signed by the client.`)
-      } else if (!env.sentToClient) {
-        blockers.push(`${name}: mark the envelope as sent to the client.`)
-      } else if (!env.clientSignaturesComplete) {
-        blockers.push(`${name}: mark the envelope as signed by the client.`)
-      }
+    const hasCompletedEnvelope = envelopes.some((env) => getEsignEnvelopeStatus(env) === 'completed')
+    if (!hasCompletedEnvelope) {
+      const names = envelopes.map((env) => getEnvelopeDisplayName(env)).join(', ')
+      blockers.push(
+        `eSign required: at least one envelope must be Completed. Current envelope(s): ${names}.`,
+      )
+    }
+  }
+
+  return blockers
+}
+
+/**
+ * Readiness checks for submitting all account-opening child workflows for review from Open Accounts.
+ */
+export function getOpenAccountsSubmitForReviewBlockers(state: WorkflowState): string[] {
+  const blockers: string[] = []
+  const openAccountsTask = state.tasks.find((t) => t.formKey === 'open-accounts')
+  const accountOpeningChildren =
+    openAccountsTask?.children?.filter((c) => c.childType === 'account-opening') ?? []
+
+  if (accountOpeningChildren.length === 0) {
+    return ['Add at least one account in Accounts to be Opened before submitting for review.']
+  }
+
+  blockers.push(...getOpenAccountsMissingDocumentSpecificationIssues(state))
+
+  for (const child of accountOpeningChildren) {
+    const childIssues = getAccountOpeningChildSubmissionIssues(state, child.id)
+    for (const issue of childIssues) {
+      blockers.push(`${child.name}: ${issue}`)
+    }
+  }
+
+  const openData = (state.taskData['open-accounts'] as Record<string, unknown> | undefined) ?? {}
+  const envelopes = (openData.esignEnvelopes as EsignEnvelope[] | undefined) ?? []
+  const sentEnvelopes = envelopes.filter((env) => env.sentToClient === true)
+
+  if (envelopes.length === 0) {
+    blockers.push('Create at least one eSign envelope.')
+    return blockers
+  }
+  if (sentEnvelopes.length === 0) {
+    blockers.push('Send at least one eSign envelope to the client before submitting for review.')
+    return blockers
+  }
+
+  const accountNameById = new Map(accountOpeningChildren.map((c) => [c.id, c.name]))
+  const coveredAccountIds = new Set<string>()
+  for (const env of sentEnvelopes) {
+    for (const row of env.formSelections) {
+      if (row.included) coveredAccountIds.add(row.accountChildId)
+    }
+  }
+
+  const uncovered = accountOpeningChildren.filter((c) => !coveredAccountIds.has(c.id))
+  for (const c of uncovered) {
+    blockers.push(`${c.name}: forms have not been sent to client in any envelope.`)
+  }
+
+  // Also surface envelope-level gaps for debugging routing.
+  for (const env of sentEnvelopes) {
+    const includedRows = env.formSelections.filter((r) => r.included)
+    if (includedRows.length === 0) {
+      blockers.push(`${getEnvelopeDisplayName(env)}: sent but no account forms are included.`)
+      continue
+    }
+    const unknownAccountIds = new Set(
+      includedRows.map((r) => r.accountChildId).filter((id) => !accountNameById.has(id)),
+    )
+    if (unknownAccountIds.size > 0) {
+      blockers.push(
+        `${getEnvelopeDisplayName(env)}: contains form selections for accounts not found in this submission.`,
+      )
     }
   }
 

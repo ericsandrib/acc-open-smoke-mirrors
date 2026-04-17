@@ -9,6 +9,7 @@ import {
 } from '@/data/seed'
 import { getChildSubTaskIds, getChildTypeConfig, parseChildSubTaskId } from '@/utils/childTaskRegistry'
 import { generateAccountOpenIdentifiers } from '@/utils/accountOpenIdentifiers'
+import { mergeFeatureRequests } from '@/types/featureRequests'
 
 export function getChildReviewState(state: WorkflowState, childId: string | undefined): ChildReviewState | undefined {
   if (!childId) return undefined
@@ -238,6 +239,7 @@ function workflowReducer(state: WorkflowState, action: WorkflowAction): Workflow
           const gen = generateAccountOpenIdentifiers(action.childName, spawnedChildId)
           merged.accountNumber = (merged.accountNumber as string | undefined) ?? gen.accountNumber
           merged.shortName = (merged.shortName as string | undefined) ?? gen.shortName
+          merged.featureRequests = mergeFeatureRequests(merged.featureRequests)
         }
         newTaskData = { ...state.taskData, [spawnedChildId]: merged }
       }
@@ -275,6 +277,7 @@ function workflowReducer(state: WorkflowState, action: WorkflowAction): Workflow
         flatTaskOrder: spawnOrder,
         activeChildActionId: newChildId,
         activeChildSubTaskIndex: 0,
+        demoViewMode: sanitizeDemoViewModeForChild('advisor', action.childType),
       }
     }
 
@@ -501,22 +504,22 @@ function workflowReducer(state: WorkflowState, action: WorkflowAction): Workflow
       const enteredChild = state.tasks
         .flatMap((t) => t.children ?? [])
         .find((c) => c.id === action.childId)
-      const isAwaitingReview = enteredChild?.status === 'awaiting_review'
-      const isAccountOpeningAwaiting = isAwaitingReview && enteredChild?.childType === 'account-opening'
-      const kycEnteredWithPipeline =
-        enteredChild?.childType === 'kyc' &&
+      const childInReviewerPipeline =
+        !!enteredChild &&
         (enteredChild.status === 'awaiting_review' ||
           enteredChild.status === 'complete' ||
           enteredChild.status === 'rejected')
+      const isAwaitingReview = enteredChild?.status === 'awaiting_review'
+      const isAccountOpeningAwaiting = isAwaitingReview && enteredChild?.childType === 'account-opening'
       const seedTime = new Date().toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })
       const nextDemoRaw =
-        isAwaitingReview
+        !childInReviewerPipeline
+          ? 'advisor'
+          : isAwaitingReview
           ? isAccountOpeningAwaiting
             ? (state.demoViewMode ?? 'ho-documents')
             : (state.demoViewMode ?? 'advisor')
-          : kycEnteredWithPipeline
-            ? (state.demoViewMode ?? 'advisor')
-            : state.demoViewMode
+          : (state.demoViewMode ?? 'advisor')
       return {
         ...state,
         activeChildActionId: action.childId,
@@ -524,7 +527,7 @@ function workflowReducer(state: WorkflowState, action: WorkflowAction): Workflow
         childActionResume: action.resumeAfterExit,
         demoViewMode: sanitizeDemoViewModeForChild(nextDemoRaw, enteredChild?.childType),
         submittedAt:
-          isAwaitingReview || kycEnteredWithPipeline
+          childInReviewerPipeline
             ? (state.submittedAt ?? seedTime)
             : state.submittedAt,
       }
@@ -602,6 +605,44 @@ function workflowReducer(state: WorkflowState, action: WorkflowAction): Workflow
           reviewStatus: 'pending',
           assignedTo: 'Home Office Review Team',
         },
+      }
+    }
+
+    case 'SUBMIT_ALL_ACCOUNT_OPENING_CHILDREN_FOR_REVIEW': {
+      const openAccountsTask = state.tasks.find((t) => t.formKey === 'open-accounts')
+      if (!openAccountsTask?.children?.length) return state
+
+      const accountOpeningIds = new Set(
+        openAccountsTask.children
+          .filter((c) => c.childType === 'account-opening')
+          .map((c) => c.id),
+      )
+      if (accountOpeningIds.size === 0) return state
+
+      const updatedTasks = state.tasks.map((t) => {
+        if (!t.children) return t
+        return {
+          ...t,
+          children: t.children.map((c) =>
+            accountOpeningIds.has(c.id) ? { ...c, status: 'awaiting_review' as const } : c,
+          ),
+        }
+      })
+
+      const nextChildReviews = { ...(state.childReviewsByChildId ?? {}) }
+      for (const childId of accountOpeningIds) {
+        const prev = nextChildReviews[childId] ?? {}
+        nextChildReviews[childId] = {
+          ...prev,
+          documentReview: prev.documentReview ?? { status: 'pending' },
+          principalReview: prev.principalReview ?? { status: 'pending' },
+        }
+      }
+
+      return {
+        ...state,
+        tasks: updatedTasks,
+        childReviewsByChildId: nextChildReviews,
       }
     }
 
@@ -1199,21 +1240,66 @@ export function useChildActionContext() {
 }
 
 /**
- * Returns `true` when the advisor is viewing a child that has been sent back
- * with feedback by any reviewer (AML, HO Document, HO Principal, HO KYC,
- * or Principal KYC).  Forms use this to re-enable editing so the advisor
- * can fix issues and resubmit.
+ * In advisor demo view: `true` when the active child’s forms should be editable.
+ * Draft children (`not_started` / `in_progress`) are always editable; after submit,
+ * editing re-opens only when a reviewer returns the case (NIGO / info requested / etc.).
  */
-export function useAdvisorUnlocked(): boolean {
+export function useAdvisorFormsEditable(): boolean {
   const { state } = useWorkflow()
   if (state.demoViewMode !== 'advisor') return false
-  const rs = getChildReviewState(state, state.activeChildActionId)
-  if (!rs) return false
 
   const child = state.tasks
     .flatMap((t) => t.children ?? [])
     .find((c) => c.id === state.activeChildActionId)
   if (!child) return false
+
+  const inReviewerPipeline =
+    child.status === 'awaiting_review' ||
+    child.status === 'complete' ||
+    child.status === 'rejected'
+
+  if (!inReviewerPipeline) return true
+  if (child.status === 'rejected') return true
+
+  const rs = getChildReviewState(state, state.activeChildActionId)
+  if (!rs) return false
+
+  if (child.childType === 'kyc') {
+    return (
+      rs.amlReview?.status === 'info_requested' ||
+      rs.amlReview?.status === 'flagged' ||
+      rs.hoKycReview?.status === 'changes_requested' ||
+      rs.principalKycReview?.status === 'rejected' ||
+      false
+    )
+  }
+
+  return (
+    rs.amlReview?.status === 'info_requested' ||
+    rs.amlReview?.status === 'flagged' ||
+    rs.documentReview?.status === 'nigo' ||
+    rs.principalReview?.status === 'nigo' ||
+    false
+  )
+}
+
+/**
+ * Advisor demo: `true` when the child has been through review and needs correction / resubmit.
+ * First-time drafts (no review state) are `false` so the footer shows Next / Submit, not Resubmit.
+ */
+export function useAdvisorResubmitEligible(): boolean {
+  const { state } = useWorkflow()
+  if (state.demoViewMode !== 'advisor') return false
+
+  const child = state.tasks
+    .flatMap((t) => t.children ?? [])
+    .find((c) => c.id === state.activeChildActionId)
+  if (!child) return false
+
+  if (child.status === 'rejected') return true
+
+  const rs = getChildReviewState(state, state.activeChildActionId)
+  if (!rs) return false
 
   if (child.childType === 'kyc') {
     return (

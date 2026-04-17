@@ -4,6 +4,34 @@ export type PaperworkDeliveryMethod =
   | 'in_person'
   | 'mail'
 
+export type EsignEnvelopeStatus =
+  | 'draft'
+  | 'sent'
+  | 'delivered'
+  | 'completed'
+  | 'declined'
+  | 'voided'
+
+export type EsignSignerStatus =
+  | 'pending'
+  | 'sent'
+  | 'delivered'
+  | 'viewed'
+  | 'signed'
+  | 'declined'
+
+export interface EsignEnvelopeHistoryEvent {
+  id: string
+  occurredAt: string
+  source: 'docusign' | 'advisor'
+  eventType: 'envelope_status' | 'signer_status'
+  envelopeStatus?: EsignEnvelopeStatus
+  signerId?: string
+  signerName?: string
+  signerStatus?: EsignSignerStatus
+  note?: string
+}
+
 export interface EsignEnvelopeSigner {
   id: string
   /** Related-party id for account owner source-of-truth mapping. */
@@ -14,6 +42,9 @@ export interface EsignEnvelopeSigner {
   phone?: string
   /** Account-opening children this signer should sign for. */
   accountChildIds?: string[]
+  /** Current DocuSign recipient signing state (demo). */
+  signingStatus?: EsignSignerStatus
+  signedAt?: string
 }
 
 /** One generated firm/custodian form row (grouped by account in the UI). */
@@ -53,6 +84,10 @@ export interface EsignEnvelope {
   uploadedFiles: EnvelopeUploadedFile[]
   signers: EsignEnvelopeSigner[]
   createdAt: string
+  /** Current envelope status from DocuSign (demo). */
+  envelopeStatus?: EsignEnvelopeStatus
+  /** Timeline of envelope and signer updates. */
+  history?: EsignEnvelopeHistoryEvent[]
   /** Demo: advisor has delivered the signing package to the client. */
   sentToClient?: boolean
   /** Demo: client has completed required signatures on the package. */

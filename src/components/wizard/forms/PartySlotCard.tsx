@@ -81,6 +81,23 @@ export function PartySlotCard({
     if (party.kycStatus === 'needs_kyc') {
       return { label: 'Not Started', className: 'bg-red-50 text-red-700 border-red-200' }
     }
+    if (party.kycStatus === 'pending') {
+      return { label: 'Pending', className: 'bg-amber-50 text-amber-700 border-amber-200' }
+    }
+    return null
+  }
+
+  const getPartyKycAction = (party: RelatedParty | undefined): 'start' | 'go' | null => {
+    if (!party) return null
+    const kycParentTask = state.tasks.find((t) => t.formKey === 'kyc') ?? state.tasks.find((t) => t.formKey === 'open-accounts')
+    const kycChild = kycParentTask?.children?.find((c) => c.childType === 'kyc' && c.name === party.name)
+    if (kycChild) {
+      const ds = deriveChildDisplayStatus(kycChild.status)
+      return ds === 'complete' ? null : 'go'
+    }
+    if (party.kycStatus === 'verified') return null
+    if (party.kycStatus === 'pending') return 'go'
+    if (party.kycStatus === 'needs_kyc') return 'start'
     return null
   }
 
@@ -322,11 +339,35 @@ export function PartySlotCard({
                     return (
                       <li key={t.id} className="flex items-center justify-between gap-2">
                         <span className="truncate">{line}</span>
-                        {trusteeKycStatus ? (
-                          <Badge variant="outline" className={cn('text-[10px] shrink-0', trusteeKycStatus.className)}>
-                            {trusteeKycStatus.label}
-                          </Badge>
-                        ) : null}
+                        <div className="flex items-center gap-1.5 shrink-0">
+                          {trusteeKycStatus ? (
+                            <Badge variant="outline" className={cn('text-[10px] shrink-0', trusteeKycStatus.className)}>
+                              {trusteeKycStatus.label}
+                            </Badge>
+                          ) : null}
+                          {linked && getPartyKycAction(linked) === 'start' && onStartKyc ? (
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              className="h-5 px-2 text-[10px]"
+                              type="button"
+                              onClick={() => onStartKyc(linked.id)}
+                            >
+                              Start KYC
+                            </Button>
+                          ) : null}
+                          {linked && getPartyKycAction(linked) === 'go' && onGoToKyc ? (
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              className="h-5 px-2 text-[10px]"
+                              type="button"
+                              onClick={() => onGoToKyc(linked.id)}
+                            >
+                              Go to KYC
+                            </Button>
+                          ) : null}
+                        </div>
                       </li>
                     )
                   })}
@@ -352,11 +393,35 @@ export function PartySlotCard({
                     return (
                       <li key={`${b.name}-${idx}`} className="flex items-center justify-between gap-2">
                         <span className="truncate">{line}</span>
-                        {boKycStatus ? (
-                          <Badge variant="outline" className={cn('text-[10px] shrink-0', boKycStatus.className)}>
-                            {boKycStatus.label}
-                          </Badge>
-                        ) : null}
+                        <div className="flex items-center gap-1.5 shrink-0">
+                          {boKycStatus ? (
+                            <Badge variant="outline" className={cn('text-[10px] shrink-0', boKycStatus.className)}>
+                              {boKycStatus.label}
+                            </Badge>
+                          ) : null}
+                          {linked && getPartyKycAction(linked) === 'start' && onStartKyc ? (
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              className="h-5 px-2 text-[10px]"
+                              type="button"
+                              onClick={() => onStartKyc(linked.id)}
+                            >
+                              Start KYC
+                            </Button>
+                          ) : null}
+                          {linked && getPartyKycAction(linked) === 'go' && onGoToKyc ? (
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              className="h-5 px-2 text-[10px]"
+                              type="button"
+                              onClick={() => onGoToKyc(linked.id)}
+                            >
+                              Go to KYC
+                            </Button>
+                          ) : null}
+                        </div>
                       </li>
                     )
                   })}

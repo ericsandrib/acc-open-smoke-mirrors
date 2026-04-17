@@ -41,7 +41,7 @@ export const taskDescriptions: Partial<Record<string, string>> = {
   'open-accounts':
     'Select the types of accounts to open, review documents, and prepare for signature.',
   'acct-child-account-owners':
-    'Confirm account registration details, add owners and participants, complete supplementary account questions, and satisfy owner-level document requirements.',
+    'Set up the account, add owners and participants, request margin and options, answer remaining account questions, and collect required owner documents.',
   'acct-child-funding-transfers':
     'Kick off one or more funding and account transfer workflows for this account—each line opens its own detail flow, similar to Accounts to be Opened on the parent task.',
   'funding-line-child-setup':

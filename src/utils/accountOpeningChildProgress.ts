@@ -1,4 +1,5 @@
 import type { ChildTask, WorkflowState } from '@/types/workflow'
+import { mergeFeatureRequests } from '@/types/featureRequests'
 import {
   getRegistrationDocumentsForType,
   getDocSubTypes,
@@ -143,8 +144,17 @@ function progressAccountOwners(state: WorkflowState, accountChildId: string): { 
   }
 
   const titleFilled = countStr(data.displayTitle)
-  const total = 1 + ownerSlots + supplementalKeys.length
-  const filled = titleFilled + ownerFilled + supFilled
+  const fr = mergeFeatureRequests(childMeta?.featureRequests)
+  const marginRequested = typeof fr.margin?.requested === 'boolean'
+  const marginOk = marginRequested
+  const optionsLevelOk = (fr.options?.requestedLevel ?? 0) >= 1
+  const optionsRequested = typeof fr.options?.requested === 'boolean'
+  const optionsOk = optionsRequested && (!fr.options?.requested || optionsLevelOk)
+  const featureFilled = (marginOk ? 1 : 0) + (optionsOk ? 1 : 0)
+  const featureTotal = 2
+
+  const total = 1 + ownerSlots + supplementalKeys.length + featureTotal
+  const filled = titleFilled + ownerFilled + supFilled + featureFilled
 
   return applySubmittedCap(state, taskId, { filled, total })
 }
@@ -326,4 +336,16 @@ export function getAccountOpeningChildSubmissionIssues(
   }
 
   return issues
+}
+
+/**
+ * `true` after the account-opening child has been submitted for home-office review at least once
+ * (`SUBMIT_CHILD_FOR_REVIEW` seeds `childReviewsByChildId`).
+ * First-time drafts have no entry — UX can still label both as "draft".
+ */
+export function hasAccountOpeningChildBeenSubmittedForReview(
+  state: WorkflowState,
+  accountChildId: string,
+): boolean {
+  return Boolean(state.childReviewsByChildId?.[accountChildId])
 }

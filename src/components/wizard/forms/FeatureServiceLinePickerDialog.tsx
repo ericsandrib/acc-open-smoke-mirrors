@@ -12,7 +12,7 @@ import {
 } from '@/components/ui/select'
 import { Plus, Trash2 } from 'lucide-react'
 import type { FeatureServiceLineRowInput } from '@/utils/spawnFeatureServiceLineChildren'
-import { ACCOUNT_FEATURE_SERVICE_OPTIONS } from '@/data/accountFeatureServiceOptions'
+import { ACCOUNT_FEATURE_SERVICE_SPAWN_OPTIONS } from '@/data/accountFeatureServiceOptions'
 
 const QUANTITY_OPTIONS = Array.from({ length: 10 }, (_, i) => ({
   value: String(i + 1),
@@ -122,7 +122,7 @@ export function FeatureServiceLinePickerDialog({
                       <SelectValue placeholder="Select type…" />
                     </SelectTrigger>
                     <SelectContent className="max-h-[min(24rem,70vh)]">
-                      {ACCOUNT_FEATURE_SERVICE_OPTIONS.map((opt) => (
+                      {ACCOUNT_FEATURE_SERVICE_SPAWN_OPTIONS.map((opt) => (
                         <SelectItem key={opt.value} value={opt.value} className="text-left py-2">
                           {opt.label}
                         </SelectItem>

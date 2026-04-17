@@ -142,6 +142,7 @@ export function EsignEnvelopeDrawer({
   const [draggingPaletteField, setDraggingPaletteField] = useState<string | null>(null)
   const pdfCanvasRef = useRef<HTMLDivElement | null>(null)
   const pdfScrollRef = useRef<HTMLDivElement | null>(null)
+  const fieldIdCounterRef = useRef(0)
 
   const dragSessionRef = useRef<{
     fieldId: string
@@ -155,9 +156,27 @@ export function EsignEnvelopeDrawer({
   } | null>(null)
   const suppressClickFieldIdRef = useRef<string | null>(null)
   const placedFieldsByFileRef = useRef(placedFieldsByFile)
-  placedFieldsByFileRef.current = placedFieldsByFile
+  useEffect(() => {
+    placedFieldsByFileRef.current = placedFieldsByFile
+  }, [placedFieldsByFile])
+
+  const nextPlacedFieldId = () => {
+    fieldIdCounterRef.current += 1
+    return `fld-${fieldIdCounterRef.current}`
+  }
 
   const grouped = groupFormSelectionsByAccountChild(local.formSelections)
+  const accountSelections = useMemo(
+    () =>
+      Array.from(grouped.entries()).map(([accountChildId, rows]) => ({
+        accountChildId,
+        rows,
+        included: rows.some((r) => r.included),
+        accountOpeningName: rows[0]?.accountOpeningName ?? 'Account',
+        accountNumberLabel: rows[0]?.accountNumberLabel ?? '—',
+      })),
+    [grouped],
+  )
 
   const { state } = useWorkflow()
 
@@ -188,6 +207,15 @@ export function EsignEnvelopeDrawer({
       optionalFormIdsIncluded: checked
         ? [...new Set([...prev.optionalFormIdsIncluded, id])]
         : prev.optionalFormIdsIncluded.filter((x) => x !== id),
+    }))
+  }
+
+  const setAccountIncluded = (accountChildId: string, included: boolean) => {
+    setLocal((prev) => ({
+      ...prev,
+      formSelections: prev.formSelections.map((row) =>
+        row.accountChildId === accountChildId ? { ...row, included } : row,
+      ),
     }))
   }
 
@@ -335,7 +363,7 @@ export function EsignEnvelopeDrawer({
     const displayLabel = paletteLabel === 'Name' ? 'Full Name' : paletteLabel
     const fileId = viewerFile.id
     const signerId = selectedSignerId || local.signers[0]?.id || ''
-    const id = `fld-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`
+    const id = nextPlacedFieldId()
     setPlacedFieldsByFile((prev) => {
       const existing = prev[fileId] ?? []
       const idx = existing.length
@@ -357,7 +385,7 @@ export function EsignEnvelopeDrawer({
     const displayLabel = paletteLabel === 'Name' ? 'Full Name' : paletteLabel
     const fileId = viewerFile.id
     const signerId = selectedSignerId || local.signers[0]?.id || ''
-    const id = `fld-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`
+    const id = nextPlacedFieldId()
     const xPct = Math.max(1, Math.min(92, ((clientX - rect.left) / rect.width) * 100))
     const yPct = Math.max(1, Math.min(92, ((clientY - rect.top) / rect.height) * 100))
     setPlacedFieldsByFile((prev) => ({
@@ -382,7 +410,7 @@ export function EsignEnvelopeDrawer({
   const duplicatePlacedField = (fieldId: string) => {
     if (!viewerFile) return
     const fileId = viewerFile.id
-    const id = `fld-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`
+    const id = nextPlacedFieldId()
     setPlacedFieldsByFile((prev) => {
       const list = prev[fileId] ?? []
       const field = list.find((f) => f.id === fieldId)
@@ -587,8 +615,8 @@ export function EsignEnvelopeDrawer({
             <div>
               <p className="text-sm font-medium">Firm &amp; custodian forms</p>
               <p className="text-xs text-muted-foreground mt-1">
-                Required forms are included automatically and cannot be removed. Optional forms can be added from the
-                list below.
+                Select which account(s) to include in this envelope. Forms for selected accounts are included
+                automatically and cannot be removed individually.
               </p>
             </div>
 
@@ -598,28 +626,42 @@ export function EsignEnvelopeDrawer({
               </p>
             ) : (
               <div className="space-y-4">
-                {Array.from(grouped.entries()).map(([accountChildId, rows]) => {
-                  const head = rows[0]
+                {accountSelections.map(({ accountChildId, rows, included, accountOpeningName, accountNumberLabel }) => {
                   return (
-                  <div key={accountChildId} className="rounded-lg border border-border bg-card overflow-hidden">
-                    <div className="bg-muted/50 px-3 py-2 border-b border-border space-y-0.5">
-                      <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                        Account
-                      </p>
-                      <p className="text-sm font-medium text-foreground leading-snug">{head?.accountOpeningName ?? 'Account'}</p>
-                      <p className="text-xs text-muted-foreground tabular-nums">
-                        Account # <span className="text-foreground font-medium">{head?.accountNumberLabel ?? '—'}</span>
-                      </p>
+                  <div
+                    key={accountChildId}
+                    className={cn(
+                      'rounded-lg border border-border bg-card overflow-hidden',
+                      !included && 'opacity-70',
+                    )}
+                  >
+                    <div className="bg-muted/50 px-3 py-2 border-b border-border flex items-start justify-between gap-3">
+                      <label className="min-w-0 flex items-start gap-2.5 cursor-pointer">
+                        <Checkbox
+                          checked={included}
+                          onCheckedChange={(v) => setAccountIncluded(accountChildId, v === true)}
+                          className="mt-0.5"
+                        />
+                        <div className="space-y-0.5 min-w-0">
+                          <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                            Account
+                          </p>
+                          <p className="text-sm font-medium text-foreground leading-snug">{accountOpeningName}</p>
+                          <p className="text-xs text-muted-foreground tabular-nums">
+                            Account # <span className="text-foreground font-medium">{accountNumberLabel}</span>
+                          </p>
+                        </div>
+                      </label>
                     </div>
                     <ul className="divide-y divide-border">
                       {rows.map((row) => (
                         <li key={row.formId} className="flex items-center gap-3 px-3 py-2.5">
-                          <Checkbox checked={row.included} disabled={row.required} className="shrink-0" />
+                          <Checkbox checked={included} disabled className="shrink-0" />
                           <div className="min-w-0 flex-1">
                             <p className="text-sm text-foreground">{row.label}</p>
-                            {row.required ? (
-                              <p className="text-[11px] text-muted-foreground">Required for this registration</p>
-                            ) : null}
+                            <p className="text-[11px] text-muted-foreground">
+                              {included ? 'Required for selected account' : 'Excluded with account'}
+                            </p>
                           </div>
                           <EsignFormPdfSampleActions formIdOrDocId={row.formId} displayLabel={row.label} viewMode="preview" />
                         </li>

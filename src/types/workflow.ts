@@ -241,6 +241,7 @@ export type WorkflowAction =
   | { type: 'CHILD_GO_BACK' }
   | { type: 'SET_CHILD_SUB_TASK'; index: number }
   | { type: 'SUBMIT_FOR_REVIEW' }
+  | { type: 'SUBMIT_ALL_ACCOUNT_OPENING_CHILDREN_FOR_REVIEW' }
   | { type: 'ACCEPT_REVIEW' }
   | { type: 'REJECT_REVIEW'; reason: string; feedback?: string }
   | { type: 'SUBMIT_CHILD_FOR_REVIEW' }

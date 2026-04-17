@@ -7,18 +7,17 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from '
 import { Plus, Trash2 } from 'lucide-react'
 import { useWorkflow } from '@/stores/workflowStore'
 import type { AccountType, FinancialAccount } from '@/types/workflow'
+import { accountTypeLabels } from '@/utils/financialAccountLabels'
 
-const accountTypeLabels: Record<AccountType, string> = {
-  brokerage: 'Brokerage',
-  ira: 'Traditional IRA',
-  roth_ira: 'Roth IRA',
-  '401k': '401(k)',
-  trust: 'Trust',
-  checking: 'Checking',
-  savings: 'Savings',
-}
-
-function AddAccountSheet({ open, onOpenChange }: { open: boolean; onOpenChange: (open: boolean) => void }) {
+export function AddAccountSheet({
+  open,
+  onOpenChange,
+  onAccountAdded,
+}: {
+  open: boolean
+  onOpenChange: (open: boolean) => void
+  onAccountAdded?: (account: FinancialAccount) => void
+}) {
   const { dispatch } = useWorkflow()
   const [accountName, setAccountName] = useState('')
   const [accountType, setAccountType] = useState<AccountType | ''>('')
@@ -38,19 +37,21 @@ function AddAccountSheet({ open, onOpenChange }: { open: boolean; onOpenChange: 
 
   const handleAdd = () => {
     if (!accountName.trim()) return
+    const account: FinancialAccount = {
+      id: `acct-${Date.now()}`,
+      accountName: accountName.trim(),
+      accountType: accountType || undefined,
+      custodian: custodian || undefined,
+      routingNumber:
+        accountType === 'checking' || accountType === 'savings' ? routingNumber || undefined : undefined,
+      accountNumber: accountNumber || undefined,
+      estimatedValue: estimatedValue || undefined,
+    }
     dispatch({
       type: 'ADD_FINANCIAL_ACCOUNT',
-      account: {
-        id: `acct-${Date.now()}`,
-        accountName: accountName.trim(),
-        accountType: accountType || undefined,
-        custodian: custodian || undefined,
-        routingNumber:
-          accountType === 'checking' || accountType === 'savings' ? routingNumber || undefined : undefined,
-        accountNumber: accountNumber || undefined,
-        estimatedValue: estimatedValue || undefined,
-      },
+      account,
     })
+    onAccountAdded?.(account)
     reset()
     onOpenChange(false)
   }
@@ -232,33 +233,21 @@ function snapshotAccount(account: FinancialAccount): AccountFields {
   }
 }
 
-function EditAccountSheet({
+function EditAccountSheetInner({
   account,
   open,
   onOpenChange,
 }: {
-  account: FinancialAccount | null
+  account: FinancialAccount
   open: boolean
   onOpenChange: (open: boolean) => void
 }) {
   const { dispatch } = useWorkflow()
-  const [fields, setFields] = useState<AccountFields>({
-    accountName: '', accountType: '', custodian: '', routingNumber: '', accountNumber: '', estimatedValue: '',
-  })
-  const [snapshot, setSnapshot] = useState<AccountFields>(fields)
+  const [baseline] = useState<AccountFields>(() => snapshotAccount(account))
+  const [fields, setFields] = useState<AccountFields>(() => snapshotAccount(account))
 
-  useEffect(() => {
-    if (account && open) {
-      const s = snapshotAccount(account)
-      setFields(s)
-      setSnapshot(s)
-    }
-  }, [account?.id, open])
-
-  if (!account) return null
-
-  const isDirty = Object.keys(snapshot).some(
-    (k) => fields[k as keyof AccountFields] !== snapshot[k as keyof AccountFields]
+  const isDirty = Object.keys(baseline).some(
+    (k) => fields[k as keyof AccountFields] !== baseline[k as keyof AccountFields]
   )
 
   const setField = (key: keyof AccountFields, value: string) => {
@@ -364,6 +353,19 @@ function EditAccountSheet({
       </SheetContent>
     </Sheet>
   )
+}
+
+export function EditAccountSheet({
+  account,
+  open,
+  onOpenChange,
+}: {
+  account: FinancialAccount | null
+  open: boolean
+  onOpenChange: (open: boolean) => void
+}) {
+  if (!account) return null
+  return <EditAccountSheetInner key={account.id} account={account} open={open} onOpenChange={onOpenChange} />
 }
 
 export function FinancialAccountsForm() {

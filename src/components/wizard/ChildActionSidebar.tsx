@@ -1,4 +1,4 @@
-import { useWorkflow, useChildActionContext, useAdvisorUnlocked } from '@/stores/workflowStore'
+import { useWorkflow, useChildActionContext, useAdvisorResubmitEligible } from '@/stores/workflowStore'
 import { cn } from '@/lib/utils'
 import { Badge } from '@/components/ui/badge'
 import { ArrowLeft } from 'lucide-react'
@@ -121,7 +121,7 @@ export function ChildActionSidebar() {
 
   const overallStatus = useChildOverallStatus(ctx?.child.id ?? '')
   const statusCfg = childStatusConfig[overallStatus]
-  const advisorUnlocked = useAdvisorUnlocked()
+  const advisorResubmitEligible = useAdvisorResubmitEligible()
 
   if (!ctx) return null
 
@@ -205,8 +205,8 @@ export function ChildActionSidebar() {
         <div className="mt-auto px-3 pt-4 pb-2 border-t border-border mt-4">
           <div className="flex items-center justify-between">
             <span className="text-xs font-medium text-muted-foreground">Status:</span>
-            <Badge variant="outline" className={cn('text-xs', advisorUnlocked ? 'bg-amber-50 text-amber-700 border-amber-200' : statusCfg.className)}>
-              {advisorUnlocked
+            <Badge variant="outline" className={cn('text-xs', advisorResubmitEligible ? 'bg-amber-50 text-amber-700 border-amber-200' : statusCfg.className)}>
+              {advisorResubmitEligible
                 ? 'Action Required'
                 : statusCfg.label}
             </Badge>

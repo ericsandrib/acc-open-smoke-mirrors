@@ -3,15 +3,19 @@ import { useWorkflow, useTaskData } from '@/stores/workflowStore'
 import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
-import { Checkbox } from '@/components/ui/checkbox'
 import { ChildActionKebabMenu } from '@/components/wizard/ChildActionKebabMenu'
 import { ChildActionTimelineSheet } from '@/components/wizard/ChildActionTimelineSheet'
+import {
+  DropdownMenu,
+  DropdownMenuTrigger,
+  DropdownMenuContent,
+  DropdownMenuItem,
+} from '@/components/ui/dropdown-menu'
 import { childStatusConfig, deriveChildDisplayStatus } from '@/utils/childStatusDisplay'
 import type { ChildTask, RelatedParty } from '@/types/workflow'
 import { AccountTypePickerDialog } from './AccountTypePickerDialog'
 import type { Selection } from './AccountTypePickerDialog'
 import { spawnOpenAccountChildrenFromSelections } from '@/utils/spawnOpenAccountChildrenFromSelections'
-import { FinancialAccountsForm } from './FinancialAccountsForm'
 import {
   getRegistrationDocuments,
   getDocSubTypes,
@@ -40,7 +44,7 @@ import {
   Paperclip,
   Trash2,
   Download,
-  Pencil,
+  MoreVertical,
   Clock,
   Play,
   ShieldCheck,
@@ -55,6 +59,15 @@ import { getEnvelopeDisplayName } from '@/utils/deriveEnvelopeDisplayName'
 import { EsignEnvelopeDrawer } from '@/components/wizard/forms/EsignEnvelopeDrawer'
 import { getRegistrationTypesForOpenAccountsUploadSection } from '@/utils/openAccountsDocumentValidation'
 import { getAccountPartiesRequiringKyc } from '@/utils/accountOpeningOwnerKyc'
+import { getEsignEnvelopeStatus, ESIGN_ENVELOPE_STATUS_LABELS } from '@/utils/esignEnvelopeStatus'
+import type { EsignEnvelopeHistoryEvent, EsignEnvelopeStatus, EsignSignerStatus } from '@/types/esignEnvelope'
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+} from '@/components/ui/dialog'
 
 interface DocInstance {
   id: string
@@ -65,6 +78,65 @@ interface DocInstance {
 }
 
 type OwnerSlot = { partyId?: string; type: string }
+type ExecutedEsignForm = {
+  id: string
+  envelopeId: string
+  formId: string
+  label: string
+  fileName: string
+  executedAt: string
+}
+
+function EnvelopeKebabMenu({
+  onDownload,
+  onSimulateSigning,
+  onViewHistory,
+  triggerClassName,
+  className,
+}: {
+  onDownload: () => void
+  onSimulateSigning: () => void
+  onViewHistory: () => void
+  triggerClassName?: string
+  className?: string
+}) {
+  return (
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <button
+          type="button"
+          onClick={(e) => e.stopPropagation()}
+          className={cn(
+            'flex h-8 w-8 items-center justify-center rounded-md text-muted-foreground hover:text-foreground hover:bg-muted transition-colors',
+            className,
+            triggerClassName,
+          )}
+        >
+          <MoreVertical className="h-4 w-4" />
+        </button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent
+        align="end"
+        side="top"
+        className="z-[200] min-w-[170px] rounded-lg border border-border bg-background shadow-lg py-1 p-0"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <DropdownMenuItem className="gap-2.5 px-3 py-2 text-sm" onSelect={onViewHistory}>
+          <Clock className="h-4 w-4" />
+          History
+        </DropdownMenuItem>
+        <DropdownMenuItem className="gap-2.5 px-3 py-2 text-sm" onSelect={onDownload}>
+          <Download className="h-4 w-4" />
+          Download
+        </DropdownMenuItem>
+        <DropdownMenuItem className="gap-2.5 px-3 py-2 text-sm" onSelect={onSimulateSigning}>
+          <Play className="h-4 w-4" />
+          Simulate signing
+        </DropdownMenuItem>
+      </DropdownMenuContent>
+    </DropdownMenu>
+  )
+}
 
 export function OpenAccountsForm() {
   const { state, dispatch } = useWorkflow()
@@ -74,6 +146,7 @@ export function OpenAccountsForm() {
   const [envelopeDrawerOpen, setEnvelopeDrawerOpen] = useState(false)
   const [envelopeDraft, setEnvelopeDraft] = useState<EsignEnvelope | null>(null)
   const [envelopeDrawerCreate, setEnvelopeDrawerCreate] = useState(true)
+  const [historyEnvelopeId, setHistoryEnvelopeId] = useState<string | null>(null)
   /** Bumps when the drawer opens so the sheet remounts with fresh local state from `envelopeDraft`. */
   const [envelopeDrawerMountKey, setEnvelopeDrawerMountKey] = useState(0)
 
@@ -117,7 +190,7 @@ export function OpenAccountsForm() {
       }
     }
     return Array.from(byId.values())
-  }, [accountOpeningChildren, state.taskData, state.relatedParties])
+  }, [accountOpeningChildren, state])
 
   const childRegistrationTypes = useMemo<RegistrationType[]>(
     () => getRegistrationTypesForOpenAccountsUploadSection(accountOpeningChildren, state.taskData),
@@ -227,9 +300,27 @@ export function OpenAccountsForm() {
   }
 
   const saveEnvelopeFromDrawer = (env: EsignEnvelope) => {
+    const now = new Date().toISOString()
     const normalized = {
       ...env,
-      signers: deriveEnvelopeSigners(env.formSelections, env.signers),
+      signers: deriveEnvelopeSigners(env.formSelections, env.signers).map((s) => ({
+        ...s,
+        signingStatus: s.signingStatus ?? 'pending',
+      })),
+      envelopeStatus: env.envelopeStatus ?? getEsignEnvelopeStatus(env),
+      history:
+        env.history && env.history.length > 0
+          ? env.history
+          : [
+              {
+                id: `evt-created-${now}`,
+                occurredAt: now,
+                source: 'advisor' as const,
+                eventType: 'envelope_status' as const,
+                envelopeStatus: env.envelopeStatus ?? 'draft',
+                note: 'Envelope created',
+              },
+            ],
     }
     if (envelopeDrawerCreate) {
       updateField('esignEnvelopes', [...esignEnvelopes, normalized])
@@ -243,14 +334,124 @@ export function OpenAccountsForm() {
     setEnvelopeDrawerOpen(false)
   }
 
-  const updateEnvelopeSigningFlags = (
-    envelopeId: string,
-    patch: Partial<Pick<EsignEnvelope, 'sentToClient' | 'clientSignaturesComplete'>>,
-  ) => {
+  const statusBadgeClass = (status: EsignEnvelopeStatus) => {
+    if (status === 'completed') return 'bg-green-50 text-green-700 border-green-200'
+    if (status === 'declined' || status === 'voided') return 'bg-red-50 text-red-700 border-red-200'
+    if (status === 'delivered') return 'bg-blue-50 text-blue-700 border-blue-200'
+    if (status === 'sent') return 'bg-amber-50 text-amber-700 border-amber-200'
+    return 'bg-muted text-muted-foreground border-border'
+  }
+
+  const signerStatusLabel: Record<EsignSignerStatus, string> = {
+    pending: 'Pending',
+    sent: 'Sent',
+    delivered: 'Delivered',
+    viewed: 'Viewed',
+    signed: 'Signed',
+    declined: 'Declined',
+  }
+
+  const simulateEnvelopeSigning = (envelopeId: string) => {
+    const env = esignEnvelopes.find((e) => e.id === envelopeId)
+    if (!env) return
+    const now = new Date().toISOString()
+
     updateField(
       'esignEnvelopes',
-      esignEnvelopes.map((e) => (e.id === envelopeId ? { ...e, ...patch } : e)),
+      esignEnvelopes.map((current) => {
+        if (current.id !== envelopeId) return current
+        let history = current.history ?? []
+        const push = (event: Omit<EsignEnvelopeHistoryEvent, 'id'>) => {
+          const nextIndex = history.length + 1
+          history = [
+            ...history,
+            {
+              ...event,
+              id: `evt-${event.occurredAt}-${event.eventType}-${event.signerId ?? 'env'}-${nextIndex}`,
+            },
+          ]
+        }
+
+        push({
+          occurredAt: now,
+          source: 'docusign',
+          eventType: 'envelope_status',
+          envelopeStatus: 'sent',
+          note: 'Envelope sent to recipients',
+        })
+        push({
+          occurredAt: now,
+          source: 'docusign',
+          eventType: 'envelope_status',
+          envelopeStatus: 'delivered',
+          note: 'Envelope delivered to recipients',
+        })
+        for (const signer of current.signers) {
+          push({
+            occurredAt: now,
+            source: 'docusign',
+            eventType: 'signer_status',
+            signerId: signer.id,
+            signerName: signer.name,
+            signerStatus: 'signed',
+            note: `${signer.name || 'Signer'} completed signing`,
+          })
+        }
+        push({
+          occurredAt: now,
+          source: 'docusign',
+          eventType: 'envelope_status',
+          envelopeStatus: 'completed',
+          note: 'Envelope completed',
+        })
+
+        return {
+          ...current,
+          sentToClient: true,
+          clientSignaturesComplete: true,
+          envelopeStatus: 'completed',
+          signers: current.signers.map((s) => ({
+            ...s,
+            signingStatus: 'signed',
+            signedAt: now,
+          })),
+          history,
+        }
+      }),
     )
+
+    const rowsByChild = new Map<string, ExecutedEsignForm[]>()
+    for (const row of env.formSelections) {
+      if (!row.included) continue
+      const next: ExecutedEsignForm = {
+        id: `exec-${env.id}-${row.formId}`,
+        envelopeId: env.id,
+        formId: row.formId,
+        label: row.label,
+        fileName: `${row.label.replace(/[^a-z0-9]+/gi, '-').replace(/^-+|-+$/g, '').toLowerCase() || 'signed-form'}.pdf`,
+        executedAt: now,
+      }
+      const list = rowsByChild.get(row.accountChildId) ?? []
+      const filtered = list.filter((d) => d.formId !== row.formId || d.envelopeId !== env.id)
+      rowsByChild.set(row.accountChildId, [...filtered, next])
+    }
+
+    for (const [accountChildId, docs] of rowsByChild.entries()) {
+      const taskId = `${accountChildId}-documents-review`
+      const existing = ((state.taskData[taskId] as Record<string, unknown> | undefined)?.esignExecutedForms ??
+        []) as ExecutedEsignForm[]
+      const merged = [...existing]
+      for (const doc of docs) {
+        const idx = merged.findIndex((d) => d.formId === doc.formId && d.envelopeId === doc.envelopeId)
+        if (idx >= 0) merged[idx] = doc
+        else merged.push(doc)
+      }
+      dispatch({
+        type: 'SET_TASK_DATA',
+        taskId,
+        fields: { esignExecutedForms: merged },
+      })
+    }
   }
 
   const isAnnuity = (child: { name: string }) => child.name.includes(' - Annuity')
@@ -300,41 +501,10 @@ export function OpenAccountsForm() {
       <section>
         <div className="mb-4">
           <h3 className="text-base font-semibold">
-            Existing Accounts
-          </h3>
-          <p className="text-base text-muted-foreground">
-            These are the financial accounts currently held by the client, including brokerage, retirement, and trust accounts.
-          </p>
-        </div>
-        <FinancialAccountsForm />
-      </section>
-
-      {/* Additional Instructions */}
-      <section>
-        <div className="mb-4">
-          <h3 className="text-base font-semibold">Additional Instructions</h3>
-          <p className="text-base text-muted-foreground mt-2">
-            Account opening and funding instructions for the new accounts to be opened.
-          </p>
-        </div>
-        <textarea
-          id="additionalInstructions"
-          className="flex min-h-[18.67rem] w-full resize-y rounded-md border border-input bg-background px-3 py-2 text-sm leading-relaxed ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-          placeholder="Account opening and funding notes for the new accounts (custodian, transfers, rollovers, timing, client requests)."
-          value={(data.additionalInstructions as string) ?? ''}
-          onChange={(e) => updateField('additionalInstructions', e.target.value)}
-        />
-      </section>
-
-      {/* Section 3: Accounts to be Opened */}
-      <section>
-        <div className="mb-4">
-          <h3 className="text-base font-semibold">
             Accounts to be Opened
           </h3>
           <p className="text-base text-muted-foreground mt-2">
-            New accounts to open at the custodian, with funding instructions for each row. Current holdings are listed in
-            Existing Accounts above.
+            New accounts to open at the custodian, with funding instructions for each row.
           </p>
         </div>
 
@@ -718,7 +888,7 @@ export function OpenAccountsForm() {
                         {hasChild ? (() => {
                           const displayStatus = deriveChildDisplayStatus(matchingChild!.status)
                           const cfg = displayStatus === 'complete'
-                            ? { label: 'Verified', className: 'text-emerald-600' }
+                            ? { label: 'Verified', className: 'bg-green-50 text-green-700 border-green-200' }
                             : childStatusConfig[displayStatus]
                           return (
                             <Badge variant="outline" className={cn('text-xs', cfg.className)}>
@@ -855,13 +1025,21 @@ export function OpenAccountsForm() {
 
       {/* eSign envelopes */}
       <section>
-        <div className="mb-4">
-          <h4 className="text-sm font-semibold text-foreground">eSign Envelopes</h4>
-          <p className="text-sm text-muted-foreground mt-1">
-            Create one or more signing envelopes for this application. Required firm and custodian forms are grouped by
-            account number. When you create or edit an envelope, you can view executed PDFs; wet-signed uploads are
-            managed in each account&apos;s Documents step.
-          </p>
+        <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+          <div>
+            <h4 className="text-sm font-semibold text-foreground">eSign Envelopes</h4>
+            <p className="text-sm text-muted-foreground mt-1">
+              Create one or more signing envelopes for this application. Required firm and custodian forms are grouped by
+              account number. When you create or edit an envelope, you can view executed PDFs; wet-signed uploads are
+              managed in each account&apos;s Documents step.
+            </p>
+          </div>
+          {esignEnvelopes.length > 0 ? (
+            <Button type="button" variant="outline" size="sm" className="gap-1.5 shrink-0" onClick={openNewEnvelopeDrawer}>
+              <Plus className="h-3.5 w-3.5" />
+              Add envelope
+            </Button>
+          ) : null}
         </div>
         {esignEnvelopes.length === 0 ? (
           <div className="rounded-lg border border-dashed border-border p-6 text-center">
@@ -876,68 +1054,57 @@ export function OpenAccountsForm() {
             </Button>
           </div>
         ) : (
-          <ul className="space-y-2">
-            {esignEnvelopes.map((env) => (
-              <li
-                key={env.id}
-                className="flex flex-col gap-3 rounded-lg border border-border bg-card p-4 sm:flex-row sm:items-center sm:justify-between"
-              >
-                <div className="min-w-0 space-y-2">
-                  <p className="text-sm font-medium text-foreground truncate">{getEnvelopeDisplayName(env)}</p>
-                  <p className="text-sm text-muted-foreground mt-1">
-                    {env.formSelections.length} generated form{env.formSelections.length === 1 ? '' : 's'}
-                    {env.optionalFormIdsIncluded.length > 0
-                      ? ` · ${env.optionalFormIdsIncluded.length} optional`
-                      : ''}
-                    {env.uploadedFiles.length > 0 ? ` · ${env.uploadedFiles.length} uploaded` : ''} ·{' '}
-                    {env.signers.length} signer{env.signers.length === 1 ? '' : 's'}
-                  </p>
-                  <div className="flex flex-wrap gap-x-4 gap-y-2 pt-1">
-                    <label className="flex items-center gap-2 text-xs text-foreground cursor-pointer">
-                      <Checkbox
-                        checked={env.sentToClient ?? false}
-                        onCheckedChange={(v) =>
-                          updateEnvelopeSigningFlags(env.id, { sentToClient: v === true })
-                        }
-                      />
-                      Sent to client
-                    </label>
-                    <label className="flex items-center gap-2 text-xs text-foreground cursor-pointer">
-                      <Checkbox
-                        checked={env.clientSignaturesComplete ?? false}
-                        onCheckedChange={(v) =>
-                          updateEnvelopeSigningFlags(env.id, { clientSignaturesComplete: v === true })
-                        }
-                      />
-                      Client signed
-                    </label>
+          <div className="rounded-lg border border-border p-1">
+            <ul className="space-y-1">
+              {esignEnvelopes.map((env) => (
+                <li
+                  key={env.id}
+                  className="group flex items-center justify-between rounded-lg p-3 hover:bg-muted/50 transition-colors"
+                  role="button"
+                  tabIndex={0}
+                  onClick={() => openEditEnvelopeDrawer(env)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' || e.key === ' ') {
+                      e.preventDefault()
+                      openEditEnvelopeDrawer(env)
+                    }
+                  }}
+                >
+                  <div className="flex min-w-0 flex-1 items-center gap-3">
+                    <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-muted text-sm font-medium">
+                      <FileSignature className="h-4 w-4" />
+                    </div>
+                    <div className="min-w-0 space-y-1">
+                      <p className="text-sm font-medium text-foreground truncate">{getEnvelopeDisplayName(env)}</p>
+                    </div>
                   </div>
-                </div>
-                <div className="flex flex-wrap items-center gap-2 shrink-0">
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    className="gap-1"
-                    onClick={() => downloadEnvelopeManifest(env)}
-                  >
-                    <Download className="h-3.5 w-3.5" />
-                    Download
-                  </Button>
-                  <Button
-                    type="button"
-                    variant="secondary"
-                    size="sm"
-                    className="gap-1"
-                    onClick={() => openEditEnvelopeDrawer(env)}
-                  >
-                    <Pencil className="h-3.5 w-3.5" />
-                    Edit
-                  </Button>
-                </div>
-              </li>
-            ))}
-          </ul>
+
+                  <div className="shrink-0 relative min-h-8 min-w-[7rem] flex items-center justify-end" onClick={(e) => e.stopPropagation()}>
+                    <Badge
+                      variant="outline"
+                      className={cn(
+                        'text-[10px] transition-opacity group-hover:opacity-0',
+                        statusBadgeClass(getEsignEnvelopeStatus(env)),
+                      )}
+                    >
+                      {ESIGN_ENVELOPE_STATUS_LABELS[getEsignEnvelopeStatus(env)]}
+                    </Badge>
+                    <EnvelopeKebabMenu
+                      className="absolute right-0 top-1/2 -translate-y-1/2"
+                      triggerClassName="opacity-0 pointer-events-none group-hover:opacity-100 group-hover:pointer-events-auto focus-within:opacity-100 focus-within:pointer-events-auto data-[state=open]:opacity-100 data-[state=open]:pointer-events-auto"
+                      onDownload={() => downloadEnvelopeManifest(env)}
+                      onSimulateSigning={() => simulateEnvelopeSigning(env.id)}
+                      onViewHistory={() => setHistoryEnvelopeId(env.id)}
+                    />
+                  </div>
+                </li>
+              ))}
+            </ul>
+            <Button type="button" variant="ghost" className="w-full gap-1.5" onClick={openNewEnvelopeDrawer}>
+              <Plus className="h-4 w-4" />
+              Add envelope
+            </Button>
+          </div>
         )}
       </section>
 
@@ -954,6 +1121,56 @@ export function OpenAccountsForm() {
           isCreate={envelopeDrawerCreate}
         />
       ) : null}
+
+      <Dialog open={historyEnvelopeId !== null} onOpenChange={(open) => !open && setHistoryEnvelopeId(null)}>
+        <DialogContent className="sm:max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>Envelope status history</DialogTitle>
+            <DialogDescription>
+              DocuSign envelope timeline and signer-level signing events.
+            </DialogDescription>
+          </DialogHeader>
+          {(() => {
+            const env = esignEnvelopes.find((e) => e.id === historyEnvelopeId)
+            if (!env) return <p className="text-sm text-muted-foreground">Envelope not found.</p>
+            const history = [...(env.history ?? [])].sort((a, b) => b.occurredAt.localeCompare(a.occurredAt))
+            return (
+              <div className="space-y-4">
+                <div className="rounded-md border border-border bg-muted/20 p-3">
+                  <p className="text-sm font-medium">{getEnvelopeDisplayName(env)}</p>
+                  <p className="text-xs text-muted-foreground">
+                    Current status: {ESIGN_ENVELOPE_STATUS_LABELS[getEsignEnvelopeStatus(env)]}
+                  </p>
+                </div>
+                {history.length === 0 ? (
+                  <p className="text-sm text-muted-foreground">No status events recorded yet.</p>
+                ) : (
+                  <ul className="space-y-2 max-h-[45vh] overflow-y-auto">
+                    {history.map((event) => (
+                      <li key={event.id} className="rounded-md border border-border p-3">
+                        <div className="flex items-center justify-between gap-3">
+                          <p className="text-sm font-medium">
+                            {event.eventType === 'envelope_status'
+                              ? `Envelope ${event.envelopeStatus ? ESIGN_ENVELOPE_STATUS_LABELS[event.envelopeStatus] : 'Updated'}`
+                              : `${event.signerName ?? 'Signer'} — ${event.signerStatus ? signerStatusLabel[event.signerStatus] : 'Updated'}`}
+                          </p>
+                          <Badge variant="outline" className="text-[10px]">
+                            {event.source === 'docusign' ? 'DocuSign' : 'Advisor'}
+                          </Badge>
+                        </div>
+                        <p className="text-xs text-muted-foreground mt-1">
+                          {new Date(event.occurredAt).toLocaleString()}
+                        </p>
+                        {event.note ? <p className="text-xs text-muted-foreground mt-1">{event.note}</p> : null}
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </div>
+            )
+          })()}
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }
