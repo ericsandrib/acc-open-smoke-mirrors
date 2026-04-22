@@ -157,7 +157,6 @@ function AdvisorViewBanner() {
   const isKyc = ctx?.child.childType === 'kyc'
 
   const hoKycReview = reviewState?.hoKycReview
-  const principalKycReview = reviewState?.principalKycReview
 
   if (!ctx) return null
   const { child } = ctx
@@ -196,25 +195,13 @@ function AdvisorViewBanner() {
           )
         }
       } else if (hoKycReview?.status === 'changes_requested') {
-        teamLabel = 'Home Office KYC Team'
-        detail = 'The Home Office has requested changes to this submission. Please review the feedback and resubmit.'
+        teamLabel = 'Document Review'
+        detail = 'Document Review has requested changes to this submission. Please review the feedback and resubmit.'
         if (hoKycReview.comments) {
           feedbackBlock = (
             <div className="mt-2 rounded-md bg-red-100/60 dark:bg-red-900/30 px-3 py-2">
               <p className="text-xs text-red-900 dark:text-red-100">
                 <span className="font-semibold">Feedback:</span> {hoKycReview.comments}
-              </p>
-            </div>
-          )
-        }
-      } else if (principalKycReview?.status === 'rejected') {
-        teamLabel = 'Principal'
-        detail = 'The Principal has rejected the KYC package. Please review the reason and resubmit.'
-        if (principalKycReview.reason) {
-          feedbackBlock = (
-            <div className="mt-2 rounded-md bg-red-100/60 dark:bg-red-900/30 px-3 py-2">
-              <p className="text-xs text-red-900 dark:text-red-100">
-                <span className="font-semibold">Reason:</span> {principalKycReview.reason}
               </p>
             </div>
           )
@@ -277,6 +264,22 @@ function AdvisorViewBanner() {
       )
     }
 
+    if (isKyc) {
+      return (
+        <div className="rounded-lg border border-green-200 bg-green-50 dark:border-green-900/60 dark:bg-green-950/40 px-4 py-3 mb-6">
+          <div className="flex items-start gap-3">
+            <CheckCircle2 className="h-5 w-5 text-green-600 dark:text-green-400 mt-0.5 shrink-0" />
+            <div className="space-y-0.5">
+              <p className="text-sm font-medium text-green-900 dark:text-green-100">Approved — KYC complete</p>
+              <p className="text-xs text-green-800/80 dark:text-green-200/70">
+                Document Review has approved this KYC submission. Approved at {decision.decidedAt}.
+              </p>
+            </div>
+          </div>
+        </div>
+      )
+    }
+
     return (
       <div className="rounded-lg border border-green-200 bg-green-50 dark:border-green-900/60 dark:bg-green-950/40 px-4 py-3 mb-6">
         <div className="flex items-start gap-3">
@@ -300,7 +303,7 @@ function AdvisorViewBanner() {
   if (isKyc) {
     if (amlReview?.status === 'pending') progressParts.push('AML Screening: In Progress')
     else if (amlReview?.status === 'cleared') progressParts.push('AML Screening: Cleared')
-    if (hoKycReview?.status === 'pending') progressParts.push('Home Office Review: Pending')
+    if (hoKycReview?.status === 'pending') progressParts.push('Document Review: Pending')
   } else {
     if (docReview?.status === 'igo') progressParts.push('Document Review: Accepted')
     else if (docReview?.status === 'nigo') progressParts.push('Document Review: Rejected')
@@ -314,11 +317,11 @@ function AdvisorViewBanner() {
         <Lock className="h-5 w-5 text-blue-600 dark:text-blue-400 mt-0.5 shrink-0" />
         <div className="space-y-0.5">
           <p className="text-sm font-medium text-blue-900 dark:text-blue-100">
-            {isKyc ? 'Submitted to Home Office' : 'Read-Only — Under Home Office Review'}
+            {isKyc ? 'Submitted for document review' : 'Read-Only — Under Home Office Review'}
           </p>
           <p className="text-xs text-blue-800/80 dark:text-blue-200/70">
             {isKyc
-              ? 'Your submission has been sent to the Home Office for review. AML screening is in progress. You will be notified when the review is complete.'
+              ? 'Your submission has been sent for document review. AML screening is in progress. You will be notified when the review is complete.'
               : 'This submission is being reviewed by the home office team. All fields are locked until the review is complete.'}
           </p>
           {progressParts.length > 0 && (

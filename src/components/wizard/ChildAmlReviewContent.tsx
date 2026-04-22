@@ -62,6 +62,15 @@ const AML_SECTION_DEFAULTS = [
   'case-notes',
 ] as const
 
+const AML_ENTITY_SECTION_DEFAULTS = [
+  'entity',
+  'ofac',
+  'pep',
+  'risk',
+  'source-funds',
+  'case-notes',
+] as const
+
 /**
  * Demo: values as if returned from an AML screening API (complete — no pending placeholders).
  * When `amlReview.status === 'flagged'`, section-specific flagged copy still overrides in the UI.
@@ -99,16 +108,24 @@ export function ChildAmlReviewContent() {
   const amlNotes = reviewState?.amlNotes
   const [caseNotes, setCaseNotes] = useState(amlNotes ?? AML_API_SCREENING.caseNotesFallback)
 
-  const party = state.relatedParties.find((p) => p.name === child.name)
+  const childMeta = (state.taskData[child.id] as Record<string, unknown> | undefined) ?? {}
+  const subjectPartyId = childMeta.kycSubjectPartyId as string | undefined
+  const subjectType = childMeta.kycSubjectType === 'entity' ? 'entity' : 'individual'
+  const isEntity = subjectType === 'entity'
+  const party = state.relatedParties.find((p) => p.id === subjectPartyId) ?? state.relatedParties.find((p) => p.name === child.name)
   const taskData = state.taskData[`${child.id}-info`] ?? {}
 
   const firstName = (taskData.firstName as string) || party?.firstName || ''
   const lastName = (taskData.lastName as string) || party?.lastName || ''
-  const fullName = `${firstName} ${lastName}`.trim() || child.name
+  const legalName = (taskData.legalName as string) || party?.organizationName || child.name
+  const fullName = isEntity ? legalName : `${firstName} ${lastName}`.trim() || child.name
   const dob = (taskData.dob as string) || party?.dob || ''
-  const ssn = (taskData.ssn as string) || party?.ssn || ''
+  const ssn = (taskData.taxId as string) || party?.taxId || party?.ssn || ''
   const email = (taskData.email as string) || party?.email || ''
   const phone = (taskData.phone as string) || party?.phone || ''
+  const entityType = (taskData.entityType as string) || party?.entityType || ''
+  const jurisdiction = (taskData.jurisdiction as string) || party?.jurisdiction || ''
+  const contactPerson = (taskData.contactPerson as string) || party?.contactPerson || ''
 
   return (
     <main className="flex-1 overflow-y-auto p-8">
@@ -121,7 +138,7 @@ export function ChildAmlReviewContent() {
               <div className="space-y-0.5">
                 <p className="text-sm font-medium text-green-900">AML Review Cleared</p>
                 <p className="text-xs text-green-800/80">
-                  This individual has been cleared by the AML team. No sanctions or watchlist matches found. Cleared at {amlReview.decidedAt}.
+                  This {isEntity ? 'legal entity' : 'individual'} has been cleared by the AML team. No sanctions or watchlist matches found. Cleared at {amlReview.decidedAt}.
                 </p>
               </div>
             </div>
@@ -135,7 +152,7 @@ export function ChildAmlReviewContent() {
               <div className="space-y-1">
                 <p className="text-sm font-medium text-red-900">Flagged for Further Review</p>
                 <p className="text-xs text-red-800/80">
-                  This individual has been flagged by the AML team and requires further investigation. Flagged at {amlReview.decidedAt}.
+                  This {isEntity ? 'legal entity' : 'individual'} has been flagged by the AML team and requires further investigation. Flagged at {amlReview.decidedAt}.
                 </p>
                 {amlReview.findings && (
                   <div className="mt-2 rounded-md bg-red-100/60 px-3 py-2">
@@ -214,7 +231,7 @@ export function ChildAmlReviewContent() {
           </div>
           <h2 className="text-2xl font-semibold text-foreground mt-2">{fullName}</h2>
           <p className="text-sm text-muted-foreground mt-1">
-            Anti-Money Laundering & Sanctions Screening
+            {isEntity ? 'Anti-Money Laundering & Sanctions Screening (KYB)' : 'Anti-Money Laundering & Sanctions Screening'}
           </p>
         </div>
 
@@ -231,14 +248,29 @@ export function ChildAmlReviewContent() {
           </div>
         )}
 
-        <Accordion type="multiple" defaultValue={[...AML_SECTION_DEFAULTS]} className="space-y-3">
-          <AccordionSection value="individual" title="Individual Information" icon={User}>
-            <ReviewRow label="Full Name" value={fullName || '—'} />
-            <ReviewRow label="Date of Birth" value={dob || '—'} />
-            <ReviewRow label="SSN / Tax ID" value={ssn ? `***-**-${ssn.slice(-4)}` : '***-**-**** (verified)'} />
+        <Accordion
+          type="multiple"
+          defaultValue={[...(isEntity ? AML_ENTITY_SECTION_DEFAULTS : AML_SECTION_DEFAULTS)]}
+          className="space-y-3"
+        >
+          <AccordionSection value={isEntity ? 'entity' : 'individual'} title={isEntity ? 'Legal Entity Information' : 'Individual Information'} icon={User}>
+            <ReviewRow label={isEntity ? 'Legal Name' : 'Full Name'} value={fullName || '—'} />
+            {isEntity ? (
+              <>
+                <ReviewRow label="Entity Type" value={entityType || '—'} />
+                <ReviewRow label="Tax ID / EIN" value={ssn ? `**-***${ssn.slice(-4)}` : 'Not provided'} />
+                <ReviewRow label="Jurisdiction" value={jurisdiction || '—'} />
+                <ReviewRow label="Contact Person" value={contactPerson || '—'} />
+              </>
+            ) : (
+              <>
+                <ReviewRow label="Date of Birth" value={dob || '—'} />
+                <ReviewRow label="SSN / Tax ID" value={ssn ? `***-**-${ssn.slice(-4)}` : '***-**-**** (verified)'} />
+              </>
+            )}
             <ReviewRow label="Email" value={email || '—'} />
             <ReviewRow label="Phone" value={phone || '—'} />
-            <ReviewRow label="Relationship" value={party?.relationship || party?.role || 'Client'} />
+            {!isEntity && <ReviewRow label="Relationship" value={party?.relationship || party?.role || 'Client'} />}
           </AccordionSection>
 
           <AccordionSection
@@ -356,9 +388,11 @@ export function ChildAmlReviewContent() {
               }
             />
             <ReviewRow
-              label="Employment Status"
+              label={isEntity ? 'Business Type / Industry' : 'Employment Status'}
               value={
+                (taskData.bizIndustry as string) ||
                 (taskData.employmentStatus as string) ||
+                party?.businessProfile?.industry ||
                 party?.accountOwnerIndividual?.employmentStatus ||
                 AML_API_SCREENING.employmentFallback
               }

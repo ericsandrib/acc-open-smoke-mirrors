@@ -152,11 +152,21 @@ export function ChildHoPrincipalViewContent() {
 
   const fr = mergeFeatureRequests(childMeta?.featureRequests)
   const marginSummary = fr.margin?.requested
-    ? 'Requested'
+    ? `Requested${fr.margin?.marginDebtCoveredBySweep ? ' · sweep covers margin debt' : ''}`
     : 'Not requested'
   const optionsSummary = fr.options?.requested
     ? `Requested · level ${fr.options.requestedLevel ?? '—'}`
     : 'Not requested'
+  const alt = fr.alternativeStrategySelection
+  const altStrategySummary = (() => {
+    if (!alt?.requested) return 'Not requested'
+    const types = alt.strategyTypes?.length ? `${alt.strategyTypes.length} type(s)` : 'Types pending'
+    const tgt =
+      typeof alt.targetAllocationPercent === 'number' && Number.isFinite(alt.targetAllocationPercent)
+        ? `${alt.targetAllocationPercent}% target`
+        : 'Allocation pending'
+    return `Requested · ${types} · ${tgt}`
+  })()
 
   return (
     <main className="flex-1 overflow-y-auto p-8">
@@ -248,6 +258,7 @@ export function ChildHoPrincipalViewContent() {
             <dl className="space-y-0">
               <ReviewRow label="Margin" value={marginSummary} />
               <ReviewRow label="Options" value={optionsSummary} />
+                  <ReviewRow label="Alternative strategy selection" value={altStrategySummary} />
             </dl>
           </AccordionSection>
 

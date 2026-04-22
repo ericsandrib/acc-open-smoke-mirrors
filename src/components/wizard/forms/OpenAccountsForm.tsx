@@ -47,6 +47,8 @@ import {
   MoreVertical,
   Clock,
   Play,
+  CheckCircle2,
+  XCircle,
   ShieldCheck,
   UserPlus,
 } from 'lucide-react'
@@ -58,7 +60,7 @@ import { downloadEnvelopeManifest } from '@/utils/downloadEsignEnvelopeManifest'
 import { getEnvelopeDisplayName } from '@/utils/deriveEnvelopeDisplayName'
 import { EsignEnvelopeDrawer } from '@/components/wizard/forms/EsignEnvelopeDrawer'
 import { getRegistrationTypesForOpenAccountsUploadSection } from '@/utils/openAccountsDocumentValidation'
-import { getAccountPartiesRequiringKyc } from '@/utils/accountOpeningOwnerKyc'
+import { mergeFeatureRequests } from '@/types/featureRequests'
 import { getEsignEnvelopeStatus, ESIGN_ENVELOPE_STATUS_LABELS } from '@/utils/esignEnvelopeStatus'
 import type { EsignEnvelopeHistoryEvent, EsignEnvelopeStatus, EsignSignerStatus } from '@/types/esignEnvelope'
 import {
@@ -156,6 +158,7 @@ export function OpenAccountsForm() {
   const [kycAddSheetOpen, setKycAddSheetOpen] = useState(false)
   const [kycTimelineChild, setKycTimelineChild] = useState<ChildTask | null>(null)
   const pendingKycPartyId = useRef<string | null>(null)
+  const [kycAddContactBump, setKycAddContactBump] = useState(0)
 
   useEffect(() => {
     if (!pendingKycPartyId.current || !kycParentTask) return
@@ -171,13 +174,17 @@ export function OpenAccountsForm() {
     dispatch({
       type: 'SPAWN_CHILD',
       parentTaskId: kycParentTask.id,
-      childName: party.name,
+      childName:
+        party.name?.trim() ||
+        party.organizationName?.trim() ||
+        (party.type === 'related_organization' ? 'Legal entity' : 'Contact'),
       childType: 'kyc',
     })
-  }, [state.relatedParties, kycParentTask, dispatch])
+  }, [state.relatedParties, kycParentTask, dispatch, kycAddContactBump])
 
   const handleKycContactAdded = (partyId: string) => {
     pendingKycPartyId.current = partyId
+    setKycAddContactBump((b) => b + 1)
   }
   const accountOpeningChildren = (openAccountsTask?.children ?? []).filter((c) => c.childType === 'account-opening')
   const householdMembers = state.relatedParties.filter((p) => p.type === 'household_member' && !p.isHidden)
@@ -185,12 +192,16 @@ export function OpenAccountsForm() {
   const kycOwnerParties = useMemo(() => {
     const byId = new Map<string, RelatedParty>()
     for (const child of accountOpeningChildren) {
-      for (const party of getAccountPartiesRequiringKyc(state, child.id)) {
-        byId.set(party.id, party)
+      const ownerData = (state.taskData[`${child.id}-account-owners`] as Record<string, unknown> | undefined)
+      const owners = (ownerData?.owners as OwnerSlot[] | undefined) ?? []
+      for (const owner of owners) {
+        if (owner.type !== 'existing' || !owner.partyId) continue
+        const party = state.relatedParties.find((p) => p.id === owner.partyId)
+        if (party) byId.set(party.id, party)
       }
     }
     return Array.from(byId.values())
-  }, [accountOpeningChildren, state])
+  }, [accountOpeningChildren, state.relatedParties, state.taskData])
 
   const childRegistrationTypes = useMemo<RegistrationType[]>(
     () => getRegistrationTypesForOpenAccountsUploadSection(accountOpeningChildren, state.taskData),
@@ -277,9 +288,30 @@ export function OpenAccountsForm() {
 
   const esignEnvelopes = (data.esignEnvelopes as EsignEnvelope[] | undefined) ?? []
 
+  const deriveDefaultOptionalForms = () => {
+    const ids = new Set<string>()
+    for (const account of accountOpeningChildren) {
+      const childMeta = (state.taskData[account.id] as Record<string, unknown> | undefined) ?? {}
+      const fr = mergeFeatureRequests(childMeta.featureRequests)
+      if (fr.margin?.requested) ids.add('opt-margin-supplement')
+      if (fr.options?.requested) ids.add('opt-options-supplement')
+      if (
+        fr.alternativeStrategySelection?.requested &&
+        fr.alternativeStrategySelection.includePdfInEsign !== false
+      ) {
+        ids.add('opt-alternative-strategy-selection')
+      }
+    }
+    return Array.from(ids)
+  }
+
   const openNewEnvelopeDrawer = () => {
+    const base = createNewEnvelope(requiredEsignFormRows, deriveEnvelopeSigners(requiredEsignFormRows))
     setEnvelopeDraft(
-      createNewEnvelope(requiredEsignFormRows, deriveEnvelopeSigners(requiredEsignFormRows)),
+      {
+        ...base,
+        optionalFormIdsIncluded: deriveDefaultOptionalForms(),
+      },
     )
     setEnvelopeDrawerCreate(true)
     setEnvelopeDrawerMountKey((k) => k + 1)
@@ -855,7 +887,7 @@ export function OpenAccountsForm() {
         <div className="mb-3">
           <h4 className="text-sm font-semibold text-foreground">Account Owners</h4>
           <p className="text-sm text-muted-foreground mt-1">
-            One row per owner from accounts. Start KYC initiation for each.
+            One row per account owner. Trust members are covered within the trust KYC case.
           </p>
         </div>
         {kycOwnerParties.length > 0 ? (
@@ -870,7 +902,12 @@ export function OpenAccountsForm() {
               </thead>
               <tbody>
                 {kycOwnerParties.map((member, idx) => {
-                  const matchingChild = kycChildren.find((c) => c.name === member.name)
+                  const matchingChild = kycChildren.find((c) => {
+                    if (c.childType !== 'kyc') return false
+                    const meta = state.taskData[c.id] as Record<string, unknown> | undefined
+                    if ((meta?.kycSubjectPartyId as string | undefined) === member.id) return true
+                    return c.name === member.name
+                  })
                   const isVerified = !matchingChild && member.kycStatus === 'verified'
                   const hasChild = !!matchingChild
                   const isNotStarted = !hasChild && !isVerified
@@ -886,7 +923,8 @@ export function OpenAccountsForm() {
                       <td className="px-4 py-3 text-muted-foreground">{relationship}</td>
                       <td className="px-4 py-3">
                         {hasChild ? (() => {
-                          const displayStatus = deriveChildDisplayStatus(matchingChild!.status)
+                          const reviewState = state.childReviewsByChildId?.[matchingChild!.id]
+                          const displayStatus = deriveChildDisplayStatus(matchingChild!.status, reviewState)
                           const cfg = displayStatus === 'complete'
                             ? { label: 'Verified', className: 'bg-green-50 text-green-700 border-green-200' }
                             : childStatusConfig[displayStatus]
@@ -910,6 +948,31 @@ export function OpenAccountsForm() {
                                 parentTaskId: kycParentTask!.id,
                                 childName: member.name,
                                 childType: 'kyc',
+                                metadata: {
+                                  kycSubjectPartyId: member.id,
+                                  kycSubjectType: member.type === 'related_organization' ? 'entity' : 'individual',
+                                  ...(member.type === 'related_organization'
+                                    ? {
+                                        kycRelatedSubjectPartyIds: Array.from(
+                                          new Set([
+                                            ...(member.trustParties ?? [])
+                                              .map((t) => t.partyId)
+                                              .filter((id): id is string => Boolean(id)),
+                                            ...(member.beneficialOwners ?? [])
+                                              .map((b) =>
+                                                state.relatedParties.find(
+                                                  (p) =>
+                                                    p.type !== 'related_organization' &&
+                                                    !p.isHidden &&
+                                                    p.name?.trim().toLowerCase() === b.name.trim().toLowerCase(),
+                                                )?.id,
+                                              )
+                                              .filter((id): id is string => Boolean(id)),
+                                          ]),
+                                        ),
+                                      }
+                                    : {}),
+                                },
                               })
                               dispatch({
                                 type: 'UPDATE_RELATED_PARTY',
@@ -954,14 +1017,40 @@ export function OpenAccountsForm() {
                 onClick={() => dispatch({ type: 'ENTER_CHILD_ACTION', childId: child.id })}
                 className="flex-1 flex items-center gap-3 text-left cursor-pointer"
               >
-                <div className="flex h-8 w-8 items-center justify-center rounded-full bg-yellow-100 text-yellow-700 shrink-0">
-                  <Clock className="h-4 w-4" />
-                </div>
+                {(() => {
+                  const reviewState = state.childReviewsByChildId?.[child.id]
+                  const displayStatus = deriveChildDisplayStatus(child.status, reviewState)
+                  if (displayStatus === 'complete') {
+                    return (
+                      <div className="flex h-8 w-8 items-center justify-center rounded-full bg-green-100 text-green-700 shrink-0">
+                        <CheckCircle2 className="h-4 w-4" />
+                      </div>
+                    )
+                  }
+                  if (
+                    displayStatus === 'nigo' ||
+                    displayStatus === 'nigo_document' ||
+                    displayStatus === 'nigo_principal' ||
+                    displayStatus === 'rejected_aml'
+                  ) {
+                    return (
+                      <div className="flex h-8 w-8 items-center justify-center rounded-full bg-red-100 text-red-700 shrink-0">
+                        <XCircle className="h-4 w-4" />
+                      </div>
+                    )
+                  }
+                  return (
+                    <div className="flex h-8 w-8 items-center justify-center rounded-full bg-yellow-100 text-yellow-700 shrink-0">
+                      <Clock className="h-4 w-4" />
+                    </div>
+                  )
+                })()}
                 <span className="text-sm font-medium">{child.name}</span>
               </button>
               <div className="flex items-center gap-2">
                 {(() => {
-                  const displayStatus = deriveChildDisplayStatus(child.status)
+                  const reviewState = state.childReviewsByChildId?.[child.id]
+                  const displayStatus = deriveChildDisplayStatus(child.status, reviewState)
                   const cfg = childStatusConfig[displayStatus]
                   return (
                     <Badge
@@ -1013,7 +1102,8 @@ export function OpenAccountsForm() {
           onOpenChange={setKycAddSheetOpen}
           onPartyAdded={handleKycContactAdded}
           title="Add contact for verification"
-          description="Search for an existing person or entity, or create a new contact to add for KYC/KYB verification."
+          description="Search for an existing individual or legal entity, or create a new record. The form matches the type you select."
+          includeLegalEntityCreate
         />
 
         <ChildActionTimelineSheet
@@ -1079,23 +1169,26 @@ export function OpenAccountsForm() {
                     </div>
                   </div>
 
-                  <div className="shrink-0 relative min-h-8 min-w-[7rem] flex items-center justify-end" onClick={(e) => e.stopPropagation()}>
+                  <div
+                    className="flex shrink-0 items-center gap-2"
+                    onClick={(e) => e.stopPropagation()}
+                  >
                     <Badge
                       variant="outline"
                       className={cn(
-                        'text-[10px] transition-opacity group-hover:opacity-0',
+                        'text-xs group-hover:hidden',
                         statusBadgeClass(getEsignEnvelopeStatus(env)),
                       )}
                     >
                       {ESIGN_ENVELOPE_STATUS_LABELS[getEsignEnvelopeStatus(env)]}
                     </Badge>
-                    <EnvelopeKebabMenu
-                      className="absolute right-0 top-1/2 -translate-y-1/2"
-                      triggerClassName="opacity-0 pointer-events-none group-hover:opacity-100 group-hover:pointer-events-auto focus-within:opacity-100 focus-within:pointer-events-auto data-[state=open]:opacity-100 data-[state=open]:pointer-events-auto"
-                      onDownload={() => downloadEnvelopeManifest(env)}
-                      onSimulateSigning={() => simulateEnvelopeSigning(env.id)}
-                      onViewHistory={() => setHistoryEnvelopeId(env.id)}
-                    />
+                    <div className="hidden shrink-0 group-hover:block has-[button[data-state=open]]:block">
+                      <EnvelopeKebabMenu
+                        onDownload={() => downloadEnvelopeManifest(env)}
+                        onSimulateSigning={() => simulateEnvelopeSigning(env.id)}
+                        onViewHistory={() => setHistoryEnvelopeId(env.id)}
+                      />
+                    </div>
                   </div>
                 </li>
               ))}

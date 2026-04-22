@@ -23,8 +23,34 @@ export function getChildReviewDecision(state: WorkflowState, childId: string | u
 
 let childIdCounter = 0
 
+function buildKycPreAmlTimeline(): NonNullable<ChildReviewState['kycPreAmlTimeline']> {
+  const fmt = (d: Date) =>
+    d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) +
+    ', ' +
+    d.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })
+  const now = Date.now()
+  return {
+    draftAt: fmt(new Date(now - 5 * 60 * 1000)),
+    idVerificationAt: fmt(new Date(now - 3 * 60 * 1000)),
+    submittedForReviewAt: fmt(new Date(now)),
+  }
+}
+
+function buildAccountOpeningPreReviewTimeline(): NonNullable<ChildReviewState['accountOpeningPreReviewTimeline']> {
+  const fmt = (d: Date) =>
+    d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) +
+    ', ' +
+    d.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })
+  const now = Date.now()
+  return {
+    draftAt: fmt(new Date(now - 8 * 60 * 1000)),
+    clientSignatureAt: fmt(new Date(now - 5 * 60 * 1000)),
+    submittedForReviewAt: fmt(new Date(now)),
+  }
+}
+
 /** KYC-only demo views — invalid when drilling into account opening (or similar) children. */
-const KYC_DEMO_VIEW_MODES = new Set(['aml', 'ho-kyc', 'ho-principal-kyc'])
+const KYC_DEMO_VIEW_MODES = new Set(['aml', 'ho-kyc'])
 /** Account HO demo views — invalid when drilling into a KYC child. */
 const ACCOUNT_HO_DEMO_VIEW_MODES = new Set(['ho-documents', 'ho-principal'])
 
@@ -33,6 +59,10 @@ function sanitizeDemoViewModeForChild(
   childType: ChildType | undefined,
 ): WorkflowState['demoViewMode'] | undefined {
   if (childType == null || mode == null) return mode
+  /** Legacy sessions: Principal KYC reviewer tab removed — map to Document Review (ho-kyc) or advisor. */
+  if ((mode as string) === 'ho-principal-kyc') {
+    return childType === 'kyc' ? 'ho-kyc' : 'advisor'
+  }
   if (childType === 'kyc') {
     return ACCOUNT_HO_DEMO_VIEW_MODES.has(mode) ? 'advisor' : mode
   }
@@ -208,14 +238,15 @@ function workflowReducer(state: WorkflowState, action: WorkflowAction): Workflow
       const config = getChildTypeConfig(action.childType)
       let spawnedChildId = ''
       const newTasks = state.tasks.map((t) => {
-        if (t.id === action.parentTaskId && t.children) {
+        if (t.id === action.parentTaskId) {
+          const priorChildren = t.children ?? []
           const childId = `${config.idPrefix}-${Date.now()}-${++childIdCounter}`
           spawnedChildId = childId
           return {
             ...t,
             edited: true,
             children: [
-              ...t.children,
+              ...priorChildren,
               {
                 id: childId,
                 name: action.childName,
@@ -250,14 +281,15 @@ function workflowReducer(state: WorkflowState, action: WorkflowAction): Workflow
       const spawnConfig = getChildTypeConfig(action.childType)
       let newChildId = ''
       const spawnTasks = state.tasks.map((t) => {
-        if (t.id === action.parentTaskId && t.children) {
+        if (t.id === action.parentTaskId) {
+          const priorChildren = t.children ?? []
           const childId = `${spawnConfig.idPrefix}-${Date.now()}-${++childIdCounter}`
           newChildId = childId
           return {
             ...t,
             edited: true,
             children: [
-              ...t.children,
+              ...priorChildren,
               {
                 id: childId,
                 name: action.childName,
@@ -638,6 +670,8 @@ function workflowReducer(state: WorkflowState, action: WorkflowAction): Workflow
           ...prev,
           documentReview: prev.documentReview ?? { status: 'pending' },
           principalReview: prev.principalReview ?? { status: 'pending' },
+          accountOpeningPreReviewTimeline:
+            prev.accountOpeningPreReviewTimeline ?? buildAccountOpeningPreReviewTimeline(),
         }
       }
 
@@ -714,16 +748,19 @@ function workflowReducer(state: WorkflowState, action: WorkflowAction): Workflow
             },
             hoKycReview: { status: 'pending' as const },
             validationErrors: [],
+            kycPreAmlTimeline: buildKycPreAmlTimeline(),
           }
         : isAccountOpeningChild
           ? {
               documentReview: { status: 'pending' },
               principalReview: { status: 'pending' },
+              accountOpeningPreReviewTimeline: buildAccountOpeningPreReviewTimeline(),
             }
           : {
               amlReview: { status: 'pending' as const },
               documentReview: { status: 'pending' },
               principalReview: { status: 'pending' },
+              accountOpeningPreReviewTimeline: buildAccountOpeningPreReviewTimeline(),
             }
 
       return {
@@ -1086,68 +1123,6 @@ function workflowReducer(state: WorkflowState, action: WorkflowAction): Workflow
       }
     }
 
-    case 'PRINCIPAL_KYC_APPROVE': {
-      if (!state.activeChildActionId) return state
-      const pkApproveTs = new Date().toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })
-      const pkApproveId = state.activeChildActionId
-      const prevPk = state.childReviewsByChildId?.[pkApproveId] ?? {}
-      const pkApproveTasks = state.tasks.map((t) => {
-        if (!t.children) return t
-        return {
-          ...t,
-          children: t.children.map((c) =>
-            c.id === pkApproveId ? { ...c, status: 'complete' as const } : c,
-          ),
-        }
-      })
-      return {
-        ...state,
-        tasks: pkApproveTasks,
-        childReviewsByChildId: {
-          ...state.childReviewsByChildId,
-          [pkApproveId]: {
-            ...prevPk,
-            principalKycReview: { status: 'approved', decidedAt: pkApproveTs },
-          },
-        },
-        childReviewDecisionsByChildId: {
-          ...state.childReviewDecisionsByChildId,
-          [pkApproveId]: { outcome: 'approved', decidedAt: pkApproveTs },
-        },
-      }
-    }
-
-    case 'PRINCIPAL_KYC_REJECT': {
-      if (!state.activeChildActionId) return state
-      const pkRejectTs = new Date().toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })
-      const pkRejectId = state.activeChildActionId
-      const prevReject = state.childReviewsByChildId?.[pkRejectId] ?? {}
-      const pkRejectTasks = state.tasks.map((t) => {
-        if (!t.children) return t
-        return {
-          ...t,
-          children: t.children.map((c) =>
-            c.id === pkRejectId ? { ...c, status: 'rejected' as const } : c,
-          ),
-        }
-      })
-      return {
-        ...state,
-        tasks: pkRejectTasks,
-        childReviewsByChildId: {
-          ...state.childReviewsByChildId,
-          [pkRejectId]: {
-            ...prevReject,
-            principalKycReview: { status: 'rejected', decidedAt: pkRejectTs, reason: action.reason },
-          },
-        },
-        childReviewDecisionsByChildId: {
-          ...state.childReviewDecisionsByChildId,
-          [pkRejectId]: { outcome: 'rejected', decidedAt: pkRejectTs },
-        },
-      }
-    }
-
     case 'SET_DEMO_VIEW': {
       return {
         ...state,
@@ -1272,7 +1247,6 @@ export function useAdvisorFormsEditable(): boolean {
       rs.amlReview?.status === 'info_requested' ||
       rs.amlReview?.status === 'flagged' ||
       rs.hoKycReview?.status === 'changes_requested' ||
-      rs.principalKycReview?.status === 'rejected' ||
       false
     )
   }
@@ -1309,7 +1283,6 @@ export function useAdvisorResubmitEligible(): boolean {
       rs.amlReview?.status === 'info_requested' ||
       rs.amlReview?.status === 'flagged' ||
       rs.hoKycReview?.status === 'changes_requested' ||
-      rs.principalKycReview?.status === 'rejected' ||
       false
     )
   }

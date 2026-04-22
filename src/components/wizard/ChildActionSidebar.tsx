@@ -131,14 +131,12 @@ export function ChildActionSidebar() {
     child.childType !== 'account-opening' && child.childType !== 'kyc'
   const viewMode = state.demoViewMode
   const isHoKycView = viewMode === 'ho-kyc'
-  const isHoPrincipalKycView = viewMode === 'ho-principal-kyc'
 
-  // Only collapse to one pseudo-step for KYC Home Office / Principal KYC modes. HO Document and
+  // Only collapse to one pseudo-step for KYC Document Review (ho-kyc) mode. HO Document and
   // HO Principal account-opening views use the same numbered subtasks as Advisor (AML is KYC-only).
   // (e.g. Account & owners → Documents).
-  const showSingleReviewStep =
-    child.childType === 'kyc' && (isHoKycView || isHoPrincipalKycView)
-  const singleReviewStepLabel = isHoKycView ? 'Home Office Review' : 'Principal Review'
+  const showSingleReviewStep = child.childType === 'kyc' && isHoKycView
+  const singleReviewStepLabel = 'Document Review'
 
   return (
     <TooltipProvider delayDuration={300}>

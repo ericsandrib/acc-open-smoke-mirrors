@@ -17,8 +17,7 @@ interface TimelineStage {
 
 const ACCOUNT_OPENING_STAGES: TimelineStage[] = [
   { label: 'Draft', description: 'Capture client & account data, validate, and perform ID verification.', matchStatuses: ['not_started', 'in_progress'] },
-  { label: 'Pending Client Signature', description: 'Combined eSign package generated and sent to client for signature.', matchStatuses: [] },
-  { label: 'Pending Advisor Signature', description: 'Awaiting advisor counter-signature on the application.', matchStatuses: [] },
+  { label: 'Client Signature', description: 'Combined eSign package generated and sent to client for signature.', matchStatuses: [] },
   { label: 'Submitted', description: 'Account application submitted to Home Office for review.', matchStatuses: ['awaiting_review'] },
   { label: 'Document Review', description: 'Document Review Team verifies completeness of all account documents.', matchStatuses: ['doc_review_pending'] },
   { label: 'Principal Review', description: 'Principal Review Team performs final approval and oversight.', matchStatuses: ['principal_review_pending', 'rejected'] },
@@ -31,10 +30,12 @@ const KYC_STAGES: TimelineStage[] = [
   { label: 'ID Verification', description: 'Identity verification performed by Avantos.', matchStatuses: [] },
   { label: 'Submitted', description: 'ID verification documents submitted for compliance review.', matchStatuses: ['awaiting_review'] },
   { label: 'AML Review', description: 'AML Team reviews watchlist codes against OFAC and KYC platforms.', matchStatuses: ['aml_pending', 'aml_flagged', 'rejected'] },
-  { label: 'Home Office Review', description: 'Home Office KYC Team reviews the complete submission.', matchStatuses: ['ho_kyc_pending', 'ho_kyc_changes_requested'] },
-  { label: 'Principal Sign-Off', description: 'Principal performs final sign-off on the KYC package.', matchStatuses: ['principal_kyc_pending', 'principal_kyc_rejected'] },
+  { label: 'Document Review', description: 'Review KYC documents and verification data for completeness.', matchStatuses: ['ho_kyc_pending', 'ho_kyc_changes_requested'] },
   { label: 'Complete', description: 'Identity verified. No further KYC action required.', matchStatuses: ['complete'] },
 ]
+
+const KYC_AML_STAGE_INDEX = KYC_STAGES.findIndex((s) => s.label === 'AML Review')
+const ACCOUNT_OPENING_DOC_STAGE_INDEX = ACCOUNT_OPENING_STAGES.findIndex((s) => s.label === 'Document Review')
 
 function getStagesForType(childType: ChildType): TimelineStage[] {
   return childType === 'kyc' ? KYC_STAGES : ACCOUNT_OPENING_STAGES
@@ -50,11 +51,9 @@ function deriveEffectiveStatus(
   if (childType === 'kyc') {
     const amlStatus = reviewState?.amlReview?.status
     const hoKycStatus = reviewState?.hoKycReview?.status
-    const principalKycStatus = reviewState?.principalKycReview?.status
 
     if (rawStatus === 'rejected') {
       if (amlStatus === 'flagged' || amlStatus === 'escalated') return 'rejected'
-      if (principalKycStatus === 'rejected') return 'principal_kyc_rejected'
       if (hoKycStatus === 'changes_requested') return 'ho_kyc_changes_requested'
       return 'rejected'
     }
@@ -63,9 +62,7 @@ function deriveEffectiveStatus(
       if (amlStatus === 'pending') return 'aml_pending'
       if (amlStatus === 'flagged') return 'aml_flagged'
       if (amlStatus === 'cleared' && hoKycStatus === 'pending') return 'ho_kyc_pending'
-      if (hoKycStatus === 'approved') return 'principal_kyc_pending'
-      if (principalKycStatus === 'pending') return 'principal_kyc_pending'
-      if (principalKycStatus === 'approved') return 'complete'
+      if (hoKycStatus === 'approved') return 'complete'
       return rawStatus
     }
 
@@ -128,17 +125,6 @@ export function getActiveStageLabel(
   return stages[idx].label
 }
 
-function formatTimestamp() {
-  return new Date().toLocaleDateString('en-US', {
-    month: 'short',
-    day: 'numeric',
-    year: 'numeric',
-  }) + ', ' + new Date().toLocaleTimeString('en-US', {
-    hour: 'numeric',
-    minute: '2-digit',
-  })
-}
-
 export function ChildActionTimeline({
   childType,
   status,
@@ -154,6 +140,7 @@ export function ChildActionTimeline({
   const stages = getStagesForType(childType)
   const activeIndex = getActiveStageIndex(stages, effectiveStatus)
   const isRejected = effectiveStatus === 'rejected'
+  const isWorkflowComplete = effectiveStatus === 'complete'
 
   const docReview = reviewState?.documentReview
   const principalReview = reviewState?.principalReview
@@ -166,14 +153,19 @@ export function ChildActionTimeline({
         const isComplete = i < activeIndex
         const isPending = i > activeIndex
         const isLast = i === stages.length - 1
+        const isTerminalCompleteChecked = isWorkflowComplete && stage.label === 'Complete'
 
         const hoKycReview = reviewState?.hoKycReview
-        const principalKycReview = reviewState?.principalKycReview
 
         let stageAnnotation: string | null = null
-        if (stage.label === 'Document Review' && docReview) {
-          if (docReview.status === 'igo') stageAnnotation = `Accepted at ${docReview.decidedAt}`
-          else if (docReview.status === 'nigo') stageAnnotation = `Rejected at ${docReview.decidedAt}`
+        if (stage.label === 'Document Review') {
+          if (childType === 'kyc' && hoKycReview) {
+            if (hoKycReview.status === 'approved') stageAnnotation = `Approved at ${hoKycReview.decidedAt}`
+            else if (hoKycReview.status === 'changes_requested') stageAnnotation = `Changes requested at ${hoKycReview.decidedAt}`
+          } else if (docReview) {
+            if (docReview.status === 'igo') stageAnnotation = `Accepted at ${docReview.decidedAt}`
+            else if (docReview.status === 'nigo') stageAnnotation = `Rejected at ${docReview.decidedAt}`
+          }
         }
         if (stage.label === 'Principal Review' && principalReview) {
           if (principalReview.status === 'igo') stageAnnotation = `Approved at ${principalReview.decidedAt}`
@@ -183,22 +175,108 @@ export function ChildActionTimeline({
           if (amlReview.status === 'cleared') stageAnnotation = `Cleared at ${amlReview.decidedAt}`
           else if (amlReview.status === 'flagged') stageAnnotation = `Flagged at ${amlReview.decidedAt}`
           else if (amlReview.status === 'escalated') stageAnnotation = `Rejected at ${amlReview.decidedAt}`
+          else if (amlReview.status === 'info_requested' && amlReview.decidedAt) {
+            stageAnnotation = `Info requested at ${amlReview.decidedAt}`
+          }
         }
-        if (stage.label === 'Home Office Review' && hoKycReview) {
-          if (hoKycReview.status === 'approved') stageAnnotation = `Approved at ${hoKycReview.decidedAt}`
-          else if (hoKycReview.status === 'changes_requested') stageAnnotation = `Changes requested at ${hoKycReview.decidedAt}`
+        if (
+          childType !== 'kyc' &&
+          stage.label === 'Pending Release' &&
+          isComplete &&
+          principalReview?.status === 'igo' &&
+          principalReview.decidedAt
+        ) {
+          stageAnnotation = `Approved for release at ${principalReview.decidedAt}`
         }
-        if (stage.label === 'Principal Sign-Off' && principalKycReview) {
-          if (principalKycReview.status === 'approved') stageAnnotation = `Signed off at ${principalKycReview.decidedAt}`
-          else if (principalKycReview.status === 'rejected') stageAnnotation = `Rejected at ${principalKycReview.decidedAt}`
+        if (
+          childType !== 'kyc' &&
+          stage.label === 'Complete' &&
+          isWorkflowComplete &&
+          principalReview?.status === 'igo' &&
+          principalReview.decidedAt
+        ) {
+          stageAnnotation = `Completed at ${principalReview.decidedAt}`
+        }
+        if (
+          childType === 'kyc' &&
+          stage.label === 'Complete' &&
+          isWorkflowComplete &&
+          hoKycReview?.status === 'approved' &&
+          hoKycReview.decidedAt
+        ) {
+          stageAnnotation = `Completed at ${hoKycReview.decidedAt}`
+        }
+
+        const preAml = reviewState?.kycPreAmlTimeline
+        let kycPreAmlAnnotation: string | null = null
+        if (
+          childType === 'kyc' &&
+          preAml &&
+          KYC_AML_STAGE_INDEX >= 0 &&
+          i < KYC_AML_STAGE_INDEX &&
+          isComplete
+        ) {
+          if (stage.label === 'Draft') kycPreAmlAnnotation = `Completed at ${preAml.draftAt} by Jane Advisor`
+          else if (stage.label === 'ID Verification') kycPreAmlAnnotation = `Completed at ${preAml.idVerificationAt} by Jane Advisor`
+          else if (stage.label === 'Submitted') kycPreAmlAnnotation = `Submitted for review at ${preAml.submittedForReviewAt} by Jane Advisor`
+        }
+
+        const aoPre = reviewState?.accountOpeningPreReviewTimeline
+        let accountOpeningPreAnnotation: string | null = null
+        if (
+          childType !== 'kyc' &&
+          aoPre &&
+          ACCOUNT_OPENING_DOC_STAGE_INDEX >= 0 &&
+          i < ACCOUNT_OPENING_DOC_STAGE_INDEX &&
+          isComplete
+        ) {
+          if (stage.label === 'Draft') {
+            accountOpeningPreAnnotation = `Completed at ${aoPre.draftAt} by Jane Advisor`
+          } else if (stage.label === 'Client Signature') {
+            accountOpeningPreAnnotation = `Completed at ${aoPre.clientSignatureAt} by Jane Advisor`
+          } else if (stage.label === 'Submitted') {
+            accountOpeningPreAnnotation = `Submitted for review at ${aoPre.submittedForReviewAt} by Jane Advisor`
+          }
+        }
+
+        let timelineDetail = stageAnnotation ?? kycPreAmlAnnotation ?? accountOpeningPreAnnotation
+
+        const documentReviewStillPending =
+          stage.label === 'Document Review' &&
+          (childType === 'kyc'
+            ? !hoKycReview || hoKycReview.status === 'pending'
+            : !docReview || docReview.status === 'pending')
+
+        const amlReviewStillPending =
+          stage.label === 'AML Review' && (!amlReview || amlReview.status === 'pending')
+
+        const principalReviewStillPending =
+          stage.label === 'Principal Review' &&
+          (!principalReview || principalReview.status === 'pending')
+
+        if (!timelineDetail && (isComplete || isTerminalCompleteChecked)) {
+          const ts =
+            (stage.label === 'AML Review' &&
+              !amlReviewStillPending &&
+              amlReview?.decidedAt) ||
+            (stage.label === 'Document Review' &&
+              !documentReviewStillPending &&
+              (childType === 'kyc' ? hoKycReview?.decidedAt : docReview?.decidedAt)) ||
+            (stage.label === 'Principal Review' &&
+              !principalReviewStillPending &&
+              principalReview?.decidedAt) ||
+            (stage.label === 'Pending Release' && principalReview?.decidedAt) ||
+            (stage.label === 'Complete' &&
+              (childType === 'kyc' ? hoKycReview?.decidedAt : principalReview?.decidedAt))
+          if (ts) timelineDetail = `Recorded at ${ts}`
         }
 
         const isNigoStage =
-          (stage.label === 'Document Review' && docReview?.status === 'nigo') ||
+          (stage.label === 'Document Review' &&
+            ((childType === 'kyc' && hoKycReview?.status === 'changes_requested') ||
+              docReview?.status === 'nigo')) ||
           (stage.label === 'Principal Review' && principalReview?.status === 'nigo') ||
-          (stage.label === 'AML Review' && (amlReview?.status === 'flagged' || amlReview?.status === 'escalated')) ||
-          (stage.label === 'Home Office Review' && hoKycReview?.status === 'changes_requested') ||
-          (stage.label === 'Principal Sign-Off' && principalKycReview?.status === 'rejected')
+          (stage.label === 'AML Review' && (amlReview?.status === 'flagged' || amlReview?.status === 'escalated'))
 
         return (
           <div key={stage.label} className="relative flex gap-3">
@@ -206,7 +284,7 @@ export function ChildActionTimeline({
               <div
                 className={cn(
                   'absolute left-[11px] top-[24px] w-[2px] bottom-0',
-                  isComplete ? 'bg-foreground' : 'bg-border',
+                  isComplete || isTerminalCompleteChecked ? 'bg-foreground' : 'bg-border',
                 )}
               />
             )}
@@ -216,7 +294,7 @@ export function ChildActionTimeline({
                 <div className="flex h-6 w-6 items-center justify-center rounded-full bg-destructive text-destructive-foreground">
                   <XCircle className="h-4 w-4" />
                 </div>
-              ) : isComplete || isActive ? (
+              ) : isComplete || isTerminalCompleteChecked ? (
                 <div className="flex h-6 w-6 items-center justify-center rounded-full bg-foreground text-background">
                   <CheckCircle2 className="h-4 w-4" />
                 </div>
@@ -246,14 +324,9 @@ export function ChildActionTimeline({
                   {stage.description}
                 </p>
               )}
-              {stageAnnotation && (
+              {timelineDetail && (
                 <p className={cn('text-xs mt-0.5', isNigoStage ? 'text-destructive/80' : 'text-muted-foreground')}>
-                  {stageAnnotation}
-                </p>
-              )}
-              {isActive && !stageAnnotation && (
-                <p className={cn('text-xs mt-0.5', isRejected ? 'text-destructive/80' : 'text-muted-foreground')}>
-                  {formatTimestamp()} by <span className="underline">{isRejected ? (childType === 'kyc' ? 'AML Team' : 'Home Office') : 'Jane Advisor'}</span>
+                  {timelineDetail}
                 </p>
               )}
             </div>

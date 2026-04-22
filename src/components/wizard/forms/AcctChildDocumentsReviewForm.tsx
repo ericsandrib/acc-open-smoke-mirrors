@@ -208,11 +208,14 @@ export function AcctChildDocumentsReviewForm() {
     () => new Map(executedEsignForms.map((f) => [f.formId, f])),
     [executedEsignForms],
   )
-  const executedRequiredForms = useMemo(
-    () =>
-      ruleDrivenDocs.firmCustodianEsign.filter((doc) => executedFormsByFormId.has(doc.id)),
-    [ruleDrivenDocs.firmCustodianEsign, executedFormsByFormId],
-  )
+  /** Envelope rows and executed-form records use `${accountChildId}::${documentId}` (see buildRequiredEsignFormRows). */
+  const accountChildId = ctx?.child.id ?? ''
+  const executedRequiredForms = useMemo(() => {
+    if (!accountChildId) return []
+    return ruleDrivenDocs.firmCustodianEsign.filter((doc) =>
+      executedFormsByFormId.has(`${accountChildId}::${doc.id}`),
+    )
+  }, [ruleDrivenDocs.firmCustodianEsign, executedFormsByFormId, accountChildId])
 
   const updateLocalDocs = (next: DocInstance[]) => {
     updateField('child-local-docs', next)
@@ -261,7 +264,10 @@ export function AcctChildDocumentsReviewForm() {
             </p>
             {executedRequiredForms.length > 0 ? (
               <EsignDocumentsBundleViewerButton
-                items={executedRequiredForms.map((d) => ({ id: d.id, label: d.label }))}
+                items={executedRequiredForms.map((d) => ({
+                  id: `${ctx.child.id}::${d.id}`,
+                  label: d.label,
+                }))}
               />
             ) : null}
           </div>
@@ -291,7 +297,7 @@ export function AcctChildDocumentsReviewForm() {
                         <div className="min-w-0 flex-1">
                           <p className="text-sm font-medium text-foreground truncate">{doc.label}</p>
                           {(() => {
-                            const executed = executedFormsByFormId.get(doc.id)
+                            const executed = executedFormsByFormId.get(`${ctx.child.id}::${doc.id}`)
                             if (!executed) return null
                             return (
                               <p className="text-[11px] text-muted-foreground line-clamp-2">
@@ -301,7 +307,7 @@ export function AcctChildDocumentsReviewForm() {
                           })()}
                         </div>
                         <EsignFormPdfSampleActions
-                          formIdOrDocId={doc.id}
+                          formIdOrDocId={`${ctx.child.id}::${doc.id}`}
                           displayLabel={doc.label}
                           viewMode="signed"
                         />

@@ -16,6 +16,10 @@ export const FUNDING_OPTIONS = [
     label: 'Mutual Fund Periodic Order Instructions',
     description: 'Recurring investment instructions — asset movement by schedule',
   },
+  {
+    value: 'annuities_servicing',
+    label: 'Annuities Servicing',
+  },
 ] as const
 
 export type FundingMethodValue = (typeof FUNDING_OPTIONS)[number]['value']

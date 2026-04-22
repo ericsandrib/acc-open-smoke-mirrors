@@ -84,6 +84,7 @@ export interface RelatedParty {
   clientId?: string
   entityType?: string
   jurisdiction?: string
+  dateOfFormation?: string
   contactPerson?: string
   accountOwnerIndividual?: AccountOwnerIndividualProfile
   kycDirectAdd?: boolean
@@ -175,6 +176,10 @@ export interface ChildReviewState {
   hoKycReview?: { status: 'pending' | 'approved' | 'changes_requested'; decidedAt?: string; comments?: string }
   principalKycReview?: { status: 'pending' | 'approved' | 'rejected'; decidedAt?: string; reason?: string }
   validationErrors?: string[]
+  /** Demo: timestamps for timeline steps before AML (set when the KYC child is submitted for review). */
+  kycPreAmlTimeline?: { draftAt: string; idVerificationAt: string; submittedForReviewAt: string }
+  /** Demo: timestamps for Draft / Client Signature / Submitted before Home Office review (non-KYC child workflows). */
+  accountOpeningPreReviewTimeline?: { draftAt: string; clientSignatureAt: string; submittedForReviewAt: string }
 }
 
 export type ChildReviewDecision = { outcome: 'approved' | 'rejected'; decidedAt: string }
@@ -208,7 +213,7 @@ export interface WorkflowState {
   /** When drilling into a funding-line or feature-service-line child, EXIT restores this account child + sub-step. */
   childActionResume?: { accountChildId: string; subTaskIndex: number }
   reviewState?: ReviewState
-  demoViewMode?: 'advisor' | 'ho-documents' | 'ho-principal' | 'ho-kyc' | 'ho-principal-kyc' | 'aml'
+  demoViewMode?: 'advisor' | 'ho-documents' | 'ho-principal' | 'ho-kyc' | 'aml'
   submittedAt?: string
   /** Last review outcome per child id (demo / footer messaging). */
   childReviewDecisionsByChildId?: Record<string, ChildReviewDecision>
@@ -267,7 +272,7 @@ export type WorkflowAction =
   | { type: 'SUBMIT_CHILD_FOR_REVIEW' }
   | { type: 'ACCEPT_CHILD_REVIEW' }
   | { type: 'REJECT_CHILD_REVIEW'; reason: string; feedback?: string }
-  | { type: 'SET_DEMO_VIEW'; mode: 'advisor' | 'ho-documents' | 'ho-principal' | 'ho-kyc' | 'ho-principal-kyc' | 'aml' }
+  | { type: 'SET_DEMO_VIEW'; mode: 'advisor' | 'ho-documents' | 'ho-principal' | 'ho-kyc' | 'aml' }
   | { type: 'DOCUMENT_REVIEW_IGO' }
   | { type: 'DOCUMENT_REVIEW_NIGO'; reason: string; feedback?: string }
   | { type: 'PRINCIPAL_REVIEW_IGO' }
@@ -279,5 +284,3 @@ export type WorkflowAction =
   | { type: 'HO_KYC_REQUEST_CHANGES'; comments: string }
   | { type: 'AML_REQUEST_MORE_INFO'; comments: string }
   | { type: 'AML_ESCALATE_SAR'; reason?: string }
-  | { type: 'PRINCIPAL_KYC_APPROVE' }
-  | { type: 'PRINCIPAL_KYC_REJECT'; reason: string }

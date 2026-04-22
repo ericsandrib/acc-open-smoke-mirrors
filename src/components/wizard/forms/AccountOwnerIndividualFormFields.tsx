@@ -27,7 +27,7 @@ import {
 import { cn } from '@/lib/utils'
 
 const field = 'text-xs font-medium text-foreground'
-const sectionTitle = 'text-sm font-semibold text-foreground pt-2'
+const sectionTitle = 'text-sm font-semibold text-foreground'
 
 type Props = {
   value: IndividualAccountOwnerFormState
@@ -49,8 +49,8 @@ export function AccountOwnerIndividualFormFields({ value: s, onChange, variant =
         </p>
       )}
       <section className="space-y-3">
-        <h4 className={sectionTitle}>1) Client information</h4>
-        <div className="grid grid-cols-2 gap-3">
+        <h4 className={sectionTitle}>1. Client Information</h4>
+        <div className="grid grid-cols-1 gap-3">
           <div className="space-y-1.5 col-span-2 sm:col-span-1">
             <Label className={field}>First name</Label>
             <Input value={s.firstName} onChange={(e) => onChange({ firstName: e.target.value })} />
@@ -105,7 +105,7 @@ export function AccountOwnerIndividualFormFields({ value: s, onChange, variant =
       <Separator />
 
       <section className="space-y-3">
-        <h4 className={sectionTitle}>2) Address &amp; contact</h4>
+        <h4 className={sectionTitle}>2. Address &amp; Contact</h4>
         <p className="text-xs text-muted-foreground font-medium">Legal (residential) address</p>
         <div className="space-y-3">
           <div className="space-y-1.5">
@@ -116,7 +116,7 @@ export function AccountOwnerIndividualFormFields({ value: s, onChange, variant =
             <Label className={field}>Apt / unit</Label>
             <Input value={s.legalApt} onChange={(e) => onChange({ legalApt: e.target.value })} />
           </div>
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 gap-3">
             <div className="space-y-1.5 col-span-2 sm:col-span-1">
               <Label className={field}>City</Label>
               <Input value={s.legalCity} onChange={(e) => onChange({ legalCity: e.target.value })} />
@@ -158,7 +158,7 @@ export function AccountOwnerIndividualFormFields({ value: s, onChange, variant =
               <Label className={field}>Apt / unit</Label>
               <Input value={s.mailingApt} onChange={(e) => onChange({ mailingApt: e.target.value })} />
             </div>
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 gap-3">
               <div className="space-y-1.5 col-span-2 sm:col-span-1">
                 <Label className={field}>City</Label>
                 <Input value={s.mailingCity} onChange={(e) => onChange({ mailingCity: e.target.value })} />
@@ -179,7 +179,7 @@ export function AccountOwnerIndividualFormFields({ value: s, onChange, variant =
           </div>
         )}
 
-        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+        <div className="grid grid-cols-1 gap-3">
           <div className="space-y-1.5">
             <Label className={field}>Phone number</Label>
             <Input type="tel" value={s.phone} onChange={(e) => onChange({ phone: e.target.value })} />
@@ -190,7 +190,7 @@ export function AccountOwnerIndividualFormFields({ value: s, onChange, variant =
           </div>
         </div>
 
-        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+        <div className="grid grid-cols-1 gap-3">
           <div className="space-y-1.5">
             <Label className={field}>Relationship</Label>
             <Select value={s.relationship || undefined} onValueChange={(v) => onChange({ relationship: v })}>
@@ -229,7 +229,7 @@ export function AccountOwnerIndividualFormFields({ value: s, onChange, variant =
       <Separator />
 
       <section className="space-y-3">
-        <h4 className={sectionTitle}>3) Employment information</h4>
+        <h4 className={sectionTitle}>3. Employment Information</h4>
         <div className="space-y-3">
           <div className="space-y-1.5">
             <Label className={field}>Employment status</Label>
@@ -267,8 +267,8 @@ export function AccountOwnerIndividualFormFields({ value: s, onChange, variant =
       <Separator />
 
       <section className="space-y-3">
-        <h4 className={sectionTitle}>4) Financial information (suitability)</h4>
-        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+        <h4 className={sectionTitle}>4. Financial Information (Suitability)</h4>
+        <div className="grid grid-cols-1 gap-3">
           <div className="space-y-1.5">
             <Label className={field}>Annual income (range)</Label>
             <Select
@@ -341,8 +341,8 @@ export function AccountOwnerIndividualFormFields({ value: s, onChange, variant =
       <Separator />
 
       <section className="space-y-3">
-        <h4 className={sectionTitle}>5) Investment profile</h4>
-        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+        <h4 className={sectionTitle}>5. Investment Profile</h4>
+        <div className="grid grid-cols-1 gap-3">
           <div className="space-y-1.5">
             <Label className={field}>Investment objective</Label>
             <Select
@@ -412,8 +412,8 @@ export function AccountOwnerIndividualFormFields({ value: s, onChange, variant =
       <Separator />
 
       <section className="space-y-3">
-        <h4 className={sectionTitle}>6) Regulatory disclosures</h4>
-        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+        <h4 className={sectionTitle}>6. Regulatory Disclosures</h4>
+        <div className="grid grid-cols-1 gap-3">
           <div className="space-y-1.5">
             <Label className={field}>Control person of a public company</Label>
             <Select
@@ -484,7 +484,7 @@ export function AccountOwnerIndividualFormFields({ value: s, onChange, variant =
         </div>
 
         <p className="text-xs font-medium text-muted-foreground pt-2">Trusted contact person</p>
-        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 rounded-md border border-border p-3 bg-muted/20">
+        <div className="grid grid-cols-1 gap-3 rounded-md border border-border p-3 bg-muted/20">
           <div className="space-y-1.5 sm:col-span-2">
             <Label className={field}>Name</Label>
             <Input value={s.trustedContactName} onChange={(e) => onChange({ trustedContactName: e.target.value })} />

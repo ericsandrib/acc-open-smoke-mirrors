@@ -1,6 +1,10 @@
 import type { ChildTask, WorkflowState } from '@/types/workflow'
 import { mergeFeatureRequests } from '@/types/featureRequests'
 import {
+  alternativeStrategyProgressWeight,
+  getAlternativeStrategyBlockingIssues,
+} from '@/utils/alternativeStrategyValidation'
+import {
   getRegistrationDocumentsForType,
   getDocSubTypes,
   partitionRegistrationDocumentsByFulfillment,
@@ -150,8 +154,9 @@ function progressAccountOwners(state: WorkflowState, accountChildId: string): { 
   const optionsLevelOk = (fr.options?.requestedLevel ?? 0) >= 1
   const optionsRequested = typeof fr.options?.requested === 'boolean'
   const optionsOk = optionsRequested && (!fr.options?.requested || optionsLevelOk)
-  const featureFilled = (marginOk ? 1 : 0) + (optionsOk ? 1 : 0)
-  const featureTotal = 2
+  const altW = alternativeStrategyProgressWeight(fr.alternativeStrategySelection)
+  const featureFilled = (marginOk ? 1 : 0) + (optionsOk ? 1 : 0) + altW
+  const featureTotal = 3
 
   const total = 1 + ownerSlots + supplementalKeys.length + featureTotal
   const filled = titleFilled + ownerFilled + supFilled + featureFilled
@@ -328,6 +333,12 @@ export function getAccountOpeningChildSubmissionIssues(
   const hasAssignedOwner = owners.some((o) => o.type === 'existing' && o.partyId)
   if (!hasAssignedOwner) {
     issues.push('Account & owners: add at least one account owner assigned to a person or entity.')
+  }
+
+  const childMeta = state.taskData[accountChildId] as Record<string, unknown> | undefined
+  const fr = mergeFeatureRequests(childMeta?.featureRequests)
+  for (const msg of getAlternativeStrategyBlockingIssues(fr.alternativeStrategySelection)) {
+    issues.push(`Alternative strategy: ${msg}`)
   }
 
   const { names } = getAccountOwnersMissingKyc(state, accountChildId)

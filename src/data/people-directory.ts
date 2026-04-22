@@ -1,3 +1,5 @@
+import type { AccountOwnerIndividualProfile } from '@/types/workflow'
+
 export interface DirectoryPerson {
   id: string
   firstName: string
@@ -11,6 +13,160 @@ export interface DirectoryPerson {
   email?: string
   phone?: string
   dob?: string
+  accountOwnerProfile?: AccountOwnerIndividualProfile
+}
+
+/** Synthetic profile for directory individuals not modeled as household parties in seed. */
+function demoDirectoryOwner(p: {
+  street: string
+  apt?: string
+  city: string
+  state: string
+  zip: string
+  employer: string
+  occupation: string
+  industry: string
+  income: string
+  middleName?: string
+  netWorthRange?: string
+  liquidNetWorthRange?: string
+  sourceOfFunds?: string
+  investmentObjective?: string
+  employmentStatus?: string
+  trusted?: { name: string; relationship: string; phoneEmail: string }
+}): AccountOwnerIndividualProfile {
+  return {
+    middleName: p.middleName,
+    legalStreet: p.street,
+    legalApt: p.apt,
+    legalCity: p.city,
+    legalState: p.state,
+    legalZip: p.zip,
+    legalCountry: 'United States',
+    mailingSameAsLegal: true,
+    employmentStatus: p.employmentStatus ?? 'Employed',
+    employerName: p.employer,
+    occupation: p.occupation,
+    industry: p.industry,
+    annualIncomeRange: p.income,
+    netWorthRange: p.netWorthRange ?? '$250,000–$499,999',
+    liquidNetWorthRange: p.liquidNetWorthRange ?? '$50,000–$149,999',
+    sourceOfFunds: p.sourceOfFunds ?? 'Employment Income',
+    investmentObjective: p.investmentObjective ?? 'Growth with income',
+    riskTolerance: 'Moderate',
+    timeHorizon: '7–15 years',
+    investmentExperience: 'Moderate',
+    controlPerson: 'No',
+    bdAffiliation: 'No',
+    familyAffiliation: 'No',
+    pep: 'No',
+    insiderRule144: 'No',
+    trustedContactName: p.trusted?.name,
+    trustedContactRelationship: p.trusted?.relationship,
+    trustedContactPhoneEmail: p.trusted?.phoneEmail,
+  }
+}
+
+/** Aligned with `initialRelatedParties` Smith household (seed) for directory parity. */
+const smithJohnDirectoryProfile: AccountOwnerIndividualProfile = {
+  middleName: 'Howard',
+  legalStreet: '2450 North Lakeview Avenue',
+  legalApt: 'Unit 12C',
+  legalCity: 'Chicago',
+  legalState: 'IL',
+  legalZip: '60657',
+  legalCountry: 'United States',
+  mailingSameAsLegal: true,
+  employmentStatus: 'Employed',
+  employerName: 'ComEd (Commonwealth Edison)',
+  occupation: 'Senior grid operations supervisor',
+  industry: 'Electric utilities',
+  annualIncomeRange: '$150,000–$249,999',
+  netWorthRange: '$500,000–$999,999',
+  liquidNetWorthRange: '$150,000–$249,999',
+  sourceOfFunds: 'Salary, savings, and proceeds from prior home sale (2021)',
+  investmentObjective: 'Growth with income',
+  riskTolerance: 'Moderate',
+  timeHorizon: '10–15 years',
+  investmentExperience: 'Moderate (stocks, mutual funds, employer 401(k))',
+  controlPerson: 'No',
+  bdAffiliation: 'No',
+  familyAffiliation: 'No',
+  pep: 'No',
+  insiderRule144: 'No',
+  trustedContactName: 'Jane Smith',
+  trustedContactRelationship: 'Spouse',
+  trustedContactPhoneEmail: '+1 (555) 123-4568 · jane.smith@example.com',
+}
+
+const smithJaneDirectoryProfile: AccountOwnerIndividualProfile = {
+  middleName: 'Marie',
+  legalStreet: '2450 North Lakeview Avenue',
+  legalApt: 'Unit 12C',
+  legalCity: 'Chicago',
+  legalState: 'IL',
+  legalZip: '60657',
+  legalCountry: 'United States',
+  mailingSameAsLegal: true,
+  employmentStatus: 'Employed',
+  employerName: 'Northwestern Memorial Hospital',
+  occupation: 'Clinical nurse specialist',
+  industry: 'Health care',
+  annualIncomeRange: '$100,000–$149,999',
+  netWorthRange: '$500,000–$999,999',
+  liquidNetWorthRange: '$100,000–$149,999',
+  sourceOfFunds: 'Employment Income',
+  investmentObjective: 'Growth with income',
+  riskTolerance: 'Moderate',
+  timeHorizon: '10–15 years',
+  investmentExperience: 'Moderate (stocks, mutual funds, employer 401(k))',
+  trustedContactName: 'John Smith',
+  trustedContactRelationship: 'Spouse',
+  trustedContactPhoneEmail: '+1 (555) 123-4567 · john.smith@example.com',
+  controlPerson: 'No',
+  bdAffiliation: 'No',
+  familyAffiliation: 'No',
+  pep: 'No',
+  insiderRule144: 'No',
+  kycIdType: "Driver's License",
+  kycIdNumber: 'S771234567890',
+  kycIdState: 'IL',
+  kycIdExpiration: '2029-03-15',
+}
+
+const smithRobertDirectoryProfile: AccountOwnerIndividualProfile = {
+  middleName: 'Allen',
+  suffix: 'Jr.',
+  legalStreet: '2450 North Lakeview Avenue',
+  legalApt: 'Unit 12C',
+  legalCity: 'Chicago',
+  legalState: 'IL',
+  legalZip: '60657',
+  legalCountry: 'United States',
+  mailingSameAsLegal: true,
+  employmentStatus: 'Student',
+  occupation: 'Student',
+  industry: 'Education',
+  annualIncomeRange: '$0–$24,999',
+  netWorthRange: '$25,000–$49,999',
+  liquidNetWorthRange: '$0–$24,999',
+  sourceOfFunds: 'Family Support',
+  investmentObjective: 'Capital appreciation',
+  riskTolerance: 'Moderate',
+  timeHorizon: '5–10 years',
+  investmentExperience: 'Limited (custodial savings and ETFs)',
+  trustedContactName: 'John Smith',
+  trustedContactRelationship: 'Parent',
+  trustedContactPhoneEmail: '+1 (555) 123-4567 · john.smith@example.com',
+  controlPerson: 'No',
+  bdAffiliation: 'No',
+  familyAffiliation: 'No',
+  pep: 'No',
+  insiderRule144: 'No',
+  kycIdType: 'State ID',
+  kycIdNumber: 'IL-98211450',
+  kycIdState: 'IL',
+  kycIdExpiration: '2028-08-09',
 }
 
 export interface DirectoryEntity {
@@ -42,6 +198,21 @@ export const peopleDirectory: DirectoryPerson[] = [
     email: 'kevin.tsai@example.com',
     phone: '+1 (555) 201-4421',
     dob: '1981-06-15',
+    accountOwnerProfile: demoDirectoryOwner({
+      street: '180 Hamilton Avenue',
+      city: 'Palo Alto',
+      state: 'CA',
+      zip: '94301',
+      employer: 'Horizon Analytics LLC',
+      occupation: 'Director of product strategy',
+      industry: 'Technology',
+      income: '$200,000–$249,999',
+      trusted: {
+        name: 'Linda Tsai',
+        relationship: 'Spouse',
+        phoneEmail: '+1 (555) 201-4422 · linda.tsai@example.com',
+      },
+    }),
   },
   {
     id: 'dir-ind-2',
@@ -56,6 +227,21 @@ export const peopleDirectory: DirectoryPerson[] = [
     email: 'linda.tsai@example.com',
     phone: '+1 (555) 201-4422',
     dob: '1983-09-02',
+    accountOwnerProfile: demoDirectoryOwner({
+      street: '180 Hamilton Avenue',
+      city: 'Palo Alto',
+      state: 'CA',
+      zip: '94301',
+      employer: 'Stanford Health Care',
+      occupation: 'Clinical research coordinator',
+      industry: 'Health care',
+      income: '$120,000–$149,999',
+      trusted: {
+        name: 'Kevin Tsai',
+        relationship: 'Spouse',
+        phoneEmail: '+1 (555) 201-4421 · kevin.tsai@example.com',
+      },
+    }),
   },
   {
     id: 'dir-ind-3',
@@ -70,6 +256,22 @@ export const peopleDirectory: DirectoryPerson[] = [
     email: 'marcus.williams@example.com',
     phone: '+1 (555) 312-8830',
     dob: '1974-12-08',
+    accountOwnerProfile: demoDirectoryOwner({
+      street: '4414 Westheimer Road',
+      apt: 'Suite 900',
+      city: 'Houston',
+      state: 'TX',
+      zip: '77027',
+      employer: 'Gulf Coast Capital Partners',
+      occupation: 'Managing director',
+      industry: 'Financial services',
+      income: '$350,000–$499,999',
+      trusted: {
+        name: 'Angela Williams',
+        relationship: 'Spouse',
+        phoneEmail: '+1 (555) 312-8831 · angela.williams@example.com',
+      },
+    }),
   },
   {
     id: 'dir-ind-4',
@@ -84,6 +286,22 @@ export const peopleDirectory: DirectoryPerson[] = [
     email: 'angela.williams@example.com',
     phone: '+1 (555) 312-8831',
     dob: '1976-04-19',
+    accountOwnerProfile: demoDirectoryOwner({
+      street: '4414 Westheimer Road',
+      apt: 'Suite 900',
+      city: 'Houston',
+      state: 'TX',
+      zip: '77027',
+      employer: 'Memorial Hermann Health System',
+      occupation: 'Nurse practitioner',
+      industry: 'Health care',
+      income: '$150,000–$199,999',
+      trusted: {
+        name: 'Marcus Williams',
+        relationship: 'Spouse',
+        phoneEmail: '+1 (555) 312-8830 · marcus.williams@example.com',
+      },
+    }),
   },
   {
     id: 'dir-ind-5',
@@ -98,6 +316,16 @@ export const peopleDirectory: DirectoryPerson[] = [
     email: 'robert.chen@example.com',
     phone: '+1 (555) 408-1102',
     dob: '1969-03-25',
+    accountOwnerProfile: demoDirectoryOwner({
+      street: '1100 Northeast Campus Parkway',
+      city: 'Bellevue',
+      state: 'WA',
+      zip: '98004',
+      employer: 'Cascade Software Inc.',
+      occupation: 'Principal engineer',
+      industry: 'Technology',
+      income: '$225,000–$249,999',
+    }),
   },
   {
     id: 'dir-ind-6',
@@ -112,6 +340,16 @@ export const peopleDirectory: DirectoryPerson[] = [
     email: 'patricia.nguyen@example.com',
     phone: '+1 (555) 650-2209',
     dob: '1985-07-30',
+    accountOwnerProfile: demoDirectoryOwner({
+      street: '88 South Almaden Boulevard',
+      city: 'San Jose',
+      state: 'CA',
+      zip: '95113',
+      employer: 'Silicon Valley Bank',
+      occupation: 'Commercial relationship manager',
+      industry: 'Banking',
+      income: '$175,000–$199,999',
+    }),
   },
   {
     id: 'dir-ind-7',
@@ -126,6 +364,16 @@ export const peopleDirectory: DirectoryPerson[] = [
     email: 'david.martinez@example.com',
     phone: '+1 (555) 773-5501',
     dob: '1978-11-14',
+    accountOwnerProfile: demoDirectoryOwner({
+      street: '4742 North Scottsdale Road',
+      city: 'Scottsdale',
+      state: 'AZ',
+      zip: '85251',
+      employer: 'Desert Sun Hospitality Group',
+      occupation: 'Regional operations lead',
+      industry: 'Hospitality',
+      income: '$140,000–$174,999',
+    }),
   },
   {
     id: 'dir-ind-8',
@@ -140,6 +388,17 @@ export const peopleDirectory: DirectoryPerson[] = [
     email: 'susan.park@example.com',
     phone: '+1 (555) 510-3340',
     dob: '1990-01-22',
+    accountOwnerProfile: demoDirectoryOwner({
+      street: '1200 Southwest Morrison Street',
+      apt: 'Unit 8B',
+      city: 'Portland',
+      state: 'OR',
+      zip: '97205',
+      employer: 'Rose City Media',
+      occupation: 'Creative director',
+      industry: 'Media',
+      income: '$110,000–$139,999',
+    }),
   },
   {
     id: 'dir-ind-9',
@@ -154,6 +413,16 @@ export const peopleDirectory: DirectoryPerson[] = [
     email: 'james.obrien@example.com',
     phone: '+1 (555) 617-9012',
     dob: '1965-08-03',
+    accountOwnerProfile: demoDirectoryOwner({
+      street: '1 Federal Street',
+      city: 'Boston',
+      state: 'MA',
+      zip: '02110',
+      employer: 'Harbor Trust Company',
+      occupation: 'Trust officer',
+      industry: 'Financial services',
+      income: '$180,000–$199,999',
+    }),
   },
   {
     id: 'dir-ind-10',
@@ -168,6 +437,16 @@ export const peopleDirectory: DirectoryPerson[] = [
     email: 'elena.petrova@example.com',
     phone: '+1 (555) 832-6678',
     dob: '1988-05-11',
+    accountOwnerProfile: demoDirectoryOwner({
+      street: '1450 Brickell Avenue',
+      city: 'Miami',
+      state: 'FL',
+      zip: '33131',
+      employer: 'Atlantic Realty Advisors',
+      occupation: 'Real estate analyst',
+      industry: 'Real estate',
+      income: '$95,000–$119,999',
+    }),
   },
   {
     id: 'dir-ind-11',
@@ -182,6 +461,16 @@ export const peopleDirectory: DirectoryPerson[] = [
     email: 'thomas.anderson@example.com',
     phone: '+1 (555) 425-1190',
     dob: '1972-02-17',
+    accountOwnerProfile: demoDirectoryOwner({
+      street: '200 North LaSalle Street',
+      city: 'Chicago',
+      state: 'IL',
+      zip: '60601',
+      employer: 'Midwest Logistics Corp.',
+      occupation: 'VP of supply chain',
+      industry: 'Transportation',
+      income: '$275,000–$299,999',
+    }),
   },
   {
     id: 'dir-ind-12',
@@ -196,6 +485,16 @@ export const peopleDirectory: DirectoryPerson[] = [
     email: 'rachel.kim@example.com',
     phone: '+1 (555) 949-3382',
     dob: '1993-10-05',
+    accountOwnerProfile: demoDirectoryOwner({
+      street: '750 B Street',
+      city: 'San Diego',
+      state: 'CA',
+      zip: '92101',
+      employer: 'Pacific Biotech Labs',
+      occupation: 'Research scientist',
+      industry: 'Life sciences',
+      income: '$105,000–$124,999',
+    }),
   },
   {
     id: 'dir-ind-smith-john',
@@ -210,6 +509,7 @@ export const peopleDirectory: DirectoryPerson[] = [
     email: 'john.smith@example.com',
     phone: '+1 (555) 123-4567',
     dob: '1975-03-15',
+    accountOwnerProfile: smithJohnDirectoryProfile,
   },
   {
     id: 'dir-ind-smith-jane',
@@ -222,6 +522,7 @@ export const peopleDirectory: DirectoryPerson[] = [
     email: 'jane.smith@example.com',
     phone: '+1 (555) 123-4568',
     dob: '1977-08-22',
+    accountOwnerProfile: smithJaneDirectoryProfile,
   },
   {
     id: 'dir-ind-smith-robert',
@@ -236,6 +537,7 @@ export const peopleDirectory: DirectoryPerson[] = [
     email: 'robert.smith@example.com',
     phone: '+1 (555) 123-4569',
     dob: '2005-01-10',
+    accountOwnerProfile: smithRobertDirectoryProfile,
   },
 ]
 
@@ -412,7 +714,8 @@ export function searchAll(query: string, field: CombinedSearchField = 'all'): Di
           (person.taxId?.toLowerCase().includes(q) ?? false) ||
           (person.clientId?.toLowerCase().includes(q) ?? false) ||
           (person.household?.toLowerCase().includes(q) ?? false) ||
-          (person.email?.toLowerCase().includes(q) ?? false)
+          (person.email?.toLowerCase().includes(q) ?? false) ||
+          (person.phone?.toLowerCase().includes(q) ?? false)
         )
     }
   })
@@ -435,7 +738,9 @@ export function searchAll(query: string, field: CombinedSearchField = 'all'): Di
           (entity.clientId?.toLowerCase().includes(q) ?? false) ||
           (entity.contactPerson?.toLowerCase().includes(q) ?? false) ||
           (entity.entityType?.toLowerCase().includes(q) ?? false) ||
-          (entity.email?.toLowerCase().includes(q) ?? false)
+          (entity.email?.toLowerCase().includes(q) ?? false) ||
+          (entity.jurisdiction?.toLowerCase().includes(q) ?? false) ||
+          (entity.phone?.toLowerCase().includes(q) ?? false)
         )
     }
   })
@@ -467,7 +772,9 @@ export function searchEntities(query: string, field: EntitySearchField = 'all'):
           (entity.clientId?.toLowerCase().includes(q) ?? false) ||
           (entity.contactPerson?.toLowerCase().includes(q) ?? false) ||
           (entity.entityType?.toLowerCase().includes(q) ?? false) ||
-          (entity.email?.toLowerCase().includes(q) ?? false)
+          (entity.email?.toLowerCase().includes(q) ?? false) ||
+          (entity.jurisdiction?.toLowerCase().includes(q) ?? false) ||
+          (entity.phone?.toLowerCase().includes(q) ?? false)
         )
     }
   })

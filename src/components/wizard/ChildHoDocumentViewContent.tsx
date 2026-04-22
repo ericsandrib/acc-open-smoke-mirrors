@@ -193,10 +193,6 @@ export function ChildHoDocumentViewContent() {
                 <span>Client Signature</span>
                 <Badge variant="secondary" className="text-[10px] bg-green-100 text-green-800 border-green-200">Signed</Badge>
               </div>
-              <div className="rounded-md border border-border px-3 py-2 text-sm flex items-center justify-between">
-                <span>Advisor Counter-Signature</span>
-                <Badge variant="secondary" className="text-[10px] bg-green-100 text-green-800 border-green-200">Signed</Badge>
-              </div>
             </div>
           </AccordionSection>
 

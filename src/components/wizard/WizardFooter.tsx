@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { useWorkflow } from '@/stores/workflowStore'
 import { Button } from '@/components/ui/button'
-import { ChevronLeft, ChevronRight, Check, Pencil, ShieldAlert } from 'lucide-react'
+import { ChevronLeft, ChevronRight, Pencil, ShieldAlert } from 'lucide-react'
 import type { TaskStatus } from '@/types/workflow'
 import { parseChildSubTaskId } from '@/utils/childTaskRegistry'
 import { getOpenAccountsSubmitForReviewBlockers } from '@/utils/openAccountsDocumentValidation'
@@ -157,7 +157,6 @@ export function WizardFooter() {
                 : activeStatus === 'complete' || isSubmitted
             }
           >
-            <Check className="h-4 w-4" />
             {isOpenAccountsTask
               ? allAccountChildrenTerminal
                 ? 'Complete'

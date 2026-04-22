@@ -2,9 +2,9 @@ import { useState, useEffect, useMemo } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
 import { Clock, MoreHorizontal, ThumbsUp, X } from 'lucide-react'
 import { Button } from '@/components/ui/button'
+import { Combobox } from '@/components/ui/combobox'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { Badge } from '@/components/ui/badge'
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -121,6 +121,22 @@ export function ComposeDialog({ onClose }: ComposeDialogProps) {
       [...new Set(teamMembers.map((m) => m.officeCode))]
         .sort()
         .map((code) => ({ value: code, label: `Office ${code}` })),
+    [],
+  )
+  const advisorOptions = useMemo(
+    () => teamMembers.map((m) => ({ value: m.id, label: m.name })),
+    [],
+  )
+  const actionTypeOptions = useMemo(
+    () =>
+      actionTypes.map((action) => ({
+        value: action.value,
+        label: action.enabled ? action.label : `${action.label} (Coming soon)`,
+      })),
+    [],
+  )
+  const actionTypeByValue = useMemo(
+    () => new Map(actionTypes.map((action) => [action.value, action])),
     [],
   )
 
@@ -280,29 +296,20 @@ export function ComposeDialog({ onClose }: ComposeDialogProps) {
                     Action type
                     <RequiredMark />
                   </Label>
-                  <Select value={actionType} onValueChange={setActionType}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select an action…" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {actionTypes.map((action) => (
-                        <SelectItem
-                          key={action.value}
-                          value={action.value}
-                          disabled={!action.enabled}
-                        >
-                          <span className="flex items-center gap-2">
-                            {action.label}
-                            {!action.enabled && (
-                              <Badge variant="secondary" className="text-[10px]">
-                                Coming soon
-                              </Badge>
-                            )}
-                          </span>
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                  <Combobox
+                    options={actionTypeOptions}
+                    value={actionType}
+                    onValueChange={(next) => {
+                      const action = actionTypeByValue.get(next)
+                      if (!action?.enabled) {
+                        toast.message('This action type is coming soon.')
+                        return
+                      }
+                      setActionType(next)
+                    }}
+                    placeholder="Search action type..."
+                    emptyMessage="No action types found."
+                  />
                 </div>
 
                 <div className="space-y-2">
@@ -310,18 +317,13 @@ export function ComposeDialog({ onClose }: ComposeDialogProps) {
                     Relationship
                     <RequiredMark />
                   </Label>
-                  <Select value={relationshipId} onValueChange={setRelationshipId}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select a relationship…" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {relationships.map((r) => (
-                        <SelectItem key={r.id} value={r.id}>
-                          {r.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                  <Combobox
+                    options={relationships.map((r) => ({ value: r.id, label: r.name }))}
+                    value={relationshipId}
+                    onValueChange={setRelationshipId}
+                    placeholder="Search relationship..."
+                    emptyMessage="No relationships found."
+                  />
                 </div>
               </div>
             </section>
@@ -343,18 +345,14 @@ export function ComposeDialog({ onClose }: ComposeDialogProps) {
                         Office
                         <RequiredMark />
                       </Label>
-                      <Select value={officeCode} onValueChange={setOfficeCode}>
-                        <SelectTrigger id="compose-office">
-                          <SelectValue placeholder="Select office…" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {officeOptions.map((o) => (
-                            <SelectItem key={o.value} value={o.value}>
-                              {o.label}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
+                      <Combobox
+                        options={officeOptions}
+                        value={officeCode}
+                        onValueChange={setOfficeCode}
+                        placeholder="Search office..."
+                        emptyMessage="No offices found."
+                        dropdownClassName="max-h-40"
+                      />
                     </div>
 
                     <div className="space-y-2">
@@ -362,18 +360,14 @@ export function ComposeDialog({ onClose }: ComposeDialogProps) {
                         Advisor
                         <RequiredMark />
                       </Label>
-                      <Select value={investmentProfessionalId} onValueChange={setInvestmentProfessionalId}>
-                        <SelectTrigger id="compose-ip">
-                          <SelectValue placeholder="Select advisor…" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {teamMembers.map((m) => (
-                            <SelectItem key={m.id} value={m.id}>
-                              {m.name}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
+                      <Combobox
+                        options={advisorOptions}
+                        value={investmentProfessionalId}
+                        onValueChange={setInvestmentProfessionalId}
+                        placeholder="Search advisor..."
+                        emptyMessage="No advisors found."
+                        dropdownClassName="max-h-40"
+                      />
                     </div>
                   </div>
 

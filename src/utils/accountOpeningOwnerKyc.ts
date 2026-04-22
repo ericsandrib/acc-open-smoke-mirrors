@@ -1,4 +1,5 @@
 import type { RelatedParty, WorkflowState } from '@/types/workflow'
+import { deriveChildDisplayStatus } from '@/utils/childStatusDisplay'
 
 /**
  * Household members must have completed KYC (party verified or matching KYC child workflow complete).
@@ -8,11 +9,66 @@ export function isAccountOwnerKycVerified(state: WorkflowState, party: RelatedPa
   if (party.type === 'related_organization') {
     return true
   }
-  const kycTask = state.tasks.find((t) => t.formKey === 'kyc')
+  const kycTask = state.tasks.find((t) => t.formKey === 'kyc') ?? state.tasks.find((t) => t.formKey === 'open-accounts')
   const kycChildren = kycTask?.children?.filter((c) => c.childType === 'kyc') ?? []
+  const coveredByCompletedTrustCaseFallback = kycChildren.some((c) => {
+    const reviewState = state.childReviewsByChildId?.[c.id]
+    if (deriveChildDisplayStatus(c.status, reviewState) !== 'complete') return false
+
+    const meta = state.taskData[c.id] as Record<string, unknown> | undefined
+    const subjectType = meta?.kycSubjectType as string | undefined
+    const subjectPartyId = meta?.kycSubjectPartyId as string | undefined
+    const subjectParty =
+      (subjectPartyId
+        ? state.relatedParties.find((p) => p.id === subjectPartyId)
+        : undefined) ??
+      state.relatedParties.find((p) => p.type === 'related_organization' && p.name === c.name)
+    const infoTaskData = (state.taskData[`${c.id}-info`] as Record<string, unknown> | undefined) ?? {}
+    const infoBeneficialOwners = (infoTaskData.beneficialOwners as Array<{ name?: string }> | undefined) ?? []
+    const infoControlPersonName = `${(infoTaskData.cpFirstName as string | undefined) ?? ''} ${(infoTaskData.cpLastName as string | undefined) ?? ''}`.trim()
+
+    const isEntityByMetaOrParty =
+      subjectType === 'entity' || subjectParty?.type === 'related_organization'
+    if (!isEntityByMetaOrParty) return false
+
+    const isTrustee = (subjectParty?.trustParties ?? []).some((tp) => tp.partyId === party.id)
+    if (isTrustee) return true
+
+    const byName = normalizeName(party.name)
+    const isBeneficialOwner =
+      (subjectParty?.beneficialOwners ?? []).some(
+        (bo) => normalizeName(bo.name) === byName,
+      ) ||
+      infoBeneficialOwners.some((bo) => normalizeName(bo.name) === byName)
+    if (isBeneficialOwner) return true
+
+    const isControlPerson =
+      normalizeName(infoControlPersonName) === byName ||
+      normalizeName(subjectParty?.contactPerson) === byName
+    if (isControlPerson) return true
+
+    return false
+  })
+  if (coveredByCompletedTrustCaseFallback) {
+    return true
+  }
+  const coveredByCompletedTrustCase = kycChildren.some((c) => {
+    const meta = state.taskData[c.id] as Record<string, unknown> | undefined
+    const subjectType = meta?.kycSubjectType as string | undefined
+    const relatedIds = meta?.kycRelatedSubjectPartyIds as string[] | undefined
+    if (subjectType !== 'entity' || !Array.isArray(relatedIds) || !relatedIds.includes(party.id)) {
+      return false
+    }
+    const reviewState = state.childReviewsByChildId?.[c.id]
+    return deriveChildDisplayStatus(c.status, reviewState) === 'complete'
+  })
+  if (coveredByCompletedTrustCase) {
+    return true
+  }
   const matchingChild = kycChildren.find((c) => c.name === party.name)
   if (matchingChild) {
-    return matchingChild.status === 'complete'
+    const reviewState = state.childReviewsByChildId?.[matchingChild.id]
+    return deriveChildDisplayStatus(matchingChild.status, reviewState) === 'complete'
   }
   return party.kycStatus === 'verified'
 }

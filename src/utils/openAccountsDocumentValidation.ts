@@ -11,6 +11,7 @@ import {
 } from '@/utils/registrationDocuments'
 import type { RegistrationType } from '@/utils/registrationDocuments'
 import { getEsignEnvelopeStatus } from '@/utils/esignEnvelopeStatus'
+import { getAlternativeStrategyEsignSubmitBlockers } from '@/utils/alternativeStrategyValidation'
 
 type OwnerSlot = { partyId?: string; type: string }
 
@@ -175,22 +176,19 @@ export function getOpenAccountsSubmitForReviewBlockers(state: WorkflowState): st
     blockers.push(`${c.name}: forms have not been sent to client in any envelope.`)
   }
 
-  // Also surface envelope-level gaps for debugging routing.
+  // Envelope-level checks scoped to accounts that still exist in this submission.
   for (const env of sentEnvelopes) {
     const includedRows = env.formSelections.filter((r) => r.included)
-    if (includedRows.length === 0) {
+    const includedRowsForExistingAccounts = includedRows.filter((r) =>
+      accountNameById.has(r.accountChildId),
+    )
+    if (includedRowsForExistingAccounts.length === 0) {
       blockers.push(`${getEnvelopeDisplayName(env)}: sent but no account forms are included.`)
       continue
     }
-    const unknownAccountIds = new Set(
-      includedRows.map((r) => r.accountChildId).filter((id) => !accountNameById.has(id)),
-    )
-    if (unknownAccountIds.size > 0) {
-      blockers.push(
-        `${getEnvelopeDisplayName(env)}: contains form selections for accounts not found in this submission.`,
-      )
-    }
   }
+
+  blockers.push(...getAlternativeStrategyEsignSubmitBlockers(state, accountOpeningChildren, sentEnvelopes))
 
   return blockers
 }

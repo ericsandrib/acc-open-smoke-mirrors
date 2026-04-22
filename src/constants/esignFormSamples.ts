@@ -39,6 +39,14 @@ export const ESIGN_FORM_SAMPLE_DOWNLOADS: Record<
     href: '/docs/client-application.pdf',
     fileName: 'Margin Agreement Supplement.pdf',
   },
+  'opt-options-supplement': {
+    href: '/docs/client-application.pdf',
+    fileName: 'Options Agreement Supplement.pdf',
+  },
+  'opt-alternative-strategy-selection': {
+    href: '/docs/client-application.pdf',
+    fileName: 'Alternative Strategy Selection Form.pdf',
+  },
 }
 
 /**

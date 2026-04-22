@@ -61,6 +61,8 @@ export function EditLegalEntitySheet({
   const [trustParties, setTrustParties] = useState<TrustPartyRef[]>([])
   const [addTrusteeSheetOpen, setAddTrusteeSheetOpen] = useState(false)
   const [pendingTrusteeRow, setPendingTrusteeRow] = useState<number | null>(null)
+  const [addBeneficialOwnerSheetOpen, setAddBeneficialOwnerSheetOpen] = useState(false)
+  const [pendingBeneficialOwnerRow, setPendingBeneficialOwnerRow] = useState<number | null>(null)
 
   const [beneficialOwners, setBeneficialOwners] = useState<Array<{ name: string; ownershipPercent: string }>>([
     { name: '', ownershipPercent: '' },
@@ -147,6 +149,16 @@ export function EditLegalEntitySheet({
   const removeOwner = (idx: number) => setBeneficialOwners((prev) => prev.filter((_, i) => i !== idx))
   const updateOwner = (idx: number, field: 'name' | 'ownershipPercent', value: string) =>
     setBeneficialOwners((prev) => prev.map((o, i) => (i === idx ? { ...o, [field]: value } : o)))
+  const setBeneficialOwnerMember = (idx: number, memberId: string) => {
+    if (memberId === '__create__') {
+      setPendingBeneficialOwnerRow(idx)
+      setAddBeneficialOwnerSheetOpen(true)
+      return
+    }
+    const m = householdMembers.find((p) => p.id === memberId)
+    if (!m?.name?.trim()) return
+    updateOwner(idx, 'name', m.name.trim())
+  }
 
   const addTrusteeRow = () => {
     setTrustParties((prev) => [...prev, { id: newTrusteeRefId(), displayName: '', role: 'Trustee' }])
@@ -161,12 +173,6 @@ export function EditLegalEntitySheet({
     if (memberId === '__create__') {
       setPendingTrusteeRow(idx)
       setAddTrusteeSheetOpen(true)
-      return
-    }
-    if (memberId === '__none__') {
-      setTrustParties((prev) =>
-        prev.map((t, i) => (i === idx ? { ...t, partyId: undefined, displayName: '' } : t)),
-      )
       return
     }
     const m = householdMembers.find((p) => p.id === memberId)
@@ -188,6 +194,16 @@ export function EditLegalEntitySheet({
         i === row ? { ...t, partyId: newPartyId, displayName: m?.name?.trim() ?? t.displayName } : t,
       ),
     )
+  }
+
+  const handleBeneficialOwnerMemberAdded = (newPartyId: string) => {
+    const row = pendingBeneficialOwnerRow
+    setAddBeneficialOwnerSheetOpen(false)
+    setPendingBeneficialOwnerRow(null)
+    if (row === null) return
+    const m = state.relatedParties.find((p) => p.id === newPartyId)
+    if (!m?.name?.trim()) return
+    updateOwner(row, 'name', m.name.trim())
   }
 
   const currentState = JSON.stringify({
@@ -269,6 +285,16 @@ export function EditLegalEntitySheet({
     )
   }
 
+  const membersAvailableForBeneficialOwnerRow = (rowIdx: number) => {
+    const currentName = beneficialOwners[rowIdx]?.name.trim()
+    return householdMembers.filter((m) => {
+      const memberName = m.name?.trim()
+      if (!memberName) return false
+      if (memberName === currentName) return true
+      return !beneficialOwners.some((owner, i) => i !== rowIdx && owner.name.trim() === memberName)
+    })
+  }
+
   return (
     <>
       <Sheet open={open} onOpenChange={onOpenChange}>
@@ -336,14 +362,13 @@ export function EditLegalEntitySheet({
                           <div className="flex-1 space-y-1.5">
                             <Label className={fieldCls}>Trustee</Label>
                             <Select
-                              value={t.partyId ?? '__none__'}
+                              value={t.partyId}
                               onValueChange={(v) => setTrusteeMember(idx, v)}
                             >
                               <SelectTrigger>
                                 <SelectValue placeholder="Select household member" />
                               </SelectTrigger>
                               <SelectContent>
-                                <SelectItem value="__none__">Select household member…</SelectItem>
                                 {membersAvailableForTrusteeRow(idx).map((m) => (
                                   <SelectItem key={m.id} value={m.id}>{m.name}</SelectItem>
                                 ))}
@@ -436,8 +461,21 @@ export function EditLegalEntitySheet({
                 {beneficialOwners.map((owner, idx) => (
                   <div key={idx} className="flex items-end gap-2">
                     <div className="flex-1 space-y-1.5">
-                      <Label className={fieldCls}>Name</Label>
-                      <Input value={owner.name} onChange={(e) => updateOwner(idx, 'name', e.target.value)} placeholder="Full name" />
+                      <Label className={fieldCls}>Owner</Label>
+                      <Select
+                        value={householdMembers.some((m) => m.name?.trim() === owner.name.trim()) ? householdMembers.find((m) => m.name?.trim() === owner.name.trim())?.id : undefined}
+                        onValueChange={(v) => setBeneficialOwnerMember(idx, v)}
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select household member" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {membersAvailableForBeneficialOwnerRow(idx).map((m) => (
+                            <SelectItem key={m.id} value={m.id}>{m.name}</SelectItem>
+                          ))}
+                          <SelectItem value="__create__">Create new individual…</SelectItem>
+                        </SelectContent>
+                      </Select>
                     </div>
                     <div className="w-28 space-y-1.5">
                       <Label className={fieldCls}>Ownership %</Label>
@@ -497,6 +535,17 @@ export function EditLegalEntitySheet({
         onPartyAdded={handleTrusteeMemberAdded}
         title="Add trustee"
         description="Search for someone already in the household directory, or create a new individual to link as trustee."
+        individualCreateOnly
+      />
+      <AddHouseholdMemberSheet
+        open={addBeneficialOwnerSheetOpen}
+        onOpenChange={(v) => {
+          setAddBeneficialOwnerSheetOpen(v)
+          if (!v) setPendingBeneficialOwnerRow(null)
+        }}
+        onPartyAdded={handleBeneficialOwnerMemberAdded}
+        title="Add beneficial owner"
+        description="Search for someone already in the household directory, or create a new individual to link as beneficial owner."
         individualCreateOnly
       />
     </>

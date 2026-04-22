@@ -1,4 +1,5 @@
 import {
+  useWorkflow,
   useTaskData,
   useChildActionContext,
   useAdvisorFormsEditable,
@@ -12,8 +13,11 @@ export function KycChildDocumentsForm() {
   const child = ctx?.child ?? null
   const taskId = ctx?.subTaskId ?? ''
   const { data, updateField } = useTaskData(taskId || '__no_child__')
+  const { state } = useWorkflow()
   const advisorFormsEditable = useAdvisorFormsEditable()
   const advisorResubmitEligible = useAdvisorResubmitEligible()
+  const childMeta = child ? (state.taskData[child.id] as Record<string, unknown> | undefined) ?? {} : {}
+  const isEntity = childMeta.kycSubjectType === 'entity'
 
   const statusLocked = child ? (child.status === 'awaiting_review' || child.status === 'complete' || child.status === 'rejected') : false
   const isLocked = statusLocked && !advisorFormsEditable
@@ -22,20 +26,29 @@ export function KycChildDocumentsForm() {
   const docs = [
     {
       id: 'gov-id',
-      label: 'Government-Issued ID',
-      description: 'Upload a passport, driver\'s license, or national ID card',
+      label: isEntity ? 'Formation Document' : 'Government-Issued ID',
+      description: isEntity
+        ? 'Upload certificate of formation/incorporation, trust deed, or equivalent'
+        : 'Upload a passport, driver\'s license, or national ID card',
       hint: 'PDF, JPG, or PNG up to 10 MB',
     },
     {
       id: 'supporting-docs',
-      label: 'Supporting Documents',
-      description: 'Upload proof of address, utility bills, or other supporting documentation',
+      label: isEntity ? 'Supporting KYB Documents' : 'Supporting Documents',
+      description: isEntity
+        ? 'Upload ownership/control, operating agreement, or proof of registered address'
+        : 'Upload proof of address, utility bills, or other supporting documentation',
       hint: 'PDF, JPG, or PNG up to 10 MB',
     },
   ]
 
   return (
     <div className="space-y-4">
+      <div className="rounded-md border border-border bg-muted/20 px-3 py-2.5">
+        <p className="text-xs text-muted-foreground">
+          Documents are optional by default and only needed for step-up verification (e.g., registry mismatch, higher risk, or AML request).
+        </p>
+      </div>
       {advisorResubmitEligible && (
         <div className="rounded-md border border-blue-200 bg-blue-50 dark:border-blue-900/60 dark:bg-blue-950/40 px-3 py-2.5">
           <div className="flex items-center gap-2">

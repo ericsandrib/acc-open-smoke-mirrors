@@ -18,6 +18,8 @@ export function HoKycReviewFooter() {
   const reviewState = getChildReviewState(state, child.id)
   const amlReview = reviewState?.amlReview
   const hoKycReview = reviewState?.hoKycReview
+  const childMeta = (state.taskData[child.id] as Record<string, unknown> | undefined) ?? {}
+  const subjectLabel = childMeta.kycSubjectType === 'entity' ? 'legal entity' : 'individual'
 
   const amlBlocked = amlReview?.status === 'pending' || amlReview?.status === 'flagged' || amlReview?.status === 'info_requested'
   const amlEscalated = amlReview?.status === 'escalated'
@@ -83,8 +85,9 @@ export function HoKycReviewFooter() {
               <div className="space-y-1">
                 <h3 className="text-base font-semibold">Approve KYC</h3>
                 <p className="text-sm text-muted-foreground">
-                  Confirm that <span className="font-medium text-foreground">{child.name}</span>'s
-                  KYC verification is complete and all data has been reviewed.
+                  Confirm that this <span className="font-medium text-foreground">{subjectLabel}</span> (
+                  <span className="font-medium text-foreground">{child.name}</span>) has completed KYC verification
+                  and all data has been reviewed.
                 </p>
               </div>
             </div>
@@ -115,8 +118,8 @@ export function HoKycReviewFooter() {
               <div className="space-y-1">
                 <h3 className="text-base font-semibold">Request Changes</h3>
                 <p className="text-sm text-muted-foreground">
-                  Send <span className="font-medium text-foreground">{child.name}</span>'s
-                  submission back to the advisor for corrections.
+                  Send this <span className="font-medium text-foreground">{subjectLabel}</span> submission (
+                  <span className="font-medium text-foreground">{child.name}</span>) back to the advisor for corrections.
                 </p>
               </div>
             </div>
@@ -140,7 +143,7 @@ export function HoKycReviewFooter() {
                   dispatch({ type: 'HO_KYC_REQUEST_CHANGES', comments: feedback })
                   setShowRequestChanges(false)
                   setComments('')
-                  toast('Home Office KYC Team returned feedback', {
+                  toast('Document Review returned feedback', {
                     description: feedback,
                     icon: <MessageSquare className="h-4 w-4 text-amber-600" />,
                     duration: 6000,

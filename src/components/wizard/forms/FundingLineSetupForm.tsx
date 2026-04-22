@@ -11,6 +11,7 @@ import {
 } from '@/components/ui/select'
 import { FUNDING_OPTIONS } from '@/data/fundingOptions'
 import { FinancialAccountSlotCard } from '@/components/wizard/forms/FinancialAccountSlotCard'
+import { ExternalLink } from 'lucide-react'
 
 const servicingModels = [
   { value: 'advisory', label: 'Advisory (Fee-based)' },
@@ -27,6 +28,7 @@ const dividendOptions = [
 
 /** Detail form for a single funding / asset movement workflow line. */
 export function FundingLineSetupForm() {
+  const NETX360_ANNUITIES_DEEPLINK = 'https://netx360.pershing.com/annuities'
   const { state } = useWorkflow()
   const ctx = useChildActionContext()
   const taskId = ctx?.subTaskId ?? ''
@@ -36,6 +38,7 @@ export function FundingLineSetupForm() {
   const fundingSource =
     (data.fundingSource as string | undefined) ?? (childRoot?.fundingMethod as string | undefined) ?? ''
 
+  const isAnnuitiesServicing = fundingSource === 'annuities_servicing'
   const needsBank = fundingSource === 'ach' || fundingSource === 'bank_send_receive' || fundingSource === 'fed_fund_wires'
   const isCheckMovement = fundingSource === 'check_deposits' || fundingSource === 'check_withdrawals'
 
@@ -155,6 +158,7 @@ export function FundingLineSetupForm() {
           <Select
             value={fundingSource || undefined}
             onValueChange={(v) => updateField('fundingSource', v)}
+            disabled
           >
             <SelectTrigger>
               <SelectValue placeholder="Select movement type…" />
@@ -169,47 +173,81 @@ export function FundingLineSetupForm() {
           </Select>
         </div>
 
-        <div className="grid gap-4 sm:grid-cols-2">
-          <div className="space-y-2">
-            <Label>Amount (if applicable)</Label>
-            <Input
-              value={(data.fundingAmount as string) ?? ''}
-              onChange={(e) => updateField('fundingAmount', e.target.value)}
-              placeholder="e.g. 100,000"
-            />
-          </div>
-          <div className="space-y-2">
-            <Label>Transfer scope</Label>
-            <Select
-              value={(data.transferScope as string) ?? ''}
-              onValueChange={(v) => updateField('transferScope', v)}
+        {isAnnuitiesServicing && (
+          <div className="space-y-4 rounded-lg border border-border bg-muted/20 p-4">
+            <h3 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
+              NetX360 workflow required
+            </h3>
+            <p className="text-sm text-muted-foreground">
+              Annuities servicing is completed in <span className="font-medium text-foreground">NetX360</span>, where
+              this task is nested inside the NetX360 workflow.
+            </p>
+            <a
+              href={NETX360_ANNUITIES_DEEPLINK}
+              target="_blank"
+              rel="noreferrer"
+              className="inline-flex items-center gap-1.5 text-sm font-medium text-primary underline underline-offset-2 hover:text-primary/80"
             >
-              <SelectTrigger>
-                <SelectValue placeholder="If transfer…" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="full">Full</SelectItem>
-                <SelectItem value="partial">Partial</SelectItem>
-                <SelectItem value="na">N/A</SelectItem>
-              </SelectContent>
-            </Select>
+              Open NetX360 annuities workflow
+              <ExternalLink className="h-3.5 w-3.5" />
+            </a>
+            <ol className="list-decimal space-y-1.5 pl-5 text-sm text-foreground">
+              <li>Open NetX360 from the link above.</li>
+              <li>Navigate to the account workflow you normally use.</li>
+              <li>Go to step 4, <span className="font-medium">Add related requests</span>.</li>
+              <li>Add the annuities workflow as you normally would in NetX360.</li>
+            </ol>
+            <p className="text-xs text-muted-foreground">
+              Completion for this movement line is tracked externally in NetX360.
+            </p>
           </div>
-        </div>
+        )}
 
-        <div className="grid gap-4 sm:grid-cols-2">
-          <div className="space-y-2 sm:col-span-2">
-            <Label>Source of funds / source of wealth</Label>
-            <textarea
-              className="flex min-h-[72px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
-              value={(data.sourceOfFundsWealth as string) ?? ''}
-              onChange={(e) => updateField('sourceOfFundsWealth', e.target.value)}
-              placeholder="Employment income, sale of business, inheritance, etc."
-            />
-          </div>
-        </div>
+        {!isAnnuitiesServicing && (
+          <>
+            <div className="grid gap-4 sm:grid-cols-2">
+              <div className="space-y-2">
+                <Label>Amount (if applicable)</Label>
+                <Input
+                  value={(data.fundingAmount as string) ?? ''}
+                  onChange={(e) => updateField('fundingAmount', e.target.value)}
+                  placeholder="e.g. 100,000"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>Transfer scope</Label>
+                <Select
+                  value={(data.transferScope as string) ?? ''}
+                  onValueChange={(v) => updateField('transferScope', v)}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="If transfer…" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="full">Full</SelectItem>
+                    <SelectItem value="partial">Partial</SelectItem>
+                    <SelectItem value="na">N/A</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+
+            <div className="grid gap-4 sm:grid-cols-2">
+              <div className="space-y-2 sm:col-span-2">
+                <Label>Source of funds / source of wealth</Label>
+                <textarea
+                  className="flex min-h-[72px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                  value={(data.sourceOfFundsWealth as string) ?? ''}
+                  onChange={(e) => updateField('sourceOfFundsWealth', e.target.value)}
+                  placeholder="Employment income, sale of business, inheritance, etc."
+                />
+              </div>
+            </div>
+          </>
+        )}
       </section>
 
-      {fundingSource === 'account_transfers' && (
+      {!isAnnuitiesServicing && fundingSource === 'account_transfers' && (
         <div className="space-y-4">
           <FinancialAccountSlotCard
             title="Investment account"
@@ -232,7 +270,7 @@ export function FundingLineSetupForm() {
         </div>
       )}
 
-      {isCheckMovement && (
+      {!isAnnuitiesServicing && isCheckMovement && (
         <section className="space-y-4 rounded-lg border border-border p-4 bg-muted/20">
           <h3 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
             Check details
@@ -256,7 +294,7 @@ export function FundingLineSetupForm() {
         </section>
       )}
 
-      {fundingSource === 'mutual_fund_periodic_orders' && (
+      {!isAnnuitiesServicing && fundingSource === 'mutual_fund_periodic_orders' && (
         <section className="space-y-4 rounded-lg border border-border p-4 bg-muted/20">
           <h3 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
             Recurring mutual fund orders
@@ -276,7 +314,7 @@ export function FundingLineSetupForm() {
         </section>
       )}
 
-      {needsBank && (
+      {!isAnnuitiesServicing && needsBank && (
         <FinancialAccountSlotCard
           title="Bank details"
           selectLabel="Choose an account"
@@ -289,6 +327,7 @@ export function FundingLineSetupForm() {
         />
       )}
 
+      {!isAnnuitiesServicing && (
       <section className="space-y-4">
         <h3 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
           Standing & periodic instructions
@@ -315,7 +354,9 @@ export function FundingLineSetupForm() {
           />
         </div>
       </section>
+      )}
 
+      {!isAnnuitiesServicing && (
       <section className="space-y-4">
         <h3 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
           Servicing (demo)
@@ -368,6 +409,7 @@ export function FundingLineSetupForm() {
           />
         </div>
       </section>
+      )}
     </div>
   )
 }

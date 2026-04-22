@@ -25,7 +25,7 @@ export const relationships: Relationship[] = [
         email: 'john.smith@example.com',
         phone: '+1 (555) 123-4567',
         dob: '1975-03-15',
-        kycStatus: 'verified',
+        kycStatus: 'needs_kyc',
         clientId: 'CLN-7482910',
         taxId: '123-45-6789',
         accountOwnerIndividual: {
@@ -168,10 +168,11 @@ export const relationships: Relationship[] = [
         taxId: '36-7123456',
         clientId: 'ENT-200901',
         jurisdiction: 'Illinois',
+        dateOfFormation: '2001-04-15',
         contactPerson: 'John Smith',
         email: 'trust@smithfamily.example.com',
         phone: '+1 (555) 123-4570',
-        kycStatus: 'verified',
+        kycStatus: 'needs_kyc',
         businessProfile: {
           industry: 'Trust / fiduciary',
           sourceOfFunds: 'Trust corpus / investment proceeds',

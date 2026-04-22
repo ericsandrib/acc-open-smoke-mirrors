@@ -34,7 +34,7 @@ export const childStatusConfig: Record<ChildDisplayStatus, { label: string; clas
     className: 'bg-violet-50 text-violet-700 border-violet-200',
   },
   ho_kyc_review: {
-    label: 'Home Office Review',
+    label: 'Document Review',
     className: 'bg-violet-50 text-violet-700 border-violet-200',
   },
   escalation_hold: {
@@ -92,9 +92,7 @@ export function deriveChildDisplayStatus(
     const docReview = reviewState.documentReview
     const principalReview = reviewState.principalReview
     const amlReview = reviewState.amlReview
-    const principalKycReview = reviewState.principalKycReview
     if (amlReview?.status === 'escalated' || amlReview?.status === 'flagged') return 'rejected_aml'
-    if (principalKycReview?.status === 'rejected') return 'nigo_principal'
     if (principalReview?.status === 'nigo') return 'nigo_principal'
     if (docReview?.status === 'nigo') return 'nigo_document'
     return 'nigo'
@@ -105,7 +103,6 @@ export function deriveChildDisplayStatus(
     const amlReview = reviewState.amlReview
     const docReview = reviewState.documentReview
     const hoKycReview = reviewState.hoKycReview
-    const principalKycReview = reviewState.principalKycReview
     const amlFlagged = reviewState.amlFlagged
 
     if (amlReview?.status === 'pending') return 'aml_review'
@@ -113,9 +110,7 @@ export function deriveChildDisplayStatus(
 
     if (hoKycReview) {
       if (hoKycReview.status === 'pending') return 'ho_kyc_review'
-      if (hoKycReview.status === 'approved') {
-        if (principalKycReview?.status === 'pending' || !principalKycReview) return 'principal_review'
-      }
+      if (hoKycReview.status === 'approved') return 'complete'
     }
 
     if (docReview) {

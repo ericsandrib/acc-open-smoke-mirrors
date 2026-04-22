@@ -12,11 +12,9 @@ import { ChildActionRightSidebar } from './ChildActionRightSidebar'
 import { ChildHoDocumentViewContent } from './ChildHoDocumentViewContent'
 import { ChildHoPrincipalViewContent } from './ChildHoPrincipalViewContent'
 import { ChildHoKycViewContent } from './ChildHoKycViewContent'
-import { ChildHoPrincipalKycContent } from './ChildHoPrincipalKycContent'
 import { ChildAmlReviewContent } from './ChildAmlReviewContent'
-import { HoPrincipalKycFooter } from './HoPrincipalKycFooter'
 import { useState } from 'react'
-import { Eye, FileSearch, ShieldCheck, ShieldAlert, Building } from 'lucide-react'
+import { Eye, ShieldCheck, ShieldAlert, Building } from 'lucide-react'
 import { VerticalNav } from '@/components/navigation/vertical-nav'
 import { ComposeDialog } from '@/components/dashboard/ComposeDialog'
 import { useWorkflow } from '@/stores/workflowStore'
@@ -47,7 +45,6 @@ export function WizardLayout() {
   const isHoDocView = viewMode === 'ho-documents'
   const isHoPrincipalView = viewMode === 'ho-principal'
   const isHoKycView = viewMode === 'ho-kyc'
-  const isHoPrincipalKycView = viewMode === 'ho-principal-kyc'
   const isAmlView = viewMode === 'aml'
   const isHomeOfficeView = isHoDocView || isHoPrincipalView
   /** Stale `ho-documents` / `ho-principal` after KYC must not put a draft account child into HO reviewer layout. */
@@ -106,20 +103,7 @@ export function WizardLayout() {
                     )}
                   >
                     <Building className="h-3.5 w-3.5" />
-                    Home Office
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => dispatch({ type: 'SET_DEMO_VIEW', mode: 'ho-principal-kyc' })}
-                    className={cn(
-                      'flex items-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-medium transition-colors',
-                      isHoPrincipalKycView
-                        ? 'bg-primary text-primary-foreground shadow-sm'
-                        : 'text-muted-foreground hover:text-foreground hover:bg-muted/50',
-                    )}
-                  >
-                    <ShieldCheck className="h-3.5 w-3.5" />
-                    Principal
+                    Document Review
                   </button>
                 </>
               ) : (
@@ -134,8 +118,8 @@ export function WizardLayout() {
                         : 'text-muted-foreground hover:text-foreground hover:bg-muted/50',
                     )}
                   >
-                    <FileSearch className="h-3.5 w-3.5" />
-                    HO Document Team
+                    <Building className="h-3.5 w-3.5" />
+                    Document Review
                   </button>
                   <button
                     type="button"
@@ -148,7 +132,7 @@ export function WizardLayout() {
                     )}
                   >
                     <ShieldCheck className="h-3.5 w-3.5" />
-                    HO Principal Team
+                    Principal Review
                   </button>
                 </>
               )}
@@ -182,19 +166,6 @@ export function WizardLayout() {
                   </div>
                 </div>
                 <HoKycReviewFooter />
-              </div>
-            ) : isHoPrincipalKycView && isKycChild ? (
-              <div className="flex-1 flex flex-col min-h-0 min-w-0 overflow-hidden">
-                <div className="flex flex-1 min-h-0 overflow-hidden">
-                  <ChildActionSidebar />
-                  <div className="flex flex-1 min-h-0 overflow-hidden min-w-0">
-                    <div className="flex-1 flex flex-col overflow-hidden min-w-0">
-                      <ChildHoPrincipalKycContent />
-                    </div>
-                    <ChildActionRightSidebar />
-                  </div>
-                </div>
-                <HoPrincipalKycFooter />
               </div>
             ) : showHomeOfficeAccountLayout ? (
               activeChild?.childType === 'account-opening' ? (

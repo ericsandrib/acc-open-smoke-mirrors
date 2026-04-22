@@ -333,6 +333,16 @@ export function AccountAdditionalInformationSection({ data, updateField }: Accou
           </div>
 
           <div className="space-y-2">
+            <Label>Investment time horizon date</Label>
+            <Input
+              type="date"
+              value={(data.invObjTimeHorizonDate as string) ?? ''}
+              onChange={(e) => updateField('invObjTimeHorizonDate', e.target.value)}
+            />
+            <p className="text-xs text-muted-foreground">Optional — aligns with custody suitability when provided.</p>
+          </div>
+
+          <div className="space-y-2">
             <Label>Account funding date</Label>
             <Input
               type="date"

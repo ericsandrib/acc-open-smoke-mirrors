@@ -15,6 +15,7 @@ interface ComboboxProps {
   emptyMessage?: string
   className?: string
   inputClassName?: string
+  dropdownClassName?: string
   disabled?: boolean
 }
 
@@ -26,12 +27,12 @@ function Combobox({
   emptyMessage = "No results found.",
   className,
   inputClassName,
+  dropdownClassName,
   disabled = false,
 }: ComboboxProps) {
   const [open, setOpen] = React.useState(false)
   const [search, setSearch] = React.useState("")
   const [highlightIndex, setHighlightIndex] = React.useState(-1)
-  const [dropdownStyle, setDropdownStyle] = React.useState<React.CSSProperties>({})
   const containerRef = React.useRef<HTMLDivElement>(null)
   const inputRef = React.useRef<HTMLInputElement>(null)
   const listRef = React.useRef<HTMLDivElement>(null)
@@ -53,41 +54,6 @@ function Combobox({
       setSearch("")
     }
   }, [open])
-
-  const updateDropdownPosition = React.useCallback(() => {
-    if (!inputRef.current) return
-    const rect = inputRef.current.getBoundingClientRect()
-    setDropdownStyle({
-      position: "fixed",
-      top: rect.bottom + 4,
-      left: rect.left,
-      width: rect.width,
-    })
-  }, [])
-
-  React.useEffect(() => {
-    if (!open) return
-
-    updateDropdownPosition()
-
-    const scrollParents: Element[] = []
-    let el: Element | null = containerRef.current
-    while (el) {
-      if (el.scrollHeight > el.clientHeight || el.scrollWidth > el.clientWidth) {
-        scrollParents.push(el)
-      }
-      el = el.parentElement
-    }
-
-    const handleScroll = () => updateDropdownPosition()
-    scrollParents.forEach((sp) => sp.addEventListener("scroll", handleScroll, { passive: true }))
-    window.addEventListener("resize", handleScroll, { passive: true })
-
-    return () => {
-      scrollParents.forEach((sp) => sp.removeEventListener("scroll", handleScroll))
-      window.removeEventListener("resize", handleScroll)
-    }
-  }, [open, updateDropdownPosition])
 
   React.useEffect(() => {
     function handleClickOutside(e: MouseEvent) {
@@ -184,6 +150,12 @@ function Combobox({
             setOpen(true)
             setSearch("")
           }}
+          onClick={() => {
+            if (!open) {
+              setOpen(true)
+              setSearch("")
+            }
+          }}
           onKeyDown={handleKeyDown}
         />
         <button
@@ -206,8 +178,10 @@ function Combobox({
         <div
           ref={listRef}
           role="listbox"
-          style={dropdownStyle}
-          className="z-[9999] max-h-60 overflow-auto rounded-md border border-border bg-popover p-1 text-popover-foreground shadow-md"
+          className={cn(
+            "absolute left-0 top-[calc(100%+4px)] z-[9999] max-h-60 w-full overflow-auto rounded-md border border-border bg-popover p-1 text-popover-foreground shadow-md",
+            dropdownClassName
+          )}
         >
           {filtered.length === 0 ? (
             <div className="py-2 text-center text-sm text-muted-foreground">

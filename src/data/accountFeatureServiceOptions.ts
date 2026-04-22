@@ -1,5 +1,5 @@
-/** Margin & options are captured on the parent account (`featureRequests`), not spawned as service lines. */
-export const ACCOUNT_EMBEDDED_FEATURE_VALUES = ['margin', 'options'] as const
+/** Optional account-level elections captured on the parent account (`featureRequests`). */
+export const ACCOUNT_EMBEDDED_FEATURE_VALUES = ['margin', 'options', 'alternative_strategy_selection'] as const
 
 /** Account features & services — administrative, setup, or lifecycle (not transactional movements). */
 export const ACCOUNT_FEATURE_SERVICE_OPTIONS = [

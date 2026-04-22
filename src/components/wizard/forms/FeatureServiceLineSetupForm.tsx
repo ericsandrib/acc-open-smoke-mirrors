@@ -70,8 +70,9 @@ export function FeatureServiceLineSetupForm() {
           <Label>Feature / service type</Label>
           {(ACCOUNT_EMBEDDED_FEATURE_VALUES as readonly string[]).includes(featureServiceType) ? (
             <p className="text-xs text-amber-900 dark:text-amber-100 rounded-md border border-amber-200 bg-amber-50 dark:border-amber-900/50 dark:bg-amber-950/30 px-3 py-2">
-              Margin and options are configured on the parent account under <strong>Account &amp; owners</strong>. This
-              service line is legacy if it still shows those types—prefer closing it and using the account step instead.
+              Margin, options, and alternative strategy selection are configured on the parent account under{' '}
+              <strong>Account &amp; owners</strong>. This service line is legacy if it still shows those types—prefer
+              closing it and using the account step instead.
             </p>
           ) : null}
           <Select

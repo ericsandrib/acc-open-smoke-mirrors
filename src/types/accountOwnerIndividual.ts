@@ -1,3 +1,4 @@
+import type { DirectoryPerson } from '@/data/people-directory'
 import type { AccountOwnerIndividualProfile, RelatedParty } from '@/types/workflow'
 
 export const EMPLOYMENT_STATUSES = ['Employed', 'Self-employed', 'Retired', 'Unemployed'] as const
@@ -145,19 +146,12 @@ export function createEmptyIndividualAccountOwnerForm(): IndividualAccountOwnerF
   }
 }
 
-export function hydrateIndividualFormFromParty(p: RelatedParty): IndividualAccountOwnerFormState {
-  const base = createEmptyIndividualAccountOwnerForm()
-  const ext = p.accountOwnerIndividual ?? {}
+function applyAccountOwnerIndividualProfileToForm(
+  base: IndividualAccountOwnerFormState,
+  ext: Partial<AccountOwnerIndividualProfile>,
+): IndividualAccountOwnerFormState {
   return {
     ...base,
-    firstName: p.firstName ?? '',
-    lastName: p.lastName ?? '',
-    dob: p.dob ?? '',
-    taxId: p.taxId ?? '',
-    relationship: p.relationship ?? '',
-    role: p.role ?? '',
-    email: p.email ?? '',
-    phone: p.phone ?? '',
     middleName: ext.middleName ?? '',
     suffix: ext.suffix ?? '',
     legalStreet: ext.legalStreet ?? '',
@@ -193,6 +187,38 @@ export function hydrateIndividualFormFromParty(p: RelatedParty): IndividualAccou
     trustedContactName: ext.trustedContactName ?? '',
     trustedContactRelationship: ext.trustedContactRelationship ?? '',
     trustedContactPhoneEmail: ext.trustedContactPhoneEmail ?? '',
+  }
+}
+
+/** Seed full account-owner form state from a directory search hit (same shape as Create New for owners). */
+export function hydrateIndividualFormFromDirectoryPerson(person: DirectoryPerson): IndividualAccountOwnerFormState {
+  const base = createEmptyIndividualAccountOwnerForm()
+  const withProfile = applyAccountOwnerIndividualProfileToForm(base, person.accountOwnerProfile ?? {})
+  return {
+    ...withProfile,
+    firstName: person.firstName ?? '',
+    lastName: person.lastName ?? '',
+    email: person.email ?? '',
+    phone: person.phone ?? '',
+    dob: person.dob ?? '',
+    taxId: person.taxId ?? person.ssn ?? '',
+  }
+}
+
+export function hydrateIndividualFormFromParty(p: RelatedParty): IndividualAccountOwnerFormState {
+  const base = createEmptyIndividualAccountOwnerForm()
+  const ext = p.accountOwnerIndividual ?? {}
+  const withProfile = applyAccountOwnerIndividualProfileToForm(base, ext)
+  return {
+    ...withProfile,
+    firstName: p.firstName ?? '',
+    lastName: p.lastName ?? '',
+    dob: p.dob ?? '',
+    taxId: p.taxId ?? '',
+    relationship: p.relationship ?? '',
+    role: p.role ?? '',
+    email: p.email ?? '',
+    phone: p.phone ?? '',
   }
 }
 

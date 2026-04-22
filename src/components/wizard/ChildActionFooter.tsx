@@ -128,7 +128,15 @@ export function ChildActionFooter() {
   const isAdvisorView = state.demoViewMode === 'advisor'
   const isAmlView = state.demoViewMode === 'aml'
   const isHoKycView = state.demoViewMode === 'ho-kyc'
-  const isHoPrincipalKycView = state.demoViewMode === 'ho-principal-kyc'
+  const kycParty =
+    isKyc
+      ? state.relatedParties.find((p) => p.id === (state.taskData[child.id]?.kycSubjectPartyId as string | undefined)) ??
+        state.relatedParties.find((p) => p.name === child.name)
+      : null
+  const kycSubjectType: 'individual' | 'entity' =
+    state.taskData[child.id]?.kycSubjectType === 'entity' || kycParty?.type === 'related_organization'
+      ? 'entity'
+      : 'individual'
 
   if (isNestedAccountLineChild) {
     return (
@@ -165,8 +173,13 @@ export function ChildActionFooter() {
     if (isKyc) {
       const infoTaskId = `${child.id}-info`
       const infoData = state.taskData[infoTaskId] ?? {}
+      const childMeta = state.taskData[child.id] ?? {}
       const errors = getKycValidationErrors(infoData, {
         optionalIdVerification: kycChildHasOptionalIdVerification(child),
+        subjectType:
+          childMeta.kycSubjectType === 'entity' || kycSubjectType === 'entity'
+            ? 'entity'
+            : 'individual',
       })
       if (errors.length > 0) {
         toast.error('Please fix validation errors before resubmitting', {
@@ -211,8 +224,13 @@ export function ChildActionFooter() {
     if (isKyc) {
       const infoTaskId = `${child.id}-info`
       const infoData = state.taskData[infoTaskId] ?? {}
+      const childMeta = state.taskData[child.id] ?? {}
       const errors = getKycValidationErrors(infoData, {
         optionalIdVerification: kycChildHasOptionalIdVerification(child),
+        subjectType:
+          childMeta.kycSubjectType === 'entity' || kycSubjectType === 'entity'
+            ? 'entity'
+            : 'individual',
       })
 
       if (errors.length > 0) {
@@ -264,7 +282,7 @@ export function ChildActionFooter() {
   const hideNextInAdvisorAfterSubmit =
     isAdvisorView && child.status === 'awaiting_review' && !advisorFormsEditable
 
-  if (isAdvisorView || isAmlView || isHoKycView || isHoPrincipalKycView) {
+  if (isAdvisorView || isAmlView || isHoKycView) {
     return (
       <>
         <footer className="border-t border-border bg-background px-6 py-3 min-h-14 flex justify-between items-center shrink-0 box-border">
@@ -290,7 +308,7 @@ export function ChildActionFooter() {
                   {(() => {
                     const rs = getChildReviewState(state, child.id)
                     const dec = getChildReviewDecision(state, child.id)
-                    if (isKyc) return rs?.principalKycReview?.decidedAt ?? rs?.hoKycReview?.decidedAt ?? state.submittedAt ?? 'N/A'
+                    if (isKyc) return rs?.hoKycReview?.decidedAt ?? state.submittedAt ?? 'N/A'
                     return rs?.principalReview?.decidedAt ?? dec?.decidedAt ?? state.submittedAt ?? 'N/A'
                   })()}
                 </span>
@@ -298,7 +316,10 @@ export function ChildActionFooter() {
             ) : child.status === 'awaiting_review' ? (
               <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
                 <Clock className="h-3.5 w-3.5" />
-                <span>Submitted for {isKyc ? 'home office' : 'home office review'} at {state.submittedAt ?? 'N/A'}</span>
+                <span>
+                  Submitted for {isKyc ? 'document review' : 'home office review'} at{' '}
+                  {state.submittedAt ?? 'N/A'}
+                </span>
               </div>
             ) : isLast && (child.status === 'in_progress' || child.status === 'not_started') ? (
               child.childType === 'account-opening' &&
@@ -379,8 +400,7 @@ export function ChildActionFooter() {
                 <span>
                   Completed at{' '}
                   {isKyc
-                    ? getChildReviewState(state, child.id)?.principalKycReview?.decidedAt ??
-                      getChildReviewState(state, child.id)?.hoKycReview?.decidedAt ??
+                    ? getChildReviewState(state, child.id)?.hoKycReview?.decidedAt ??
                       state.submittedAt ??
                       'N/A'
                     : getChildReviewState(state, child.id)?.principalReview?.decidedAt ??

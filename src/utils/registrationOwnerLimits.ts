@@ -20,6 +20,23 @@ const ENTITY_SINGLE_CONTROL = new Set<RegistrationType>(['SOLE_PROPRIETORSHIP'])
 /** Trust registration: one titling trust entity as account owner (demo). */
 const TRUST_SINGLE_OWNER = new Set<RegistrationType>(['TRUST'])
 
+/**
+ * Entity-category registrations where a `related_organization` may be titled as account owner.
+ * Individual / joint / IRA / 529 / UTMA and other personal registrations are natural-person only here.
+ */
+const LEGAL_ENTITY_ACCOUNT_OWNER_REGISTRATIONS = new Set<RegistrationType>([
+  'LLC',
+  'CORPORATION',
+  'PARTNERSHIP',
+  'NON_PROFIT',
+  'SOLE_PROPRIETORSHIP',
+  'CAPTIVE_INSURANCE',
+  'ESTATE',
+  'ADVISORY_ON_PLATFORM_ENTITY',
+  'ADVISORY_OFF_PLATFORM_ENTITY',
+  'OFF_PLATFORM_COB_ENTITY',
+])
+
 /** Default cap for estates, corps, LLCs, plans — trustees, signers, control persons. */
 const ENTITY_MULTI_OWNER_CAP = 8
 
@@ -56,6 +73,17 @@ export function getMaxAccountOwnersForRegistration(
   if (TWO_OWNER_CUSTODIAL.has(registrationType)) return 2
   if (FOUR_OWNER_529.has(registrationType)) return 4
   return 1
+}
+
+/**
+ * Whether this registration allows a legal entity (`related_organization`) as account owner.
+ * Trust registrations use a separate flow (trust legal entity only); this covers business/estate entity accounts.
+ */
+export function registrationAllowsLegalEntityAsAccountOwner(
+  registrationType: RegistrationType | null | undefined,
+): boolean {
+  if (!registrationType) return false
+  return LEGAL_ENTITY_ACCOUNT_OWNER_REGISTRATIONS.has(registrationType)
 }
 
 /** Short helper line for the owners section. */

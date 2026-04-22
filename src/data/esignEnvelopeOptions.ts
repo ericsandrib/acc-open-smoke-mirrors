@@ -24,4 +24,6 @@ export const OPTIONAL_ESIGN_FORM_CATALOG = [
   { id: 'opt-privacy', label: 'Privacy policy acknowledgment' },
   { id: 'opt-trusted-contact', label: 'Trusted contact designation' },
   { id: 'opt-margin-supplement', label: 'Margin agreement supplement' },
+  { id: 'opt-options-supplement', label: 'Options agreement supplement' },
+  { id: 'opt-alternative-strategy-selection', label: 'Alternative Strategy Selection form' },
 ] as const

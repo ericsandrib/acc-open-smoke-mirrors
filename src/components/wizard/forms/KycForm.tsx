@@ -12,19 +12,25 @@ import type { ChildTask } from '@/types/workflow'
 
 export function KycForm() {
   const { state, dispatch } = useWorkflow()
-  const kycTask = state.tasks.find((t) => t.formKey === 'kyc')
-  const children = kycTask?.children ?? []
+  /** Default onboarding has no standalone KYC task — spawn/list under Open Accounts like `OpenAccountsForm`. */
+  const openAccountsTask = state.tasks.find((t) => t.formKey === 'open-accounts')
+  const kycParentTask = state.tasks.find((t) => t.formKey === 'kyc') ?? openAccountsTask
+  const children = kycParentTask?.children?.filter((c) => c.childType === 'kyc') ?? []
 
   const allHouseholdMembers = state.relatedParties.filter(
-    (p) => p.type === 'household_member' && !p.isHidden,
+    (p) =>
+      !p.isHidden &&
+      (p.type === 'household_member' || p.type === 'related_organization'),
   )
   const householdMembers = allHouseholdMembers.filter((m) => !m.kycDirectAdd)
   const [addSheetOpen, setAddSheetOpen] = useState(false)
   const [timelineChild, setTimelineChild] = useState<ChildTask | null>(null)
   const pendingKycPartyId = useRef<string | null>(null)
+  /** Bumps when add-contact completes so the effect runs even if `relatedParties` is unchanged (e.g. existing org by clientId). */
+  const [kycAddContactBump, setKycAddContactBump] = useState(0)
 
   useEffect(() => {
-    if (!pendingKycPartyId.current || !kycTask) return
+    if (!pendingKycPartyId.current || !kycParentTask) return
     const partyId = pendingKycPartyId.current
     const party = state.relatedParties.find((p) => p.id === partyId)
     if (!party) return
@@ -36,14 +42,22 @@ export function KycForm() {
     })
     dispatch({
       type: 'SPAWN_CHILD',
-      parentTaskId: kycTask.id,
-      childName: party.name,
+      parentTaskId: kycParentTask.id,
+      childName:
+        party.name?.trim() ||
+        party.organizationName?.trim() ||
+        (party.type === 'related_organization' ? 'Legal entity' : 'Contact'),
       childType: 'kyc',
+      metadata: {
+        kycSubjectPartyId: party.id,
+        kycSubjectType: party.type === 'related_organization' ? 'entity' : 'individual',
+      },
     })
-  }, [state.relatedParties, kycTask, dispatch])
+  }, [state.relatedParties, kycParentTask, dispatch, kycAddContactBump])
 
   const handleContactAdded = useCallback((partyId: string) => {
     pendingKycPartyId.current = partyId
+    setKycAddContactBump((b) => b + 1)
   }, [])
 
   return (
@@ -86,9 +100,13 @@ export function KycForm() {
                             onClick={() =>
                               dispatch({
                                 type: 'SPAWN_CHILD',
-                                parentTaskId: kycTask!.id,
+                                parentTaskId: kycParentTask!.id,
                                 childName: member.name,
                                 childType: 'kyc',
+                                metadata: {
+                                  kycSubjectPartyId: member.id,
+                                  kycSubjectType: member.type === 'related_organization' ? 'entity' : 'individual',
+                                },
                               })
                             }
                           >
@@ -170,7 +188,9 @@ export function KycForm() {
                 <div className="hidden group-hover:block">
                   <ChildActionKebabMenu
                     onViewDetails={() => setTimelineChild(child)}
-                    onDelete={() => dispatch({ type: 'REMOVE_CHILD', parentTaskId: kycTask!.id, childId: child.id })}
+                    onDelete={() =>
+                      dispatch({ type: 'REMOVE_CHILD', parentTaskId: kycParentTask!.id, childId: child.id })
+                    }
                   />
                 </div>
               </div>
@@ -206,7 +226,8 @@ export function KycForm() {
         onOpenChange={setAddSheetOpen}
         onPartyAdded={handleContactAdded}
         title="Add contact for verification"
-        description="Search for an existing person or entity, or create a new contact to add for KYC/KYB verification."
+        description="Search for an existing individual or legal entity, or create a new record. The form matches the type you select."
+        includeLegalEntityCreate
       />
 
       <ChildActionTimelineSheet

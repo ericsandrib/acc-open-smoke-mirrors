@@ -1,4 +1,4 @@
-import { type ReactNode, useMemo } from 'react'
+import { type ReactNode, useCallback, useMemo } from 'react'
 import type { RelatedParty } from '@/types/workflow'
 import { useWorkflow } from '@/stores/workflowStore'
 import { deriveChildDisplayStatus, childStatusConfig } from '@/utils/childStatusDisplay'
@@ -31,6 +31,8 @@ export type PartySlotCardProps = {
   selectCandidates: RelatedParty[]
   onOpenAddParty: () => void
   onEditParty: (partyId: string) => void
+  onDeleteCandidate?: (partyId: string) => void
+  canDeleteCandidate?: (party: RelatedParty) => { allowed: boolean; reason?: string }
   addPartyItemLabel?: string
   addPartyItemDescription?: string
   /** Shown next to the title so owners vs interested parties vs beneficiaries are obvious at a glance */
@@ -39,6 +41,8 @@ export type PartySlotCardProps = {
    * `designation` — beneficiaries / interested parties: minimal preview, no KYC strip, no owner-style gap alerts.
    */
   previewVariant?: 'account_owner' | 'designation'
+  /** Hide built-in profile details and render custom footer-only details. */
+  hideDefaultDetails?: boolean
   footer?: ReactNode
   onStartKyc?: (partyId: string) => void
   onGoToKyc?: (partyId: string) => void
@@ -54,23 +58,53 @@ export function PartySlotCard({
   selectCandidates,
   onOpenAddParty,
   onEditParty,
+  onDeleteCandidate,
+  canDeleteCandidate,
   addPartyItemLabel = 'Search or add a person or entity',
   addPartyItemDescription,
   roleLabel,
   previewVariant = 'account_owner',
+  hideDefaultDetails = false,
   footer,
   onStartKyc,
   onGoToKyc,
 }: PartySlotCardProps) {
   const { state } = useWorkflow()
   const matchedParty = partyId ? parties.find((p) => p.id === partyId) ?? null : null
-
-  const getPartyKycDisplayStatus = (party: RelatedParty | undefined) => {
+  const findKycChildForParty = useCallback((party: RelatedParty | undefined) => {
     if (!party) return null
     const kycParentTask = state.tasks.find((t) => t.formKey === 'kyc') ?? state.tasks.find((t) => t.formKey === 'open-accounts')
-    const kycChild = kycParentTask?.children?.find((c) => c.childType === 'kyc' && c.name === party.name)
+    return (
+      kycParentTask?.children?.find((c) => {
+        if (c.childType !== 'kyc') return false
+        const meta = state.taskData[c.id] as Record<string, unknown> | undefined
+        if ((meta?.kycSubjectPartyId as string | undefined) === party.id) return true
+        return c.name === party.name
+      }) ?? null
+    )
+  }, [state.tasks, state.taskData])
+
+  const getPartyKycDisplayStatus = useCallback((party: RelatedParty | undefined) => {
+    if (!party) return null
+    const isTrustEntity =
+      party.type === 'related_organization' && (party.entityType ?? '').trim().toLowerCase() === 'trust'
+    if (isTrustEntity) {
+      const kycChild = findKycChildForParty(party)
+      if (kycChild) {
+        const reviewState = state.childReviewsByChildId?.[kycChild.id]
+        if (deriveChildDisplayStatus(kycChild.status, reviewState) === 'complete') {
+          return { label: 'Verified', className: 'bg-green-50 text-green-700 border-green-200' }
+        }
+      }
+      if (party.kycStatus === 'verified') {
+        return { label: 'Verified', className: 'bg-green-50 text-green-700 border-green-200' }
+      }
+      return { label: 'Not Started', className: 'bg-red-50 text-red-700 border-red-200' }
+    }
+    const kycChild = findKycChildForParty(party)
     if (kycChild) {
-      const ds = deriveChildDisplayStatus(kycChild.status)
+      const reviewState = state.childReviewsByChildId?.[kycChild.id]
+      const ds = deriveChildDisplayStatus(kycChild.status, reviewState)
       return ds === 'complete'
         ? { label: 'Verified', className: 'bg-green-50 text-green-700 border-green-200' }
         : childStatusConfig[ds]
@@ -85,63 +119,46 @@ export function PartySlotCard({
       return { label: 'Pending', className: 'bg-amber-50 text-amber-700 border-amber-200' }
     }
     return null
-  }
+  }, [findKycChildForParty, state.childReviewsByChildId])
 
-  const getPartyKycAction = (party: RelatedParty | undefined): 'start' | 'go' | null => {
+  const getPartyKycAction = useCallback((party: RelatedParty | undefined): 'start' | 'go' | null => {
     if (!party) return null
-    const kycParentTask = state.tasks.find((t) => t.formKey === 'kyc') ?? state.tasks.find((t) => t.formKey === 'open-accounts')
-    const kycChild = kycParentTask?.children?.find((c) => c.childType === 'kyc' && c.name === party.name)
+    const includedInTrustCase = state.tasks.some((task) =>
+      task.children?.some((child) => {
+        if (child.childType !== 'kyc') return false
+        const meta = state.taskData[child.id] as Record<string, unknown> | undefined
+        const subjectType = meta?.kycSubjectType as string | undefined
+        const relatedIds = meta?.kycRelatedSubjectPartyIds as string[] | undefined
+        return subjectType === 'entity' && Array.isArray(relatedIds) && relatedIds.includes(party.id)
+      }),
+    )
+    if (includedInTrustCase) return null
+    const kycChild = findKycChildForParty(party)
     if (kycChild) {
-      const ds = deriveChildDisplayStatus(kycChild.status)
+      const reviewState = state.childReviewsByChildId?.[kycChild.id]
+      const ds = deriveChildDisplayStatus(kycChild.status, reviewState)
       return ds === 'complete' ? null : 'go'
     }
     if (party.kycStatus === 'verified') return null
     if (party.kycStatus === 'pending') return 'go'
     if (party.kycStatus === 'needs_kyc') return 'start'
     return null
-  }
+  }, [findKycChildForParty, state.tasks, state.taskData, state.childReviewsByChildId])
 
   const kycDisplayStatus = useMemo(() => {
     if (!matchedParty) return null
     return getPartyKycDisplayStatus(matchedParty)
-  }, [matchedParty, state.tasks])
+  }, [getPartyKycDisplayStatus, matchedParty])
   const ownerPreview = matchedParty
     ? previewVariant === 'designation'
       ? buildDesignationPartyPreview(matchedParty)
       : buildAccountOwnerPreview(matchedParty)
     : null
   const isDesignationPreview = previewVariant === 'designation'
-  const trustPeopleKycSummary = useMemo(() => {
-    if (!matchedParty || matchedParty.type !== 'related_organization') return null
-
-    const linkedTrustees = (matchedParty.trustParties ?? [])
-      .map((t) => (t.partyId ? parties.find((p) => p.id === t.partyId) : undefined))
-      .filter((p): p is RelatedParty => Boolean(p))
-    const linkedBeneficialOwners = (matchedParty.beneficialOwners ?? [])
-      .map((b) => parties.find((p) => p.type !== 'related_organization' && p.name === b.name))
-      .filter((p): p is RelatedParty => Boolean(p))
-
-    const byId = new Map<string, RelatedParty>()
-    for (const p of [...linkedTrustees, ...linkedBeneficialOwners]) byId.set(p.id, p)
-    const people = Array.from(byId.values())
-    if (people.length === 0) return null
-
-    const verifiedCount = people.filter((p) => getPartyKycDisplayStatus(p)?.label === 'Verified').length
-    const pendingNames = people
-      .filter((p) => getPartyKycDisplayStatus(p)?.label !== 'Verified')
-      .map((p) => p.name)
-
-    return { total: people.length, verifiedCount, pendingNames }
-  }, [matchedParty, parties, state.tasks])
   const trustOverallKyc = useMemo(() => {
     if (!matchedParty || matchedParty.type !== 'related_organization') return null
-    const entityVerified = getPartyKycDisplayStatus(matchedParty)?.label === 'Verified'
-    const peopleComplete = !trustPeopleKycSummary || trustPeopleKycSummary.pendingNames.length === 0
-    const verified = entityVerified && peopleComplete
-    return verified
-      ? { label: 'Verified', className: 'bg-green-50 text-green-700 border-green-200' }
-      : { label: 'Incomplete', className: 'bg-amber-50 text-amber-700 border-amber-200' }
-  }, [matchedParty, trustPeopleKycSummary, state.tasks])
+    return getPartyKycDisplayStatus(matchedParty)
+  }, [getPartyKycDisplayStatus, matchedParty])
 
   return (
     <div className="rounded-lg border border-border p-4 space-y-4">
@@ -186,14 +203,51 @@ export function PartySlotCard({
             <SelectContent>
               {selectCandidates.length > 0 ? (
                 selectCandidates.map((party) => (
-                  <SelectItem key={party.id} value={party.id} textValue={party.name}>
-                    <span className="flex items-center gap-2">
-                      <span>{party.name}</span>
-                      {party.type === 'related_organization' && (
-                        <Badge variant="outline" className="text-[10px] font-normal shrink-0">
-                          Entity
-                        </Badge>
-                      )}
+                  <SelectItem key={party.id} value={party.id} textValue={party.name} className="group">
+                    {/*
+                      Name + badge stay grouped on the left; delete is in its own column so it does not sit
+                      under Radix’s selection checkmark. Middle “gap” stays inside the label group when the
+                      name is short (avoids a huge space between name and badge).
+                    */}
+                    <span className="flex w-full min-w-0 items-center gap-2">
+                      <span className="flex min-w-0 flex-1 items-center gap-1.5 overflow-hidden">
+                        <span className="truncate">{party.name}</span>
+                        {party.type === 'related_organization' && (
+                          <Badge variant="outline" className="text-[10px] font-normal shrink-0">
+                            Entity
+                          </Badge>
+                        )}
+                      </span>
+                      {onDeleteCandidate ? (
+                        (() => {
+                          const rule = canDeleteCandidate?.(party) ?? { allowed: true as const, reason: undefined }
+                          if (!rule.allowed) return null
+                          return (
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="icon"
+                              className={cn(
+                                'h-7 w-7 shrink-0 -mr-1 touch-manipulation text-muted-foreground hover:bg-destructive/10 hover:text-destructive',
+                                'transition-opacity duration-150',
+                                '[@media(pointer:coarse)]:opacity-100 [@media(pointer:fine)]:opacity-0 [@media(pointer:fine)]:group-hover:opacity-100 focus-visible:opacity-100',
+                              )}
+                              title="Remove from list"
+                              onPointerDown={(e) => {
+                                e.preventDefault()
+                                e.stopPropagation()
+                              }}
+                              onClick={(e) => {
+                                e.preventDefault()
+                                e.stopPropagation()
+                                onDeleteCandidate(party.id)
+                              }}
+                            >
+                              <Trash2 className="h-3.5 w-3.5" />
+                            </Button>
+                          )
+                        })()
+                      ) : null}
                     </span>
                   </SelectItem>
                 ))
@@ -238,9 +292,9 @@ export function PartySlotCard({
                     Legal entity
                   </Badge>
                 )}
-                {!isDesignationPreview && matchedParty.type === 'related_organization' && kycDisplayStatus && (
-                  <Badge variant="outline" className={cn('text-[10px] px-1.5 py-0', kycDisplayStatus.className)}>
-                    Trust entity KYC: {kycDisplayStatus.label}
+                {!isDesignationPreview && matchedParty.type === 'related_organization' && trustOverallKyc && (
+                  <Badge variant="outline" className={cn('text-[10px] px-1.5 py-0', trustOverallKyc.className)}>
+                    {trustOverallKyc.label}
                   </Badge>
                 )}
                 {matchedParty.isPrimary && (
@@ -249,11 +303,11 @@ export function PartySlotCard({
                   </Badge>
                 )}
               </div>
-              <p className="text-[11px] text-muted-foreground leading-snug">
-                {isDesignationPreview
-                  ? 'KYC is not required for this role. Capture or confirm identity and contact details sufficient for registration—less than a full account owner file.'
-                  : 'Profile shared across the journey. Open details to add or correct fields.'}
-              </p>
+              {!isDesignationPreview && !hideDefaultDetails && (
+                <p className="text-[11px] text-muted-foreground leading-snug">
+                  Profile shared across the journey. Open details to add or correct fields.
+                </p>
+              )}
             </div>
             <Button
               type="button"
@@ -267,7 +321,7 @@ export function PartySlotCard({
             </Button>
           </div>
 
-          {!isDesignationPreview && ownerPreview.criticalGaps.length > 0 && (
+          {!hideDefaultDetails && !isDesignationPreview && ownerPreview.criticalGaps.length > 0 && (
             <div
               role="alert"
               className="rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-950 dark:border-amber-900/60 dark:bg-amber-950/40 dark:text-amber-100"
@@ -287,7 +341,7 @@ export function PartySlotCard({
             </div>
           )}
 
-          {!isDesignationPreview && ownerPreview.criticalGaps.length === 0 && ownerPreview.recommendedGaps.length > 0 && (
+          {!hideDefaultDetails && !isDesignationPreview && ownerPreview.criticalGaps.length === 0 && ownerPreview.recommendedGaps.length > 0 && (
             <div
               role="status"
               className="rounded-md border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-800 dark:border-slate-700 dark:bg-slate-900/50 dark:text-slate-200"
@@ -306,24 +360,27 @@ export function PartySlotCard({
             </div>
           )}
 
-          <dl className="grid gap-2 sm:grid-cols-2 text-xs">
-            {ownerPreview.lines.map((line) => (
-              <div key={line.label} className="space-y-0.5 min-w-0 sm:col-span-2">
-                <dt className="text-muted-foreground font-medium">{line.label}</dt>
-                <dd
-                  className={
-                    line.missing
-                      ? 'text-amber-800 dark:text-amber-200/90 italic'
-                      : 'text-foreground break-words'
-                  }
-                >
-                  {line.value}
-                </dd>
-              </div>
-            ))}
-          </dl>
+          {!hideDefaultDetails && (
+            <dl className="grid gap-2 sm:grid-cols-2 text-xs">
+              {ownerPreview.lines.map((line) => (
+                <div key={line.label} className="space-y-0.5 min-w-0 sm:col-span-2">
+                  <dt className="text-muted-foreground font-medium">{line.label}</dt>
+                  <dd
+                    className={
+                      line.missing
+                        ? 'text-amber-800 dark:text-amber-200/90 italic'
+                        : 'text-foreground break-words'
+                    }
+                  >
+                    {line.value}
+                  </dd>
+                </div>
+              ))}
+            </dl>
+          )}
 
-          {!isDesignationPreview &&
+          {!hideDefaultDetails &&
+            !isDesignationPreview &&
             matchedParty.type === 'related_organization' &&
             matchedParty.trustParties &&
             matchedParty.trustParties.length > 0 && (
@@ -333,41 +390,12 @@ export function PartySlotCard({
                 </p>
                 <ul className="text-xs text-foreground space-y-1">
                   {matchedParty.trustParties.map((t) => {
-                    const linked = t.partyId ? parties.find((p) => p.id === t.partyId) : undefined
-                    const trusteeKycStatus = getPartyKycDisplayStatus(linked)
-                    const line = [linked?.name ?? t.displayName, t.role].filter(Boolean).join(' · ')
+                    const partyName =
+                      (t.partyId ? parties.find((p) => p.id === t.partyId)?.name : undefined) ?? t.displayName
+                    const line = [partyName, t.role].filter(Boolean).join(' · ')
                     return (
-                      <li key={t.id} className="flex items-center justify-between gap-2">
+                      <li key={t.id} className="flex items-center gap-2">
                         <span className="truncate">{line}</span>
-                        <div className="flex items-center gap-1.5 shrink-0">
-                          {trusteeKycStatus ? (
-                            <Badge variant="outline" className={cn('text-[10px] shrink-0', trusteeKycStatus.className)}>
-                              {trusteeKycStatus.label}
-                            </Badge>
-                          ) : null}
-                          {linked && getPartyKycAction(linked) === 'start' && onStartKyc ? (
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              className="h-5 px-2 text-[10px]"
-                              type="button"
-                              onClick={() => onStartKyc(linked.id)}
-                            >
-                              Start KYC
-                            </Button>
-                          ) : null}
-                          {linked && getPartyKycAction(linked) === 'go' && onGoToKyc ? (
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              className="h-5 px-2 text-[10px]"
-                              type="button"
-                              onClick={() => onGoToKyc(linked.id)}
-                            >
-                              Go to KYC
-                            </Button>
-                          ) : null}
-                        </div>
                       </li>
                     )
                   })}
@@ -375,7 +403,8 @@ export function PartySlotCard({
               </div>
             )}
 
-          {!isDesignationPreview &&
+          {!hideDefaultDetails &&
+            !isDesignationPreview &&
             matchedParty.type === 'related_organization' &&
             matchedParty.beneficialOwners &&
             matchedParty.beneficialOwners.length > 0 && (
@@ -385,43 +414,12 @@ export function PartySlotCard({
                 </p>
                 <ul className="text-xs text-foreground space-y-1">
                   {matchedParty.beneficialOwners.map((b, idx) => {
-                    const linked = parties.find((p) => p.type !== 'related_organization' && p.name === b.name)
-                    const boKycStatus = getPartyKycDisplayStatus(linked)
                     const line = [b.name, b.ownershipPercent ? `${b.ownershipPercent}%` : undefined]
                       .filter(Boolean)
                       .join(' · ')
                     return (
-                      <li key={`${b.name}-${idx}`} className="flex items-center justify-between gap-2">
+                      <li key={`${b.name}-${idx}`} className="flex items-center gap-2">
                         <span className="truncate">{line}</span>
-                        <div className="flex items-center gap-1.5 shrink-0">
-                          {boKycStatus ? (
-                            <Badge variant="outline" className={cn('text-[10px] shrink-0', boKycStatus.className)}>
-                              {boKycStatus.label}
-                            </Badge>
-                          ) : null}
-                          {linked && getPartyKycAction(linked) === 'start' && onStartKyc ? (
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              className="h-5 px-2 text-[10px]"
-                              type="button"
-                              onClick={() => onStartKyc(linked.id)}
-                            >
-                              Start KYC
-                            </Button>
-                          ) : null}
-                          {linked && getPartyKycAction(linked) === 'go' && onGoToKyc ? (
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              className="h-5 px-2 text-[10px]"
-                              type="button"
-                              onClick={() => onGoToKyc(linked.id)}
-                            >
-                              Go to KYC
-                            </Button>
-                          ) : null}
-                        </div>
                       </li>
                     )
                   })}
@@ -429,31 +427,20 @@ export function PartySlotCard({
               </div>
             )}
 
-          {!isDesignationPreview && (kycDisplayStatus || matchedParty.kycStatus) && (
+          {!hideDefaultDetails && !isDesignationPreview && (kycDisplayStatus || matchedParty.kycStatus) && matchedParty.type !== 'related_organization' && (
             <div className="flex flex-wrap items-center gap-2 text-sm pt-1 border-t border-border/60">
               <span className="text-muted-foreground">
-                {matchedParty.type === 'related_organization' ? 'Overall trust KYC status:' : 'KYC status:'}
+                KYC status:
               </span>
-              {matchedParty.type === 'related_organization' ? (
-                trustOverallKyc ? (
-                  <Badge
-                    variant="outline"
-                    className={cn('text-xs', trustOverallKyc.className)}
-                  >
-                    {trustOverallKyc.label}
-                  </Badge>
-                ) : null
-              ) : (
-                kycDisplayStatus && (
-                  <Badge
-                    variant="outline"
-                    className={cn('text-xs', kycDisplayStatus.className)}
-                  >
-                    {kycDisplayStatus.label}
-                  </Badge>
-                )
+              {kycDisplayStatus && (
+                <Badge
+                  variant="outline"
+                  className={cn('text-xs', kycDisplayStatus.className)}
+                >
+                  {kycDisplayStatus.label}
+                </Badge>
               )}
-              {matchedParty.kycStatus === 'needs_kyc' && onStartKyc && (
+              {matchedParty.kycStatus === 'needs_kyc' && onStartKyc && getPartyKycAction(matchedParty) === 'start' && (
                 <Button
                   variant="outline"
                   size="sm"
@@ -464,7 +451,7 @@ export function PartySlotCard({
                   Start
                 </Button>
               )}
-              {matchedParty.kycStatus === 'pending' && onGoToKyc && (
+              {matchedParty.kycStatus === 'pending' && onGoToKyc && getPartyKycAction(matchedParty) === 'go' && (
                 <Button
                   variant="outline"
                   size="sm"

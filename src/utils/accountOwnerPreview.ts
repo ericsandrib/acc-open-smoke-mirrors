@@ -170,14 +170,6 @@ export function buildAccountOwnerPreview(party: RelatedParty): AccountOwnerPrevi
   return buildIndividualAccountOwnerPreview(party)
 }
 
-function partyDirectoryLabel(party: RelatedParty): string {
-  if (party.type === 'related_organization') return 'Legal entity'
-  if (party.type === 'related_contact') {
-    return party.relationship ? `Contact · ${party.relationship}` : 'Related contact'
-  }
-  return party.relationship ? `Household · ${party.relationship}` : 'Household member'
-}
-
 /**
  * Lightweight preview for beneficiaries / interested parties: identity context only.
  * KYC completion and full suitability are not implied for this role.
@@ -197,9 +189,7 @@ export function buildDesignationPartyPreview(party: RelatedParty): AccountOwnerP
   }
 
   const ext = party.accountOwnerIndividual ?? {}
-  const lines: PreviewLine[] = [
-    { label: 'In directory as', value: partyDirectoryLabel(party), missing: false },
-  ]
+  const lines: PreviewLine[] = []
 
   if (party.dob?.trim()) {
     lines.push({ label: 'Date of birth', value: formatDob(party.dob), missing: false })

@@ -35,9 +35,9 @@ export const taskDescriptions: Partial<Record<string, string>> = {
   'kyc':
     'Review household members and select who requires identity verification.',
   'kyc-child-info':
-    'Review and confirm the personal information for this household member.',
+    'Collect and verify KYC/KYB data for this subject (individual or legal entity).',
   'kyc-child-documents':
-    'Upload the required identity documents for compliance verification.',
+    'Upload supporting KYC/KYB documents if step-up verification is required.',
   'open-accounts':
     'Select the types of accounts to open, review documents, and prepare for signature.',
   'acct-child-account-owners':
