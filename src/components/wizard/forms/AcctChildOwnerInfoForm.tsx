@@ -47,6 +47,14 @@ type BeneficiaryRow = {
   taxIdNumber?: string
 }
 
+/** Registration types that support standard beneficiary-array capture in this workflow. */
+const BENEFICIARY_ENABLED_REGISTRATIONS = new Set<RegistrationType>([
+  'TOD_IND', // API index code TODI
+  'TOD_JT', // API index code TODJ
+  'IRA', // API index code DLJI (Traditional / Rollover IRA)
+  'ROTH_IRA', // API index code DLJI
+])
+
 function getInitials(name: string) {
   return name
     .split(' ')
@@ -80,6 +88,9 @@ export function AcctChildOwnerInfoForm() {
   const childId = ctx?.child.id ?? ''
   const childMeta = state.taskData[childId] as Record<string, unknown> | undefined
   const childRegType = (childMeta?.registrationType as RegistrationType | undefined) ?? null
+  const isJointRegistration = childRegType === 'JT' || childRegType === 'TOD_JT'
+  const showBeneficiariesSection =
+    childRegType != null && BENEFICIARY_ENABLED_REGISTRATIONS.has(childRegType)
   const trustEntityOwnersOnly = childRegType === 'TRUST'
   const allowLegalEntityAsOwner =
     !trustEntityOwnersOnly && registrationAllowsLegalEntityAsAccountOwner(childRegType)
@@ -129,6 +140,20 @@ export function AcctChildOwnerInfoForm() {
   }, [ctx, maxOwners, owners, updateField])
 
   useEffect(() => {
+    if (!ctx || !isJointRegistration) return
+    const next: OwnerRow[] = [...owners.slice(0, 2)]
+    while (next.length < 2) {
+      next.push({ id: `owner-${Date.now()}-${next.length + 1}`, type: 'existing' })
+    }
+    const changed =
+      next.length !== owners.length ||
+      next.some((row, idx) => owners[idx]?.id !== row.id || owners[idx]?.partyId !== row.partyId)
+    if (changed) {
+      updateField('owners', next)
+    }
+  }, [ctx, isJointRegistration, owners, updateField])
+
+  useEffect(() => {
     if (!ctx || !trustEntityOwnersOnly) return
     let changed = false
     const next = owners.map((o) => {
@@ -169,6 +194,11 @@ export function AcctChildOwnerInfoForm() {
       )
     }
   }, [ctx, trustEntityOwnersOnly, allowLegalEntityAsOwner, owners, state.relatedParties, updateField])
+
+  useEffect(() => {
+    if (!ctx || showBeneficiariesSection || beneficiaries.length === 0) return
+    updateField('beneficiaries', [])
+  }, [ctx, showBeneficiariesSection, beneficiaries.length, updateField])
 
   const handleStartKyc = (partyId: string) => {
     const party = state.relatedParties.find((p) => p.id === partyId)
@@ -340,7 +370,7 @@ export function AcctChildOwnerInfoForm() {
           </p>
         </div>
 
-        {owners.length === 0 && (
+        {!isJointRegistration && owners.length === 0 && (
           <div className="rounded-lg border border-dashed border-border p-6 text-center">
             <UserPlus className="mx-auto mb-2 h-8 w-8 text-muted-foreground/50" />
             <p className="text-sm text-muted-foreground mb-3">
@@ -361,7 +391,7 @@ export function AcctChildOwnerInfoForm() {
             selectLabel="Select account owner"
             partyId={owner.partyId}
             onPartyIdChange={(v) => selectExistingOwner(owner.id, v)}
-            onRemove={() => removeOwner(owner.id)}
+            onRemove={isJointRegistration ? undefined : () => removeOwner(owner.id)}
             parties={state.relatedParties}
             selectCandidates={accountOwnerCandidates}
             onOpenAddParty={() => setAddMemberSheetOwnerId(owner.id)}
@@ -387,7 +417,7 @@ export function AcctChildOwnerInfoForm() {
           />
         ))}
 
-        {owners.length > 0 && canAddMoreOwners && (
+        {!isJointRegistration && owners.length > 0 && canAddMoreOwners && (
           <Button variant="outline" className="w-full" onClick={addOwnerSlot}>
             <Plus className="h-4 w-4 mr-1" />
             Add Another Owner
@@ -453,6 +483,7 @@ export function AcctChildOwnerInfoForm() {
         )}
       </section>
 
+      {showBeneficiariesSection ? (
       <section className="space-y-6">
         <div>
           <h3 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground flex items-center gap-2 mb-1">
@@ -738,6 +769,7 @@ export function AcctChildOwnerInfoForm() {
           </SheetContent>
         </Sheet>
       </section>
+      ) : null}
 
       <AccountProfileSection
         data={data}

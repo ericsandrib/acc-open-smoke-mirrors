@@ -18,7 +18,11 @@ export function spawnOpenAccountChildrenFromSelections(
         parentTaskId,
         childName: name,
         childType: 'account-opening',
-        metadata: { registrationType: sel.registrationType },
+        metadata: {
+          registrationType: sel.registrationType,
+          officeCode: sel.officeCode,
+          investmentProfessionalId: sel.investmentProfessionalId,
+        },
       })
     }
   }

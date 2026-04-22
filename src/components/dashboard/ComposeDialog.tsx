@@ -48,8 +48,6 @@ type ComposeDraftFields = {
   journeyName: string
   actionType: string
   relationshipId: string
-  officeCode: string
-  investmentProfessionalId: string
   openAnnuityAccount: 'yes' | 'no' | ''
   createMore: boolean
 }
@@ -59,8 +57,6 @@ function loadComposeDraft(): ComposeDraftFields {
     journeyName: '',
     actionType: '',
     relationshipId: '',
-    officeCode: '',
-    investmentProfessionalId: '',
     openAnnuityAccount: '',
     createMore: false,
   }
@@ -72,9 +68,6 @@ function loadComposeDraft(): ComposeDraftFields {
       journeyName: typeof d.journeyName === 'string' ? d.journeyName : '',
       actionType: typeof d.actionType === 'string' ? d.actionType : '',
       relationshipId: typeof d.relationshipId === 'string' ? d.relationshipId : '',
-      officeCode: typeof d.officeCode === 'string' ? d.officeCode : '',
-      investmentProfessionalId:
-        typeof d.investmentProfessionalId === 'string' ? d.investmentProfessionalId : '',
       openAnnuityAccount:
         d.openAnnuityAccount === 'yes' || d.openAnnuityAccount === 'no' || d.openAnnuityAccount === ''
           ? d.openAnnuityAccount
@@ -97,10 +90,6 @@ export function ComposeDialog({ onClose }: ComposeDialogProps) {
   const [journeyName, setJourneyName] = useState(draftInitial.journeyName)
   const [actionType, setActionType] = useState(draftInitial.actionType)
   const [relationshipId, setRelationshipId] = useState(draftInitial.relationshipId)
-  const [officeCode, setOfficeCode] = useState(draftInitial.officeCode)
-  const [investmentProfessionalId, setInvestmentProfessionalId] = useState(
-    draftInitial.investmentProfessionalId,
-  )
   const [openAnnuityAccount, setOpenAnnuityAccount] = useState<'yes' | 'no' | ''>(
     draftInitial.openAnnuityAccount,
   )
@@ -116,17 +105,6 @@ export function ComposeDialog({ onClose }: ComposeDialogProps) {
   const location = useLocation()
   const navigate = useNavigate()
 
-  const officeOptions = useMemo(
-    () =>
-      [...new Set(teamMembers.map((m) => m.officeCode))]
-        .sort()
-        .map((code) => ({ value: code, label: `Office ${code}` })),
-    [],
-  )
-  const advisorOptions = useMemo(
-    () => teamMembers.map((m) => ({ value: m.id, label: m.name })),
-    [],
-  )
   const actionTypeOptions = useMemo(
     () =>
       actionTypes.map((action) => ({
@@ -140,16 +118,9 @@ export function ComposeDialog({ onClose }: ComposeDialogProps) {
     [],
   )
 
-  const selectedIp = useMemo(
-    () => teamMembers.find((m) => m.id === investmentProfessionalId),
-    [investmentProfessionalId],
-  )
-
   const canSubmit =
     actionType === 'client-onboarding' &&
     relationshipId !== '' &&
-    officeCode !== '' &&
-    investmentProfessionalId !== '' &&
     (openAnnuityAccount === 'yes' || openAnnuityAccount === 'no')
 
   function handleSnooze() {
@@ -167,8 +138,6 @@ export function ComposeDialog({ onClose }: ComposeDialogProps) {
       journeyName,
       actionType,
       relationshipId,
-      officeCode,
-      investmentProfessionalId,
       openAnnuityAccount,
       createMore,
       savedAt: new Date().toISOString(),
@@ -183,7 +152,7 @@ export function ComposeDialog({ onClose }: ComposeDialogProps) {
 
   function handleStart() {
     const relationship = relationships.find((r) => r.id === relationshipId)
-    if (!relationship || !selectedIp) return
+    if (!relationship) return
 
     if (currentLiveJourney) {
       saveCurrentJourney(currentLiveJourney)
@@ -206,10 +175,10 @@ export function ComposeDialog({ onClose }: ComposeDialogProps) {
       },
       journeyName: name,
       journeyId: newJourneyId,
-      assignedTo: selectedIp.name,
+      assignedTo: undefined,
       journeyOnboardingConfig: {
-        office: officeCode,
-        investmentProfessionalId: selectedIp.id,
+        office: '',
+        investmentProfessionalId: '',
         openAnnuityAccount: openAnnuityAccount === 'yes',
       },
     })
@@ -219,8 +188,6 @@ export function ComposeDialog({ onClose }: ComposeDialogProps) {
       setJourneyName('')
       setActionType('')
       setRelationshipId('')
-      setOfficeCode('')
-      setInvestmentProfessionalId('')
       setOpenAnnuityAccount('')
       setCreateMore(false)
       toast.message('Add another journey, or close when you are done.')
@@ -339,38 +306,6 @@ export function ComposeDialog({ onClose }: ComposeDialogProps) {
               </div>
               {actionType === 'client-onboarding' && (
                 <div className="space-y-4 rounded-xl border border-border bg-background/80 p-4 shadow-sm sm:p-5">
-                  <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 sm:gap-5">
-                    <div className="space-y-2">
-                      <Label htmlFor="compose-office">
-                        Office
-                        <RequiredMark />
-                      </Label>
-                      <Combobox
-                        options={officeOptions}
-                        value={officeCode}
-                        onValueChange={setOfficeCode}
-                        placeholder="Search office..."
-                        emptyMessage="No offices found."
-                        dropdownClassName="max-h-40"
-                      />
-                    </div>
-
-                    <div className="space-y-2">
-                      <Label htmlFor="compose-ip">
-                        Advisor
-                        <RequiredMark />
-                      </Label>
-                      <Combobox
-                        options={advisorOptions}
-                        value={investmentProfessionalId}
-                        onValueChange={setInvestmentProfessionalId}
-                        placeholder="Search advisor..."
-                        emptyMessage="No advisors found."
-                        dropdownClassName="max-h-40"
-                      />
-                    </div>
-                  </div>
-
                   <div className="space-y-2">
                     <Label htmlFor="compose-annuity">
                       Will this client open an account that includes an annuity?
