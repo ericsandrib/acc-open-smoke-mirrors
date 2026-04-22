@@ -28,6 +28,35 @@ function SectionTitle({ children }: { children: ReactNode }) {
   return <h3 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">{children}</h3>
 }
 
+function SectionRequestToggle({
+  id,
+  checked,
+  onCheckedChange,
+  label,
+  disabled,
+}: {
+  id: string
+  checked: boolean
+  onCheckedChange: (checked: boolean) => void
+  label: string
+  disabled?: boolean
+}) {
+  return (
+    <div className="flex items-center justify-end shrink-0 sm:pt-0.5">
+      <Checkbox
+        id={id}
+        checked={checked}
+        disabled={disabled}
+        onCheckedChange={(v) => onCheckedChange(v === true)}
+        aria-label={label}
+      />
+      <Label htmlFor={id} className="sr-only">
+        {label}
+      </Label>
+    </div>
+  )
+}
+
 const STRATEGY_OPTIONS: { value: AlternativeStrategyType; label: string }[] = [
   { value: 'private_equity', label: 'Private Equity' },
   { value: 'hedge_funds', label: 'Hedge Funds' },
@@ -169,46 +198,37 @@ export function AccountFeatureRequestsSection({ accountChildId }: { accountChild
               </p>
             ) : null}
           </div>
-          <div className="flex items-center gap-2 shrink-0 sm:pt-0.5">
-            <Checkbox
-              id={`${uid}-margin-requested`}
-              disabled={!marginEligibility.eligible}
-              checked={Boolean(marginEligibility.eligible && featureRequests.margin?.requested)}
-              onCheckedChange={(v) =>
-                patchFeatureRequests((prev) => ({
-                  ...prev,
-                  margin: {
-                    ...prev.margin,
-                    requested: v === true,
-                    ...(v !== true
-                      ? {
-                          agreementAccepted: false,
-                          agreementSignedAt: undefined,
-                          agreementDocumentId: undefined,
-                          marginDebtCoveredBySweep: false,
-                        }
-                      : {}),
-                  },
-                }))
-              }
-            />
-            <Label
-              htmlFor={`${uid}-margin-requested`}
-              className={cn(
-                'text-sm font-normal',
-                marginEligibility.eligible ? 'cursor-pointer' : 'cursor-not-allowed text-muted-foreground',
-              )}
-            >
-              Request margin
-            </Label>
-          </div>
+          <SectionRequestToggle
+            id={`${uid}-margin-requested`}
+            label="Request margin"
+            disabled={!marginEligibility.eligible}
+            checked={Boolean(marginEligibility.eligible && featureRequests.margin?.requested)}
+            onCheckedChange={(checked) =>
+              patchFeatureRequests((prev) => ({
+                ...prev,
+                margin: {
+                  ...prev.margin,
+                  requested: checked,
+                  ...(!checked
+                    ? {
+                        agreementAccepted: false,
+                        agreementSignedAt: undefined,
+                        agreementDocumentId: undefined,
+                        marginDebtCoveredBySweep: false,
+                      }
+                    : {}),
+                },
+              }))
+            }
+          />
         </div>
 
         {marginEligibility.eligible && featureRequests.margin?.requested ? (
-          <div className="space-y-3 pt-1 border-t border-border">
-            <div className="flex items-start gap-2">
+          <div className="space-y-3 pt-2">
+            <div className="flex items-start gap-2.5">
               <Checkbox
                 id={`${uid}-margin-sweep`}
+                className="mt-1.5"
                 checked={Boolean(featureRequests.margin?.marginDebtCoveredBySweep)}
                 onCheckedChange={(v) =>
                   patchFeatureRequests((prev) => ({
@@ -238,38 +258,34 @@ export function AccountFeatureRequestsSection({ accountChildId }: { accountChild
       </section>
 
       <section className="rounded-lg border border-border p-4 space-y-4">
-        <div className="flex items-center justify-between gap-4">
+        <div className="flex items-start justify-between gap-4">
           <div>
             <h4 className="text-sm font-medium">Options</h4>
             <p className="text-xs text-muted-foreground mt-0.5">
               Options-specific fields live here; general suitability stays on the owner profile.
             </p>
           </div>
-          <div className="flex items-center gap-2 shrink-0">
-            <Checkbox
-              id={`${uid}-options-requested`}
-              checked={Boolean(featureRequests.options?.requested)}
-              onCheckedChange={(v) =>
-                patchFeatureRequests((prev) => ({
-                  ...prev,
-                  options: {
-                    ...prev.options,
-                    requested: v === true,
-                    ...(v !== true
-                      ? { agreementAccepted: false, agreementSignedAt: undefined, agreementDocumentId: undefined }
-                      : {}),
-                  },
-                }))
-              }
-            />
-            <Label htmlFor={`${uid}-options-requested`} className="text-sm font-normal cursor-pointer">
-              Request options
-            </Label>
-          </div>
+          <SectionRequestToggle
+            id={`${uid}-options-requested`}
+            label="Request options"
+            checked={Boolean(featureRequests.options?.requested)}
+            onCheckedChange={(checked) =>
+              patchFeatureRequests((prev) => ({
+                ...prev,
+                options: {
+                  ...prev.options,
+                  requested: checked,
+                  ...(!checked
+                    ? { agreementAccepted: false, agreementSignedAt: undefined, agreementDocumentId: undefined }
+                    : {}),
+                },
+              }))
+            }
+          />
         </div>
 
         {featureRequests.options?.requested ? (
-          <div className="space-y-4">
+          <div className="space-y-4 pt-2">
             <div className="grid gap-4 sm:grid-cols-2">
               <div className="space-y-2">
                 <Label>Requested options level</Label>
@@ -352,7 +368,7 @@ export function AccountFeatureRequestsSection({ accountChildId }: { accountChild
       </section>
 
       <section className="rounded-lg border border-border p-4 space-y-4">
-        <div className="flex items-center justify-between gap-4">
+        <div className="flex items-start justify-between gap-4">
           <div>
             <h4 className="text-sm font-medium">Alternative strategy selection</h4>
             <p className="text-xs text-muted-foreground mt-0.5">
@@ -360,32 +376,27 @@ export function AccountFeatureRequestsSection({ accountChildId }: { accountChild
               and complete disclosures before submit. Captured for internal suitability only (not sent to custody APIs).
             </p>
           </div>
-          <div className="flex items-center gap-2 shrink-0">
-            <Checkbox
-              id={`${uid}-alt-strategy-requested`}
-              checked={Boolean(alt?.requested)}
-              onCheckedChange={(v) =>
-                patchFeatureRequests((prev) => ({
-                  ...prev,
-                  alternativeStrategySelection:
-                    v === true
-                      ? {
-                          ...createDefaultAlternativeStrategyElection(),
-                          requested: true,
-                          status: 'draft',
-                        }
-                      : createDefaultAlternativeStrategyElection(),
-                }))
-              }
-            />
-            <Label htmlFor={`${uid}-alt-strategy-requested`} className="text-sm font-normal cursor-pointer">
-              Request alternative strategy
-            </Label>
-          </div>
+          <SectionRequestToggle
+            id={`${uid}-alt-strategy-requested`}
+            label="Request alternative strategy"
+            checked={Boolean(alt?.requested)}
+            onCheckedChange={(checked) =>
+              patchFeatureRequests((prev) => ({
+                ...prev,
+                alternativeStrategySelection: checked
+                  ? {
+                      ...createDefaultAlternativeStrategyElection(),
+                      requested: true,
+                      status: 'draft',
+                    }
+                  : createDefaultAlternativeStrategyElection(),
+              }))
+            }
+          />
         </div>
 
         {alt?.requested ? (
-          <div className="space-y-8 pt-2 border-t border-border">
+          <div className="space-y-8 pt-2">
             {altWarnings.length > 0 ? (
               <div
                 className="rounded-md border border-amber-200 bg-amber-50 dark:bg-amber-950/30 dark:border-amber-800/50 px-3 py-2 text-xs text-amber-900 dark:text-amber-100 space-y-1"
@@ -421,7 +432,7 @@ export function AccountFeatureRequestsSection({ accountChildId }: { accountChild
               </div>
 
               {hasOther ? (
-                <div className="space-y-2 max-w-xl">
+                <div className="space-y-2">
                   <Label>Other strategy description</Label>
                   <Input
                     value={alt.otherStrategyText ?? ''}
@@ -431,7 +442,7 @@ export function AccountFeatureRequestsSection({ accountChildId }: { accountChild
                 </div>
               ) : null}
 
-              <div className="grid gap-4 sm:grid-cols-2 max-w-2xl">
+              <div className="grid gap-4 sm:grid-cols-2">
                 <div className="space-y-2">
                   <Label>Target allocation to alternatives (%)</Label>
                   <Input
@@ -487,7 +498,7 @@ export function AccountFeatureRequestsSection({ accountChildId }: { accountChild
 
             <div className="space-y-4">
               <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Alternative risk profile</p>
-              <div className="grid gap-4 sm:grid-cols-2 max-w-2xl">
+              <div className="grid gap-4 sm:grid-cols-2">
                 <div className="space-y-2">
                   <Label>Illiquidity tolerance</Label>
                   <Select
@@ -554,7 +565,7 @@ export function AccountFeatureRequestsSection({ accountChildId }: { accountChild
               <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
                 Alternative liquidity &amp; funding
               </p>
-              <div className="grid gap-4 sm:grid-cols-2 max-w-2xl">
+              <div className="grid gap-4 sm:grid-cols-2">
                 <div className="space-y-2">
                   <Label>Emergency liquidity buffer (months)</Label>
                   <Input
@@ -599,7 +610,7 @@ export function AccountFeatureRequestsSection({ accountChildId }: { accountChild
                   </Select>
                 </div>
                 {alt.canMeetCapitalCalls === true ? (
-                  <div className="space-y-2 sm:col-span-2 max-w-md">
+                  <div className="space-y-2 sm:col-span-2">
                     <Label>Capital call capacity amount</Label>
                     <Input
                       type="number"
@@ -639,7 +650,7 @@ export function AccountFeatureRequestsSection({ accountChildId }: { accountChild
               <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
                 Alternative disclosures &amp; acknowledgments
               </p>
-              <div className="space-y-3 max-w-xl">
+              <div className="space-y-3">
                 {(
                   [
                     ['illiquidityAccepted', 'I understand these investments may be illiquid.'],

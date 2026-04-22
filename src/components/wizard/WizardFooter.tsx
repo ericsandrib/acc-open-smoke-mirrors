@@ -26,7 +26,7 @@ function getActiveTaskStatus(state: ReturnType<typeof useWorkflow>['state']): Ta
   return 'not_started'
 }
 
-function CompleteAccountOpeningConfirmModal({
+export function CompleteAccountOpeningConfirmModal({
   onConfirm,
   onCancel,
   warnings,

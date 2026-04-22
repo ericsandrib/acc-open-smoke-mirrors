@@ -60,9 +60,12 @@ import { downloadEnvelopeManifest } from '@/utils/downloadEsignEnvelopeManifest'
 import { getEnvelopeDisplayName } from '@/utils/deriveEnvelopeDisplayName'
 import { EsignEnvelopeDrawer } from '@/components/wizard/forms/EsignEnvelopeDrawer'
 import { getRegistrationTypesForOpenAccountsUploadSection } from '@/utils/openAccountsDocumentValidation'
+import { getAccountOwnersMissingKyc } from '@/utils/accountOpeningOwnerKyc'
+import { getAccountOpeningChildSubmissionIssues } from '@/utils/accountOpeningChildProgress'
 import { mergeFeatureRequests } from '@/types/featureRequests'
 import { getEsignEnvelopeStatus, ESIGN_ENVELOPE_STATUS_LABELS } from '@/utils/esignEnvelopeStatus'
 import type { EsignEnvelopeHistoryEvent, EsignEnvelopeStatus, EsignSignerStatus } from '@/types/esignEnvelope'
+import { CompleteAccountOpeningConfirmModal } from '@/components/wizard/WizardFooter'
 import {
   Dialog,
   DialogContent,
@@ -93,12 +96,20 @@ function EnvelopeKebabMenu({
   onDownload,
   onSimulateSigning,
   onViewHistory,
+  onCancelEnvelope,
+  onDeleteEnvelope,
+  canCancelEnvelope = true,
+  canDeleteEnvelope = false,
   triggerClassName,
   className,
 }: {
   onDownload: () => void
   onSimulateSigning: () => void
   onViewHistory: () => void
+  onCancelEnvelope: () => void
+  onDeleteEnvelope: () => void
+  canCancelEnvelope?: boolean
+  canDeleteEnvelope?: boolean
   triggerClassName?: string
   className?: string
 }) {
@@ -135,6 +146,23 @@ function EnvelopeKebabMenu({
           <Play className="h-4 w-4" />
           Simulate signing
         </DropdownMenuItem>
+        <div className="my-1 h-px bg-border" />
+        <DropdownMenuItem
+          className="gap-2.5 px-3 py-2 text-sm text-destructive focus:text-destructive"
+          disabled={!canCancelEnvelope}
+          onSelect={onCancelEnvelope}
+        >
+          <XCircle className="h-4 w-4" />
+          Cancel envelope
+        </DropdownMenuItem>
+        <DropdownMenuItem
+          className="gap-2.5 px-3 py-2 text-sm text-destructive focus:text-destructive"
+          disabled={!canDeleteEnvelope}
+          onSelect={onDeleteEnvelope}
+        >
+          <Trash2 className="h-4 w-4" />
+          Delete envelope
+        </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>
   )
@@ -149,6 +177,9 @@ export function OpenAccountsForm() {
   const [envelopeDraft, setEnvelopeDraft] = useState<EsignEnvelope | null>(null)
   const [envelopeDrawerCreate, setEnvelopeDrawerCreate] = useState(true)
   const [historyEnvelopeId, setHistoryEnvelopeId] = useState<string | null>(null)
+  const [submitChildConfirmOpen, setSubmitChildConfirmOpen] = useState(false)
+  const [submitChildWarnings, setSubmitChildWarnings] = useState<string[]>([])
+  const [submitTargetChildId, setSubmitTargetChildId] = useState<string | null>(null)
   /** Bumps when the drawer opens so the sheet remounts with fresh local state from `envelopeDraft`. */
   const [envelopeDrawerMountKey, setEnvelopeDrawerMountKey] = useState(0)
 
@@ -368,7 +399,7 @@ export function OpenAccountsForm() {
 
   const statusBadgeClass = (status: EsignEnvelopeStatus) => {
     if (status === 'completed') return 'bg-green-50 text-green-700 border-green-200'
-    if (status === 'declined' || status === 'voided') return 'bg-red-50 text-red-700 border-red-200'
+    if (status === 'declined' || status === 'voided' || status === 'canceled') return 'bg-red-50 text-red-700 border-red-200'
     if (status === 'delivered') return 'bg-blue-50 text-blue-700 border-blue-200'
     if (status === 'sent') return 'bg-amber-50 text-amber-700 border-amber-200'
     return 'bg-muted text-muted-foreground border-border'
@@ -386,6 +417,22 @@ export function OpenAccountsForm() {
   const simulateEnvelopeSigning = (envelopeId: string) => {
     const env = esignEnvelopes.find((e) => e.id === envelopeId)
     if (!env) return
+    const includedAccountIds = Array.from(
+      new Set(env.formSelections.filter((r) => r.included).map((r) => r.accountChildId)),
+    )
+    const ownersMissingKyc = Array.from(
+      new Set(
+        includedAccountIds.flatMap((accountChildId) =>
+          getAccountOwnersMissingKyc(state, accountChildId).names,
+        ),
+      ),
+    )
+    if (ownersMissingKyc.length > 0) {
+      window.alert(
+        `Cannot simulate envelope signing until KYC is complete for: ${ownersMissingKyc.join(', ')}.`,
+      )
+      return
+    }
     const now = new Date().toISOString()
 
     updateField(
@@ -486,6 +533,46 @@ export function OpenAccountsForm() {
     }
   }
 
+  const cancelEnvelope = (envelopeId: string) => {
+    const now = new Date().toISOString()
+    updateField(
+      'esignEnvelopes',
+      esignEnvelopes.map((current) => {
+        if (current.id !== envelopeId) return current
+        const history = [
+          ...(current.history ?? []),
+          {
+            id: `evt-${now}-envelope_status-canceled`,
+            occurredAt: now,
+            source: 'advisor' as const,
+            eventType: 'envelope_status' as const,
+            envelopeStatus: 'canceled' as const,
+            note: 'Envelope canceled. Next send will create a new provider envelope while retaining this row.',
+          },
+        ]
+        return {
+          ...current,
+          envelopeStatus: 'canceled' as const,
+          sentToClient: false,
+          clientSignaturesComplete: false,
+          signers: current.signers.map((s) => ({
+            ...s,
+            signingStatus: 'pending' as const,
+            signedAt: undefined,
+          })),
+          history,
+        }
+      }),
+    )
+  }
+
+  const deleteEnvelope = (envelopeId: string) => {
+    updateField(
+      'esignEnvelopes',
+      esignEnvelopes.filter((e) => e.id !== envelopeId),
+    )
+  }
+
   const isAnnuity = (child: { name: string }) => child.name.includes(' - Annuity')
   const topLevelChildren = accountOpeningChildren.filter((c) => !isAnnuity(c))
   const getAnnuities = (parentName: string) =>
@@ -526,6 +613,12 @@ export function OpenAccountsForm() {
     if (!openAccountsTask) return
     spawnOpenAccountChildrenFromSelections(dispatch, openAccountsTask.id, selections)
     setPickerOpen(false)
+  }
+
+  const submitAccountChildForReview = (childId: string) => {
+    setSubmitTargetChildId(childId)
+    setSubmitChildWarnings([])
+    setSubmitChildConfirmOpen(true)
   }
 
   return (
@@ -583,6 +676,7 @@ export function OpenAccountsForm() {
                       <div className="hidden group-hover:block">
                         <ChildActionKebabMenu
                           onViewDetails={() => setTimelineChild(child)}
+                          onSubmitForReview={() => submitAccountChildForReview(child.id)}
                           onDelete={() => dispatch({ type: 'REMOVE_CHILD', parentTaskId: openAccountsTask!.id, childId: child.id })}
                         />
                       </div>
@@ -1176,17 +1270,21 @@ export function OpenAccountsForm() {
                     <Badge
                       variant="outline"
                       className={cn(
-                        'text-xs group-hover:hidden',
+                        'text-xs',
                         statusBadgeClass(getEsignEnvelopeStatus(env)),
                       )}
                     >
                       {ESIGN_ENVELOPE_STATUS_LABELS[getEsignEnvelopeStatus(env)]}
                     </Badge>
-                    <div className="hidden shrink-0 group-hover:block has-[button[data-state=open]]:block">
+                    <div className="shrink-0">
                       <EnvelopeKebabMenu
                         onDownload={() => downloadEnvelopeManifest(env)}
                         onSimulateSigning={() => simulateEnvelopeSigning(env.id)}
                         onViewHistory={() => setHistoryEnvelopeId(env.id)}
+                        onCancelEnvelope={() => cancelEnvelope(env.id)}
+                        onDeleteEnvelope={() => deleteEnvelope(env.id)}
+                        canCancelEnvelope={!['completed', 'canceled', 'voided'].includes(getEsignEnvelopeStatus(env))}
+                        canDeleteEnvelope={getEsignEnvelopeStatus(env) === 'canceled'}
                       />
                     </div>
                   </div>
@@ -1264,6 +1362,35 @@ export function OpenAccountsForm() {
           })()}
         </DialogContent>
       </Dialog>
+      {submitChildConfirmOpen && (
+        <CompleteAccountOpeningConfirmModal
+          mode="submit-children"
+          warnings={submitChildWarnings}
+          onCancel={() => {
+            setSubmitChildConfirmOpen(false)
+            setSubmitChildWarnings([])
+            setSubmitTargetChildId(null)
+          }}
+          onConfirm={() => {
+            if (!submitTargetChildId) {
+              setSubmitChildConfirmOpen(false)
+              setSubmitChildWarnings([])
+              return
+            }
+            const issues = getAccountOpeningChildSubmissionIssues(state, submitTargetChildId)
+            if (issues.length > 0) {
+              setSubmitChildWarnings(issues)
+              return
+            }
+            dispatch({ type: 'ENTER_CHILD_ACTION', childId: submitTargetChildId })
+            dispatch({ type: 'SUBMIT_CHILD_FOR_REVIEW' })
+            dispatch({ type: 'EXIT_CHILD_ACTION' })
+            setSubmitChildConfirmOpen(false)
+            setSubmitChildWarnings([])
+            setSubmitTargetChildId(null)
+          }}
+        />
+      )}
     </div>
   )
 }

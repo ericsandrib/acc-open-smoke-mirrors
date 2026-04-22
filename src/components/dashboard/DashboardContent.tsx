@@ -22,6 +22,27 @@ interface ActionItem {
   date: string;
 }
 
+function getMeaningfulActionTitle(action: ActionItem): string {
+  const currentTitle = action.title.trim();
+  if (currentTitle && currentTitle.toLowerCase() !== "untitled action") {
+    return currentTitle;
+  }
+
+  const rawDescription = action.description.replace(/\.\.\.$/, "").trim();
+  if (!rawDescription) {
+    return "Client Servicing Action";
+  }
+
+  const normalized = rawDescription.toLowerCase();
+  if (normalized.includes("account ope")) return "Account Opening";
+  if (normalized.includes("close financial account")) return "Account Closure";
+  if (normalized.includes("investment strategy")) return "Investment Strategy Update";
+  if (normalized.includes("cash")) return "Cash Management Update";
+  if (normalized.includes("dollar cost averag")) return "Dollar-Cost Averaging Update";
+
+  return rawDescription;
+}
+
 const actions: ActionItem[] = [
   {
     id: "1",
@@ -331,7 +352,7 @@ export function DashboardContent() {
                     </div>
                     <div className="min-w-0 flex-1">
                       <p className="text-sm font-medium text-[var(--text-primary)] truncate">
-                        {action.title}
+                        {getMeaningfulActionTitle(action)}
                       </p>
                       <p className="text-xs text-[var(--text-secondary)] truncate">
                         {action.description} &bull; {action.refId}

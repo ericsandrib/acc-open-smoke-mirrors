@@ -346,6 +346,16 @@ export function getAccountOpeningChildSubmissionIssues(
     issues.push(`KYC required: complete identity verification for ${names.join(', ')}.`)
   }
 
+  const docsTaskId = `${accountChildId}-documents-review`
+  const docsData = (state.taskData[docsTaskId] as Record<string, unknown> | undefined) ?? {}
+  const executedEsignForms =
+    (docsData.esignExecutedForms as
+      | Array<{ id?: string; envelopeId?: string; formId?: string; label?: string; fileName?: string; executedAt?: string }>
+      | undefined) ?? []
+  if (executedEsignForms.length === 0) {
+    issues.push('Documents: send and complete at least one eSign envelope so signed forms appear in this account.')
+  }
+
   return issues
 }
 

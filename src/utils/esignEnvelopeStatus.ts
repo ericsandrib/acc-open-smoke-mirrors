@@ -1,6 +1,6 @@
 import type { EsignEnvelope } from '@/types/esignEnvelope'
 
-export type EsignEnvelopeStatus = 'draft' | 'sent' | 'delivered' | 'completed' | 'declined' | 'voided'
+export type EsignEnvelopeStatus = 'draft' | 'sent' | 'delivered' | 'completed' | 'declined' | 'canceled' | 'voided'
 
 export function getEsignEnvelopeStatus(envelope: EsignEnvelope): EsignEnvelopeStatus {
   if (envelope.envelopeStatus) return envelope.envelopeStatus
@@ -15,6 +15,7 @@ export const ESIGN_ENVELOPE_STATUS_LABELS: Record<EsignEnvelopeStatus, string> =
   delivered: 'Delivered',
   completed: 'Completed',
   declined: 'Declined',
+  canceled: 'Canceled',
   voided: 'Voided',
 }
 

@@ -10,6 +10,7 @@ export type EsignEnvelopeStatus =
   | 'delivered'
   | 'completed'
   | 'declined'
+  | 'canceled'
   | 'voided'
 
 export type EsignSignerStatus =

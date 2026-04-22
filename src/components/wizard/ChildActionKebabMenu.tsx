@@ -1,14 +1,20 @@
 import { useState, useRef, useEffect } from 'react'
-import { MoreVertical, Info, Trash2 } from 'lucide-react'
+import { MoreVertical, Info, Send, Trash2 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
 interface ChildActionKebabMenuProps {
   onViewDetails: () => void
+  onSubmitForReview?: () => void
   onDelete?: () => void
   className?: string
 }
 
-export function ChildActionKebabMenu({ onViewDetails, onDelete, className }: ChildActionKebabMenuProps) {
+export function ChildActionKebabMenu({
+  onViewDetails,
+  onSubmitForReview,
+  onDelete,
+  className,
+}: ChildActionKebabMenuProps) {
   const [open, setOpen] = useState(false)
   const menuRef = useRef<HTMLDivElement>(null)
 
@@ -37,7 +43,7 @@ export function ChildActionKebabMenu({ onViewDetails, onDelete, className }: Chi
       </button>
 
       {open && (
-        <div className="absolute right-0 top-full mt-1 z-50 min-w-[160px] rounded-lg border border-border bg-background shadow-lg py-1">
+        <div className="absolute right-0 top-full mt-1 z-50 min-w-[180px] rounded-lg border border-border bg-background shadow-lg py-1">
           <button
             type="button"
             onClick={(e) => {
@@ -50,6 +56,20 @@ export function ChildActionKebabMenu({ onViewDetails, onDelete, className }: Chi
             <Info className="h-4 w-4" />
             View Details
           </button>
+          {onSubmitForReview && (
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation()
+                setOpen(false)
+                onSubmitForReview()
+              }}
+              className="w-full flex items-center gap-2.5 px-3 py-2 text-sm text-foreground hover:bg-muted transition-colors whitespace-nowrap"
+            >
+              <Send className="h-4 w-4" />
+              Submit for Review
+            </button>
+          )}
           {onDelete && (
             <button
               type="button"
