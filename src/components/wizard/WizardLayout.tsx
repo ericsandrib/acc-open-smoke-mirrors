@@ -105,7 +105,7 @@ export function WizardLayout() {
       )
       const taskData = (state.taskData[taskId] as Record<string, unknown> | undefined) ?? {}
 
-      // Section 1: Accounts to be Opened
+      // Section 1: Accounts to Be Opened
       const accountsPct =
         children.length === 0
           ? 0

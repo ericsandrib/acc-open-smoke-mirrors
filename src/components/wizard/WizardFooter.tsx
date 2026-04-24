@@ -59,7 +59,7 @@ export function CompleteAccountOpeningConfirmModal({
             <p className="text-sm text-muted-foreground">
               {isCompleteParent
                 ? 'All account workflows are in terminal states (approved or canceled). Confirm to complete the Open Accounts task.'
-                : 'This submits ready account workflows under Accounts to be Opened for home office review. Each account is reviewed independently in its child workflow.'}
+                : 'This submits ready account workflows under Accounts to Be Opened for home office review. Each account is reviewed independently in its child workflow.'}
             </p>
           </div>
         </div>

@@ -625,7 +625,7 @@ export function OpenAccountsForm() {
       <section id="oa-accounts" className="scroll-mt-16">
         <div className="mb-4">
           <h3 className="text-base font-semibold">
-            Accounts to be Opened
+            Accounts to Be Opened
           </h3>
           <p className="text-base text-muted-foreground mt-2">
             New accounts to open at the custodian, with funding instructions for each row.
@@ -1110,7 +1110,7 @@ export function OpenAccountsForm() {
       <section id="oa-esign" className="scroll-mt-16">
         <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
           <div>
-            <h4 className="text-sm font-semibold text-foreground">Envelopes</h4>
+            <h3 className="text-base font-semibold">Envelopes</h3>
             <p className="text-sm text-muted-foreground mt-1">
               Create one or more signing envelopes for this application. Required firm and custodian forms are grouped by
               account number. When you create or edit an envelope, you can view executed PDFs; wet-signed uploads are

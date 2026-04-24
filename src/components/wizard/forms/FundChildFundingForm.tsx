@@ -14,7 +14,7 @@ import { cn } from '@/lib/utils'
 import { findParentTaskForChild } from '@/utils/openAccountsTaskContext'
 
 /**
- * Hub step (per account child): list funding / account transfer workflows—mirrors "Accounts to be Opened" on Open Accounts.
+ * Hub step (per account child): list funding / account transfer workflows—mirrors "Accounts to Be Opened" on Open Accounts.
  */
 export function FundChildFundingForm() {
   const { state, dispatch } = useWorkflow()

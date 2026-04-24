@@ -152,7 +152,7 @@ export function getOpenAccountsSubmitForReviewBlockers(
   const externalAnnuityPlatform = isAnnuityExternalPlatformOpenAccountsTask(openAccountsTask)
 
   if (accountOpeningChildren.length === 0) {
-    return ['Add at least one account in Accounts to be Opened before submitting for review.']
+    return ['Add at least one account in Accounts to Be Opened before submitting for review.']
   }
 
   blockers.push(...getOpenAccountsMissingDocumentSpecificationIssues(state, openAccountsTaskId))
