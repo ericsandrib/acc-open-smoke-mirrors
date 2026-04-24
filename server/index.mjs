@@ -23,7 +23,14 @@ import { randomUUID } from 'node:crypto'
 const PORT = Number(process.env.PORT || 3001)
 const CLIENT_ID = process.env.SCHWAB_CLIENT_ID || ''
 const CLIENT_SECRET = process.env.SCHWAB_CLIENT_SECRET || ''
-const BASE = process.env.SCHWAB_BASE_URL || 'https://api.schwabapi.com'
+// AS Digital Account Open required header — the app machine name from the portal.
+const APP_ID = process.env.SCHWAB_APP_ID || ''
+// Schwab sandbox (AS Digital Account Open) runs on sandbox.schwabapi.com.
+// Override via SCHWAB_BASE_URL if pointing at production.
+const BASE = process.env.SCHWAB_BASE_URL || 'https://sandbox.schwabapi.com'
+// AS Digital Account Open service path + version.
+const AS_DAO_PATH = process.env.SCHWAB_AS_DAO_PATH || '/as-integration/accounts/v2/account-open-contacts'
+const AS_DAO_VERSION = process.env.SCHWAB_AS_DAO_VERSION || '2'
 const CALLBACK = process.env.SCHWAB_CALLBACK_URL || `http://localhost:${PORT}/api/schwab/oauth/callback`
 const FRONTEND_ORIGIN = process.env.FRONTEND_ORIGIN || 'http://localhost:5173'
 const MOCK_MODE = process.env.SCHWAB_MOCK === '1' || (!CLIENT_ID || !CLIENT_SECRET)
@@ -85,65 +92,72 @@ app.get('/api/schwab/health', (_req, res) => {
   res.json(healthPayload())
 })
 
-app.get('/api/schwab/auth-url', (_req, res) => {
+// Fetch (or refresh) a client_credentials token from Schwab.
+// Sandbox AS Digital Account Open uses service-to-service auth — no user redirect.
+async function fetchClientCredentialsToken() {
+  const basic = Buffer.from(`${CLIENT_ID}:${CLIENT_SECRET}`).toString('base64')
+  const resp = await fetch(`${BASE}/v1/oauth/token`, {
+    method: 'POST',
+    headers: {
+      Authorization: `Basic ${basic}`,
+      'Content-Type': 'application/x-www-form-urlencoded',
+    },
+    body: new URLSearchParams({ grant_type: 'client_credentials' }),
+  })
+  const text = await resp.text()
+  let body
+  try { body = JSON.parse(text) } catch { body = { raw: text } }
+  if (!resp.ok) {
+    const err = new Error(`Token exchange failed: HTTP ${resp.status} ${JSON.stringify(body).slice(0, 200)}`)
+    err.cause = body
+    err.status = resp.status
+    throw err
+  }
+  tokenCache.accessToken = body.access_token || null
+  tokenCache.refreshToken = body.refresh_token || null
+  // Schwab returns expires_in as a string sometimes — coerce.
+  const expiresSec = Number(body.expires_in || 1800)
+  tokenCache.expiresAt = new Date(Date.now() + expiresSec * 1000)
+  return body
+}
+
+async function ensureValidToken() {
+  const stillValid =
+    tokenCache.accessToken &&
+    tokenCache.expiresAt &&
+    tokenCache.expiresAt.getTime() - Date.now() > 30_000 // 30s buffer
+  if (stillValid) return
+  await fetchClientCredentialsToken()
+}
+
+// /auth-url is kept for compatibility with the frontend's "Connect Schwab" button.
+// In client_credentials mode it just fetches a token server-side and redirects back.
+app.get('/api/schwab/auth-url', async (_req, res) => {
   if (MOCK_MODE) {
-    return res.json({
-      url: `/api/schwab/oauth/callback?code=MOCK_CODE&state=mock`,
+    return res.json({ url: `/api/schwab/oauth/callback?code=MOCK_CODE&state=mock` })
+  }
+  try {
+    await fetchClientCredentialsToken()
+    res.json({
+      url: `${FRONTEND_ORIGIN}/onboarding/flow/account-opening-funding?schwab=connected`,
+    })
+  } catch (err) {
+    console.error('[schwab] client_credentials failed', err)
+    res.status(500).json({
+      error: err instanceof Error ? err.message : 'Token fetch failed',
     })
   }
-  const params = new URLSearchParams({
-    response_type: 'code',
-    client_id: CLIENT_ID,
-    redirect_uri: CALLBACK,
-    scope: 'readonly',
-  })
-  res.json({ url: `${BASE}/v1/oauth/authorize?${params.toString()}` })
 })
 
-app.get('/api/schwab/oauth/callback', async (req, res) => {
-  const code = String(req.query.code || '')
-  if (!code) return res.status(400).send('Missing code')
-
-  if (MOCK_MODE) {
-    tokenCache.accessToken = 'mock-access-token'
-    tokenCache.refreshToken = 'mock-refresh-token'
-    tokenCache.expiresAt = new Date(Date.now() + 30 * 60 * 1000)
-    return res.redirect(`${FRONTEND_ORIGIN}/onboarding/flow/account-opening-funding`)
-  }
-
-  try {
-    const basic = Buffer.from(`${CLIENT_ID}:${CLIENT_SECRET}`).toString('base64')
-    const tokenRes = await fetch(`${BASE}/v1/oauth/token`, {
-      method: 'POST',
-      headers: {
-        Authorization: `Basic ${basic}`,
-        'Content-Type': 'application/x-www-form-urlencoded',
-      },
-      body: new URLSearchParams({
-        grant_type: 'authorization_code',
-        code,
-        redirect_uri: CALLBACK,
-      }),
-    })
-    const body = await tokenRes.json()
-    if (!tokenRes.ok) {
-      console.error('[schwab] token exchange failed', body)
-      return res.status(tokenRes.status).json(body)
-    }
-    tokenCache.accessToken = body.access_token || null
-    tokenCache.refreshToken = body.refresh_token || null
-    tokenCache.expiresAt = new Date(Date.now() + (Number(body.expires_in || 1800) * 1000))
-    res.redirect(`${FRONTEND_ORIGIN}/onboarding/flow/account-opening-funding`)
-  } catch (err) {
-    console.error('[schwab] oauth error', err)
-    res.status(500).json({ error: err instanceof Error ? err.message : String(err) })
-  }
+// Kept for the old 3-legged OAuth flow. Sandbox doesn't use this today.
+app.get('/api/schwab/oauth/callback', async (_req, res) => {
+  res.redirect(`${FRONTEND_ORIGIN}/onboarding/flow/account-opening-funding?schwab=callback-unused`)
 })
 
 app.post('/api/schwab/customers', async (req, res) => {
   const startedAt = Date.now()
   const correlId = randomUUID()
-  const url = `${BASE}/accountOpening/v1/customers`
+  const url = `${BASE}${AS_DAO_PATH}`
 
   // Mock path — always succeeds; useful before OAuth is wired.
   if (MOCK_MODE) {
@@ -163,18 +177,24 @@ app.post('/api/schwab/customers', async (req, res) => {
     return res.json(result)
   }
 
-  if (!tokenCache.accessToken) {
+  // Auto-fetch token on first call / when expired.
+  try {
+    await ensureValidToken()
+  } catch (err) {
     return res.json({
       ok: false,
-      status: 401,
+      status: err?.status ?? 401,
       correlId,
       resourceVersion: null,
       requestedAt: new Date().toISOString(),
       durationMs: Date.now() - startedAt,
       mode: 'live',
       url,
-      body: null,
-      error: 'Not authorized with Schwab. Click Connect Schwab to complete OAuth.',
+      body: err?.cause ?? null,
+      error:
+        err instanceof Error
+          ? err.message
+          : 'Unable to acquire Schwab access token.',
     })
   }
 
@@ -184,8 +204,9 @@ app.post('/api/schwab/customers', async (req, res) => {
       headers: {
         Authorization: `Bearer ${tokenCache.accessToken}`,
         'Content-Type': 'application/json',
+        'Schwab-Client-AppId': APP_ID,
         'Schwab-Client-CorrelId': correlId,
-        'Schwab-Resource-Version': '1',
+        'Schwab-Resource-Version': AS_DAO_VERSION,
       },
       body: JSON.stringify(req.body),
     })
