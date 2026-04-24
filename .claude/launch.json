@@ -2,10 +2,16 @@
   "version": "0.0.1",
   "configurations": [
     {
-      "name": "dev",
-      "runtimeExecutable": "/Users/biancamoy/.nvm/versions/node/v24.11.1/bin/node",
+      "name": "web",
+      "runtimeExecutable": "/Users/ericsandrib/.nvm/versions/node/v22.22.2/bin/node",
       "runtimeArgs": ["node_modules/vite/bin/vite.js", "--port", "5178"],
       "port": 5178
+    },
+    {
+      "name": "api",
+      "runtimeExecutable": "/Users/ericsandrib/.nvm/versions/node/v22.22.2/bin/node",
+      "runtimeArgs": ["server/index.mjs"],
+      "port": 3001
     }
   ]
 }

@@ -1,8 +1,13 @@
 import { useMemo } from 'react'
+import { Link } from 'react-router-dom'
+import { ArrowRight, Zap } from 'lucide-react'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { Button } from '@/components/ui/button'
+import { Badge } from '@/components/ui/badge'
 import { PageTitle } from '@/components/page-title'
 import { AccessoryBar } from '@/components/accessory-bar'
 import { useServicing } from '@/stores/servicingStore'
+import { TEST_CLIENT } from '@/data/testClientFlow'
 import { OnboardingJourneysTable } from './OnboardingJourneysTable'
 import { ActionsTable, deriveActionRows } from './ActionsTable'
 import { TasksTable, deriveTaskRows } from './TasksTable'
@@ -45,6 +50,39 @@ export function OnboardingContent() {
             <TabsTrigger value="tasks">Tasks</TabsTrigger>
           </TabsList>
         </div>
+
+        <Link
+          to="/onboarding/flow"
+          className="mb-6 flex items-center justify-between gap-4 rounded-lg border border-border-category1-primary bg-fill-category1-tertiary p-4 hover:shadow-md transition-all group"
+        >
+          <div className="flex items-start gap-3">
+            <div className="h-9 w-9 rounded-full bg-fill-category1-primary text-text-oncategory1-primary flex items-center justify-center flex-shrink-0">
+              <Zap className="h-4 w-4" />
+            </div>
+            <div>
+              <div className="flex items-center gap-2 flex-wrap">
+                <h3 className="text-sm font-semibold text-text-primary">
+                  Test client flow · {TEST_CLIENT.name}
+                </h3>
+                <Badge
+                  variant="outline"
+                  className="bg-fill-success-tertiary text-text-success-primary border-border-success-primary text-xs"
+                >
+                  Schwab API wired
+                </Badge>
+              </div>
+              <p className="text-xs text-text-secondary mt-0.5">
+                5-step dashboard · open Account Opening & Funding to hit the Schwab sandbox
+              </p>
+            </div>
+          </div>
+          <Button size="sm" variant="ghost" asChild>
+            <span className="flex items-center gap-1">
+              Open
+              <ArrowRight className="h-3.5 w-3.5 group-hover:translate-x-0.5 transition-transform" />
+            </span>
+          </Button>
+        </Link>
 
         <TabsContent value="journeys">
           <OnboardingJourneysTable />
