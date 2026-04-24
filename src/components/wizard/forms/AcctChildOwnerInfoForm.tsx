@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useWorkflow, useTaskData, useChildActionContext } from '@/stores/workflowStore'
+import { findParentTaskForChild, OPEN_ACCOUNTS_WITH_ANNUITY_FORM_KEY } from '@/utils/openAccountsTaskContext'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -128,9 +129,12 @@ export function AcctChildOwnerInfoForm() {
   const canAddMoreOwners = owners.length < maxOwners
 
   const [addMemberSheetOwnerId, setAddMemberSheetOwnerId] = useState<string | null>(null)
+  const openAccountsParent = ctx ? findParentTaskForChild(state, ctx.child.id) : undefined
   const kycParentTask =
     state.tasks.find((t) => t.formKey === 'kyc')
-    ?? state.tasks.find((t) => t.formKey === 'open-accounts')
+    ?? (openAccountsParent?.formKey === OPEN_ACCOUNTS_WITH_ANNUITY_FORM_KEY
+      ? undefined
+      : openAccountsParent)
 
   useEffect(() => {
     if (!ctx) return
@@ -344,11 +348,11 @@ export function AcctChildOwnerInfoForm() {
 
   return (
     <div className="space-y-8">
-      <section className="space-y-6">
+      <section id="acct-owners" className="space-y-6 scroll-mt-16">
         <div>
           <h3 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground flex items-center gap-2 mb-1">
             <UserPlus className="h-4 w-4" />
-            Owners & participants
+            Owners & Participants
           </h3>
           <p className="text-sm text-muted-foreground">
             {trustEntityOwnersOnly ? (
@@ -484,7 +488,7 @@ export function AcctChildOwnerInfoForm() {
       </section>
 
       {showBeneficiariesSection ? (
-      <section className="space-y-6">
+      <section id="acct-beneficiaries" className="space-y-6 scroll-mt-16">
         <div>
           <h3 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground flex items-center gap-2 mb-1">
             <UserPlus className="h-4 w-4" />
@@ -771,21 +775,31 @@ export function AcctChildOwnerInfoForm() {
       </section>
       ) : null}
 
-      <AccountProfileSection
-        data={data}
-        updateField={updateField}
-        registrationType={childRegType}
-        productAccountTypeOverride={productAccountTypeOverride}
-        prefilledAccountNumber={(childMeta?.accountNumber as string) ?? ''}
-      />
+      <section id="acct-info" className="space-y-6 scroll-mt-16">
+        <div>
+          <h3 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground mb-1">
+            Account Information
+          </h3>
+          <p className="text-sm text-muted-foreground">
+            Define account setup details, servicing metadata, suitability profile, and additional account-level fields.
+          </p>
+        </div>
+        <AccountProfileSection
+          data={data}
+          updateField={updateField}
+          registrationType={childRegType}
+          productAccountTypeOverride={productAccountTypeOverride}
+          prefilledAccountNumber={(childMeta?.accountNumber as string) ?? ''}
+          hideHeader
+        />
+        <AccountAdditionalInformationSection data={data} updateField={updateField} hideHeader />
+      </section>
 
       {childId ? (
-        <section className="space-y-6">
+        <section id="acct-features" className="space-y-6 scroll-mt-16">
           <AccountFeatureRequestsSection accountChildId={childId} />
         </section>
       ) : null}
-
-      <AccountAdditionalInformationSection data={data} updateField={updateField} />
     </div>
   )
 }

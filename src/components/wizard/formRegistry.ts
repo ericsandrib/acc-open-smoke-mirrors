@@ -19,6 +19,7 @@ export const formComponents: Record<string, React.ComponentType> = {
   'kyc-child-info': KycChildInfoForm,
   'kyc-child-documents': KycChildDocumentsForm,
   'open-accounts': OpenAccountsForm,
+  'open-accounts-with-annuity': OpenAccountsForm,
   'acct-child-account-owners': AcctChildOwnerInfoForm,
   'acct-child-funding-transfers': FundChildFundingForm,
   'funding-line-child-setup': FundingLineSetupForm,
@@ -39,7 +40,9 @@ export const taskDescriptions: Partial<Record<string, string>> = {
   'kyc-child-documents':
     'Upload supporting KYC/KYB documents if step-up verification is required.',
   'open-accounts':
-    'Select the types of accounts to open, review documents, and prepare for signature.',
+    'Add accounts by registration type, run KYC verification, and create eSign envelopes in this app.',
+  'open-accounts-with-annuity':
+    'Annuity path: add accounts by registration type. KYC and eSign run outside this app.',
   'acct-child-account-owners':
     'Set up the account, add owners and participants, request margin and options, answer remaining account questions, and collect required owner documents.',
   'acct-child-funding-transfers':

@@ -5,6 +5,7 @@ import { ChevronLeft, ChevronRight, Pencil, ShieldAlert } from 'lucide-react'
 import type { TaskStatus } from '@/types/workflow'
 import { parseChildSubTaskId } from '@/utils/childTaskRegistry'
 import { getOpenAccountsSubmitForReviewBlockers } from '@/utils/openAccountsDocumentValidation'
+import { isOpenAccountsTask } from '@/utils/openAccountsTaskContext'
 
 function getActiveTaskStatus(state: ReturnType<typeof useWorkflow>['state']): TaskStatus {
   // Check parent tasks
@@ -98,7 +99,7 @@ export function WizardFooter() {
   const activeStatus = getActiveTaskStatus(state)
   const isSubmitted = state.submittedTaskIds.includes(state.activeTaskId)
   const active = state.tasks.find((t) => t.id === state.activeTaskId)
-  const isOpenAccountsTask = active?.formKey === 'open-accounts'
+  const isOnOpenAccountsTask = isOpenAccountsTask(active)
   const openAccountsChildren = active?.children ?? []
   const accountOpeningChildren = openAccountsChildren.filter((c) => c.childType === 'account-opening')
   const allAccountChildrenTerminal =
@@ -152,12 +153,12 @@ export function WizardFooter() {
               setCompleteAccountOpeningOpen(true)
             }}
             disabled={
-              isOpenAccountsTask
+              isOnOpenAccountsTask
                 ? false
                 : activeStatus === 'complete' || isSubmitted
             }
           >
-            {isOpenAccountsTask
+            {isOnOpenAccountsTask
               ? allAccountChildrenTerminal
                 ? 'Complete'
                 : 'Submit for review'
@@ -177,7 +178,7 @@ export function WizardFooter() {
       <CompleteAccountOpeningConfirmModal
         warnings={completeAccountOpeningWarnings}
         mode={
-          isOpenAccountsTask && allAccountChildrenTerminal
+          isOnOpenAccountsTask && allAccountChildrenTerminal
             ? 'complete-parent'
             : 'submit-children'
         }
@@ -186,19 +187,22 @@ export function WizardFooter() {
           setCompleteAccountOpeningWarnings([])
         }}
         onConfirm={() => {
-          if (isOpenAccountsTask) {
+          if (isOnOpenAccountsTask) {
             if (allAccountChildrenTerminal) {
               dispatch({ type: 'CONFIRM_TASK', taskId: state.activeTaskId })
               setCompleteAccountOpeningOpen(false)
               setCompleteAccountOpeningWarnings([])
               return
             }
-            const blockers = getOpenAccountsSubmitForReviewBlockers(state)
+            const blockers = getOpenAccountsSubmitForReviewBlockers(state, state.activeTaskId)
             if (blockers.length > 0) {
               setCompleteAccountOpeningWarnings(blockers)
               return
             }
-            dispatch({ type: 'SUBMIT_ALL_ACCOUNT_OPENING_CHILDREN_FOR_REVIEW' })
+            dispatch({
+              type: 'SUBMIT_ALL_ACCOUNT_OPENING_CHILDREN_FOR_REVIEW',
+              openAccountsTaskId: state.activeTaskId,
+            })
             setCompleteAccountOpeningOpen(false)
             setCompleteAccountOpeningWarnings([])
             return

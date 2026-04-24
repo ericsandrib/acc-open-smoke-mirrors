@@ -1,5 +1,12 @@
 import { createContext, useContext, useReducer, useCallback, type ReactNode } from 'react'
-import type { WorkflowState, WorkflowAction, Task, ChildReviewState, ChildType } from '@/types/workflow'
+import type {
+  Action,
+  WorkflowState,
+  WorkflowAction,
+  Task,
+  ChildReviewState,
+  ChildType,
+} from '@/types/workflow'
 import {
   actions,
   tasks,
@@ -76,7 +83,7 @@ function sanitizeDemoViewModeForChild(
   return mode
 }
 
-function computeFlatTaskOrder(allTasks: Task[], allActions: typeof actions): string[] {
+function computeFlatTaskOrder(allTasks: Task[], allActions: readonly Action[]): string[] {
   const order: string[] = []
   const sortedActions = [...allActions].sort((a, b) => a.order - b.order)
 
@@ -477,27 +484,68 @@ function workflowReducer(state: WorkflowState, action: WorkflowAction): Workflow
       const baseActions = actions.filter((a) => a.id !== 'kyc')
       const baseTasks = tasks.filter((t) => t.id !== 'kyc-review' && t.formKey !== 'kyc' && t.actionId !== 'kyc')
 
-      const freshTasks = baseTasks.map((t) => ({
+      const collectDataAction = baseActions.find((a) => a.id === 'collect-client-data')!
+
+      const splitAnnuity = action.journeyOnboardingConfig?.openAnnuityAccount === true
+
+      const actionsForState: Action[] = splitAnnuity
+        ? [
+            collectDataAction,
+            { id: 'account-opening', title: 'Account opening (no annuity)', order: 2 },
+            { id: 'account-opening-annuity', title: 'Account opening (with annuity)', order: 3 },
+          ]
+        : [...baseActions]
+
+      const mkFresh = (t: Task): Task => ({
         ...t,
         status: 'in_progress' as const,
         assignedTo: assignee,
         children: t.children ? [] : undefined,
         unread: true,
         edited: false,
-      }))
-      const newOrder = computeFlatTaskOrder(freshTasks, baseActions)
+      })
+
+      let tasksForState: Task[]
+
+      if (splitAnnuity) {
+        const collect = baseTasks.filter((t) => t.actionId === 'collect-client-data').map(mkFresh)
+        const oaSeed = baseTasks.find((t) => t.id === 'open-accounts')!
+        const open1: Task = {
+          ...mkFresh(oaSeed),
+          actionId: 'account-opening',
+        }
+        const open2: Task = {
+          id: 'open-accounts-annuity',
+          title: 'Open Accounts',
+          actionId: 'account-opening-annuity',
+          status: 'in_progress' as const,
+          assignedTo: assignee,
+          formKey: 'open-accounts-with-annuity',
+          order: 1,
+          unread: true,
+          edited: false,
+          children: [],
+        }
+        tasksForState = [...collect, open1, open2]
+      } else {
+        tasksForState = baseTasks.map(mkFresh)
+      }
+
+      const newOrder = computeFlatTaskOrder(tasksForState, actionsForState)
+      const openAccountsDataShell = { additionalInstructions: seedOpenAccountsAdditionalInstructions }
       return {
-        actions: [...baseActions],
-        tasks: freshTasks,
+        actions: actionsForState,
+        tasks: tasksForState,
         relatedParties: structuredClone(action.relatedParties),
         financialAccounts: structuredClone(action.financialAccounts),
-        activeTaskId: freshTasks[0].id,
+        activeTaskId: tasksForState[0].id,
         flatTaskOrder: newOrder,
         taskData: {
           'client-info': structuredClone(action.clientInfo),
-          'open-accounts': {
-            additionalInstructions: seedOpenAccountsAdditionalInstructions,
-          },
+          'open-accounts': openAccountsDataShell,
+          ...(splitAnnuity
+            ? { 'open-accounts-annuity': { additionalInstructions: seedOpenAccountsAdditionalInstructions } }
+            : {}),
         },
         journeyName: action.journeyName,
         journeyId: action.journeyId ?? `journey-${Date.now()}`,
@@ -643,7 +691,7 @@ function workflowReducer(state: WorkflowState, action: WorkflowAction): Workflow
     }
 
     case 'SUBMIT_ALL_ACCOUNT_OPENING_CHILDREN_FOR_REVIEW': {
-      const openAccountsTask = state.tasks.find((t) => t.formKey === 'open-accounts')
+      const openAccountsTask = state.tasks.find((t) => t.id === action.openAccountsTaskId)
       if (!openAccountsTask?.children?.length) return state
 
       const accountOpeningIds = new Set(

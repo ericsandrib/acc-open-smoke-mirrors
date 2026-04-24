@@ -7,6 +7,7 @@ import { ChevronDown, CheckCircle2, Building2, Users, FileText, CreditCard, Shie
 import * as Collapsible from '@radix-ui/react-collapsible'
 import type { RelatedParty, AccountType } from '@/types/workflow'
 import { cn } from '@/lib/utils'
+import { isOpenAccountsTask } from '@/utils/openAccountsTaskContext'
 
 const accountTypeLabels: Record<AccountType, string> = {
   brokerage: 'Brokerage',
@@ -120,7 +121,13 @@ export function HomeOfficeViewContent() {
     dataConsent: true,
   }
   const journeyClientMeta = state.taskData['client-info'] as Record<string, unknown> | undefined
-  const openAccountsData = state.taskData['open-accounts'] ?? {}
+  const allOpen = state.tasks.filter((t) => isOpenAccountsTask(t))
+  const openAccountsData =
+    (allOpen
+      .map((t) => state.taskData[t.id] as Record<string, unknown> | undefined)
+      .find((d) => d && typeof d.additionalInstructions === 'string' && d.additionalInstructions) as
+      | Record<string, unknown>
+      | undefined) ?? (state.taskData['open-accounts'] as Record<string, unknown> | undefined) ?? {}
 
   const primaryMember =
     state.relatedParties.find((p) => p.type === 'household_member' && p.isPrimary && !p.isHidden)
@@ -163,8 +170,9 @@ export function HomeOfficeViewContent() {
     ),
   )
 
-  const openAccountsTask = state.tasks.find((t) => t.id === 'open-accounts')
-  const acctChildren = openAccountsTask?.children ?? []
+  const acctChildren = state.tasks
+    .filter((t) => isOpenAccountsTask(t))
+    .flatMap((t) => (t.children ?? []).filter((c) => c.childType === 'account-opening'))
 
   const totalValue = state.financialAccounts.reduce((sum, a) => {
     const num = parseFloat((a.estimatedValue ?? '').replace(/,/g, ''))

@@ -15,6 +15,7 @@ import {
   SelectSeparator,
 } from '@/components/ui/select'
 import { buildAccountOwnerPreview, buildDesignationPartyPreview } from '@/utils/accountOwnerPreview'
+import { isOpenAccountsTask } from '@/utils/openAccountsTaskContext'
 import { Plus, Trash2, Pencil, AlertTriangle, Info } from 'lucide-react'
 
 const ADD_PARTY_VALUE = '__add_party__'
@@ -73,15 +74,20 @@ export function PartySlotCard({
   const matchedParty = partyId ? parties.find((p) => p.id === partyId) ?? null : null
   const findKycChildForParty = useCallback((party: RelatedParty | undefined) => {
     if (!party) return null
-    const kycParentTask = state.tasks.find((t) => t.formKey === 'kyc') ?? state.tasks.find((t) => t.formKey === 'open-accounts')
-    return (
-      kycParentTask?.children?.find((c) => {
+    const kycStandalone = state.tasks.find((t) => t.formKey === 'kyc')
+    const parents = kycStandalone
+      ? [kycStandalone]
+      : state.tasks.filter((t) => isOpenAccountsTask(t))
+    for (const kycParentTask of parents) {
+      const found = kycParentTask.children?.find((c) => {
         if (c.childType !== 'kyc') return false
         const meta = state.taskData[c.id] as Record<string, unknown> | undefined
         if ((meta?.kycSubjectPartyId as string | undefined) === party.id) return true
         return c.name === party.name
-      }) ?? null
-    )
+      })
+      if (found) return found
+    }
+    return null
   }, [state.tasks, state.taskData])
 
   const getPartyKycDisplayStatus = useCallback((party: RelatedParty | undefined) => {

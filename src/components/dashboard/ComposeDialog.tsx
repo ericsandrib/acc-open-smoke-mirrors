@@ -22,7 +22,6 @@ import { toast } from 'sonner'
 import { useWorkflow } from '@/stores/workflowStore'
 import { useServicing } from '@/stores/servicingStore'
 import { relationships } from '@/data/relationships'
-import { teamMembers } from '@/data/teamMembers'
 
 interface ComposeDialogProps {
   onClose: () => void

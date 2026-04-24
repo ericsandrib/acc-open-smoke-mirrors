@@ -618,7 +618,7 @@ export function RelatedPartiesForm() {
 
   return (
     <div className="space-y-8">
-      <section className="space-y-4">
+      <section id="rcd-household" className="space-y-4 scroll-mt-16">
         <div>
           <h3 className="text-base font-semibold">Household</h3>
           <p className="text-base text-muted-foreground">
@@ -649,7 +649,7 @@ export function RelatedPartiesForm() {
         />
       </section>
 
-      <section className="space-y-4">
+      <section id="rcd-related-individuals" className="space-y-4 scroll-mt-16">
         <div>
           <h3 className="text-base font-semibold">Related Individuals</h3>
           <p className="text-base text-muted-foreground">
@@ -682,7 +682,7 @@ export function RelatedPartiesForm() {
         />
       </section>
 
-      <section className="space-y-4">
+      <section id="rcd-trusts" className="space-y-4 scroll-mt-16">
         <div>
           <h3 className="text-base font-semibold">Trusts</h3>
           <p className="text-base text-muted-foreground">
@@ -715,7 +715,7 @@ export function RelatedPartiesForm() {
         />
       </section>
 
-      <section className="space-y-4">
+      <section id="rcd-other-entities" className="space-y-4 scroll-mt-16">
         <div>
           <h3 className="text-base font-semibold">Other Entities</h3>
           <p className="text-base text-muted-foreground">
@@ -748,7 +748,7 @@ export function RelatedPartiesForm() {
         />
       </section>
 
-      <section className="space-y-4">
+      <section id="rcd-professional-contacts" className="space-y-4 scroll-mt-16">
         <div>
           <h3 className="text-base font-semibold">Professional Contacts</h3>
           <p className="text-base text-muted-foreground">

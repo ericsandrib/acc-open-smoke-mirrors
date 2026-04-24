@@ -1,4 +1,5 @@
 import type { WorkflowState } from '@/types/workflow'
+import { findParentTaskForChild } from '@/utils/openAccountsTaskContext'
 import { getRegistrationDocumentsForType, partitionRegistrationDocumentsByFulfillment } from '@/utils/registrationDocuments'
 import type { RegistrationType } from '@/utils/registrationDocuments'
 
@@ -32,7 +33,7 @@ function doc(
 }
 
 function collectFeatureLineTypes(state: WorkflowState, accountChildId: string): string[] {
-  const openAccounts = state.tasks.find((t) => t.formKey === 'open-accounts')
+  const openAccounts = findParentTaskForChild(state, accountChildId)
   const types: string[] = []
   for (const c of openAccounts?.children ?? []) {
     if (c.childType !== 'feature-service-line') continue

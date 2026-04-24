@@ -28,9 +28,9 @@ const CHILD_TYPE_CONFIGS: Record<ChildType, ChildTypeConfig> = {
     idPrefix: 'acct-child',
     displayLabel: 'Open Financial Account',
     subTasks: [
-      { suffix: 'account-owners', title: 'Account & owners', formKey: 'acct-child-account-owners' },
-      { suffix: 'funding-transfers', title: 'Funding & asset movement', formKey: 'acct-child-funding-transfers' },
-      { suffix: 'features-services', title: 'Account features & services', formKey: 'acct-child-features-services' },
+      { suffix: 'account-owners', title: 'Account & Owners', formKey: 'acct-child-account-owners' },
+      { suffix: 'funding-transfers', title: 'Funding & Asset Movement', formKey: 'acct-child-funding-transfers' },
+      { suffix: 'features-services', title: 'Account Features & Services', formKey: 'acct-child-features-services' },
       { suffix: 'documents-review', title: 'Documents', formKey: 'acct-child-documents-review' },
     ],
   },
@@ -41,7 +41,7 @@ const CHILD_TYPE_CONFIGS: Record<ChildType, ChildTypeConfig> = {
     subTasks: [
       {
         suffix: 'setup',
-        title: 'Funding & asset movement details',
+        title: 'Funding & Asset Movement Details',
         formKey: 'funding-line-child-setup',
       },
     ],
@@ -53,7 +53,7 @@ const CHILD_TYPE_CONFIGS: Record<ChildType, ChildTypeConfig> = {
     subTasks: [
       {
         suffix: 'setup',
-        title: 'Feature & service details',
+        title: 'Feature & Service Details',
         formKey: 'feature-service-line-child-setup',
       },
     ],

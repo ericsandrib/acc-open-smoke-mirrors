@@ -25,6 +25,7 @@ import {
   WET_SIGNED_FIRM_UPLOADS_KEY,
   type WetSignedFirmUpload,
 } from '@/utils/wetSignedFirmUploads'
+import { findParentTaskForChild } from '@/utils/openAccountsTaskContext'
 
 interface DocInstance {
   id: string
@@ -51,7 +52,10 @@ export function AcctChildDocumentsReviewForm() {
   const ctx = useChildActionContext()
   const taskId = ctx?.subTaskId ?? ''
   const { data, updateField } = useTaskData(taskId || '__no_child__')
-  const { data: openAccountsData, updateField: updateOpenAccountsField } = useTaskData('open-accounts')
+  const openAccountsParentId = ctx
+    ? findParentTaskForChild(state, ctx.child.id)?.id ?? 'open-accounts'
+    : 'open-accounts'
+  const { data: openAccountsData, updateField: updateOpenAccountsField } = useTaskData(openAccountsParentId)
 
   const childMeta = ctx
     ? ((state.taskData[ctx.child.id] as Record<string, unknown> | undefined) ?? undefined)
@@ -68,7 +72,7 @@ export function AcctChildDocumentsReviewForm() {
     }
   }, [registrationType, state.relatedParties])
 
-  const openAccountsTask = state.tasks.find((t) => t.formKey === 'open-accounts')
+  const openAccountsTask = ctx ? findParentTaskForChild(state, ctx.child.id) : undefined
   const accountOpeningChildren = (openAccountsTask?.children ?? []).filter((c) => c.childType === 'account-opening')
 
   const wetSignedAccountOptions = useMemo(() => {
@@ -248,9 +252,9 @@ export function AcctChildDocumentsReviewForm() {
 
   return (
     <div className="space-y-8">
-      <section className="space-y-4">
+      <section id="acct-docs-forms" className="space-y-4 scroll-mt-16">
         <h3 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
-          Forms for this account
+          Forms for This Account
         </h3>
         <p className="text-sm text-muted-foreground">
           These required forms are generated automatically from this account&apos;s registration type using the same rules
@@ -341,6 +345,7 @@ export function AcctChildDocumentsReviewForm() {
           )}
         </div>
 
+        <div id="acct-docs-client-upload" className="scroll-mt-16" />
         {ruleDrivenDocs.clientUpload.length === 0 ? (
           <div className="rounded-lg border border-dashed border-border p-6 text-center">
             <FileText className="mx-auto mb-2 h-8 w-8 text-muted-foreground/50" />
@@ -514,7 +519,7 @@ export function AcctChildDocumentsReviewForm() {
           </div>
         )}
 
-        <div className="space-y-2">
+        <div id="acct-docs-notes" className="space-y-2 scroll-mt-16">
           <Label>Exceptions / notes</Label>
           <textarea
             className="flex min-h-[88px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm"

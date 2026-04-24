@@ -140,6 +140,16 @@ export function ChildHoKycViewContent() {
     })
   }
   const docData = taskData
+  const hasKycUploadedDoc = (key: 'gov-id' | 'supporting-docs') => {
+    const rows =
+      ((docData[`doc-instances-${key}`] as { fileName?: string }[] | undefined) ??
+        (docData[`doc-${key}`] as { name?: string }[] | undefined) ??
+        [])
+    return rows.some((r) => {
+      const row = r as { fileName?: string; name?: string }
+      return Boolean(row.fileName ?? row.name)
+    })
+  }
 
   const firstName = (taskData.firstName as string) || party?.firstName || ''
   const lastName = (taskData.lastName as string) || party?.lastName || ''
@@ -440,8 +450,8 @@ export function ChildHoKycViewContent() {
           )}
 
           <AccordionSection value="documents" title="Documents" icon={FileText}>
-            <ReviewRow label={isEntity ? 'Formation Documents' : 'Government ID'} value={docData['doc-gov-id'] ? 'Uploaded' : 'Not uploaded'} />
-            <ReviewRow label={isEntity ? 'Supporting KYB Documents' : 'Supporting Documents'} value={docData['doc-supporting-docs'] ? 'Uploaded' : 'Not uploaded'} />
+            <ReviewRow label={isEntity ? 'Formation Documents' : 'Government ID'} value={hasKycUploadedDoc('gov-id') ? 'Uploaded' : 'Not uploaded'} />
+            <ReviewRow label={isEntity ? 'Supporting KYB Documents' : 'Supporting Documents'} value={hasKycUploadedDoc('supporting-docs') ? 'Uploaded' : 'Not uploaded'} />
             <div className="py-2 space-y-3">
               <div className="flex items-center justify-between">
                 <span className="text-sm text-muted-foreground">{isEntity ? 'KYB review uploads' : 'CIP review uploads'}</span>

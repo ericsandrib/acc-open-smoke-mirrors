@@ -55,7 +55,7 @@ export function AccountTypePickerDialog({ open, onOpenChange, onConfirm }: Accou
 
   const officeOptions = [...new Set(teamMembers.map((m) => m.officeCode))]
     .sort()
-    .map((code) => ({ value: code, label: `Office ${code}` }))
+    .map((code) => ({ value: code, label: `Product ${code}` }))
   const advisorOptions = teamMembers.map((m) => ({ value: m.id, label: m.name }))
 
   const handleReset = () => {
@@ -139,14 +139,14 @@ export function AccountTypePickerDialog({ open, onOpenChange, onConfirm }: Accou
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               <div className="space-y-1.5">
                 <Label>
-                  Office <span className="text-destructive">*</span>
+                  Product <span className="text-destructive">*</span>
                 </Label>
                 <Combobox
                   options={officeOptions}
                   value={officeCode}
                   onValueChange={setOfficeCode}
-                  placeholder="Search office..."
-                  emptyMessage="No offices found."
+                  placeholder="Search product..."
+                  emptyMessage="No products found."
                   dropdownClassName="max-h-40"
                 />
               </div>

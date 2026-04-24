@@ -1,4 +1,5 @@
 import type { ChildTask, WorkflowState } from '@/types/workflow'
+import { findParentTaskForChild, OPEN_ACCOUNTS_WITH_ANNUITY_FORM_KEY } from '@/utils/openAccountsTaskContext'
 import { mergeFeatureRequests } from '@/types/featureRequests'
 import {
   alternativeStrategyProgressWeight,
@@ -37,12 +38,8 @@ function applySubmittedCap(
   return progress
 }
 
-function findOpenAccountsTask(state: WorkflowState) {
-  return state.tasks.find((t) => t.formKey === 'open-accounts')
-}
-
 function getFundingLinesForAccount(state: WorkflowState, accountChildId: string): ChildTask[] {
-  const openAccountsTask = findOpenAccountsTask(state)
+  const openAccountsTask = findParentTaskForChild(state, accountChildId)
   if (!openAccountsTask?.children) return []
   return openAccountsTask.children.filter((c) => {
     if (c.childType !== 'funding-line') return false
@@ -54,7 +51,7 @@ function getFundingLinesForAccount(state: WorkflowState, accountChildId: string)
 }
 
 function getFeatureLinesForAccount(state: WorkflowState, accountChildId: string): ChildTask[] {
-  const openAccountsTask = findOpenAccountsTask(state)
+  const openAccountsTask = findParentTaskForChild(state, accountChildId)
   if (!openAccountsTask?.children) return []
   return openAccountsTask.children.filter((c) => {
     if (c.childType !== 'feature-service-line') return false
@@ -221,7 +218,8 @@ function progressDocuments(state: WorkflowState, accountChildId: string): { fill
   const docsData = (state.taskData[taskId] as Record<string, unknown> | undefined) ?? {}
   const childMeta = state.taskData[accountChildId] as Record<string, unknown> | undefined
   const registrationType = childMeta?.registrationType as RegistrationType | undefined
-  const openAccountsData = (state.taskData['open-accounts'] as Record<string, unknown> | undefined) ?? {}
+  const parent = findParentTaskForChild(state, accountChildId)
+  const openAccountsData = (state.taskData[parent?.id ?? 'open-accounts'] as Record<string, unknown> | undefined) ?? {}
   const localDocs = (docsData['child-local-docs'] as DocInstance[] | undefined) ?? []
 
   const ownersTaskId = `${accountChildId}-account-owners`
@@ -326,6 +324,10 @@ export function getAccountOpeningChildSubmissionIssues(
     return ['Unable to validate this account. Please re-open the account workflow and try again.']
   }
 
+  const parentOpenAccountsTask = findParentTaskForChild(state, accountChildId)
+  const kycEsignExternal =
+    parentOpenAccountsTask?.formKey === OPEN_ACCOUNTS_WITH_ANNUITY_FORM_KEY
+
   const ownersTaskId = `${accountChildId}-account-owners`
   const ownersData = (state.taskData[ownersTaskId] as Record<string, unknown> | undefined) ?? {}
   const owners = (ownersData.owners as { partyId?: string; type?: string }[] | undefined) ?? []
@@ -341,19 +343,23 @@ export function getAccountOpeningChildSubmissionIssues(
     issues.push(`Alternative strategy: ${msg}`)
   }
 
-  const { names } = getAccountOwnersMissingKyc(state, accountChildId)
-  if (names.length > 0) {
-    issues.push(`KYC required: complete identity verification for ${names.join(', ')}.`)
+  if (!kycEsignExternal) {
+    const { names } = getAccountOwnersMissingKyc(state, accountChildId)
+    if (names.length > 0) {
+      issues.push(`KYC required: complete identity verification for ${names.join(', ')}.`)
+    }
   }
 
-  const docsTaskId = `${accountChildId}-documents-review`
-  const docsData = (state.taskData[docsTaskId] as Record<string, unknown> | undefined) ?? {}
-  const executedEsignForms =
-    (docsData.esignExecutedForms as
-      | Array<{ id?: string; envelopeId?: string; formId?: string; label?: string; fileName?: string; executedAt?: string }>
-      | undefined) ?? []
-  if (executedEsignForms.length === 0) {
-    issues.push('Documents: send and complete at least one eSign envelope so signed forms appear in this account.')
+  if (!kycEsignExternal) {
+    const docsTaskId = `${accountChildId}-documents-review`
+    const docsData = (state.taskData[docsTaskId] as Record<string, unknown> | undefined) ?? {}
+    const executedEsignForms =
+      (docsData.esignExecutedForms as
+        | Array<{ id?: string; envelopeId?: string; formId?: string; label?: string; fileName?: string; executedAt?: string }>
+        | undefined) ?? []
+    if (executedEsignForms.length === 0) {
+      issues.push('Documents: send and complete at least one eSign envelope so signed forms appear in this account.')
+    }
   }
 
   return issues

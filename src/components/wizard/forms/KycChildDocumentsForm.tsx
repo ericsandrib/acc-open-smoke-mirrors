@@ -5,7 +5,11 @@ import {
   useAdvisorFormsEditable,
   useAdvisorResubmitEligible,
 } from '@/stores/workflowStore'
-import { FileUpload, type FileWithStatus } from '@/components/ui/file-upload'
+import { useMemo } from 'react'
+import {
+  DocumentUploadInstancesTable,
+  type DocumentUploadInstance,
+} from '@/components/wizard/forms/DocumentUploadInstancesTable'
 import { Lock, AlertTriangle, CheckCircle2 } from 'lucide-react'
 
 export function KycChildDocumentsForm() {
@@ -41,9 +45,46 @@ export function KycChildDocumentsForm() {
       hint: 'PDF, JPG, or PNG up to 10 MB',
     },
   ]
+  const assignmentOptions = useMemo(
+    () =>
+      state.relatedParties
+        .filter((p) => !p.isHidden && (p.type === 'household_member' || p.type === 'related_organization'))
+        .map((p) => ({
+          id: p.id,
+          name: `${p.name}${p.type === 'related_organization' ? ' (Legal entity)' : ' (Individual)'}`,
+        })),
+    [state.relatedParties],
+  )
+  const defaultAssignedTo = (childMeta.kycSubjectPartyId as string | undefined) ?? ''
+
+  const updateDocInstances = (docId: string, next: DocumentUploadInstance[]) => {
+    updateField(`doc-instances-${docId}`, next)
+    updateField(
+      `doc-${docId}`,
+      next
+        .filter((d) => Boolean(d.fileName))
+        .map((d) => ({ name: d.fileName!, assignedTo: d.assignedTo, subType: d.subType })),
+    )
+  }
+
+  const uploadForInstance = (docId: string, instanceId: string) => {
+    const input = document.createElement('input')
+    input.type = 'file'
+    input.accept = '.pdf,.jpg,.jpeg,.png'
+    input.onchange = (e) => {
+      const file = (e.target as HTMLInputElement).files?.[0]
+      if (!file) return
+      const instances = ((data[`doc-instances-${docId}`] as DocumentUploadInstance[] | undefined) ?? []).map((d) =>
+        d.id === instanceId ? { ...d, fileName: file.name } : d,
+      )
+      updateDocInstances(docId, instances)
+    }
+    input.click()
+  }
 
   return (
     <div className="space-y-4">
+      <div id="kyc-docs-overview" className="scroll-mt-16" />
       <div className="rounded-md border border-border bg-muted/20 px-3 py-2.5">
         <p className="text-xs text-muted-foreground">
           Documents are optional by default and only needed for step-up verification (e.g., registry mismatch, higher risk, or AML request).
@@ -81,26 +122,40 @@ export function KycChildDocumentsForm() {
         )
       )}
       {docs.map((doc) => {
-        const storedFiles = (data[`doc-${doc.id}`] as { name: string; size?: number }[] | undefined) ?? []
+        const instances = (data[`doc-instances-${doc.id}`] as DocumentUploadInstance[] | undefined) ?? []
+        const nextAssignees = assignmentOptions
 
         return (
-          <FileUpload
-            key={doc.id}
-            id={`kyc-${taskId}-${doc.id}`}
-            label={doc.label}
-            subtitle={doc.description}
-            hint={doc.hint}
-            initialFiles={storedFiles}
-            acceptedFileTypes={['.pdf', '.jpg', '.jpeg', '.png']}
-            disabled={isLocked}
-            onFilesChange={(files: FileWithStatus[]) => {
-              const meta = files.map((f) => ({
-                name: f.file.name,
-                size: f.file.size,
-              }))
-              updateField(`doc-${doc.id}`, meta)
-            }}
-          />
+          <div key={doc.id} id={`kyc-doc-${doc.id}`} className="scroll-mt-16">
+            <DocumentUploadInstancesTable
+              docLabel={doc.label}
+              docDescription={`${doc.description}. ${doc.hint}`}
+              instances={instances}
+              subTypes={[]}
+              assignees={nextAssignees}
+              lockAssignedWhenPresent={false}
+              disabled={isLocked}
+              emptyMessage="No documents added yet. Click “Add” to assign and upload."
+              onAdd={() =>
+                updateDocInstances(doc.id, [
+                  ...instances,
+                  {
+                    id: `kyc-doc-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+                    docTypeId: doc.id,
+                    assignedTo: defaultAssignedTo,
+                  },
+                ])
+              }
+              onRemove={(instanceId) => updateDocInstances(doc.id, instances.filter((i) => i.id !== instanceId))}
+              onUpload={(instanceId) => uploadForInstance(doc.id, instanceId)}
+              onUpdate={(instanceId, updates) =>
+                updateDocInstances(
+                  doc.id,
+                  instances.map((i) => (i.id === instanceId ? { ...i, ...updates } : i)),
+                )
+              }
+            />
+          </div>
         )
       })}
     </div>

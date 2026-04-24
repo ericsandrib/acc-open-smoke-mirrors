@@ -9,6 +9,7 @@ import {
 import { useWorkflow } from '@/stores/workflowStore'
 import type { ChildTask } from '@/types/workflow'
 import { getRegistrationTypesForOpenAccountsUploadSection } from '@/utils/openAccountsDocumentValidation'
+import { isOpenAccountsTask } from '@/utils/openAccountsTaskContext'
 import {
   getRegistrationDocuments,
   partitionRegistrationDocumentsByFulfillment,
@@ -182,8 +183,9 @@ export function EsignEnvelopeDrawer({
   const { state } = useWorkflow()
 
   const accountOpeningChildren = useMemo(() => {
-    const t = state.tasks.find((x) => x.formKey === 'open-accounts')
-    return (t?.children ?? []).filter((c: ChildTask) => c.childType === 'account-opening')
+    return state.tasks
+      .filter((x) => isOpenAccountsTask(x))
+      .flatMap((t) => (t.children ?? []).filter((c: ChildTask) => c.childType === 'account-opening'))
   }, [state.tasks])
 
   const childRegistrationTypesForFirm = useMemo<RegistrationType[]>(

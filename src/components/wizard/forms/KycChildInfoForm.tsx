@@ -7,13 +7,10 @@ import { Label } from '@/components/ui/label'
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui/select'
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from '@/components/ui/sheet'
 import { Lock, AlertTriangle, CheckCircle2, Plus, Trash2 } from 'lucide-react'
-import { AddHouseholdMemberSheet, householdRelationships, householdRoles } from './AddPartySheet'
+import { AddHouseholdMemberSheet } from './AddPartySheet'
 import { PartySlotCard } from './PartySlotCard'
 import { cn } from '@/lib/utils'
 
-const ID_TYPES = ['Driver\'s License', 'Passport', 'State ID', 'Military ID'] as const
-const SOURCE_OF_FUNDS = ['Employment Income', 'Inheritance', 'Investment Returns', 'Business Revenue', 'Savings', 'Gift', 'Other'] as const
-const CITIZENSHIP_OPTIONS = ['United States', 'Canada', 'United Kingdom', 'Australia', 'Other'] as const
 const sectionCls = 'text-sm font-semibold text-foreground'
 const fieldCls = 'text-xs font-medium text-foreground'
 
@@ -22,17 +19,12 @@ interface ValidationError {
   message: string
 }
 
-const KYC_ID_VERIFICATION_FIELDS = new Set(['idType', 'idNumber', 'idExpiration'])
-
 const REQUIRED_RULES: { field: string; label: string }[] = [
   { field: 'firstName', label: 'First name' },
   { field: 'lastName', label: 'Last name' },
   { field: 'dob', label: 'Date of birth' },
   { field: 'taxId', label: 'SSN / Tax ID' },
   { field: 'legalStreet', label: 'Legal address (street)' },
-  { field: 'idType', label: 'ID type' },
-  { field: 'idNumber', label: 'ID number' },
-  { field: 'idExpiration', label: 'ID expiration date' },
   { field: 'citizenship', label: 'Citizenship' },
   { field: 'sourceOfFunds', label: 'Source of funds' },
 ]
@@ -71,16 +63,11 @@ export function getKycValidationErrors(
     return entityErrors
   }
 
-  const optionalId = options?.optionalIdVerification === true
   const errors: ValidationError[] = []
   for (const rule of REQUIRED_RULES) {
-    if (optionalId && KYC_ID_VERIFICATION_FIELDS.has(rule.field)) continue
     if (!data[rule.field]) {
       errors.push({ field: rule.field, message: `${rule.label} is required` })
     }
-  }
-  if (data.idExpiration && new Date(data.idExpiration as string) < new Date()) {
-    errors.push({ field: 'idExpiration', message: 'ID document is expired' })
   }
   return errors
 }
@@ -470,12 +457,9 @@ export function KycChildInfoForm() {
   }, [isEntity, data, updateFields])
 
   const validationScrollNonce = data._validationScrollNonce as number | undefined
-  const idVerificationOptional = kycChildHasOptionalIdVerification(child)
-
   useEffect(() => {
     if (!submitAttempted || validationScrollNonce == null) return
     const errors = getKycValidationErrors(data, {
-      optionalIdVerification: idVerificationOptional,
       subjectType: isEntity ? 'entity' : 'individual',
     })
     if (errors.length === 0) return
@@ -484,7 +468,7 @@ export function KycChildInfoForm() {
     })
     // Intentionally omit `data`: only scroll when a new submit validation is triggered (nonce), not on every field edit.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [submitAttempted, validationScrollNonce, idVerificationOptional, isEntity])
+  }, [submitAttempted, validationScrollNonce, isEntity])
 
   const markTouched = useCallback((field: string) => {
     setTouched((prev) => {
@@ -503,10 +487,7 @@ export function KycChildInfoForm() {
   const isLocked = statusLocked && !advisorFormsEditable
   const isApproved = child.status === 'complete'
   const str = (key: string) => (data[key] as string) ?? ''
-  const mailingSame = str('mailingSameAsLegal') !== 'false'
-
   const allErrors = getKycValidationErrors(data, {
-    optionalIdVerification: idVerificationOptional,
     subjectType: isEntity ? 'entity' : 'individual',
   })
   const errorMap = new Map(allErrors.map((e) => [e.field, e.message]))
@@ -1289,9 +1270,9 @@ export function KycChildInfoForm() {
         <ValidationSummary errors={allErrors} position="top" />
       )}
 
-      {/* Personal Information */}
       <section className="space-y-3">
         <h4 className={sectionCls}>Personal Information</h4>
+        <p className="text-xs text-muted-foreground">Tell us a bit about yourself.</p>
         <div className="space-y-3">
           <div className="space-y-1.5" data-field="firstName">
             <Label className={fieldCls}>First name<RequiredStar /></Label>
@@ -1304,10 +1285,6 @@ export function KycChildInfoForm() {
             />
             {showError('firstName') && <InlineError message={errorMap.get('firstName')!} />}
           </div>
-          <div className="space-y-1.5">
-            <Label className={fieldCls}>Middle name</Label>
-            <Input value={str('middleName')} onChange={(e) => updateField('middleName', e.target.value)} disabled={isLocked} />
-          </div>
           <div className="space-y-1.5" data-field="lastName">
             <Label className={fieldCls}>Last name<RequiredStar /></Label>
             <Input
@@ -1318,18 +1295,6 @@ export function KycChildInfoForm() {
               className={inputErrorCls('lastName')}
             />
             {showError('lastName') && <InlineError message={errorMap.get('lastName')!} />}
-          </div>
-          <div className="space-y-1.5">
-            <Label className={fieldCls}>Suffix</Label>
-            <Select value={str('suffix') || '__none__'} onValueChange={(v) => updateField('suffix', v === '__none__' ? '' : v)} disabled={isLocked}>
-              <SelectTrigger><SelectValue placeholder="None" /></SelectTrigger>
-              <SelectContent>
-                <SelectItem value="__none__">None</SelectItem>
-                {(['Jr.', 'Sr.', 'II', 'III', 'IV', 'Esq.'] as const).map((x) => (
-                  <SelectItem key={x} value={x}>{x}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
           </div>
           <div className="space-y-1.5" data-field="dob">
             <Label className={fieldCls}>Date of birth<RequiredStar /></Label>
@@ -1344,46 +1309,6 @@ export function KycChildInfoForm() {
             />
             {showError('dob') && <InlineError message={errorMap.get('dob')!} />}
           </div>
-          <div className="space-y-1.5" data-field="taxId">
-            <Label className={fieldCls}>SSN / Tax ID<RequiredStar /></Label>
-            <SensitiveTaxIdInput
-              value={str('taxId')}
-              onChange={(e) => updateField('taxId', e.target.value)}
-              onBlur={() => markTouched('taxId')}
-              placeholder="XXX-XX-XXXX"
-              disabled={isLocked}
-              className={inputErrorCls('taxId')}
-            />
-            {showError('taxId') && <InlineError message={errorMap.get('taxId')!} />}
-          </div>
-          <div className="space-y-1.5" data-field="citizenship">
-            <Label className={fieldCls}>Citizenship<RequiredStar /></Label>
-            <Select value={str('citizenship') || undefined} onValueChange={(v) => { updateField('citizenship', v); markTouched('citizenship') }} disabled={isLocked}>
-              <SelectTrigger className={inputErrorCls('citizenship')}><SelectValue placeholder="Select" /></SelectTrigger>
-              <SelectContent>
-                {CITIZENSHIP_OPTIONS.map((c) => <SelectItem key={c} value={c}>{c}</SelectItem>)}
-              </SelectContent>
-            </Select>
-            {showError('citizenship') && <InlineError message={errorMap.get('citizenship')!} />}
-          </div>
-          <div className="space-y-1.5">
-            <Label className={fieldCls}>Relationship</Label>
-            <Select value={str('relationship') || undefined} onValueChange={(v) => updateField('relationship', v)} disabled={isLocked}>
-              <SelectTrigger><SelectValue placeholder="Select" /></SelectTrigger>
-              <SelectContent>
-                {householdRelationships.map((r) => <SelectItem key={r} value={r}>{r}</SelectItem>)}
-              </SelectContent>
-            </Select>
-          </div>
-          <div className="space-y-1.5">
-            <Label className={fieldCls}>Role</Label>
-            <Select value={str('role') || undefined} onValueChange={(v) => updateField('role', v)} disabled={isLocked}>
-              <SelectTrigger><SelectValue placeholder="Select" /></SelectTrigger>
-              <SelectContent>
-                {householdRoles.map((r) => <SelectItem key={r} value={r}>{r}</SelectItem>)}
-              </SelectContent>
-            </Select>
-          </div>
         </div>
       </section>
 
@@ -1391,8 +1316,10 @@ export function KycChildInfoForm() {
 
       {/* Address */}
       <section className="space-y-3">
-        <h4 className={sectionCls}>Address</h4>
-        <p className="text-xs text-muted-foreground font-medium">Legal (residential) address</p>
+        <h4 className={sectionCls}>Home Address</h4>
+        <p className="text-xs text-muted-foreground">
+          Where do you currently live? This must be your primary residence.
+        </p>
         <div className="space-y-3">
           <div className="space-y-1.5" data-field="legalStreet">
             <Label className={fieldCls}>Street<RequiredStar /></Label>
@@ -1427,161 +1354,27 @@ export function KycChildInfoForm() {
           </div>
         </div>
 
-        <div className="flex items-center gap-2 pt-1">
-          <input
-            type="checkbox"
-            id="kyc-mailing-same"
-            checked={mailingSame}
-            onChange={(e) => updateField('mailingSameAsLegal', e.target.checked ? 'true' : 'false')}
-            className="rounded border-border"
-            disabled={isLocked}
-          />
-          <Label htmlFor="kyc-mailing-same" className="text-sm font-normal cursor-pointer">
-            Mailing address is the same as legal address
-          </Label>
-        </div>
-
-        {!mailingSame && (
-          <div className="space-y-3 rounded-md border border-border p-3 bg-muted/20">
-            <p className="text-xs text-muted-foreground font-medium">Mailing address</p>
-            <div className="space-y-1.5">
-              <Label className={fieldCls}>Street</Label>
-              <Input value={str('mailingStreet')} onChange={(e) => updateField('mailingStreet', e.target.value)} disabled={isLocked} />
-            </div>
-            <div className="space-y-1.5">
-              <Label className={fieldCls}>City</Label>
-              <Input value={str('mailingCity')} onChange={(e) => updateField('mailingCity', e.target.value)} disabled={isLocked} />
-            </div>
-            <div className="space-y-1.5">
-              <Label className={fieldCls}>State</Label>
-              <Input value={str('mailingState')} onChange={(e) => updateField('mailingState', e.target.value)} disabled={isLocked} />
-            </div>
-            <div className="space-y-1.5">
-              <Label className={fieldCls}>ZIP</Label>
-              <Input value={str('mailingZip')} onChange={(e) => updateField('mailingZip', e.target.value)} disabled={isLocked} />
-            </div>
-            <div className="space-y-1.5">
-              <Label className={fieldCls}>Country</Label>
-              <Input value={str('mailingCountry')} onChange={(e) => updateField('mailingCountry', e.target.value)} disabled={isLocked} />
-            </div>
-          </div>
-        )}
-
-        <div className="space-y-1.5">
-          <Label className={fieldCls}>Phone</Label>
-          <Input type="tel" value={str('phone')} onChange={(e) => updateField('phone', e.target.value)} disabled={isLocked} />
-        </div>
-        <div className="space-y-1.5">
-          <Label className={fieldCls}>Email</Label>
-          <Input type="email" value={str('email')} onChange={(e) => updateField('email', e.target.value)} disabled={isLocked} />
-        </div>
       </section>
 
       <hr className="border-border" />
 
-      {/* ID Verification */}
       <section className="space-y-3">
-        <div>
-          <h4 className={sectionCls}>ID Verification</h4>
-          {idVerificationOptional && (
-            <p className="mt-1 text-xs text-muted-foreground">
-              Optional for this member — add ID details when available.
-            </p>
-          )}
-        </div>
+        <h4 className={sectionCls}>Identity Verification</h4>
+        <p className="text-xs text-muted-foreground">
+          We use this information to verify your identity securely.
+        </p>
         <div className="space-y-3">
-          <div className="space-y-1.5" data-field="idType">
-            <Label className={fieldCls}>ID type{idVerificationOptional ? ' (optional)' : <RequiredStar />}</Label>
-            <Select value={str('idType') || undefined} onValueChange={(v) => { updateField('idType', v); markTouched('idType') }} disabled={isLocked}>
-              <SelectTrigger className={inputErrorCls('idType')}><SelectValue placeholder="Select" /></SelectTrigger>
-              <SelectContent>
-                {ID_TYPES.map((t) => <SelectItem key={t} value={t}>{t}</SelectItem>)}
-              </SelectContent>
-            </Select>
-            {showError('idType') && <InlineError message={errorMap.get('idType')!} />}
-          </div>
-          <div className="space-y-1.5" data-field="idNumber">
-            <Label className={fieldCls}>ID number{idVerificationOptional ? ' (optional)' : <RequiredStar />}</Label>
-            <Input
-              value={str('idNumber')}
-              onChange={(e) => updateField('idNumber', e.target.value)}
-              onBlur={() => markTouched('idNumber')}
-              placeholder="ID number"
+          <div className="space-y-1.5" data-field="taxId">
+            <Label className={fieldCls}>SSN / Tax ID<RequiredStar /></Label>
+            <SensitiveTaxIdInput
+              value={str('taxId')}
+              onChange={(e) => updateField('taxId', e.target.value)}
+              onBlur={() => markTouched('taxId')}
+              placeholder="XXX-XX-XXXX"
               disabled={isLocked}
-              className={inputErrorCls('idNumber')}
+              className={inputErrorCls('taxId')}
             />
-            {showError('idNumber') && <InlineError message={errorMap.get('idNumber')!} />}
-          </div>
-          <div className="space-y-1.5">
-            <Label className={fieldCls}>Issuing state</Label>
-            <Input value={str('idState')} onChange={(e) => updateField('idState', e.target.value)} placeholder="e.g. California" disabled={isLocked} />
-          </div>
-          <div className="space-y-1.5" data-field="idExpiration">
-            <Label className={fieldCls}>Expiration date{idVerificationOptional ? ' (optional)' : <RequiredStar />}</Label>
-            <Input
-              type="date"
-              value={str('idExpiration')}
-              onChange={(e) => updateField('idExpiration', e.target.value)}
-              onBlur={() => markTouched('idExpiration')}
-              disabled={isLocked}
-              className={inputErrorCls('idExpiration')}
-            />
-            {showError('idExpiration') && <InlineError message={errorMap.get('idExpiration')!} />}
-          </div>
-        </div>
-      </section>
-
-      <hr className="border-border" />
-
-      {/* Employment */}
-      <section className="space-y-3">
-        <h4 className={sectionCls}>Employment</h4>
-        <div className="space-y-3">
-          <div className="space-y-1.5">
-            <Label className={fieldCls}>Employment status</Label>
-            <Select value={str('employmentStatus') || undefined} onValueChange={(v) => updateField('employmentStatus', v)} disabled={isLocked}>
-              <SelectTrigger><SelectValue placeholder="Select" /></SelectTrigger>
-              <SelectContent>
-                {(['Employed', 'Self-employed', 'Retired', 'Unemployed'] as const).map((x) => (
-                  <SelectItem key={x} value={x}>{x}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-          <div className="space-y-1.5">
-            <Label className={fieldCls}>Employer name</Label>
-            <Input value={str('employerName')} onChange={(e) => updateField('employerName', e.target.value)} disabled={isLocked} />
-          </div>
-          <div className="space-y-1.5">
-            <Label className={fieldCls}>Occupation</Label>
-            <Input value={str('occupation')} onChange={(e) => updateField('occupation', e.target.value)} disabled={isLocked} />
-          </div>
-          <div className="space-y-1.5">
-            <Label className={fieldCls}>Industry</Label>
-            <Input value={str('industry')} onChange={(e) => updateField('industry', e.target.value)} disabled={isLocked} />
-          </div>
-        </div>
-      </section>
-
-      <hr className="border-border" />
-
-      {/* Source of Funds */}
-      <section className="space-y-3">
-        <h4 className={sectionCls}>Source of Funds</h4>
-        <div className="space-y-3">
-          <div className="space-y-1.5" data-field="sourceOfFunds">
-            <Label className={fieldCls}>Primary source of funds<RequiredStar /></Label>
-            <Select value={str('sourceOfFunds') || undefined} onValueChange={(v) => { updateField('sourceOfFunds', v); markTouched('sourceOfFunds') }} disabled={isLocked}>
-              <SelectTrigger className={inputErrorCls('sourceOfFunds')}><SelectValue placeholder="Select" /></SelectTrigger>
-              <SelectContent>
-                {SOURCE_OF_FUNDS.map((s) => <SelectItem key={s} value={s}>{s}</SelectItem>)}
-              </SelectContent>
-            </Select>
-            {showError('sourceOfFunds') && <InlineError message={errorMap.get('sourceOfFunds')!} />}
-          </div>
-          <div className="space-y-1.5">
-            <Label className={fieldCls}>Additional details</Label>
-            <Input value={str('sourceOfFundsDetails')} onChange={(e) => updateField('sourceOfFundsDetails', e.target.value)} placeholder="Provide additional context if needed" disabled={isLocked} />
+            {showError('taxId') && <InlineError message={errorMap.get('taxId')!} />}
           </div>
         </div>
       </section>

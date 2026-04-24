@@ -9,11 +9,12 @@ import { ChildActionKebabMenu } from '@/components/wizard/ChildActionKebabMenu'
 import { ChildActionTimelineSheet } from '@/components/wizard/ChildActionTimelineSheet'
 import { childStatusConfig, deriveChildDisplayStatus } from '@/utils/childStatusDisplay'
 import type { ChildTask } from '@/types/workflow'
+import { getAllOpenAccountsTasks } from '@/utils/openAccountsTaskContext'
 
 export function KycForm() {
   const { state, dispatch } = useWorkflow()
   /** Default onboarding has no standalone KYC task — spawn/list under Open Accounts like `OpenAccountsForm`. */
-  const openAccountsTask = state.tasks.find((t) => t.formKey === 'open-accounts')
+  const openAccountsTask = getAllOpenAccountsTasks(state)[0]
   const kycParentTask = state.tasks.find((t) => t.formKey === 'kyc') ?? openAccountsTask
   const children = kycParentTask?.children?.filter((c) => c.childType === 'kyc') ?? []
 

@@ -2,6 +2,7 @@ import { useWorkflow, useChildActionContext, useAdvisorResubmitEligible } from '
 import { cn } from '@/lib/utils'
 import { Badge } from '@/components/ui/badge'
 import { ArrowLeft } from 'lucide-react'
+import { useEffect, useState } from 'react'
 import {
   Tooltip,
   TooltipContent,
@@ -103,16 +104,49 @@ function useChildOverallStatus(childId: string): ChildDisplayStatus {
   return deriveChildDisplayStatus(child?.status ?? 'not_started', state.childReviewsByChildId?.[childId])
 }
 
-function backLabelForParent(formKey: string | undefined): string {
+function getSectionLinks(formKey: string): Array<{ id: string; label: string }> {
   switch (formKey) {
-    case 'open-accounts':
-      return 'Back to Open Accounts'
-    case 'kyc':
-    case 'kyc-review':
-      return 'Back to KYC Review'
+    case 'acct-child-account-owners':
+      return [
+        { id: 'acct-owners', label: 'Owners & Participants' },
+        { id: 'acct-beneficiaries', label: 'Beneficiaries' },
+        { id: 'acct-info', label: 'Account Information' },
+        { id: 'acct-features', label: 'Investment Elections' },
+      ]
+    case 'acct-child-documents-review':
+      return [
+        { id: 'acct-docs-forms', label: 'Forms for This Account' },
+        { id: 'acct-docs-client-upload', label: 'Client-Upload Documents' },
+        { id: 'acct-docs-notes', label: 'Exceptions / Notes' },
+      ]
+    case 'kyc-child-documents':
+      return [
+        { id: 'kyc-docs-overview', label: 'Overview' },
+        { id: 'kyc-doc-gov-id', label: 'Government ID / Formation' },
+        { id: 'kyc-doc-supporting-docs', label: 'Supporting Documents' },
+      ]
     default:
-      return 'Back to task'
+      return []
   }
+}
+
+function scrollSectionIntoNearestContainer(sectionId: string) {
+  const el = document.getElementById(sectionId)
+  if (!el) return
+
+  let parent: HTMLElement | null = el.parentElement
+  while (parent) {
+    const style = window.getComputedStyle(parent)
+    const scrollableY = style.overflowY === 'auto' || style.overflowY === 'scroll'
+    if (scrollableY && parent.scrollHeight > parent.clientHeight) {
+      const top = el.getBoundingClientRect().top - parent.getBoundingClientRect().top + parent.scrollTop - 12
+      parent.scrollTo({ top: Math.max(0, top), behavior: 'smooth' })
+      return
+    }
+    parent = parent.parentElement
+  }
+
+  el.scrollIntoView({ behavior: 'smooth', block: 'nearest' })
 }
 
 export function ChildActionSidebar() {
@@ -125,7 +159,8 @@ export function ChildActionSidebar() {
 
   if (!ctx) return null
 
-  const { child, config, subTaskIndex, parentTask } = ctx
+  const { child, config, subTaskIndex } = ctx
+  const [activeSectionId, setActiveSectionId] = useState<string | null>(null)
   /** Match account opening: no "1." prefixes on sub-task labels (KYC has a single step today). */
   const showSubTaskNumbers =
     child.childType !== 'account-opening' && child.childType !== 'kyc'
@@ -137,20 +172,26 @@ export function ChildActionSidebar() {
   // (e.g. Account & owners → Documents).
   const showSingleReviewStep = child.childType === 'kyc' && isHoKycView
   const singleReviewStepLabel = 'Document Review'
+  const activeSubTaskSections = getSectionLinks(config.subTasks[subTaskIndex]?.formKey ?? '')
+  const hasActiveSection = !!activeSectionId && activeSubTaskSections.some((s) => s.id === activeSectionId)
+
+  useEffect(() => {
+    setActiveSectionId(null)
+  }, [child.id, subTaskIndex])
 
   return (
     <TooltipProvider delayDuration={300}>
       <nav className="w-64 border-r border-border bg-sidebar-background p-2 overflow-y-auto flex flex-col">
         <div className="px-3 pt-2 pb-4 mb-2 border-b border-border">
-          <button
-            onClick={() => dispatch({ type: 'EXIT_CHILD_ACTION' })}
-            className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors mb-3"
-          >
-            <ArrowLeft className="h-3 w-3" />
-            {state.childActionResume
-              ? resumeDrillInBackLabel(state.childActionResume.subTaskIndex)
-              : backLabelForParent(parentTask?.formKey)}
-          </button>
+          {state.childActionResume ? (
+            <button
+              onClick={() => dispatch({ type: 'EXIT_CHILD_ACTION' })}
+              className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors mb-3"
+            >
+              <ArrowLeft className="h-3 w-3" />
+              {resumeDrillInBackLabel(state.childActionResume.subTaskIndex)}
+            </button>
+          ) : null}
           <h2 className="text-sm font-semibold text-foreground">
             {child.name}
           </h2>
@@ -171,6 +212,7 @@ export function ChildActionSidebar() {
           ) : (
             config.subTasks.map((subTask, idx) => {
               const subTaskId = `${child.id}-${subTask.suffix}`
+              const sectionLinks = getSectionLinks(subTask.formKey)
               return (
                 <li key={subTask.suffix}>
                   <button
@@ -178,7 +220,9 @@ export function ChildActionSidebar() {
                     className={cn(
                       'w-full text-left px-3 py-2 rounded-md text-sm flex items-center justify-between gap-2 transition-colors',
                       idx === subTaskIndex
-                        ? 'bg-accent text-accent-foreground font-medium'
+                        ? hasActiveSection
+                          ? 'bg-muted/40 text-foreground font-medium'
+                          : 'bg-accent text-accent-foreground font-medium'
                         : 'hover:bg-muted text-foreground'
                     )}
                   >
@@ -194,6 +238,29 @@ export function ChildActionSidebar() {
                       subTaskSuffix={child.childType === 'account-opening' ? subTask.suffix : undefined}
                     />
                   </button>
+                  {idx === subTaskIndex && sectionLinks.length > 0 && (
+                    <ul className="mt-1 ml-4 space-y-1">
+                      {sectionLinks.map((s) => (
+                        <li key={s.id}>
+                          <button
+                            type="button"
+                            className={cn(
+                              'w-full text-left text-xs px-2 py-1 rounded-md transition-colors',
+                              activeSectionId === s.id
+                                ? 'bg-accent text-accent-foreground font-medium'
+                                : 'text-muted-foreground hover:text-foreground hover:bg-muted',
+                            )}
+                            onClick={() => {
+                              setActiveSectionId(s.id)
+                              scrollSectionIntoNearestContainer(s.id)
+                            }}
+                          >
+                            {s.label}
+                          </button>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
                 </li>
               )
             })

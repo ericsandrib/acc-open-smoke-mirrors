@@ -317,11 +317,11 @@ function AdvisorViewBanner() {
         <Lock className="h-5 w-5 text-blue-600 dark:text-blue-400 mt-0.5 shrink-0" />
         <div className="space-y-0.5">
           <p className="text-sm font-medium text-blue-900 dark:text-blue-100">
-            {isKyc ? 'Submitted for document review' : 'Read-Only — Under Home Office Review'}
+            {isKyc ? 'Conditionally submitted — pending requested documents' : 'Read-Only — Under Home Office Review'}
           </p>
           <p className="text-xs text-blue-800/80 dark:text-blue-200/70">
             {isKyc
-              ? 'Your submission has been sent for document review. AML screening is in progress. You will be notified when the review is complete.'
+              ? 'Your KYC submission is in review. Documents may be requested if provider matching is insufficient or additional information is needed.'
               : 'This submission is being reviewed by the home office team. All fields are locked until the review is complete.'}
           </p>
           {progressParts.length > 0 && (
@@ -402,7 +402,9 @@ export function ChildActionContent() {
             </div>
           </div>
         )}
-        <p className="text-sm text-muted-foreground mb-1">{child.name}</p>
+        {child.childType !== 'kyc' && child.childType !== 'account-opening' && (
+          <p className="text-sm text-muted-foreground mb-1">{child.name}</p>
+        )}
         {isHoTeamAccountOpening && amlFlagged && (
           <div className="flex items-center gap-3 mb-2">
             <Badge variant="outline" className="text-red-700 border-red-200 bg-red-50 dark:text-red-200 dark:border-red-800 dark:bg-red-950/40 text-[10px]">
@@ -410,7 +412,7 @@ export function ChildActionContent() {
             </Badge>
           </div>
         )}
-        <h2 className="text-3xl font-semibold text-foreground mb-6">
+        <h2 className="text-3xl font-semibold text-foreground mb-2">
           {getSubTaskDisplayTitle(child.childType, currentSubTask, state.demoViewMode)}
         </h2>
         {description && (

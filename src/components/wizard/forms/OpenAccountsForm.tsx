@@ -27,21 +27,11 @@ import {
 } from '@/utils/registrationDocuments'
 import type { RegistrationType } from '@/utils/registrationDocuments'
 import {
-  Select,
-  SelectTrigger,
-  SelectValue,
-  SelectContent,
-  SelectItem,
-} from '@/components/ui/select'
-import {
   Minus,
   Plus,
   Shield,
   Wallet,
   FileSignature,
-  Upload,
-  X,
-  Paperclip,
   Trash2,
   Download,
   MoreVertical,
@@ -62,10 +52,15 @@ import { EsignEnvelopeDrawer } from '@/components/wizard/forms/EsignEnvelopeDraw
 import { getRegistrationTypesForOpenAccountsUploadSection } from '@/utils/openAccountsDocumentValidation'
 import { getAccountOwnersMissingKyc } from '@/utils/accountOpeningOwnerKyc'
 import { getAccountOpeningChildSubmissionIssues } from '@/utils/accountOpeningChildProgress'
+import {
+  getRelevantOpenAccountsTask,
+  isAnnuityExternalPlatformOpenAccountsTask,
+} from '@/utils/openAccountsTaskContext'
 import { mergeFeatureRequests } from '@/types/featureRequests'
 import { getEsignEnvelopeStatus, ESIGN_ENVELOPE_STATUS_LABELS } from '@/utils/esignEnvelopeStatus'
 import type { EsignEnvelopeHistoryEvent, EsignEnvelopeStatus, EsignSignerStatus } from '@/types/esignEnvelope'
 import { CompleteAccountOpeningConfirmModal } from '@/components/wizard/WizardFooter'
+import { DocumentUploadInstancesTable } from './DocumentUploadInstancesTable'
 import {
   Dialog,
   DialogContent,
@@ -170,7 +165,10 @@ function EnvelopeKebabMenu({
 
 export function OpenAccountsForm() {
   const { state, dispatch } = useWorkflow()
-  const { data, updateField } = useTaskData('open-accounts')
+  const openAccountsTask = getRelevantOpenAccountsTask(state)
+  const openAccountsTaskId = openAccountsTask?.id ?? 'open-accounts'
+  const externalAnnuityPlatform = isAnnuityExternalPlatformOpenAccountsTask(openAccountsTask)
+  const { data, updateField } = useTaskData(openAccountsTaskId)
   const [pickerOpen, setPickerOpen] = useState(false)
   const [timelineChild, setTimelineChild] = useState<ChildTask | null>(null)
   const [envelopeDrawerOpen, setEnvelopeDrawerOpen] = useState(false)
@@ -183,8 +181,9 @@ export function OpenAccountsForm() {
   /** Bumps when the drawer opens so the sheet remounts with fresh local state from `envelopeDraft`. */
   const [envelopeDrawerMountKey, setEnvelopeDrawerMountKey] = useState(0)
 
-  const openAccountsTask = state.tasks.find((t) => t.formKey === 'open-accounts')
-  const kycParentTask = state.tasks.find((t) => t.formKey === 'kyc') ?? openAccountsTask
+  const kycParentTask = externalAnnuityPlatform
+    ? state.tasks.find((t) => t.formKey === 'kyc')
+    : (state.tasks.find((t) => t.formKey === 'kyc') ?? openAccountsTask)
   const kycChildren = kycParentTask?.children?.filter((c) => c.childType === 'kyc') ?? []
   const [kycAddSheetOpen, setKycAddSheetOpen] = useState(false)
   const [kycTimelineChild, setKycTimelineChild] = useState<ChildTask | null>(null)
@@ -623,7 +622,7 @@ export function OpenAccountsForm() {
 
   return (
     <div className="space-y-12">
-      <section>
+      <section id="oa-accounts" className="scroll-mt-16">
         <div className="mb-4">
           <h3 className="text-base font-semibold">
             Accounts to be Opened
@@ -750,14 +749,23 @@ export function OpenAccountsForm() {
       </section>
 
       {/* Section 4: Required Documents */}
-      <section>
+      <section id="oa-documents" className="scroll-mt-16">
         <div className="mb-4">
           <h3 className="text-base font-semibold">
             Required Documents
           </h3>
           <p className="text-base text-muted-foreground">
-            Client file uploads (for example ID or trust documents) go here. Firm and custodian forms are configured under{' '}
-            <span className="font-medium text-foreground">eSign envelopes</span> below—not in this section.
+            {externalAnnuityPlatform ? (
+              <>
+                Client file uploads (for example ID or trust documents) go here. Firm and custodian forms for this path
+                are completed in your external platform—not in this demo.
+              </>
+            ) : (
+              <>
+                Client file uploads (for example ID or trust documents) go here. Firm and custodian forms are configured under{' '}
+                <span className="font-medium text-foreground">eSign envelopes</span> below—not in this section.
+              </>
+            )}
           </p>
         </div>
         {accountOpeningChildren.length > 0 && uploadDocs.length > 0 ? (
@@ -818,141 +826,26 @@ export function OpenAccountsForm() {
               const removeInstance = (instanceId: string) => {
                 updateInstances(instances.filter((i) => i.id !== instanceId))
               }
+              const subTypes = getDocSubTypes(doc.id)
+              const assigneeParties =
+                doc.id === TRUST_VERIFICATION_DOC_ID
+                  ? trustVerificationAssigneeParties
+                  : householdMembers
 
               return (
-                <div key={doc.id} className="rounded-lg border border-border overflow-hidden">
-                  <div className="bg-muted/50 px-4 py-2.5 border-b border-border flex items-center justify-between">
-                    <div>
-                      <p className="text-sm font-medium text-foreground">{doc.label}</p>
-                      <p className="text-xs text-muted-foreground">{doc.description}</p>
-                    </div>
-                    <Button variant="ghost" size="sm" className="h-7 text-xs gap-1" onClick={addInstance}>
-                      <Plus className="h-3 w-3" />
-                      Add
-                    </Button>
-                  </div>
-
-                  {instances.length > 0 ? (
-                    <table className="w-full text-sm table-fixed">
-                      <thead>
-                        <tr className="border-b border-border bg-muted/20">
-                          <th className="text-left font-medium text-muted-foreground px-4 py-2 text-xs w-[36%]">
-                            Specification
-                          </th>
-                          <th className="text-left font-medium text-muted-foreground px-4 py-2 text-xs w-[11rem] max-w-[11rem]">
-                            Assigned To
-                          </th>
-                          <th className="text-left font-medium text-muted-foreground px-4 py-2 text-xs">File</th>
-                          <th className="w-[40px]" />
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {instances.map((inst, idx) => {
-                          const memberName = state.relatedParties.find((m) => m.id === inst.assignedTo)?.name
-                          const subTypes = getDocSubTypes(doc.id)
-                          const assigneeParties =
-                            doc.id === TRUST_VERIFICATION_DOC_ID
-                              ? trustVerificationAssigneeParties
-                              : householdMembers
-                          return (
-                            <tr key={inst.id} className={idx < instances.length - 1 ? 'border-b border-border' : ''}>
-                              <td className="px-4 py-2.5 min-w-0 align-top w-[36%] max-w-[36%] overflow-hidden">
-                                {subTypes.length > 0 ? (
-                                  <Select
-                                    value={inst.subType ?? ''}
-                                    onValueChange={(v) => updateInstance(inst.id, { subType: v })}
-                                  >
-                                    <SelectTrigger className="h-8 text-xs w-full max-w-full min-w-0">
-                                      <SelectValue placeholder="Select type..." />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                      {subTypes.map((st) => (
-                                        <SelectItem key={st.value} value={st.value}>
-                                          {st.label}
-                                        </SelectItem>
-                                      ))}
-                                    </SelectContent>
-                                  </Select>
-                                ) : (
-                                  <div className="flex min-w-0 max-w-full items-center h-8 px-3 rounded-md border border-border bg-muted/30">
-                                    <span className="text-xs text-foreground truncate min-w-0" title={doc.label}>
-                                      {doc.label}
-                                    </span>
-                                  </div>
-                                )}
-                              </td>
-                              <td className="px-4 py-2.5 w-[11rem] max-w-[11rem] align-top">
-                                {inst.assignedTo && memberName ? (
-                                  <div className="flex min-w-0 items-center gap-1.5 h-8 px-3 rounded-md border border-border bg-muted/30">
-                                    <span className="text-xs text-foreground truncate min-w-0" title={memberName}>
-                                      {memberName}
-                                    </span>
-                                  </div>
-                                ) : (
-                                  <Select
-                                    value={inst.assignedTo}
-                                    onValueChange={(v) => updateInstance(inst.id, { assignedTo: v })}
-                                  >
-                                    <SelectTrigger className="h-8 text-xs w-full max-w-full min-w-0">
-                                      <SelectValue placeholder="Assign to..." />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                      {assigneeParties.map((member) => (
-                                        <SelectItem key={member.id} value={member.id}>
-                                          {member.name}
-                                        </SelectItem>
-                                      ))}
-                                    </SelectContent>
-                                  </Select>
-                                )}
-                              </td>
-                              <td className="px-4 py-2.5">
-                                {inst.fileName ? (
-                                  <div className="flex items-center gap-2">
-                                    <Paperclip className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
-                                    <span className="text-xs text-foreground truncate max-w-[180px]">{inst.fileName}</span>
-                                    <button
-                                      type="button"
-                                      onClick={() => updateInstance(inst.id, { fileName: undefined })}
-                                      className="text-muted-foreground hover:text-destructive shrink-0"
-                                    >
-                                      <X className="h-3 w-3" />
-                                    </button>
-                                  </div>
-                                ) : (
-                                  <Button
-                                    variant="ghost"
-                                    size="sm"
-                                    className="h-7 text-xs gap-1.5 text-muted-foreground"
-                                    onClick={() => handleFileSelect(inst.id)}
-                                  >
-                                    <Upload className="h-3 w-3" />
-                                    Upload
-                                  </Button>
-                                )}
-                              </td>
-                              <td className="px-2 py-2.5">
-                                <button
-                                  type="button"
-                                  onClick={() => removeInstance(inst.id)}
-                                  className="text-muted-foreground hover:text-destructive p-1"
-                                >
-                                  <Trash2 className="h-3.5 w-3.5" />
-                                </button>
-                              </td>
-                            </tr>
-                          )
-                        })}
-                      </tbody>
-                    </table>
-                  ) : (
-                    <div className="px-4 py-3 text-center">
-                      <p className="text-xs text-muted-foreground">
-                        No documents added yet. Click &ldquo;Add&rdquo; to upload and assign to a member.
-                      </p>
-                    </div>
-                  )}
-                </div>
+                <DocumentUploadInstancesTable
+                  key={doc.id}
+                  docLabel={doc.label}
+                  docDescription={doc.description}
+                  instances={instances}
+                  subTypes={subTypes}
+                  assignees={assigneeParties.map((p) => ({ id: p.id, name: p.name }))}
+                  emptyMessage="No documents added yet. Click “Add” to upload and assign to a member."
+                  onAdd={addInstance}
+                  onRemove={removeInstance}
+                  onUpload={handleFileSelect}
+                  onUpdate={updateInstance}
+                />
               )
             })}
             </div>
@@ -962,14 +855,17 @@ export function OpenAccountsForm() {
             <p className="text-sm text-muted-foreground">
               {accountOpeningChildren.length === 0
                 ? 'Add accounts above to see required documents.'
-                : 'No client uploads required for these accounts. Use eSign envelopes below for firm and custodian forms.'}
+                : externalAnnuityPlatform
+                  ? 'No client uploads required for these accounts. Use your external platform for firm and custodian forms.'
+                  : 'No client uploads required for these accounts. Use eSign envelopes below for firm and custodian forms.'}
             </p>
           </div>
         )}
       </section>
 
-      {/* KYC Verification */}
-      <section>
+      {/* KYC Verification — hidden on annuity path (KYC in external platform) */}
+      {!externalAnnuityPlatform ? (
+      <section id="oa-kyc" className="scroll-mt-16">
         <div className="mb-4">
           <h3 className="text-base font-semibold">KYC Verification</h3>
           <p className="text-base text-muted-foreground">
@@ -1206,12 +1102,15 @@ export function OpenAccountsForm() {
           child={kycTimelineChild}
         />
       </section>
+      ) : null}
 
-      {/* eSign envelopes */}
-      <section>
+      {!externalAnnuityPlatform ? (
+      <>
+      {/* Envelopes */}
+      <section id="oa-esign" className="scroll-mt-16">
         <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
           <div>
-            <h4 className="text-sm font-semibold text-foreground">eSign Envelopes</h4>
+            <h4 className="text-sm font-semibold text-foreground">Envelopes</h4>
             <p className="text-sm text-muted-foreground mt-1">
               Create one or more signing envelopes for this application. Required firm and custodian forms are grouped by
               account number. When you create or edit an envelope, you can view executed PDFs; wet-signed uploads are
@@ -1362,6 +1261,8 @@ export function OpenAccountsForm() {
           })()}
         </DialogContent>
       </Dialog>
+      </>
+      ) : null}
       {submitChildConfirmOpen && (
         <CompleteAccountOpeningConfirmModal
           mode="submit-children"

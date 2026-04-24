@@ -1,5 +1,6 @@
 import type { RelatedParty, WorkflowState } from '@/types/workflow'
 import { deriveChildDisplayStatus } from '@/utils/childStatusDisplay'
+import { getAllOpenAccountsTasks } from '@/utils/openAccountsTaskContext'
 
 /**
  * Household members must have completed KYC (party verified or matching KYC child workflow complete).
@@ -9,8 +10,10 @@ export function isAccountOwnerKycVerified(state: WorkflowState, party: RelatedPa
   if (party.type === 'related_organization') {
     return true
   }
-  const kycTask = state.tasks.find((t) => t.formKey === 'kyc') ?? state.tasks.find((t) => t.formKey === 'open-accounts')
-  const kycChildren = kycTask?.children?.filter((c) => c.childType === 'kyc') ?? []
+  const kycFromStandalone = state.tasks.find((t) => t.formKey === 'kyc')
+  const kycChildren = kycFromStandalone
+    ? (kycFromStandalone.children?.filter((c) => c.childType === 'kyc') ?? [])
+    : getAllOpenAccountsTasks(state).flatMap((t) => t.children?.filter((c) => c.childType === 'kyc') ?? [])
   const coveredByCompletedTrustCaseFallback = kycChildren.some((c) => {
     const reviewState = state.childReviewsByChildId?.[c.id]
     if (deriveChildDisplayStatus(c.status, reviewState) !== 'complete') return false
