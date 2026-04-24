@@ -7,9 +7,6 @@ import {
   UsersRound,
   ArrowUpDown,
   Filter,
-  RefreshCw,
-  Download,
-  LayoutGrid,
 } from 'lucide-react'
 import { AccessoryBar } from '@/components/accessory-bar'
 import { Button } from '@/components/ui/button'
@@ -21,36 +18,7 @@ import {
 } from '@/data/relationshipsSeed'
 import { cn } from '@/lib/utils'
 
-// --- top metric cards ------------------------------------------------------
-
-function MetricCard({
-  label,
-  value,
-  hint,
-  tall,
-}: {
-  label: string
-  value: React.ReactNode
-  hint?: boolean
-  tall?: boolean
-}) {
-  return (
-    <div
-      className={cn(
-        'rounded-xl border border-border bg-card px-5 py-3 flex flex-col justify-center min-w-[200px]',
-        tall && 'row-span-2',
-      )}
-    >
-      <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
-        <span>{label}</span>
-        {hint && <Info className="h-3.5 w-3.5 opacity-60" />}
-      </div>
-      <div className="mt-1 text-3xl font-semibold tracking-tight text-foreground">
-        {value}
-      </div>
-    </div>
-  )
-}
+// --- summary cards ---------------------------------------------------------
 
 function ProspectCard({
   status,
@@ -84,13 +52,11 @@ function ProspectCard({
 
 // --- view tabs -------------------------------------------------------------
 
-type ViewTab = 'all' | 'default' | 'prospects' | 'more'
+type ViewTab = 'all' | 'more'
 
 function ViewTabs({ active, onChange }: { active: ViewTab; onChange: (v: ViewTab) => void }) {
   const tabs: { id: ViewTab; label: string; count?: number; badge?: string }[] = [
     { id: 'all', label: 'All', count: RELATIONSHIPS_SEED.length },
-    { id: 'default', label: 'Default', count: 196 },
-    { id: 'prospects', label: 'Prospects', count: RELATIONSHIPS_SEED.filter((r) => r.type === 'Prospective').length },
     { id: 'more', label: 'More', badge: 'New' },
   ]
   return (
@@ -147,18 +113,19 @@ function ActionBar() {
           Filter
         </Button>
       </div>
-      <div className="flex items-center gap-2">
-        <Button variant="outline" size="icon" className="h-9 w-9">
-          <RefreshCw className="h-4 w-4" />
+      <div className="flex items-center gap-3">
+        <Button
+          size="sm"
+          className="h-9 px-4 bg-emerald-600 hover:bg-emerald-700 text-white font-medium rounded-md"
+        >
+          Save View
         </Button>
-        <Button variant="outline" size="sm" className="h-9 gap-2 text-sm">
-          <Download className="h-4 w-4" />
-          Download
-        </Button>
-        <Button variant="outline" size="sm" className="h-9 gap-2 text-sm">
-          <LayoutGrid className="h-4 w-4" />
-          Display
-        </Button>
+        <button
+          type="button"
+          className="text-sm text-foreground/80 hover:text-foreground transition-colors"
+        >
+          Reset
+        </button>
       </div>
     </div>
   )
@@ -255,10 +222,7 @@ export function RelationshipsContent() {
   const [view, setView] = useState<ViewTab>('all')
   const m = RELATIONSHIP_METRICS
 
-  const rows = useMemo(() => {
-    if (view === 'prospects') return RELATIONSHIPS_SEED.filter((r) => r.type === 'Prospective')
-    return RELATIONSHIPS_SEED
-  }, [view])
+  const rows = useMemo(() => RELATIONSHIPS_SEED, [view])
 
   return (
     <div className="max-w-7xl mx-auto">
@@ -270,29 +234,12 @@ export function RelationshipsContent() {
         className="-mt-6 mb-2"
       />
 
-      <h1 className="text-3xl font-semibold tracking-tight text-foreground mb-4">
+      <h1 className="text-3xl font-semibold tracking-tight text-foreground mb-5">
         Relationships
       </h1>
 
-      {/* Top metric row — mercer-top header layout */}
-      <div className="flex items-stretch gap-3 mb-4 flex-wrap">
-        <MetricCard
-          tall
-          label="Total Clients"
-          value={m.totalClients}
-          hint
-        />
-        <MetricCard label="Total AUM (Wealth)" value={`$${m.totalAumWealth}`} hint />
-        <MetricCard label="Annualized Premium Life" value={`$${m.annualizedPremiumLife}`} hint />
-        <MetricCard
-          label="Annualized Premium Disability"
-          value={`$${m.annualizedPremiumDisability}`}
-          hint
-        />
-      </div>
-
-      {/* Prospect / New / Existing summary cards */}
-      <div className="flex items-stretch gap-3 mb-5 flex-wrap">
+      {/* Prospective / New / Existing summary cards (exact mercer-live header layout) */}
+      <div className="flex items-stretch gap-3 mb-6 flex-wrap">
         <ProspectCard
           status="Prospective"
           left={{ label: 'Total', value: m.prospective.total }}
