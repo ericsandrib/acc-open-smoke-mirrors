@@ -2,7 +2,7 @@
 /* Regenerate: node scripts/generate-theme-output.mjs */
 
 
-  [data-theme="mercer"] {
+  [data-theme="mercer"], [data-theme="stratos"] {
     /* ShadCN canonical tokens */
     --primary: 0 0% 17.3%;
     --primary-foreground: 0 0% 100% / 0.9;
@@ -483,7 +483,7 @@
     --fill-avatar-primary: #feb3d9;
   }
 
-  [data-theme="mercer"].dark {
+  [data-theme="mercer"], [data-theme="stratos"].dark {
     /* ShadCN canonical tokens */
     --primary: 0 0% 74.5%;
     --primary-foreground: 0 0% 0% / 0.9;

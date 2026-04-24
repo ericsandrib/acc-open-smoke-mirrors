@@ -11,6 +11,7 @@ import { JourneyDetailPage } from '@/pages/JourneyDetailPage'
 import { TestClientFlowPage } from '@/pages/TestClientFlowPage'
 import { AccountOpeningFundingPage } from '@/pages/AccountOpeningFundingPage'
 import { FlowStepPlaceholderPage } from '@/pages/FlowStepPlaceholderPage'
+import { RelationshipsPage } from '@/pages/RelationshipsPage'
 import { SettingsPage } from '@/pages/SettingsPage'
 import { Toaster } from '@/components/ui/sonner'
 import { AppPasswordGate } from '@/components/AppPasswordGate'
@@ -39,6 +40,7 @@ export default function App() {
                   path="/onboarding/flow/:stepSlug"
                   element={<FlowStepPlaceholderPage />}
                 />
+                <Route path="/relationships" element={<RelationshipsPage />} />
                 <Route path="/settings" element={<SettingsPage />} />
                 <Route path="*" element={<Navigate to="/" replace />} />
               </Routes>

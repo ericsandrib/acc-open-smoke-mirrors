@@ -1,7 +1,7 @@
 import { createContext, useContext, useState, useEffect, type ReactNode } from 'react'
 
 type ColorScheme = 'light' | 'dark'
-type BrandTheme = 'mercer' | 'guardian' | 'vanguard'
+type BrandTheme = 'stratos' | 'mercer' | 'guardian' | 'vanguard'
 
 const ThemeContext = createContext<{
   colorScheme: ColorScheme
@@ -23,8 +23,11 @@ function getInitialColorScheme(): ColorScheme {
 
 function getInitialBrandTheme(): BrandTheme {
   const stored = localStorage.getItem('brand-theme')
-  if (stored === 'mercer' || stored === 'guardian' || stored === 'vanguard') return stored
-  return 'guardian'
+  // Force stratos for this demo; legacy stored values are ignored so the UI
+  // never shows a non-Stratos brand to a client.
+  if (stored === 'stratos') return stored
+  localStorage.setItem('brand-theme', 'stratos')
+  return 'stratos'
 }
 
 export function ThemeProvider({ children }: { children: ReactNode }) {

@@ -67,6 +67,7 @@ const navGroups: NavGroup[] = [
   {
     label: "Manage",
     items: [
+      { icon: Users, label: "Relationships", href: "/relationships" },
       { icon: Handshake, label: "Servicing", href: "/servicing" },
       { icon: Globe, label: "Onboarding", href: "/onboarding" },
       { icon: TrendingUp, label: "Tax", href: "/tax" },
@@ -340,7 +341,11 @@ export function VerticalNav({
               aria-label="Main navigation"
             >
               <div className="h-14 px-4 flex items-center shrink-0">
-                <span className="text-lg font-bold tracking-tight">G</span>
+                <img
+                  src="/stratos-logo.png"
+                  alt="Stratos Wealth Partners"
+                  className="h-7 w-auto"
+                />
               </div>
 
               <NavigationContent
@@ -382,7 +387,11 @@ export function VerticalNav({
             <div className="h-14 px-4 flex items-center shrink-0 justify-between">
               {isExpanded ? (
                 <>
-                  <span className="text-lg font-bold tracking-tight">G</span>
+                  <img
+                    src="/stratos-logo.png"
+                    alt="Stratos Wealth Partners"
+                    className="h-7 w-auto"
+                  />
                   <Tooltip>
                     <TooltipTrigger asChild>
                       <Button
@@ -408,13 +417,13 @@ export function VerticalNav({
                 </>
               ) : (
                 <>
-                  <span
-                    className={`text-lg font-bold tracking-tight mx-auto pointer-events-none ${
+                  <img
+                    src="/stratos-logo.png"
+                    alt="Stratos"
+                    className={`h-6 w-auto mx-auto pointer-events-none object-contain ${
                       isCollapsedHovered ? "invisible" : ""
                     }`}
-                  >
-                    G
-                  </span>
+                  />
                   {isCollapsedHovered && (
                     <div className="absolute inset-x-0 top-0 h-14 flex items-center justify-center pointer-events-none">
                       <div className="pointer-events-auto">
