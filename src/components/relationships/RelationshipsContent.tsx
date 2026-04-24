@@ -166,25 +166,16 @@ const COLUMNS: {
   },
   { key: 'advisor', label: 'Advisor', width: 'min-w-[140px]' },
   { key: 'type', label: 'Type', width: 'min-w-[110px]' },
-  { key: 'product', label: 'Product', width: 'min-w-[120px]' },
+  { key: 'status', label: 'Status', width: 'min-w-[220px]' },
   {
     key: 'aum',
     label: 'AUM',
     width: 'min-w-[120px]',
     render: (r) => <span>{formatMoney(r.aum)}</span>,
   },
-  { key: 'lastMeeting', label: 'Last Meeting', width: 'min-w-[130px]' },
-  { key: 'nextMeeting', label: 'Next Meeting', width: 'min-w-[130px]' },
-  { key: 'updatedAt', label: 'Updated At', width: 'min-w-[110px]' },
-  {
-    key: 'premium',
-    label: 'Premium',
-    width: 'min-w-[110px]',
-    render: (r) => <span>{formatMoney(r.premium)}</span>,
-  },
   { key: 'firm', label: 'Firm', width: 'min-w-[110px]' },
   { key: 'zipCode', label: 'Zip Code', width: 'min-w-[100px]' },
-  { key: 'status', label: 'Status', width: 'min-w-[200px]' },
+  { key: 'updatedAt', label: 'Updated At', width: 'min-w-[110px]' },
 ]
 
 function RelationshipsTable({ rows }: { rows: Relationship[] }) {
@@ -262,11 +253,18 @@ export function RelationshipsContent() {
       <RelationshipsTable rows={rows} />
 
       {/* Footer micro-copy explaining the mapping intent */}
-      <p className="mt-6 text-xs text-muted-foreground max-w-3xl">
-        Columns map to the Stratos Data Dictionary → Orion / Salesforce fields.
-        Relationship (S243 · SF-CT), Advisor (S195 · SF-FA · IAR Name),
-        Type (S244 · Contact Type), AUM (S141/S142 · Household totals),
-        Firm (S093 · Broker-Dealer Firm Name), Zip Code (S042).
+      <p className="mt-6 text-xs text-muted-foreground max-w-3xl leading-relaxed">
+        Every column is sourced from a real field in both the Avantos canonical
+        model and the Stratos Data Dictionary. Relationship →{' '}
+        <code className="font-mono">client_organisations.name</code> (S142),
+        Advisor → <code className="font-mono">agents</code> via{' '}
+        <code className="font-mono">agent_client_org_relationships</code> (S195),
+        Type → <code className="font-mono">client_organisation_type</code> (S244),
+        Status → <code className="font-mono">relationship_status</code>, AUM →{' '}
+        <code className="font-mono">sum(position_valuations)</code> per household (S141/S142),
+        Firm → <code className="font-mono">agent_organisations.name</code> (S093),
+        Zip → <code className="font-mono">address_entity_relationships.postal_code</code>{' '}
+        (S042).
       </p>
     </div>
   )
