@@ -374,7 +374,11 @@ export function KycChildInfoForm() {
           employerName: ext.employerName ?? '',
           occupation: ext.occupation ?? '',
           industry: ext.industry ?? '',
-          citizenship: '',
+          // Citizenship has no backing field on the party extension yet, so preserve
+          // whatever the advisor has already entered in the form rather than
+          // re-initializing to '' on every effect run (which would wipe the
+          // user's Select selection because `data` is in this effect's deps).
+          citizenship: (data.citizenship as string) || '',
           sourceOfFunds: ext.sourceOfFunds ?? '',
         })
       }
