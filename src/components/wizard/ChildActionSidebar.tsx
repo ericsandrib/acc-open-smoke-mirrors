@@ -144,9 +144,9 @@ export function ChildActionSidebar() {
         <div className="px-3 pt-2 pb-4 mb-2 border-b border-border">
           <button
             onClick={() => dispatch({ type: 'EXIT_CHILD_ACTION' })}
-            className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors mb-3"
+            className="flex items-center gap-1.5 mb-3 px-2.5 py-1.5 rounded-md text-xs font-medium bg-primary text-primary-foreground hover:bg-primary/90 transition-colors w-fit"
           >
-            <ArrowLeft className="h-3 w-3" />
+            <ArrowLeft className="h-3.5 w-3.5" />
             {state.childActionResume
               ? resumeDrillInBackLabel(state.childActionResume.subTaskIndex)
               : backLabelForParent(parentTask?.formKey)}

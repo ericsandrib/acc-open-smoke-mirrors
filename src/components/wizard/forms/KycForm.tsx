@@ -55,6 +55,51 @@ export function KycForm() {
     })
   }, [state.relatedParties, kycParentTask, dispatch, kycAddContactBump])
 
+  /**
+   * Auto-spawn Draft KYC child tasks for every adult household member as soon
+   * as the KYC parent task exists. Saves the advisor 3-4 clicks per person
+   * (Add → Search → Select → Submit) — they can go straight to "Review &
+   * Submit" on a row that's already in Draft.
+   *
+   * Adult heuristic: role !== 'Dependent'. Dependents (e.g. Robert Smith) are
+   * skipped so they don't generate a noisy KYC draft they don't need.
+   *
+   * Already-spawned members are tagged with `kycDirectAdd=true`, which is the
+   * same flag the manual Add-contact path sets — so this effect is idempotent
+   * across renders and re-mounts.
+   */
+  useEffect(() => {
+    if (!kycParentTask) return
+    const candidates = state.relatedParties.filter(
+      (p) =>
+        !p.isHidden &&
+        p.type === 'household_member' &&
+        !p.kycDirectAdd &&
+        p.role !== 'Dependent',
+    )
+    if (candidates.length === 0) return
+    const existingNames = new Set(children.map((c) => c.name))
+    candidates.forEach((party) => {
+      if (existingNames.has(party.name)) return
+      dispatch({
+        type: 'UPDATE_RELATED_PARTY',
+        partyId: party.id,
+        updates: { kycDirectAdd: true },
+      })
+      dispatch({
+        type: 'SPAWN_CHILD',
+        parentTaskId: kycParentTask.id,
+        childName: party.name,
+        childType: 'kyc',
+        metadata: {
+          kycSubjectPartyId: party.id,
+          kycSubjectType: 'individual',
+        },
+      })
+    })
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [kycParentTask?.id, state.relatedParties, dispatch])
+
   const handleContactAdded = useCallback((partyId: string) => {
     pendingKycPartyId.current = partyId
     setKycAddContactBump((b) => b + 1)

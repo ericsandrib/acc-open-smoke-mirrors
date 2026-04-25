@@ -287,12 +287,20 @@ export function ChildActionFooter() {
       <>
         <footer className="border-t border-border bg-background px-6 py-3 min-h-14 flex justify-between items-center shrink-0 box-border">
           <div>
-            {!isFirst && (
+            {isAdvisorView && isLast ? (
+              <Button
+                variant="outline"
+                onClick={() => dispatch({ type: 'EXIT_CHILD_ACTION' })}
+              >
+                <ChevronLeft className="h-4 w-4" />
+                Save &amp; Return to Accounts Hub
+              </Button>
+            ) : !isFirst ? (
               <Button variant="outline" onClick={() => dispatch({ type: 'CHILD_GO_BACK' })}>
                 <ChevronLeft className="h-4 w-4" />
                 Back
               </Button>
-            )}
+            ) : null}
           </div>
           <div className="flex items-center gap-3">
             {advisorResubmitEligible && isLast ? (

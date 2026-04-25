@@ -11,13 +11,6 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
-import {
-  Select,
-  SelectTrigger,
-  SelectValue,
-  SelectContent,
-  SelectItem,
-} from '@/components/ui/select'
 import { toast } from 'sonner'
 import { useWorkflow } from '@/stores/workflowStore'
 import { useServicing } from '@/stores/servicingStore'
@@ -89,9 +82,10 @@ export function ComposeDialog({ onClose }: ComposeDialogProps) {
   const [journeyName, setJourneyName] = useState(draftInitial.journeyName)
   const [actionType, setActionType] = useState(draftInitial.actionType)
   const [relationshipId, setRelationshipId] = useState(draftInitial.relationshipId)
-  const [openAnnuityAccount, setOpenAnnuityAccount] = useState<'yes' | 'no' | ''>(
-    draftInitial.openAnnuityAccount,
-  )
+  // Annuity question removed from the UX so advisors aren't forced to commit
+  // before they need to. The INITIALIZE_FROM_RELATIONSHIP dispatch always
+  // sends openAnnuityAccount: false; advisors can add an annuity registration
+  // later from inside Open Accounts.
   const [createMore, setCreateMore] = useState(draftInitial.createMore)
 
   function handleClose() {
@@ -117,10 +111,7 @@ export function ComposeDialog({ onClose }: ComposeDialogProps) {
     [],
   )
 
-  const canSubmit =
-    actionType === 'client-onboarding' &&
-    relationshipId !== '' &&
-    (openAnnuityAccount === 'yes' || openAnnuityAccount === 'no')
+  const canSubmit = actionType === 'client-onboarding' && relationshipId !== ''
 
   function handleSnooze() {
     toast.message('Snooze scheduled (demo)', {
@@ -137,7 +128,9 @@ export function ComposeDialog({ onClose }: ComposeDialogProps) {
       journeyName,
       actionType,
       relationshipId,
-      openAnnuityAccount,
+      // Annuity question removed; persist '' so legacy drafts are still
+      // readable by `loadComposeDraft`.
+      openAnnuityAccount: '' as const,
       createMore,
       savedAt: new Date().toISOString(),
     }
@@ -178,7 +171,7 @@ export function ComposeDialog({ onClose }: ComposeDialogProps) {
       journeyOnboardingConfig: {
         office: '',
         investmentProfessionalId: '',
-        openAnnuityAccount: openAnnuityAccount === 'yes',
+        openAnnuityAccount: false,
       },
     })
     toast.success(`Journey "${name}" created for ${relationship.name}`)
@@ -187,7 +180,6 @@ export function ComposeDialog({ onClose }: ComposeDialogProps) {
       setJourneyName('')
       setActionType('')
       setRelationshipId('')
-      setOpenAnnuityAccount('')
       setCreateMore(false)
       toast.message('Add another journey, or close when you are done.')
       return
@@ -303,36 +295,14 @@ export function ComposeDialog({ onClose }: ComposeDialogProps) {
                   options.
                 </p>
               </div>
-              {actionType === 'client-onboarding' && (
-                <div className="space-y-4 rounded-xl border border-border bg-background/80 p-4 shadow-sm sm:p-5">
-                  <div className="space-y-2">
-                    <Label htmlFor="compose-annuity">
-                      Will this client open an account that includes an annuity?
-                      <RequiredMark />
-                    </Label>
-                    <Select
-                      value={openAnnuityAccount}
-                      onValueChange={(v) => setOpenAnnuityAccount(v as 'yes' | 'no' | '')}
-                    >
-                      <SelectTrigger id="compose-annuity">
-                        <SelectValue placeholder="Select…" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="yes">Yes</SelectItem>
-                        <SelectItem value="no">No</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                </div>
-              )}
-              {actionType === '' && (
+              {actionType === '' ? (
                 <div className="rounded-xl border border-dashed border-border bg-muted/20 px-4 py-8 text-center text-sm text-muted-foreground">
                   Select an action type to see which settings apply to this journey.
                 </div>
-              )}
-              {actionType !== '' && actionType !== 'client-onboarding' && (
-                <div className="rounded-xl border border-dashed border-border bg-muted/20 px-4 py-8 text-center text-sm text-muted-foreground">
-                  No additional settings for this action type in the demo yet.
+              ) : (
+                <div className="rounded-xl border border-dashed border-border bg-muted/20 px-4 py-6 text-center text-sm text-muted-foreground">
+                  No additional settings required — annuity-specific configuration moves into the
+                  Open Accounts step where the advisor can add an annuity registration on demand.
                 </div>
               )}
             </section>
