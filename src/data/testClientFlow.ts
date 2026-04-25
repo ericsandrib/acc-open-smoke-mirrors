@@ -17,7 +17,7 @@ export interface FlowStep {
 export const TEST_CLIENT = {
   id: 'test-client-001',
   name: 'Lang, Chris M.',
-  summary: 'Demo client used to smoke-test the account opening flow against the Schwab API.',
+  summary: 'Onboarding journey for this client.',
 }
 
 export const TEST_CLIENT_FLOW: FlowStep[] = [

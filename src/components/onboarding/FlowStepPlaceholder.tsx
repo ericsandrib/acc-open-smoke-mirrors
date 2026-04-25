@@ -33,12 +33,10 @@ export function FlowStepPlaceholder() {
       <div className="mt-6 rounded-lg border border-dashed border-border-primary bg-fill-surface p-10 text-center">
         <Construction className="h-10 w-10 mx-auto text-text-tertiary" />
         <h2 className="text-base font-semibold text-text-primary mt-3">
-          This step isn't built yet
+          Coming soon
         </h2>
         <p className="text-sm text-text-secondary mt-1 max-w-md mx-auto">
-          Only <span className="font-medium">Account Opening and Funding</span> is wired to the
-          Schwab sandbox API for this demo. The other steps are stubs so the dashboard view is
-          complete.
+          This step is part of the upcoming onboarding flow.
         </p>
         <div className="flex items-center justify-center gap-2 mt-4">
           <Badge variant="outline" className="text-xs">
@@ -52,11 +50,8 @@ export function FlowStepPlaceholder() {
           <Button asChild variant="outline" size="sm">
             <Link to="/onboarding/flow">
               <ArrowLeft className="h-3.5 w-3.5" />
-              Back to dashboard
+              Back to overview
             </Link>
-          </Button>
-          <Button asChild size="sm">
-            <Link to="/onboarding/flow/account-opening-funding">Jump to Account Opening</Link>
           </Button>
         </div>
       </div>

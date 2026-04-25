@@ -251,21 +251,6 @@ export function RelationshipsContent() {
       <ViewTabs active={view} onChange={setView} />
       <ActionBar />
       <RelationshipsTable rows={rows} />
-
-      {/* Footer micro-copy explaining the mapping intent */}
-      <p className="mt-6 text-xs text-muted-foreground max-w-3xl leading-relaxed">
-        Every column is sourced from a real field in both the Avantos canonical
-        model and the Stratos Data Dictionary. Relationship →{' '}
-        <code className="font-mono">client_organisations.name</code> (S142),
-        Advisor → <code className="font-mono">agents</code> via{' '}
-        <code className="font-mono">agent_client_org_relationships</code> (S195),
-        Type → <code className="font-mono">client_organisation_type</code> (S244),
-        Status → <code className="font-mono">relationship_status</code>, AUM →{' '}
-        <code className="font-mono">sum(position_valuations)</code> per household (S141/S142),
-        Firm → <code className="font-mono">agent_organisations.name</code> (S093),
-        Zip → <code className="font-mono">address_entity_relationships.postal_code</code>{' '}
-        (S042).
-      </p>
     </div>
   )
 }

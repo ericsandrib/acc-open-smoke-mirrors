@@ -3,7 +3,6 @@ import { Link } from 'react-router-dom'
 import { ArrowRight, Zap } from 'lucide-react'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Button } from '@/components/ui/button'
-import { Badge } from '@/components/ui/badge'
 import { PageTitle } from '@/components/page-title'
 import { AccessoryBar } from '@/components/accessory-bar'
 import { useServicing } from '@/stores/servicingStore'
@@ -60,19 +59,11 @@ export function OnboardingContent() {
               <Zap className="h-4 w-4" />
             </div>
             <div>
-              <div className="flex items-center gap-2 flex-wrap">
-                <h3 className="text-sm font-semibold text-text-primary">
-                  Test client flow · {TEST_CLIENT.name}
-                </h3>
-                <Badge
-                  variant="outline"
-                  className="bg-fill-success-tertiary text-text-success-primary border-border-success-primary text-xs"
-                >
-                  Schwab API wired
-                </Badge>
-              </div>
+              <h3 className="text-sm font-semibold text-text-primary">
+                {TEST_CLIENT.name}
+              </h3>
               <p className="text-xs text-text-secondary mt-0.5">
-                5-step dashboard · open Account Opening & Funding to hit the Schwab sandbox
+                Open the onboarding journey for this client.
               </p>
             </div>
           </div>

@@ -58,26 +58,16 @@ function FormRow({
 
 function Field({
   label,
-  stratosId,
   children,
 }: {
   label: string
+  /** Retained for API compatibility; intentionally not rendered. */
   stratosId?: string
   children: React.ReactNode
 }) {
   return (
     <div className="space-y-1.5">
-      <div className="flex items-center gap-2">
-        <Label className="text-xs font-medium text-text-secondary">{label}</Label>
-        {stratosId && (
-          <Badge
-            variant="outline"
-            className="text-[10px] font-mono px-1 py-0 bg-fill-neutral-secondary text-text-tertiary border-border-primary"
-          >
-            {stratosId}
-          </Badge>
-        )}
-      </div>
+      <Label className="text-xs font-medium text-text-secondary">{label}</Label>
       {children}
     </div>
   )
@@ -85,24 +75,16 @@ function Field({
 
 function SectionHeader({
   title,
-  subtitle,
-  count,
 }: {
   title: string
+  /** Retained for API compatibility; intentionally not rendered. */
   subtitle?: string
+  /** Retained for API compatibility; intentionally not rendered. */
   count?: string
 }) {
   return (
-    <div className="flex items-start justify-between gap-3 mb-4">
-      <div>
-        <h2 className="text-base font-semibold text-text-primary">{title}</h2>
-        {subtitle && <p className="text-xs text-text-secondary mt-0.5">{subtitle}</p>}
-      </div>
-      {count && (
-        <Badge variant="outline" className="text-xs bg-fill-neutral-secondary text-text-secondary">
-          {count}
-        </Badge>
-      )}
+    <div className="mb-4">
+      <h2 className="text-base font-semibold text-text-primary">{title}</h2>
     </div>
   )
 }
@@ -293,7 +275,7 @@ export function AccountOpeningFunding() {
       <div className="flex items-start justify-between mb-6 gap-4">
         <PageTitle
           title="Account Opening & Funding"
-          subHead="Schwab Account Opening API · createCustomer · sandbox v1"
+          subHead="Open and fund accounts at the custodian for this client."
         />
         <div className="flex items-center gap-2">
           <Button variant="outline" size="sm" onClick={resetSample}>

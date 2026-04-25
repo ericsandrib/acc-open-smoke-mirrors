@@ -63,14 +63,6 @@ function StepCard({ step }: { step: FlowStep }) {
       <div className="flex items-center gap-2 flex-wrap">
         <OwnerBadge owner={step.owner} />
         <StatusBadge status={step.status} />
-        {step.built && (
-          <Badge
-            variant="outline"
-            className="bg-fill-success-tertiary text-text-success-primary border-border-success-primary text-xs"
-          >
-            Schwab API wired
-          </Badge>
-        )}
       </div>
 
       <ProgressBar value={step.progress} />

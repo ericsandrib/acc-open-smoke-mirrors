@@ -286,26 +286,19 @@ export function ComposeDialog({ onClose }: ComposeDialogProps) {
               </div>
             </section>
 
-            {/* Settings vary by action type — client onboarding fields shown when that action is selected */}
-            <section className="space-y-4">
-              <div>
-                <h3 className="text-sm font-semibold text-foreground">Action settings</h3>
-                <p className="mt-0.5 text-xs text-muted-foreground">
-                  Fields here depend on the action type. Different actions may ask for routing, product details, or other
-                  options.
-                </p>
-              </div>
-              {actionType === '' ? (
+            {actionType === '' && (
+              <section className="space-y-4">
+                <div>
+                  <h3 className="text-sm font-semibold text-foreground">Action settings</h3>
+                  <p className="mt-0.5 text-xs text-muted-foreground">
+                    Fields here depend on the action type.
+                  </p>
+                </div>
                 <div className="rounded-xl border border-dashed border-border bg-muted/20 px-4 py-8 text-center text-sm text-muted-foreground">
-                  Select an action type to see which settings apply to this journey.
+                  Select an action type to see which settings apply.
                 </div>
-              ) : (
-                <div className="rounded-xl border border-dashed border-border bg-muted/20 px-4 py-6 text-center text-sm text-muted-foreground">
-                  No additional settings required — annuity-specific configuration moves into the
-                  Open Accounts step where the advisor can add an annuity registration on demand.
-                </div>
-              )}
-            </section>
+              </section>
+            )}
           </div>
         </div>
 
