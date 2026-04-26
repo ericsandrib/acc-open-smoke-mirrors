@@ -125,6 +125,12 @@ export function ChildAmlReviewContent() {
   const entityType = (taskData.entityType as string) || party?.entityType || ''
   const jurisdiction = (taskData.jurisdiction as string) || party?.jurisdiction || ''
   const contactPerson = (taskData.contactPerson as string) || party?.contactPerson || ''
+  const legalStreet = (taskData.legalStreet as string) || party?.accountOwnerIndividual?.legalStreet || ''
+  const legalApt = (taskData.legalApt as string) || party?.accountOwnerIndividual?.legalApt || ''
+  const legalCity = (taskData.legalCity as string) || party?.accountOwnerIndividual?.legalCity || ''
+  const legalState = (taskData.legalState as string) || party?.accountOwnerIndividual?.legalState || ''
+  const legalZip = (taskData.legalZip as string) || party?.accountOwnerIndividual?.legalZip || ''
+  const legalCountry = (taskData.legalCountry as string) || party?.accountOwnerIndividual?.legalCountry || ''
 
   return (
     <main className="flex-1 overflow-y-auto p-8">
@@ -263,6 +269,12 @@ export function ChildAmlReviewContent() {
               <>
                 <ReviewRow label="Date of Birth" value={dob || '—'} />
                 <ReviewRow label="SSN / Tax ID" value={ssn ? `***-**-${ssn.slice(-4)}` : '***-**-**** (verified)'} />
+                <ReviewRow label="Street" value={legalStreet || 'Not provided'} />
+                <ReviewRow label="Apt / Unit" value={legalApt || 'Not provided'} />
+                <ReviewRow label="City" value={legalCity || 'Not provided'} />
+                <ReviewRow label="State" value={legalState || 'Not provided'} />
+                <ReviewRow label="ZIP / Postal code" value={legalZip || 'Not provided'} />
+                <ReviewRow label="Country" value={legalCountry || 'Not provided'} />
               </>
             )}
             <ReviewRow label="Email" value={email || '—'} />

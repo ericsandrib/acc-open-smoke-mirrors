@@ -284,32 +284,6 @@ export function ChildHoKycViewContent() {
           ) : null}
         </div>
 
-        {/* AML Status Chip */}
-        <div className="flex items-center gap-3">
-          <span className="text-sm font-medium text-muted-foreground">AML Status:</span>
-          {amlReview?.status === 'cleared' ? (
-            <Badge className="bg-green-100 text-green-800 border-green-200 hover:bg-green-100">
-              <CheckCircle2 className="h-3 w-3 mr-1" /> Clear
-            </Badge>
-          ) : amlReview?.status === 'flagged' ? (
-            <Badge className="bg-red-100 text-red-800 border-red-200 hover:bg-red-100">
-              <XCircle className="h-3 w-3 mr-1" /> Flagged
-            </Badge>
-          ) : amlReview?.status === 'escalated' ? (
-            <Badge className="bg-red-100 text-red-800 border-red-200 hover:bg-red-100">
-              <AlertTriangle className="h-3 w-3 mr-1" /> SAR Escalated
-            </Badge>
-          ) : amlReview?.status === 'info_requested' ? (
-            <Badge className="bg-amber-100 text-amber-800 border-amber-200 hover:bg-amber-100">
-              <Clock className="h-3 w-3 mr-1" /> Info Requested
-            </Badge>
-          ) : (
-            <Badge className="bg-amber-100 text-amber-800 border-amber-200 hover:bg-amber-100">
-              <Clock className="h-3 w-3 mr-1" /> Pending AML Review
-            </Badge>
-          )}
-        </div>
-
         <Accordion type="multiple" defaultValue={defaultOpen} className="space-y-3">
           {cipStatus && !isEntity && (
             <AccordionSection
@@ -404,7 +378,47 @@ export function ChildHoKycViewContent() {
 
           {!isEntity && (
             <AccordionSection value="address" title="Address" icon={MapPin}>
-            <ReviewRow label="Legal Address" value={fullAddress || 'Not provided'} />
+              {isEditing ? (
+                <div className="space-y-3 py-2">
+                  <div className="space-y-1">
+                    <Label className="text-xs">Street</Label>
+                    <Input value={editVal('legalStreet')} onChange={(e) => setEditVal('legalStreet', e.target.value)} />
+                  </div>
+                  <div className="space-y-1">
+                    <Label className="text-xs">Apt / Unit</Label>
+                    <Input value={editVal('legalApt')} onChange={(e) => setEditVal('legalApt', e.target.value)} />
+                  </div>
+                  <div className="grid gap-3 sm:grid-cols-2">
+                    <div className="space-y-1">
+                      <Label className="text-xs">City</Label>
+                      <Input value={editVal('legalCity')} onChange={(e) => setEditVal('legalCity', e.target.value)} />
+                    </div>
+                    <div className="space-y-1">
+                      <Label className="text-xs">State</Label>
+                      <Input value={editVal('legalState')} onChange={(e) => setEditVal('legalState', e.target.value)} />
+                    </div>
+                  </div>
+                  <div className="grid gap-3 sm:grid-cols-2">
+                    <div className="space-y-1">
+                      <Label className="text-xs">ZIP / Postal code</Label>
+                      <Input value={editVal('legalZip')} onChange={(e) => setEditVal('legalZip', e.target.value)} />
+                    </div>
+                    <div className="space-y-1">
+                      <Label className="text-xs">Country</Label>
+                      <Input value={editVal('legalCountry')} onChange={(e) => setEditVal('legalCountry', e.target.value)} />
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                <>
+                  <ReviewRow label="Street" value={legalStreet || 'Not provided'} />
+                  <ReviewRow label="Apt / Unit" value={((taskData.legalApt as string) || '').trim() || 'Not provided'} />
+                  <ReviewRow label="City" value={legalCity || 'Not provided'} />
+                  <ReviewRow label="State" value={legalState || 'Not provided'} />
+                  <ReviewRow label="ZIP / Postal code" value={legalZip || 'Not provided'} />
+                  <ReviewRow label="Country" value={legalCountry || 'Not provided'} />
+                </>
+              )}
             </AccordionSection>
           )}
 
