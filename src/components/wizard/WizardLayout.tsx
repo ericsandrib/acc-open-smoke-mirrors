@@ -323,14 +323,7 @@ export function WizardLayout() {
       const taskData = (state.taskData[taskId] as Record<string, unknown> | undefined) ?? {}
 
       // Section 1: Accounts to Be Opened
-      const accountsPct =
-        children.length === 0
-          ? 0
-          : Math.round(
-              (children.filter((c) => c.status === 'complete' || c.status === 'canceled').length /
-                children.length) *
-                100,
-            ) || 35 // credit meaningful progress once accounts are added even before completion
+      const accountsPct = children.length > 0 ? 100 : 0
 
       // Section 2: Required Documents (doc-instances-* rows with uploads)
       const docInstanceKeys = Object.keys(taskData).filter((k) => k.startsWith('doc-instances-'))
@@ -342,26 +335,39 @@ export function WizardLayout() {
         docRowsUploaded += rows.filter((r) => Boolean(r?.fileName)).length
       }
       const documentsPct =
-        docRowsTotal > 0
-          ? Math.round((docRowsUploaded / docRowsTotal) * 100)
-          : children.length > 0
-            ? 10 // slight lift once accounts exist and docs section is in play
-            : 0
+        docRowsTotal === 0
+          ? (children.length > 0 ? 100 : 0)
+          : (docRowsUploaded > 0 ? 100 : 0)
 
       // Section 3: KYC Verification
       const kycTask = state.tasks.find((t) => t.formKey === 'kyc')
       const kycChildren = (kycTask?.children ?? []).filter((c) => c.childType === 'kyc')
-      const kycPct =
-        kycChildren.length > 0
-          ? Math.round((kycChildren.filter((c) => c.status === 'complete').length / kycChildren.length) * 100)
-          : 0
+      const ownerPartyIds = new Set<string>()
+      for (const child of children) {
+        const ownerData = (state.taskData[`${child.id}-account-owners`] as Record<string, unknown> | undefined) ?? {}
+        const owners = (ownerData.owners as Array<{ type?: string; partyId?: string }> | undefined) ?? []
+        for (const owner of owners) {
+          if (owner.type === 'existing' && owner.partyId) ownerPartyIds.add(owner.partyId)
+        }
+      }
+      const kycOwnerIds = Array.from(ownerPartyIds)
+      const kycDone = kycOwnerIds.filter((partyId) => {
+        const party = state.relatedParties.find((p) => p.id === partyId)
+        if (party?.kycStatus === 'verified') return true
+        const matchingChild = kycChildren.find((c) => {
+          const meta = state.taskData[c.id] as Record<string, unknown> | undefined
+          return (meta?.kycSubjectPartyId as string | undefined) === partyId
+        })
+        return matchingChild?.status === 'complete' || matchingChild?.status === 'awaiting_review'
+      }).length
+      const kycPct = kycOwnerIds.length > 0 && kycDone > 0 ? 100 : 0
 
       // Section 4: Envelopes
       const envelopes = (taskData.esignEnvelopes as Array<unknown> | undefined) ?? []
       const esignPct = envelopes.length > 0 ? 100 : 0
 
-      // Weighted blend mirrors section importance in Open Accounts.
-      return Math.round(accountsPct * 0.4 + documentsPct * 0.3 + kycPct * 0.15 + esignPct * 0.15)
+      // Keep parent progress simple: four sections, equally weighted.
+      return Math.round((accountsPct + documentsPct + kycPct + esignPct) / 4)
     }
     return 0
   }
@@ -509,52 +515,6 @@ export function WizardLayout() {
       <VerticalNav defaultCollapsed onCreateClick={() => setComposeOpen(true)} />
       <WizardRightPanelProvider>
       <div className="flex flex-col flex-1 min-w-0">
-        {!inChildAction && (
-          <WizardProgressHeaderRow
-            left={(() => {
-              const jn = state.journeyName ?? 'Client Onboarding'
-              const activeActionTitle = getActionTitle(activeTopLevelTask?.actionId)
-              const activeTaskTitle = activeTopLevelTask?.title
-              const actionMenuItems = state.actions
-                .filter((a) => a.id !== 'kyc')
-                .sort((a, b) => a.order - b.order)
-                .map((a) => ({
-                  id: `action-${a.id}`,
-                  label: a.title,
-                  onSelect: () => navigateToParentAction(a.id),
-                }))
-              const taskMenuItems = getTopLevelTasksForAction(activeTopLevelTask?.actionId).map((t) => ({
-                id: `task-${t.id}`,
-                label: t.title,
-                onSelect: () => dispatch({ type: 'GO_TO_TASK', taskId: t.id }),
-              }))
-              const items: HeaderBreadcrumb[] = [
-                { id: 'root', label: 'Onboarding', onClick: () => navigate('/onboarding') },
-                {
-                  id: 'journey',
-                  label: jn,
-                  onClick: goToJourneyStart,
-                  isCurrent: !activeActionTitle && !activeTaskTitle,
-                },
-              ]
-              if (activeActionTitle && activeTopLevelTask?.actionId) {
-                items.push({
-                  id: 'action',
-                  label: activeActionTitle,
-                  onClick: () => navigateToParentAction(activeTopLevelTask.actionId),
-                  isCurrent: !activeTaskTitle,
-                  menuItems: actionMenuItems,
-                })
-              }
-              if (activeTaskTitle) items.push({ id: 'task', label: activeTaskTitle, isCurrent: true, menuItems: taskMenuItems })
-              return <HeaderBreadcrumbTrail items={items} title={items.map((i) => i.label).join(' / ')} />
-            })()}
-            actions={actionProgress}
-            activeActionId={activeParentActionId}
-            onSelectAction={navigateToParentAction}
-          />
-        )}
-        {childBreadcrumbRow}
         {showViewToggle && (
           <header className="border-b border-border px-8 py-2 flex items-center justify-end shrink-0">
             <div className="flex items-center gap-1 rounded-lg border border-border p-0.5">
@@ -634,6 +594,52 @@ export function WizardLayout() {
             </div>
           </header>
         )}
+        {!inChildAction && (
+          <WizardProgressHeaderRow
+            left={(() => {
+              const jn = state.journeyName ?? 'Client Onboarding'
+              const activeActionTitle = getActionTitle(activeTopLevelTask?.actionId)
+              const activeTaskTitle = activeTopLevelTask?.title
+              const actionMenuItems = state.actions
+                .filter((a) => a.id !== 'kyc')
+                .sort((a, b) => a.order - b.order)
+                .map((a) => ({
+                  id: `action-${a.id}`,
+                  label: a.title,
+                  onSelect: () => navigateToParentAction(a.id),
+                }))
+              const taskMenuItems = getTopLevelTasksForAction(activeTopLevelTask?.actionId).map((t) => ({
+                id: `task-${t.id}`,
+                label: t.title,
+                onSelect: () => dispatch({ type: 'GO_TO_TASK', taskId: t.id }),
+              }))
+              const items: HeaderBreadcrumb[] = [
+                { id: 'root', label: 'Onboarding', onClick: () => navigate('/onboarding') },
+                {
+                  id: 'journey',
+                  label: jn,
+                  onClick: goToJourneyStart,
+                  isCurrent: !activeActionTitle && !activeTaskTitle,
+                },
+              ]
+              if (activeActionTitle && activeTopLevelTask?.actionId) {
+                items.push({
+                  id: 'action',
+                  label: activeActionTitle,
+                  onClick: () => navigateToParentAction(activeTopLevelTask.actionId),
+                  isCurrent: !activeTaskTitle,
+                  menuItems: actionMenuItems,
+                })
+              }
+              if (activeTaskTitle) items.push({ id: 'task', label: activeTaskTitle, isCurrent: true, menuItems: taskMenuItems })
+              return <HeaderBreadcrumbTrail items={items} title={items.map((i) => i.label).join(' / ')} />
+            })()}
+            actions={actionProgress}
+            activeActionId={activeParentActionId}
+            onSelectAction={navigateToParentAction}
+          />
+        )}
+        {childBreadcrumbRow}
       <div className="flex flex-1 overflow-hidden">
           {inChildAction ? (
             isAmlView && isKycChild ? (
