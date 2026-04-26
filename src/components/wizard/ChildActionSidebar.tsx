@@ -1,7 +1,6 @@
 import { useWorkflow, useChildActionContext, useAdvisorResubmitEligible } from '@/stores/workflowStore'
 import { cn } from '@/lib/utils'
 import { Badge } from '@/components/ui/badge'
-import { useState } from 'react'
 import {
   Tooltip,
   TooltipContent,

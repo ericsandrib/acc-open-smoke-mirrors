@@ -73,7 +73,7 @@ function resolveCanonicalPath(
       break
     }
     visited.add(cursor)
-    const page = pagesById[cursor]
+    const page: BreadcrumbPage | undefined = pagesById[cursor]
     if (!page) {
       reverseIds.push(`missing:${cursor}`)
       reverseItems.push({ id: `missing:${cursor}`, label: 'Missing page', missing: true })
@@ -139,7 +139,7 @@ function resolveContextualPath(
       break
     }
     visited.add(id)
-    const page = pagesById[id]
+    const page: BreadcrumbPage | undefined = pagesById[id]
     if (!page) {
       items.push({ id: `missing:${id}`, label: 'Missing page', missing: true })
       ids.push(`missing:${id}`)

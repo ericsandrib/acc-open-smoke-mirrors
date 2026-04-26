@@ -13,7 +13,7 @@ import { ChildHoDocumentViewContent } from './ChildHoDocumentViewContent'
 import { ChildHoPrincipalViewContent } from './ChildHoPrincipalViewContent'
 import { ChildHoKycViewContent } from './ChildHoKycViewContent'
 import { ChildAmlReviewContent } from './ChildAmlReviewContent'
-import { useEffect, useRef, useState, type ReactNode } from 'react'
+import { useState, type ReactNode } from 'react'
 import { Eye, ShieldCheck, ShieldAlert, Building } from 'lucide-react'
 import { VerticalNav } from '@/components/navigation/vertical-nav'
 import { ComposeDialog } from '@/components/dashboard/ComposeDialog'
@@ -261,10 +261,6 @@ export function WizardLayout() {
     activeChildConfig && state.activeChildSubTaskIndex != null
       ? activeChildConfig.subTasks[state.activeChildSubTaskIndex]
       : undefined
-  const activeChildSubTaskTitle =
-    activeChild && activeChildSubTask
-      ? getSubTaskDisplayTitle(activeChild.childType, activeChildSubTask, viewMode)
-      : undefined
   const isKycChild = activeChild?.childType === 'kyc'
 
   /** Reviewer demo tabs only for this child once it is submitted / in review / complete — not from global `submittedAt` (e.g. after KYC approval elsewhere). */
@@ -406,26 +402,6 @@ export function WizardLayout() {
     if (!firstTask) return
     dispatch({ type: 'GO_TO_TASK', taskId: firstTask.id })
   }
-  const navigateToParentTaskSection = (sectionId: string) => {
-    if (!activeParentTask) return
-    if (inChildAction) {
-      dispatch({ type: 'EXIT_CHILD_ACTION' })
-    }
-    dispatch({ type: 'SET_ACTIVE_TASK', taskId: activeParentTask.id })
-    dispatch({ type: 'FOCUS_PARENT_TASK_SECTION', sectionId })
-
-    const attemptScroll = (triesLeft: number) => {
-      const el = document.getElementById(sectionId)
-      if (el) {
-        el.scrollIntoView({ behavior: 'smooth', block: 'start' })
-        return
-      }
-      if (triesLeft <= 0) return
-      window.setTimeout(() => attemptScroll(triesLeft - 1), 50)
-    }
-    window.setTimeout(() => attemptScroll(8), 0)
-  }
-
   const childBreadcrumbRow =
     inChildAction && activeChild ? (
       <WizardProgressHeaderRow

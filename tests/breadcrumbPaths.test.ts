@@ -7,7 +7,7 @@ import {
   getBreadcrumbPaths,
   movePage,
   type BreadcrumbPage,
-} from './breadcrumbPaths'
+} from '../src/utils/breadcrumbPaths'
 
 function seedPages(): Record<string, BreadcrumbPage> {
   return {
