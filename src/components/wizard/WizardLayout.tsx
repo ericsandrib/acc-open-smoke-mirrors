@@ -29,7 +29,7 @@ import {
 import {
   WizardRightPanelProvider,
 } from '@/components/wizard/wizardRightPanelContext'
-import { getSubTaskDisplayTitle } from '@/utils/childTaskRegistry'
+import { getChildTypeConfig, getSubTaskDisplayTitle } from '@/utils/childTaskRegistry'
 
 type WizardActionProgressItem = { id: string; title: string; pct: number }
 type HeaderBreadcrumb = {
