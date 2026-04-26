@@ -25,7 +25,6 @@ const REQUIRED_RULES: { field: string; label: string }[] = [
   { field: 'dob', label: 'Date of birth' },
   { field: 'taxId', label: 'SSN / Tax ID' },
   { field: 'legalStreet', label: 'Legal address (street)' },
-  { field: 'citizenship', label: 'Citizenship' },
   { field: 'sourceOfFunds', label: 'Source of funds' },
 ]
 
@@ -361,7 +360,6 @@ export function KycChildInfoForm() {
           employerName: ext.employerName ?? '',
           occupation: ext.occupation ?? '',
           industry: ext.industry ?? '',
-          citizenship: '',
           sourceOfFunds: ext.sourceOfFunds ?? '',
         })
       }

@@ -159,7 +159,6 @@ export function ChildHoKycViewContent() {
   const ssn = (taskData.taxId as string) || party?.taxId || party?.ssn || ''
   const email = (taskData.email as string) || party?.email || ''
   const phone = (taskData.phone as string) || party?.phone || ''
-  const citizenship = (taskData.citizenship as string) || ''
   const entityType = (taskData.entityType as string) || party?.entityType || ''
   const jurisdiction = (taskData.jurisdiction as string) || party?.jurisdiction || ''
   const contactPerson = (taskData.contactPerson as string) || party?.contactPerson || ''
@@ -256,13 +255,7 @@ export function ChildHoKycViewContent() {
 
         {/* Header */}
         <div>
-          <div className="flex items-center gap-3 mb-1">
-            <Badge variant="outline" className="text-violet-700 border-violet-200 bg-violet-50 text-[10px]">
-              <ShieldCheck className="h-3 w-3 mr-1" />
-              Document Review
-            </Badge>
-          </div>
-          <h2 className="text-2xl font-semibold text-foreground mt-2">{fullName}</h2>
+          <h2 className="text-2xl font-semibold text-foreground">{fullName}</h2>
           <p className="text-sm text-muted-foreground mt-1">
             {isEntity
               ? 'Review advisor-submitted KYB/KYC legal entity data'
@@ -400,7 +393,6 @@ export function ChildHoKycViewContent() {
                   <>
                     <ReviewRow label="Date of Birth" value={dob} />
                     <ReviewRow label="SSN / Tax ID" value={ssn ? `***-**-${ssn.slice(-4)}` : 'Not provided'} />
-                    <ReviewRow label="Citizenship" value={citizenship || 'Not provided'} />
                   </>
                 )}
                 <ReviewRow label="Email" value={email} />

@@ -219,10 +219,18 @@ export interface WorkflowState {
   childReviewDecisionsByChildId?: Record<string, ChildReviewDecision>
   /** AML, document, principal, and KYC review substeps keyed by {@link ChildTask.id}. */
   childReviewsByChildId?: Record<string, ChildReviewState>
+  /**
+   * One-shot: after leaving a child workflow via breadcrumb, StepSidebar should select this
+   * parent form section id (e.g. oa-kyc). Cleared when applied or invalid.
+   */
+  parentSectionFocusId?: string
 }
 
 export type WorkflowAction =
   | { type: 'SET_ACTIVE_TASK'; taskId: string }
+  /** Highlight this section in {@link StepSidebar} for the current task; consumed by the sidebar. */
+  | { type: 'FOCUS_PARENT_TASK_SECTION'; sectionId: string }
+  | { type: 'CLEAR_PARENT_SECTION_FOCUS' }
   /** Leave any child / drill-in flow and open a top-level task from {@link WorkflowState.flatTaskOrder}. */
   | { type: 'GO_TO_TASK'; taskId: string }
   | { type: 'SET_TASK_STATUS'; taskId: string; status: TaskStatus }

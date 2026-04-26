@@ -137,6 +137,15 @@ function workflowReducer(state: WorkflowState, action: WorkflowAction): Workflow
       return { ...state, activeTaskId: action.taskId, tasks: newTasks }
     }
 
+    case 'FOCUS_PARENT_TASK_SECTION': {
+      return { ...state, parentSectionFocusId: action.sectionId }
+    }
+
+    case 'CLEAR_PARENT_SECTION_FOCUS': {
+      if (state.parentSectionFocusId == null) return state
+      return { ...state, parentSectionFocusId: undefined }
+    }
+
     case 'GO_TO_TASK': {
       if (!state.flatTaskOrder.includes(action.taskId)) return state
       const goToTasks = state.tasks.map((t) =>

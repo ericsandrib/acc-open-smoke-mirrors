@@ -4,7 +4,6 @@ import { cn } from '@/lib/utils'
 import { parseChildSubTaskId } from '@/utils/childTaskRegistry'
 import { isOpenAccountsFormKey } from '@/utils/openAccountsTaskContext'
 import { Circle, Loader, CheckCircle2, Ban, Clock, XCircle } from 'lucide-react'
-import { useEffect, useState } from 'react'
 import {
   Tooltip,
   TooltipContent,
@@ -152,57 +151,8 @@ function DonutProgress({ progress, edited }: { progress: number; edited: boolean
   )
 }
 
-function scrollSectionIntoNearestContainer(sectionId: string) {
-  const el = document.getElementById(sectionId)
-  if (!el) return
-
-  let parent: HTMLElement | null = el.parentElement
-  while (parent) {
-    const style = window.getComputedStyle(parent)
-    const scrollableY = style.overflowY === 'auto' || style.overflowY === 'scroll'
-    if (scrollableY && parent.scrollHeight > parent.clientHeight) {
-      const top = el.getBoundingClientRect().top - parent.getBoundingClientRect().top + parent.scrollTop - 12
-      parent.scrollTo({ top: Math.max(0, top), behavior: 'smooth' })
-      return
-    }
-    parent = parent.parentElement
-  }
-
-  el.scrollIntoView({ behavior: 'smooth', block: 'nearest' })
-}
-
-function getParentSectionLinks(formKey: string): Array<{ id: string; label: string }> {
-  if (formKey === 'related-parties') {
-    return [
-      { id: 'rcd-household', label: 'Household' },
-      { id: 'rcd-related-individuals', label: 'Related Individuals' },
-      { id: 'rcd-trusts', label: 'Trusts' },
-      { id: 'rcd-other-entities', label: 'Other Entities' },
-      { id: 'rcd-professional-contacts', label: 'Professional Contacts' },
-    ]
-  }
-  if (formKey === 'existing-accounts') {
-    return [
-      { id: 'ea-existing-accounts', label: 'Existing Accounts' },
-      { id: 'ea-additional-instructions', label: 'Additional Instructions' },
-    ]
-  }
-  if (!isOpenAccountsFormKey(formKey)) return []
-  return [
-    { id: 'oa-accounts', label: 'Accounts to Be Opened' },
-    { id: 'oa-documents', label: 'Required Documents' },
-    { id: 'oa-kyc', label: 'KYC Verification' },
-    { id: 'oa-esign', label: 'Envelopes' },
-  ]
-}
-
 export function StepSidebar() {
   const { state, dispatch } = useWorkflow()
-  const [activeSectionId, setActiveSectionId] = useState<string | null>(null)
-
-  useEffect(() => {
-    setActiveSectionId(null)
-  }, [state.activeTaskId])
 
   return (
     <TooltipProvider delayDuration={300}>
@@ -231,11 +181,6 @@ export function StepSidebar() {
                   {actionTasks.map((task) => {
                     const progress = getTaskFieldProgress(state, task)
                     const pct = progress.total > 0 ? progress.filled / progress.total : 0
-                    const sectionLinks = getParentSectionLinks(task.formKey)
-                    const hasActiveSection =
-                      state.activeTaskId === task.id &&
-                      !!activeSectionId &&
-                      sectionLinks.some((s) => s.id === activeSectionId)
                     return (
                       <li key={task.id}>
                         <button
@@ -248,38 +193,13 @@ export function StepSidebar() {
                               const parsed = parseChildSubTaskId(state.activeTaskId)
                               return parsed ? c.id === parsed.childId : false
                             }) ?? false)
-                              ? hasActiveSection
-                                ? 'bg-muted/40 text-foreground font-medium'
-                                : 'bg-accent text-accent-foreground font-medium'
+                              ? 'bg-accent text-accent-foreground font-medium'
                               : 'hover:bg-muted text-foreground'
                           )}
                         >
                           <span className="truncate min-w-0">{task.title}</span>
                           <DonutProgress progress={pct} edited={!!task.edited} />
                         </button>
-                        {state.activeTaskId === task.id && sectionLinks.length > 0 && (
-                          <ul className="mt-1 ml-4 space-y-1">
-                            {sectionLinks.map((s) => (
-                              <li key={s.id}>
-                                <button
-                                  type="button"
-                                  className={cn(
-                                    'w-full text-left text-xs px-2 py-1 rounded-md transition-colors',
-                                    activeSectionId === s.id
-                                      ? 'bg-accent text-accent-foreground font-medium'
-                                      : 'text-muted-foreground hover:text-foreground hover:bg-muted',
-                                  )}
-                                  onClick={() => {
-                                    setActiveSectionId(s.id)
-                                    scrollSectionIntoNearestContainer(s.id)
-                                  }}
-                                >
-                                  {s.label}
-                                </button>
-                              </li>
-                            ))}
-                          </ul>
-                        )}
                       </li>
                     )
                   })}

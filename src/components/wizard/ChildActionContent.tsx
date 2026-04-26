@@ -402,9 +402,7 @@ export function ChildActionContent() {
             </div>
           </div>
         )}
-        {child.childType !== 'kyc' && child.childType !== 'account-opening' && (
-          <p className="text-sm text-muted-foreground mb-1">{child.name}</p>
-        )}
+        <p className="text-sm text-muted-foreground mb-1">{child.name}</p>
         {isHoTeamAccountOpening && amlFlagged && (
           <div className="flex items-center gap-3 mb-2">
             <Badge variant="outline" className="text-red-700 border-red-200 bg-red-50 dark:text-red-200 dark:border-red-800 dark:bg-red-950/40 text-[10px]">

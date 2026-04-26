@@ -13,18 +13,239 @@ import { ChildHoDocumentViewContent } from './ChildHoDocumentViewContent'
 import { ChildHoPrincipalViewContent } from './ChildHoPrincipalViewContent'
 import { ChildHoKycViewContent } from './ChildHoKycViewContent'
 import { ChildAmlReviewContent } from './ChildAmlReviewContent'
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { Eye, ShieldCheck, ShieldAlert, Building } from 'lucide-react'
 import { VerticalNav } from '@/components/navigation/vertical-nav'
 import { ComposeDialog } from '@/components/dashboard/ComposeDialog'
 import { useWorkflow } from '@/stores/workflowStore'
 import { cn } from '@/lib/utils'
-import { WizardRightPanelProvider } from '@/components/wizard/wizardRightPanelContext'
+import { useNavigate } from 'react-router-dom'
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu'
+import {
+  WizardRightPanelProvider,
+} from '@/components/wizard/wizardRightPanelContext'
 import { getChildTypeConfig, getSubTaskDisplayTitle } from '@/utils/childTaskRegistry'
-import { toast } from 'sonner'
+
+type WizardActionProgressItem = { id: string; title: string; pct: number }
+type HeaderBreadcrumb = {
+  id: string
+  label: string
+  onClick?: () => void
+  isCurrent?: boolean
+  className?: string
+  menuItems?: Array<{ id: string; label: string; onSelect: () => void }>
+}
+
+const HEADER_BREADCRUMB_MAX_VISIBLE = 4
+
+function HeaderBreadcrumbTrail({ items, title }: { items: HeaderBreadcrumb[]; title: string }) {
+  if (items.length === 0) return null
+  const needsCollapse = items.length > HEADER_BREADCRUMB_MAX_VISIBLE
+  const hiddenItems = needsCollapse ? items.slice(1, -2) : []
+  const visibleItems = needsCollapse
+    ? [items[0], { id: '__ellipsis__', label: '...' as const }, ...items.slice(-2)]
+    : items
+
+  return (
+    <div
+      className="flex flex-row flex-nowrap items-center gap-1.5 text-xs"
+      title={title}
+    >
+      {visibleItems.map((item, idx) => {
+        const isEllipsis = item.id === '__ellipsis__'
+        const isLast = idx === visibleItems.length - 1
+        return (
+          <div key={item.id} className="inline-flex items-center gap-1.5">
+            {isEllipsis ? (
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <button
+                    type="button"
+                    className="shrink-0 whitespace-nowrap text-left text-xs text-muted-foreground hover:text-foreground transition-colors bg-transparent border-0 p-0 cursor-pointer"
+                    aria-label="Show hidden breadcrumb items"
+                    title="Show hidden breadcrumb items"
+                  >
+                    ...
+                  </button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="start" sideOffset={6} className="min-w-[14rem]">
+                  {hiddenItems.map((hidden) => (
+                    <DropdownMenuItem
+                      key={hidden.id}
+                      onSelect={() => hidden.onClick?.()}
+                      className="max-w-[18rem] truncate"
+                      title={hidden.label}
+                    >
+                      {hidden.label}
+                    </DropdownMenuItem>
+                  ))}
+                </DropdownMenuContent>
+              </DropdownMenu>
+            ) : item.onClick ? (
+              item.menuItems && item.menuItems.length > 1 ? (
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <button
+                      type="button"
+                      className={cn(
+                        'shrink-0 whitespace-nowrap text-left text-xs transition-colors bg-transparent border-0 p-0 cursor-pointer hover:text-foreground',
+                        item.className ?? (item.isCurrent ? 'text-foreground font-medium' : 'text-muted-foreground'),
+                      )}
+                      onClick={item.onClick}
+                      title={item.label}
+                    >
+                      {item.label}
+                    </button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="start" sideOffset={6} className="min-w-[14rem]">
+                    {item.menuItems.map((menuItem) => (
+                      <DropdownMenuItem
+                        key={menuItem.id}
+                        onSelect={menuItem.onSelect}
+                        className="max-w-[18rem] truncate"
+                        title={menuItem.label}
+                      >
+                        {menuItem.label}
+                      </DropdownMenuItem>
+                    ))}
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              ) : (
+                <button
+                  type="button"
+                  className={cn(
+                    'shrink-0 whitespace-nowrap text-left text-xs transition-colors bg-transparent border-0 p-0 cursor-pointer hover:text-foreground',
+                    item.className ?? (item.isCurrent ? 'text-foreground font-medium' : 'text-muted-foreground'),
+                  )}
+                  onClick={item.onClick}
+                  title={item.label}
+                >
+                  {item.label}
+                </button>
+              )
+            ) : (
+              <span
+                className={cn(
+                  'shrink-0 whitespace-nowrap text-xs',
+                  item.className ?? (item.isCurrent ? 'text-foreground font-medium' : 'text-muted-foreground'),
+                )}
+                title={item.label}
+              >
+                {item.label}
+              </span>
+            )}
+            {!isLast ? (
+              <span className="shrink-0 text-muted-foreground" aria-hidden>
+                /
+              </span>
+            ) : null}
+          </div>
+        )
+      })}
+    </div>
+  )
+}
+
+function WizardActionProgressBar({
+  actions,
+  activeActionId,
+  onSelectAction,
+}: {
+  actions: WizardActionProgressItem[]
+  activeActionId: string | undefined
+  onSelectAction: (actionId: string) => void
+}) {
+  return (
+    <div className="flex flex-row flex-nowrap items-center gap-3 w-full min-w-0">
+      {actions.map((action) => {
+        const isActive = activeActionId === action.id
+        return (
+          <div
+            key={action.id}
+            className="min-w-0 flex-1 px-2 py-1.5"
+            title={`${action.title}: ${action.pct}% complete`}
+          >
+            <div className="mb-1 flex items-center justify-between gap-2">
+              <button
+                type="button"
+                className={cn(
+                  'text-[11px] truncate text-left transition-colors w-full',
+                  isActive
+                    ? 'text-primary font-semibold'
+                    : 'text-muted-foreground hover:text-foreground',
+                )}
+                onClick={() => onSelectAction(action.id)}
+              >
+                {action.title}
+              </button>
+            </div>
+            <div
+              className={cn(
+                'h-1 w-full rounded-full overflow-hidden',
+                isActive ? 'bg-primary/25 dark:bg-primary/20' : 'bg-muted',
+              )}
+            >
+              <div
+                className={cn(
+                  'h-full rounded-full transition-all',
+                  isActive ? 'bg-primary' : 'bg-muted-foreground/40 dark:bg-muted-foreground/35',
+                )}
+                style={{ width: `${action.pct}%` }}
+              />
+            </div>
+          </div>
+        )
+      })}
+    </div>
+  )
+}
+
+/**
+ * Mirrors StepSidebar | main | DetailSidebar column widths so the progress bar
+ * stays aligned with `max-w-2xl mx-auto` form content when the right rail collapses.
+ */
+function WizardProgressHeaderRow({
+  left,
+  actions,
+  activeActionId,
+  onSelectAction,
+}: {
+  left: ReactNode
+  actions: WizardActionProgressItem[]
+  activeActionId: string | undefined
+  onSelectAction: (actionId: string) => void
+}) {
+  return (
+    <header className="border-b border-border py-2 shrink-0 overflow-visible">
+      <div className="flex flex-row items-center min-h-8 min-w-0 overflow-visible">
+        <div className="w-64 shrink-0 min-w-0 px-5 overflow-visible relative z-20">
+          <div className="w-max max-w-none overflow-visible py-0.5 pr-3 rounded-r-md bg-background">
+            {left}
+          </div>
+        </div>
+        <div className="flex-1 min-w-0 px-8 relative z-10">
+          <div className="max-w-2xl w-full min-w-0 mx-auto">
+            <WizardActionProgressBar
+              actions={actions}
+              activeActionId={activeActionId}
+              onSelectAction={onSelectAction}
+            />
+          </div>
+        </div>
+        <div className="w-64 shrink-0" aria-hidden />
+      </div>
+    </header>
+  )
+}
 
 export function WizardLayout() {
   const { state, dispatch } = useWorkflow()
+  const navigate = useNavigate()
   const [composeOpen, setComposeOpen] = useState(false)
   const inChildAction = !!state.activeChildActionId
   const viewMode = state.demoViewMode
@@ -149,6 +370,15 @@ export function WizardLayout() {
     return 0
   }
   const activeParentActionId = state.tasks.find((t) => t.id === state.activeTaskId)?.actionId
+  const activeTopLevelTask = state.tasks.find((t) => t.id === state.activeTaskId)
+  const getActionTitle = (actionId: string | undefined) =>
+    actionId ? state.actions.find((a) => a.id === actionId)?.title : undefined
+  const getTopLevelTasksForAction = (actionId: string | undefined) =>
+    actionId
+      ? state.tasks
+          .filter((t) => t.actionId === actionId && t.formKey !== 'kyc' && t.id !== 'kyc-review')
+          .sort((a, b) => a.order - b.order)
+      : []
   const currentTopLevelActionId = inChildAction ? activeParentTask?.actionId : activeParentActionId
   const actionProgress = state.actions
     .filter((action) => action.id !== 'kyc')
@@ -163,15 +393,18 @@ export function WizardLayout() {
         : 0
       return { id: action.id, title: action.title, pct }
     })
+  const goToJourneyStart = () => {
+    const firstTaskId = state.flatTaskOrder[0]
+    if (!firstTaskId) return
+    dispatch({ type: 'GO_TO_TASK', taskId: firstTaskId })
+    navigate('/wizard')
+  }
   const navigateToParentAction = (actionId: string) => {
     const firstTask = state.tasks
       .filter((t) => t.actionId === actionId && t.formKey !== 'kyc' && t.id !== 'kyc-review')
       .sort((a, b) => a.order - b.order)[0]
     if (!firstTask) return
-    if (inChildAction) {
-      dispatch({ type: 'EXIT_CHILD_ACTION' })
-    }
-    dispatch({ type: 'SET_ACTIVE_TASK', taskId: firstTask.id })
+    dispatch({ type: 'GO_TO_TASK', taskId: firstTask.id })
   }
   const navigateToParentTaskSection = (sectionId: string) => {
     if (!activeParentTask) return
@@ -179,6 +412,7 @@ export function WizardLayout() {
       dispatch({ type: 'EXIT_CHILD_ACTION' })
     }
     dispatch({ type: 'SET_ACTIVE_TASK', taskId: activeParentTask.id })
+    dispatch({ type: 'FOCUS_PARENT_TASK_SECTION', sectionId })
 
     const attemptScroll = (triesLeft: number) => {
       const el = document.getElementById(sectionId)
@@ -193,111 +427,106 @@ export function WizardLayout() {
   }
 
   const childBreadcrumbRow =
-    inChildAction && !state.childActionResume && activeChild ? (
-      <header className="border-b border-border py-2 shrink-0">
-        <div className="relative flex items-center min-h-8">
-          {(() => {
-            const isKycChildBreadcrumb = activeChild.childType === 'kyc'
-            const isAccountOpeningChildBreadcrumb = activeChild.childType === 'account-opening'
-            const kycTask = state.tasks.find((t) => t.formKey === 'kyc')
-            const childSecondSegment = isKycChildBreadcrumb
-              ? (kycTask?.title ?? 'KYC Verification')
-              : isAccountOpeningChildBreadcrumb
-                ? 'Accounts to Be Opened'
-                : activeChild.name
-            const childThirdSegment =
-              isKycChildBreadcrumb || isAccountOpeningChildBreadcrumb ? null : activeChildSubTaskTitle
-            return (
-          <div className="overflow-x-auto min-w-0 pl-5 pr-8">
-            <div className="flex items-center gap-2 text-sm text-muted-foreground whitespace-nowrap min-w-max">
-              <button
-                type="button"
-                className="hover:text-foreground transition-colors shrink-0"
-                onClick={() => dispatch({ type: 'EXIT_CHILD_ACTION' })}
-                title={activeParentTask?.title ?? 'Task'}
-              >
-                {activeParentTask?.title ?? 'Task'}
-              </button>
-              <span className="shrink-0">/</span>
-              <button
-                type="button"
-                className="hover:text-foreground transition-colors shrink-0"
-                onClick={() => {
-                  if (isKycChildBreadcrumb) {
-                    navigateToParentTaskSection('oa-kyc')
-                    return
-                  }
-                  if (isAccountOpeningChildBreadcrumb) {
-                    navigateToParentTaskSection('oa-accounts')
-                    return
-                  }
-                  dispatch({ type: 'SET_CHILD_SUB_TASK', index: 0 })
-                }}
-                title={childSecondSegment}
-              >
-                {childSecondSegment}
-              </button>
-              {childThirdSegment ? (
-                <>
-                  <span className="shrink-0">/</span>
-                  <span className="text-foreground font-medium shrink-0" title={childThirdSegment}>
-                    {childThirdSegment}
-                  </span>
-                </>
-              ) : null}
-            </div>
-          </div>
-            )
-          })()}
-          <div className="pointer-events-none absolute inset-y-0 left-1/2 -translate-x-1/2 flex items-center w-full max-w-2xl">
-            <div className="pointer-events-auto flex items-center gap-3 w-full min-w-0">
-              {actionProgress.map((action) => {
-                const isActive = currentTopLevelActionId === action.id
-                return (
-                  <div key={action.id} className="min-w-0 flex-1" title={`${action.title}: ${action.pct}% complete`}>
-                    <div className="mb-1 flex items-center justify-between gap-2">
-                      <button
-                        type="button"
-                        className={cn(
-                          'text-[11px] truncate text-left hover:text-foreground transition-colors',
-                          isActive ? 'text-foreground font-medium' : 'text-muted-foreground',
-                        )}
-                        onClick={() => navigateToParentAction(action.id)}
-                      >
-                        {action.title}
-                      </button>
-                    </div>
-                    <div className="h-1 w-full rounded-full bg-muted overflow-hidden">
-                      <div
-                        className={cn('h-full rounded-full transition-all', isActive ? 'bg-primary' : 'bg-foreground/70')}
-                        style={{ width: `${action.pct}%` }}
-                      />
-                    </div>
-                  </div>
-                )
-              })}
-            </div>
-          </div>
-        </div>
-      </header>
+    inChildAction && activeChild ? (
+      <WizardProgressHeaderRow
+        left={(() => {
+          const rootCrumb = 'Onboarding'
+          const journeyCrumb = state.journeyName ?? 'Client Onboarding'
+          const parentActionTitle = getActionTitle(activeParentTask?.actionId)
+          const parentCrumb = activeParentTask?.title ?? 'Task'
+          const actionMenuItems = state.actions
+            .filter((a) => a.id !== 'kyc')
+            .sort((a, b) => a.order - b.order)
+            .map((a) => ({
+              id: `action-${a.id}`,
+              label: a.title,
+              onSelect: () => navigateToParentAction(a.id),
+            }))
+          const parentTaskMenuItems = getTopLevelTasksForAction(activeParentTask?.actionId).map((t) => ({
+            id: `task-${t.id}`,
+            label: t.title,
+            onSelect: () => dispatch({ type: 'GO_TO_TASK', taskId: t.id }),
+          }))
+          const accountSubTaskMenuItems = state.childActionResume
+            ? getChildTypeConfig('account-opening').subTasks.map((subTask, index) => ({
+                id: `account-subtask-${subTask.suffix}`,
+                label: getSubTaskDisplayTitle('account-opening', subTask, state.demoViewMode),
+                onSelect: () => {
+                  dispatch({ type: 'EXIT_CHILD_ACTION' })
+                  dispatch({ type: 'SET_CHILD_SUB_TASK', index })
+                },
+              }))
+            : []
+          const resumeAccountChild = state.childActionResume?.accountChildId
+            ? state.tasks
+                .flatMap((t) => t.children ?? [])
+                .find((c) => c.id === state.childActionResume?.accountChildId)
+            : undefined
+          const showActiveChildCrumb =
+            !resumeAccountChild &&
+            !!activeChild?.name &&
+            activeChild.name !== parentCrumb
+          const resumeSubTask =
+            state.childActionResume
+              ? getChildTypeConfig('account-opening').subTasks[state.childActionResume.subTaskIndex]
+              : undefined
+          const pathItems: HeaderBreadcrumb[] = [
+            { id: 'root', label: rootCrumb, onClick: () => navigate('/onboarding') },
+            {
+              id: 'journey',
+              label: journeyCrumb,
+              onClick: goToJourneyStart,
+            },
+            ...(parentActionTitle && activeParentTask?.actionId
+              ? [{
+                  id: 'parent-action',
+                  label: parentActionTitle,
+                  onClick: () => navigateToParentAction(activeParentTask.actionId),
+                  menuItems: actionMenuItems,
+                }]
+              : []),
+            {
+              id: 'parent',
+              label: parentCrumb,
+              onClick: () => {
+                if (activeParentTask?.id) {
+                  dispatch({ type: 'GO_TO_TASK', taskId: activeParentTask.id })
+                  return
+                }
+                dispatch({ type: 'EXIT_CHILD_ACTION' })
+              },
+              menuItems: parentTaskMenuItems,
+            },
+          ]
+          if (resumeAccountChild) {
+            pathItems.push({
+              id: 'resume-account-child',
+              label: resumeAccountChild.name,
+              onClick: () => dispatch({ type: 'EXIT_CHILD_ACTION' }),
+              menuItems: accountSubTaskMenuItems,
+            })
+          }
+          if (showActiveChildCrumb) {
+            pathItems.push({
+              id: 'active-child',
+              label: activeChild.name,
+            })
+          }
+          if (resumeSubTask) {
+            pathItems.push({
+              id: 'resume-parent-subtask',
+              label: resumeSubTask.title,
+              onClick: () => dispatch({ type: 'EXIT_CHILD_ACTION' }),
+            })
+          }
+          pathItems[pathItems.length - 1].isCurrent = true
+          return <HeaderBreadcrumbTrail items={pathItems} title={pathItems.map((p) => p.label).join(' / ')} />
+        })()}
+        actions={actionProgress}
+        activeActionId={currentTopLevelActionId}
+        onSelectAction={navigateToParentAction}
+      />
     ) : null
-
-  const lastChildIdRef = useRef<string | undefined>(state.activeChildActionId)
-  useEffect(() => {
-    const previousChildId = lastChildIdRef.current
-    const nextChildId = state.activeChildActionId
-    if (!previousChildId && nextChildId) {
-      const nextChild = state.tasks.flatMap((t) => t.children ?? []).find((c) => c.id === nextChildId)
-      const nextParent = state.tasks.find((t) => (t.children ?? []).some((c) => c.id === nextChildId))
-      toast(`Entered child action: ${nextChild?.name ?? 'Child action'}`, {
-        description: `Parent task: ${nextParent?.title ?? 'Current task'}`,
-      })
-    } else if (previousChildId && !nextChildId) {
-      const activeTask = state.tasks.find((t) => t.id === state.activeTaskId)
-      toast(`Returned to parent task: ${activeTask?.title ?? 'Task'}`)
-    }
-    lastChildIdRef.current = nextChildId
-  }, [state.activeChildActionId, state.activeTaskId, state.tasks])
 
   return (
     <div className="flex h-screen bg-background">
@@ -305,48 +534,49 @@ export function WizardLayout() {
       <WizardRightPanelProvider>
       <div className="flex flex-col flex-1 min-w-0">
         {!inChildAction && (
-          <header className="border-b border-border py-2 shrink-0">
-            <div className="relative flex items-center min-h-8">
-              <div className="overflow-x-auto min-w-0 pl-5 pr-8">
-                <div className="flex items-center gap-2 text-sm text-muted-foreground whitespace-nowrap min-w-max">
-                  <span className="shrink-0">Onboarding</span>
-                  <span className="shrink-0">/</span>
-                  <span className="text-foreground font-medium shrink-0">
-                    {state.journeyName ?? 'Client Onboarding'}
-                  </span>
-                </div>
-              </div>
-              <div className="pointer-events-none absolute inset-y-0 left-1/2 -translate-x-1/2 flex items-center w-full max-w-2xl">
-                <div className="pointer-events-auto flex items-center gap-3 w-full min-w-0">
-                  {actionProgress.map((action) => {
-                    const isActive = activeParentActionId === action.id
-                    return (
-                      <div key={action.id} className="min-w-0 flex-1" title={`${action.title}: ${action.pct}% complete`}>
-                        <div className="mb-1 flex items-center justify-between gap-2">
-                          <button
-                            type="button"
-                            className={cn(
-                              'text-[11px] truncate text-left hover:text-foreground transition-colors',
-                              isActive ? 'text-foreground font-medium' : 'text-muted-foreground',
-                            )}
-                            onClick={() => navigateToParentAction(action.id)}
-                          >
-                            {action.title}
-                          </button>
-                        </div>
-                        <div className="h-1 w-full rounded-full bg-muted overflow-hidden">
-                          <div
-                            className={cn('h-full rounded-full transition-all', isActive ? 'bg-primary' : 'bg-foreground/70')}
-                            style={{ width: `${action.pct}%` }}
-                          />
-                        </div>
-                      </div>
-                    )
-                  })}
-                </div>
-              </div>
-            </div>
-          </header>
+          <WizardProgressHeaderRow
+            left={(() => {
+              const jn = state.journeyName ?? 'Client Onboarding'
+              const activeActionTitle = getActionTitle(activeTopLevelTask?.actionId)
+              const activeTaskTitle = activeTopLevelTask?.title
+              const actionMenuItems = state.actions
+                .filter((a) => a.id !== 'kyc')
+                .sort((a, b) => a.order - b.order)
+                .map((a) => ({
+                  id: `action-${a.id}`,
+                  label: a.title,
+                  onSelect: () => navigateToParentAction(a.id),
+                }))
+              const taskMenuItems = getTopLevelTasksForAction(activeTopLevelTask?.actionId).map((t) => ({
+                id: `task-${t.id}`,
+                label: t.title,
+                onSelect: () => dispatch({ type: 'GO_TO_TASK', taskId: t.id }),
+              }))
+              const items: HeaderBreadcrumb[] = [
+                { id: 'root', label: 'Onboarding', onClick: () => navigate('/onboarding') },
+                {
+                  id: 'journey',
+                  label: jn,
+                  onClick: goToJourneyStart,
+                  isCurrent: !activeActionTitle && !activeTaskTitle,
+                },
+              ]
+              if (activeActionTitle && activeTopLevelTask?.actionId) {
+                items.push({
+                  id: 'action',
+                  label: activeActionTitle,
+                  onClick: () => navigateToParentAction(activeTopLevelTask.actionId),
+                  isCurrent: !activeTaskTitle,
+                  menuItems: actionMenuItems,
+                })
+              }
+              if (activeTaskTitle) items.push({ id: 'task', label: activeTaskTitle, isCurrent: true, menuItems: taskMenuItems })
+              return <HeaderBreadcrumbTrail items={items} title={items.map((i) => i.label).join(' / ')} />
+            })()}
+            actions={actionProgress}
+            activeActionId={activeParentActionId}
+            onSelectAction={navigateToParentAction}
+          />
         )}
         {childBreadcrumbRow}
         {showViewToggle && (

@@ -3,7 +3,6 @@ import { useWorkflow, useChildActionContext, getChildReviewState } from '@/store
 import { Badge } from '@/components/ui/badge'
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion'
 import {
-  ShieldAlert,
   ShieldCheck,
   User,
   FileText,
@@ -218,18 +217,16 @@ export function ChildAmlReviewContent() {
 
         {/* Header */}
         <div>
-          <div className="flex items-center gap-3 mb-1">
-            <Badge variant="outline" className="text-amber-700 border-amber-200 bg-amber-50 text-[10px]">
-              <ShieldAlert className="h-3 w-3 mr-1" />
-              AML Review
-            </Badge>
-            {amlFlagged && (
+          {amlFlagged ? (
+            <div className="flex items-center gap-3 mb-1">
               <Badge variant="outline" className="text-red-700 border-red-200 bg-red-50 text-[10px]">
                 Advisor Flagged
               </Badge>
-            )}
-          </div>
-          <h2 className="text-2xl font-semibold text-foreground mt-2">{fullName}</h2>
+            </div>
+          ) : null}
+          <h2 className={amlFlagged ? 'text-2xl font-semibold text-foreground mt-2' : 'text-2xl font-semibold text-foreground'}>
+            {fullName}
+          </h2>
           <p className="text-sm text-muted-foreground mt-1">
             {isEntity ? 'Anti-Money Laundering & Sanctions Screening (KYB)' : 'Anti-Money Laundering & Sanctions Screening'}
           </p>
