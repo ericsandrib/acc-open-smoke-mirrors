@@ -16,7 +16,6 @@ import {
   CheckCircle2,
   XCircle,
   Clock,
-  AlertTriangle,
   FileText,
   Upload,
   Trash2,
@@ -169,8 +168,6 @@ export function ChildHoKycViewContent() {
   const legalState = (taskData.legalState as string) || ''
   const legalZip = (taskData.legalZip as string) || ''
   const legalCountry = (taskData.legalCountry as string) || ''
-  const fullAddress = [legalStreet, legalCity, legalState, legalZip, legalCountry].filter(Boolean).join(', ')
-
   const idType = (taskData.idType as string) || ''
   const idNumber = (taskData.idNumber as string) || ''
   const idState = (taskData.idState as string) || ''

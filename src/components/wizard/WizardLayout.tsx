@@ -29,7 +29,7 @@ import {
 import {
   WizardRightPanelProvider,
 } from '@/components/wizard/wizardRightPanelContext'
-import { getChildTypeConfig, getSubTaskDisplayTitle } from '@/utils/childTaskRegistry'
+import { getSubTaskDisplayTitle } from '@/utils/childTaskRegistry'
 
 type WizardActionProgressItem = { id: string; title: string; pct: number }
 type HeaderBreadcrumb = {
@@ -256,11 +256,6 @@ export function WizardLayout() {
   const activeParentTask = activeChild
     ? state.tasks.find((t) => (t.children ?? []).some((c) => c.id === activeChild.id))
     : undefined
-  const activeChildConfig = activeChild ? getChildTypeConfig(activeChild.childType) : undefined
-  const activeChildSubTask =
-    activeChildConfig && state.activeChildSubTaskIndex != null
-      ? activeChildConfig.subTasks[state.activeChildSubTaskIndex]
-      : undefined
   const isKycChild = activeChild?.childType === 'kyc'
 
   /** Reviewer demo tabs only for this child once it is submitted / in review / complete — not from global `submittedAt` (e.g. after KYC approval elsewhere). */
