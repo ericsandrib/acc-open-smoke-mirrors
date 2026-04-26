@@ -34,12 +34,6 @@ import {
   SelectItem,
 } from '@/components/ui/select'
 import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from '@/components/ui/tooltip'
-import {
   Minus,
   Plus,
   Shield,
@@ -224,15 +218,6 @@ export function OpenAccountsForm() {
     setKycAddContactBump((b) => b + 1)
   }
   const accountOpeningChildren = (openAccountsTask?.children ?? []).filter((c) => c.childType === 'account-opening')
-  // Envelope creation is gated on at least one account child being completed.
-  // This prevents advisors from generating an empty/invalid signature package
-  // before the underlying account setup is done.
-  const hasCompletedAccountChild = accountOpeningChildren.some(
-    (c) => c.status === 'complete' || c.status === 'awaiting_review',
-  )
-  const envelopeButtonDisabledReason = hasCompletedAccountChild
-    ? null
-    : 'Complete at least one account setup to generate signature documents.'
   const householdMembers = state.relatedParties.filter((p) => p.type === 'household_member' && !p.isHidden)
 
   const kycOwnerParties = useMemo(() => {
@@ -1234,28 +1219,10 @@ export function OpenAccountsForm() {
             </p>
           </div>
           {esignEnvelopes.length > 0 ? (
-            <TooltipProvider delayDuration={150}>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <span className="shrink-0">
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="sm"
-                      className="gap-1.5"
-                      onClick={openNewEnvelopeDrawer}
-                      disabled={!!envelopeButtonDisabledReason}
-                    >
-                      <Plus className="h-3.5 w-3.5" />
-                      Add envelope
-                    </Button>
-                  </span>
-                </TooltipTrigger>
-                {envelopeButtonDisabledReason && (
-                  <TooltipContent>{envelopeButtonDisabledReason}</TooltipContent>
-                )}
-              </Tooltip>
-            </TooltipProvider>
+            <Button type="button" variant="outline" size="sm" className="gap-1.5 shrink-0" onClick={openNewEnvelopeDrawer}>
+              <Plus className="h-3.5 w-3.5" />
+              Add envelope
+            </Button>
           ) : null}
         </div>
         {esignEnvelopes.length === 0 ? (
@@ -1265,25 +1232,10 @@ export function OpenAccountsForm() {
             <p className="text-sm text-muted-foreground mb-4 max-w-md mx-auto">
               Choose delivery, template, and which generated forms to include.
             </p>
-            <TooltipProvider delayDuration={150}>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <span>
-                    <Button
-                      type="button"
-                      onClick={openNewEnvelopeDrawer}
-                      disabled={!!envelopeButtonDisabledReason}
-                    >
-                      <Plus className="h-4 w-4 mr-2" />
-                      New envelope
-                    </Button>
-                  </span>
-                </TooltipTrigger>
-                {envelopeButtonDisabledReason && (
-                  <TooltipContent>{envelopeButtonDisabledReason}</TooltipContent>
-                )}
-              </Tooltip>
-            </TooltipProvider>
+            <Button type="button" onClick={openNewEnvelopeDrawer}>
+              <Plus className="h-4 w-4 mr-2" />
+              New envelope
+            </Button>
           </div>
         ) : (
           <div className="rounded-lg border border-border p-1">

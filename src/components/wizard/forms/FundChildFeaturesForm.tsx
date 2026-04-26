@@ -78,7 +78,7 @@ export function FundChildFeaturesForm() {
           <span className="font-medium text-foreground">Margin</span> and{' '}
           <span className="font-medium text-foreground">options</span> are requested on the{' '}
           <span className="font-medium text-foreground">Account &amp; owners</span> step for this account—not here. Use
-          this list for service-style workflows (eDelivery, Corestone, SelectLink, etc.).
+          this list for service-style workflows (eDelivery, SelectLink, etc.).
         </p>
 
         {linesForAccount.length > 0 ? (

@@ -68,30 +68,34 @@ right after the existing `pendingKycPartyId` effect. Keyed on
 
 ---
 
-## Delta 3 — Gate `+ New envelope` button
+## Delta 3 — Gate `+ New envelope` button — **REVERTED**
 
-**What.** The `+ New envelope` and `Add envelope` buttons in the eSign
-Envelopes section of `OpenAccountsForm` are disabled until at least one
-account child task reaches `complete` or `awaiting_review`. A tooltip
-explains: *"Complete at least one account setup to generate signature
-documents."*
+**Status.** Reverted on 2026-04-25. The original code is back; see notes
+below before reproposing this change.
 
-**Why.** Prevents advisors from triggering envelope generation against
-empty/incomplete accounts. Off-the-shelf UI patterns require sequential
-dependencies be visually locked until prerequisites are met.
+**What was attempted.** The `+ New envelope` and `Add envelope` buttons in
+the eSign Envelopes section of `OpenAccountsForm` were disabled until at
+least one account child task reached `complete` or `awaiting_review`.
 
-**Where.** `src/components/wizard/forms/OpenAccountsForm.tsx`
-- Add `Tooltip*` imports
-- Compute `hasCompletedAccountChild` and
-  `envelopeButtonDisabledReason` near the existing `accountOpeningChildren`
-  derivation
-- Wrap both envelope-trigger buttons in `<Tooltip>` and apply
-  `disabled={!!envelopeButtonDisabledReason}`
+**Why it was wrong.** The actual onboarding sequence is:
+1. Configure account child (Owners, Funding, Features, Documents)
+2. **Generate envelope** with required forms — this is what gets sent to
+   the client for signature
+3. Client signs → account moves to `awaiting_review`
+4. Submit for home-office review
 
-**Risk.** If a workflow exists where envelopes need to be drafted before any
-account is configured (e.g. specific account types pre-pre-fill), this gate
-will block them. Verify with the document-validation team. Easy escape hatch:
-loosen the `hasCompletedAccountChild` predicate.
+Gating envelope creation on `awaiting_review`/`complete` created a
+dead-end: the advisor needed the envelope to advance the account, but
+couldn't open the envelope drawer until the account had already advanced.
+A workflow user surfaced this on 2026-04-25.
+
+**Lesson for future revisits.** The right gate (if one is needed at all)
+is on the underlying account child being **configured enough to generate
+the form list** — i.e. owners filled in, registration type chosen,
+required documents sourced. Status alone is the wrong predicate. Likely
+better to leave the button enabled and rely on the EsignEnvelopeDrawer's
+own validation to surface "no forms to send yet" when there's nothing to
+include.
 
 ---
 
