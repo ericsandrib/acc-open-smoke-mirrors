@@ -1,6 +1,5 @@
-import { useMemo, useState } from 'react'
+import { useState } from 'react'
 import { useWorkflow, useChildActionContext, getChildReviewState } from '@/stores/workflowStore'
-import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -25,6 +24,32 @@ function ReviewRow({ label, value }: { label: string; value?: string | null }) {
       <span className="text-sm text-muted-foreground">{label}</span>
       <span className="text-sm font-medium text-right max-w-[60%]">{value}</span>
     </div>
+  )
+}
+
+function AccordionSection({
+  value,
+  title,
+  icon: Icon,
+  children,
+}: {
+  value: string
+  title: string
+  icon: React.ComponentType<{ className?: string }>
+  children: React.ReactNode
+}) {
+  return (
+    <AccordionItem value={value} className="rounded-lg border border-border overflow-hidden bg-background">
+      <AccordionTrigger className="px-4 py-3 hover:no-underline bg-muted/30 border-b border-border data-[state=open]:border-b">
+        <span className="flex items-center gap-2 text-sm font-semibold">
+          <Icon className="h-4 w-4 text-muted-foreground" />
+          {title}
+        </span>
+      </AccordionTrigger>
+      <AccordionContent className="px-4 pt-2 pb-4">
+        {children}
+      </AccordionContent>
+    </AccordionItem>
   )
 }
 
@@ -104,7 +129,6 @@ export function ChildHoKycViewContent() {
     .filter(Boolean)
 
   const amlBlocked = amlReview?.status === 'pending' || amlReview?.status === 'flagged' || amlReview?.status === 'info_requested'
-  const compactAddress = [legalCity, legalState, legalCountry].filter(Boolean).join(', ')
   const maskedTaxId = ssn ? `***-**-${ssn.slice(-4)}` : '*--6789'
   const submissionDate =
     reviewState?.hoKycReview?.decidedAt ||

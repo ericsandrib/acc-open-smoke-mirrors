@@ -10,7 +10,7 @@ import {
   DocumentUploadInstancesTable,
   type DocumentUploadInstance,
 } from '@/components/wizard/forms/DocumentUploadInstancesTable'
-import { Lock, AlertTriangle, CheckCircle2 } from 'lucide-react'
+import { AlertTriangle, CheckCircle2 } from 'lucide-react'
 
 export function KycChildDocumentsForm() {
   const ctx = useChildActionContext()
