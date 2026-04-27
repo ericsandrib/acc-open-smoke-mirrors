@@ -50,7 +50,7 @@ export const taskDescriptions: Partial<Record<string, string>> = {
   'funding-line-child-setup':
     'Define funding method, amounts, external account transfers, bank instructions, and servicing for this workflow line.',
   'acct-child-features-services':
-    'Kick off one or more account feature and service workflows—administrative, setup, or lifecycle (not money movements). Each line opens its own detail flow, same pattern as Funding & asset movement.',
+    'Kick off one or more account feature and service workflows—administrative, setup, or lifecycle (not money movements).',
   'feature-service-line-child-setup':
     'Capture status, routing, dates, and notes for this feature or service workflow line.',
   'acct-child-documents-review':

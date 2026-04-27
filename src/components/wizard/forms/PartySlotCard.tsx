@@ -47,6 +47,7 @@ export type PartySlotCardProps = {
   footer?: ReactNode
   onStartKyc?: (partyId: string) => void
   onGoToKyc?: (partyId: string) => void
+  showKycStatus?: boolean
 }
 
 export function PartySlotCard({
@@ -69,6 +70,7 @@ export function PartySlotCard({
   footer,
   onStartKyc,
   onGoToKyc,
+  showKycStatus = true,
 }: PartySlotCardProps) {
   const { state } = useWorkflow()
   const matchedParty = partyId ? parties.find((p) => p.id === partyId) ?? null : null
@@ -433,7 +435,7 @@ export function PartySlotCard({
               </div>
             )}
 
-          {!hideDefaultDetails && !isDesignationPreview && (kycDisplayStatus || matchedParty.kycStatus) && matchedParty.type !== 'related_organization' && (
+          {showKycStatus && !hideDefaultDetails && !isDesignationPreview && (kycDisplayStatus || matchedParty.kycStatus) && matchedParty.type !== 'related_organization' && (
             <div className="flex flex-wrap items-center gap-2 text-sm pt-1 border-t border-border/60">
               <span className="text-muted-foreground">
                 KYC status:

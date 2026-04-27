@@ -75,13 +75,6 @@ export function FundChildFeaturesForm() {
             </Button>
           )}
         </div>
-        <p className="text-sm text-muted-foreground mb-3">
-          <span className="font-medium text-foreground">Margin</span> and{' '}
-          <span className="font-medium text-foreground">options</span> are requested on the{' '}
-          <span className="font-medium text-foreground">Account &amp; owners</span> step for this account—not here. Use
-          this list for service-style workflows (eDelivery, Corestone, SelectLink, etc.).
-        </p>
-
         {linesForAccount.length > 0 ? (
           <div className="space-y-2">
             {linesForAccount.map((line) => (

@@ -749,6 +749,7 @@ export function OpenAccountsForm() {
       </section>
 
       {/* Section 4: Required Documents */}
+      {!externalAnnuityPlatform ? (
       <section id="oa-documents" className="scroll-mt-16">
         <div className="mb-4">
           <h3 className="text-base font-semibold">
@@ -862,6 +863,7 @@ export function OpenAccountsForm() {
           </div>
         )}
       </section>
+      ) : null}
 
       {/* KYC Verification — hidden on annuity path (KYC in external platform) */}
       {!externalAnnuityPlatform ? (

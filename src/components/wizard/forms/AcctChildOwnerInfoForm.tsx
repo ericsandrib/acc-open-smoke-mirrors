@@ -130,6 +130,8 @@ export function AcctChildOwnerInfoForm() {
 
   const [addMemberSheetOwnerId, setAddMemberSheetOwnerId] = useState<string | null>(null)
   const openAccountsParent = ctx ? findParentTaskForChild(state, ctx.child.id) : undefined
+  const kycExternalForThisAccount =
+    openAccountsParent?.formKey === OPEN_ACCOUNTS_WITH_ANNUITY_FORM_KEY
   const kycParentTask =
     state.tasks.find((t) => t.formKey === 'kyc')
     ?? (openAccountsParent?.formKey === OPEN_ACCOUNTS_WITH_ANNUITY_FORM_KEY
@@ -395,7 +397,11 @@ export function AcctChildOwnerInfoForm() {
             selectLabel="Select account owner"
             partyId={owner.partyId}
             onPartyIdChange={(v) => selectExistingOwner(owner.id, v)}
-            onRemove={isJointRegistration ? undefined : () => removeOwner(owner.id)}
+            onRemove={
+              isJointRegistration
+                ? () => updateOwner(owner.id, { partyId: undefined })
+                : () => removeOwner(owner.id)
+            }
             parties={state.relatedParties}
             selectCandidates={accountOwnerCandidates}
             onOpenAddParty={() => setAddMemberSheetOwnerId(owner.id)}
@@ -416,6 +422,7 @@ export function AcctChildOwnerInfoForm() {
                   ? 'Adds to this household for use as account owner.'
                   : 'Adds a person to this household for use as account owner.'
             }
+            showKycStatus={!kycExternalForThisAccount}
             onStartKyc={handleStartKyc}
             onGoToKyc={handleGoToKyc}
           />

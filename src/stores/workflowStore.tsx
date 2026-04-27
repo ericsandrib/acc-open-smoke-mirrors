@@ -15,6 +15,7 @@ import {
   seedOpenAccountsAdditionalInstructions,
 } from '@/data/seed'
 import { getChildSubTaskIds, getChildTypeConfig, parseChildSubTaskId } from '@/utils/childTaskRegistry'
+import { OPEN_ACCOUNTS_WITH_ANNUITY_FORM_KEY } from '@/utils/openAccountsTaskContext'
 import { generateAccountOpenIdentifiers } from '@/utils/accountOpenIdentifiers'
 import { mergeFeatureRequests } from '@/types/featureRequests'
 
@@ -1243,7 +1244,18 @@ export function useChildActionContext() {
     .find((c) => c.id === state.activeChildActionId)
   if (!child) return null
 
-  const config = getChildTypeConfig(child.childType)
+  const baseConfig = getChildTypeConfig(child.childType)
+  const parentTask = state.tasks.find((t) =>
+    t.children?.some((c) => c.id === child.id)
+  )
+  const subTasks =
+    child.childType === 'account-opening' && parentTask?.formKey === OPEN_ACCOUNTS_WITH_ANNUITY_FORM_KEY
+      ? baseConfig.subTasks.filter((s) => s.suffix === 'account-owners')
+      : baseConfig.subTasks
+  const config = {
+    ...baseConfig,
+    subTasks,
+  }
   const n = config.subTasks.length
   if (n === 0) return null
 
@@ -1255,10 +1267,6 @@ export function useChildActionContext() {
   if (!currentSubTask) return null
 
   const subTaskId = `${child.id}-${currentSubTask.suffix}`
-
-  const parentTask = state.tasks.find((t) =>
-    t.children?.some((c) => c.id === child.id)
-  )
 
   return {
     child,
