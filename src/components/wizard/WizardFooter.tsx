@@ -5,7 +5,10 @@ import { ChevronLeft, ChevronRight, Pencil, ShieldAlert } from 'lucide-react'
 import type { TaskStatus } from '@/types/workflow'
 import { parseChildSubTaskId } from '@/utils/childTaskRegistry'
 import { getOpenAccountsSubmitForReviewBlockers } from '@/utils/openAccountsDocumentValidation'
-import { isOpenAccountsTask } from '@/utils/openAccountsTaskContext'
+import {
+  isAnnuityExternalPlatformOpenAccountsTask,
+  isOpenAccountsTask,
+} from '@/utils/openAccountsTaskContext'
 
 function getActiveTaskStatus(state: ReturnType<typeof useWorkflow>['state']): TaskStatus {
   // Check parent tasks
@@ -32,11 +35,13 @@ export function CompleteAccountOpeningConfirmModal({
   onCancel,
   warnings,
   mode = 'submit-children',
+  submitButtonLabel = 'Submit for Review',
 }: {
   onConfirm: () => void
   onCancel: () => void
   warnings: string[]
   mode?: 'submit-children' | 'complete-parent'
+  submitButtonLabel?: string
 }) {
   const isCompleteParent = mode === 'complete-parent'
   return (
@@ -81,7 +86,7 @@ export function CompleteAccountOpeningConfirmModal({
             Cancel
           </Button>
           <Button type="button" onClick={onConfirm}>
-            {isCompleteParent ? 'Complete task' : 'Submit for review'}
+            {isCompleteParent ? 'Complete task' : submitButtonLabel}
           </Button>
         </div>
       </div>
@@ -100,6 +105,7 @@ export function WizardFooter() {
   const isSubmitted = state.submittedTaskIds.includes(state.activeTaskId)
   const active = state.tasks.find((t) => t.id === state.activeTaskId)
   const isOnOpenAccountsTask = isOpenAccountsTask(active)
+  const isAnnuityOpenAccountsTask = isAnnuityExternalPlatformOpenAccountsTask(active)
   const openAccountsChildren = active?.children ?? []
   const accountOpeningChildren = openAccountsChildren.filter((c) => c.childType === 'account-opening')
   const allAccountChildrenTerminal =
@@ -107,6 +113,10 @@ export function WizardFooter() {
     accountOpeningChildren.every((c) =>
       c.status === 'complete' || c.status === 'canceled',
     )
+  const showsOpenAccountsSubmit = isOnOpenAccountsTask && !allAccountChildrenTerminal
+  const openAccountsSubmitLabel = isAnnuityOpenAccountsTask
+    ? 'Submit to NetX360'
+    : 'Submit for Review'
 
   return (
     <>
@@ -146,7 +156,7 @@ export function WizardFooter() {
           <span className="text-sm text-muted-foreground">Assigned to compliance</span>
         )}
 
-        {isLast ? (
+        {isLast || showsOpenAccountsSubmit ? (
           <Button
             onClick={() => {
               setCompleteAccountOpeningWarnings([])
@@ -161,7 +171,7 @@ export function WizardFooter() {
             {isOnOpenAccountsTask
               ? allAccountChildrenTerminal
                 ? 'Complete'
-                : 'Submit for review'
+                : openAccountsSubmitLabel
               : 'Complete'}
           </Button>
         ) : (
@@ -182,6 +192,7 @@ export function WizardFooter() {
             ? 'complete-parent'
             : 'submit-children'
         }
+        submitButtonLabel={openAccountsSubmitLabel}
         onCancel={() => {
           setCompleteAccountOpeningOpen(false)
           setCompleteAccountOpeningWarnings([])

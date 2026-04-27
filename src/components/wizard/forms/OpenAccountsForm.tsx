@@ -676,6 +676,7 @@ export function OpenAccountsForm() {
                         <ChildActionKebabMenu
                           onViewDetails={() => setTimelineChild(child)}
                           onSubmitForReview={() => submitAccountChildForReview(child.id)}
+                          submitForReviewLabel={externalAnnuityPlatform ? 'Submit to NetX360' : 'Submit for Review'}
                           onDelete={() => dispatch({ type: 'REMOVE_CHILD', parentTaskId: openAccountsTask!.id, childId: child.id })}
                         />
                       </div>
