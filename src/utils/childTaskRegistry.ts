@@ -73,6 +73,9 @@ export function getSubTaskDisplayTitle(
   if (childType === 'kyc' && subTask.formKey === 'kyc-child-info' && demoViewMode === 'aml') {
     return 'AML Team Review'
   }
+  if (childType === 'kyc' && subTask.formKey === 'kyc-child-info' && demoViewMode === 'ho-kyc') {
+    return 'CIP Results'
+  }
   return subTask.title
 }
 

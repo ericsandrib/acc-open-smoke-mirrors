@@ -160,6 +160,14 @@ function AdvisorViewBanner() {
 
   if (!ctx) return null
   const { child } = ctx
+  const currentSubTaskFormKey = ctx.currentSubTask.formKey
+  const isKycInfoStep = child.childType === 'kyc' && currentSubTaskFormKey === 'kyc-child-info'
+  const isKycDocumentsStep = child.childType === 'kyc' && currentSubTaskFormKey === 'kyc-child-documents'
+
+  // Keep reviewer/advisor status context on the primary KYC step only; do not duplicate
+  // the same banner on the Documents step.
+  if (isKycDocumentsStep) return null
+
   if (child.status === 'in_progress' || child.status === 'not_started') {
     return null
   }
@@ -317,7 +325,7 @@ function AdvisorViewBanner() {
         <Lock className="h-5 w-5 text-blue-600 dark:text-blue-400 mt-0.5 shrink-0" />
         <div className="space-y-0.5">
           <p className="text-sm font-medium text-blue-900 dark:text-blue-100">
-            {isKyc ? 'Conditionally submitted — pending requested documents' : 'Read-Only — Under Home Office Review'}
+            {isKycInfoStep ? 'Conditionally submitted — pending requested documents' : 'Read-Only — Under Home Office Review'}
           </p>
           <p className="text-xs text-blue-800/80 dark:text-blue-200/70">
             {isKyc
@@ -369,7 +377,7 @@ export function ChildActionContent() {
   return (
     <main className="flex-1 overflow-y-auto p-8">
       <div className="max-w-2xl mx-auto">
-        {inReview && !isAdvisorView && !isHoTeamAccountOpening && (
+        {inReview && !isAdvisorView && !isHoTeamAccountOpening && child.childType === 'account-opening' && (
           <div className="rounded-lg border border-violet-200 bg-violet-50 dark:border-violet-900/60 dark:bg-violet-950/40 px-4 py-3 mb-6">
             <div className="flex items-start gap-3">
               <ShieldCheck className="h-5 w-5 text-violet-600 dark:text-violet-400 mt-0.5 shrink-0" />

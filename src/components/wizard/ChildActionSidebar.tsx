@@ -120,13 +120,6 @@ export function ChildActionSidebar() {
     child.childType !== 'funding-line' &&
     child.childType !== 'feature-service-line'
   const viewMode = state.demoViewMode
-  const isHoKycView = viewMode === 'ho-kyc'
-
-  // Only collapse to one pseudo-step for KYC Document Review (ho-kyc) mode. HO Document and
-  // HO Principal account-opening views use the same numbered subtasks as Advisor (AML is KYC-only).
-  // (e.g. Account & owners → Documents).
-  const showSingleReviewStep = child.childType === 'kyc' && isHoKycView
-  const singleReviewStepLabel = 'Document Review'
 
   return (
     <TooltipProvider delayDuration={300}>
@@ -138,47 +131,34 @@ export function ChildActionSidebar() {
         </div>
 
         <ul className="space-y-1">
-          {showSingleReviewStep ? (
-            <li>
-              <div className="w-full text-left px-3 py-2 rounded-md text-sm flex items-center gap-2 bg-accent text-accent-foreground font-medium">
-                <span className="flex items-center gap-2 truncate">
-                  {showSubTaskNumbers && (
-                    <span className="text-xs text-muted-foreground w-4 shrink-0">1.</span>
+          {config.subTasks.map((subTask, idx) => {
+            const subTaskId = `${child.id}-${subTask.suffix}`
+            return (
+              <li key={subTask.suffix}>
+                <button
+                  onClick={() => dispatch({ type: 'SET_CHILD_SUB_TASK', index: idx })}
+                  className={cn(
+                    'w-full text-left px-3 py-2 rounded-md text-sm flex items-center justify-between gap-2 transition-colors',
+                    idx === subTaskIndex
+                      ? 'bg-accent text-accent-foreground font-medium'
+                      : 'hover:bg-muted text-foreground'
                   )}
-                  {singleReviewStepLabel}
-                </span>
-              </div>
-            </li>
-          ) : (
-            config.subTasks.map((subTask, idx) => {
-              const subTaskId = `${child.id}-${subTask.suffix}`
-              return (
-                <li key={subTask.suffix}>
-                  <button
-                    onClick={() => dispatch({ type: 'SET_CHILD_SUB_TASK', index: idx })}
-                    className={cn(
-                      'w-full text-left px-3 py-2 rounded-md text-sm flex items-center justify-between gap-2 transition-colors',
-                      idx === subTaskIndex
-                        ? 'bg-accent text-accent-foreground font-medium'
-                        : 'hover:bg-muted text-foreground'
+                >
+                  <span className="flex items-center gap-2 truncate">
+                    {showSubTaskNumbers && (
+                      <span className="text-xs text-muted-foreground w-4 shrink-0">{idx + 1}.</span>
                     )}
-                  >
-                    <span className="flex items-center gap-2 truncate">
-                      {showSubTaskNumbers && (
-                        <span className="text-xs text-muted-foreground w-4 shrink-0">{idx + 1}.</span>
-                      )}
-                      {getSubTaskDisplayTitle(child.childType, subTask, viewMode)}
-                    </span>
-                    <SubTaskStatusBadge
-                      subTaskId={subTaskId}
-                      accountOpeningChildId={child.childType === 'account-opening' ? child.id : undefined}
-                      subTaskSuffix={child.childType === 'account-opening' ? subTask.suffix : undefined}
-                    />
-                  </button>
-                </li>
-              )
-            })
-          )}
+                    {getSubTaskDisplayTitle(child.childType, subTask, viewMode)}
+                  </span>
+                  <SubTaskStatusBadge
+                    subTaskId={subTaskId}
+                    accountOpeningChildId={child.childType === 'account-opening' ? child.id : undefined}
+                    subTaskSuffix={child.childType === 'account-opening' ? subTask.suffix : undefined}
+                  />
+                </button>
+              </li>
+            )
+          })}
         </ul>
 
         <div className="mt-auto px-3 pt-4 pb-2 border-t border-border mt-4">

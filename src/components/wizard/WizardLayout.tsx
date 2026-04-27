@@ -183,6 +183,14 @@ function WizardActionProgressBar({
               >
                 {action.title}
               </button>
+              <span
+                className={cn(
+                  'shrink-0 text-[10px] tabular-nums',
+                  isActive ? 'text-primary font-semibold' : 'text-muted-foreground',
+                )}
+              >
+                {action.pct}%
+              </span>
             </div>
             <div
               className={cn(
@@ -193,7 +201,11 @@ function WizardActionProgressBar({
               <div
                 className={cn(
                   'h-full rounded-full transition-all',
-                  isActive ? 'bg-primary' : 'bg-muted-foreground/40 dark:bg-muted-foreground/35',
+                  isActive
+                    ? 'bg-primary'
+                    : action.pct > 0
+                      ? 'bg-muted-foreground/60 dark:bg-muted-foreground/50'
+                      : 'bg-muted-foreground/25 dark:bg-muted-foreground/20',
                 )}
                 style={{ width: `${action.pct}%` }}
               />
@@ -257,6 +269,10 @@ export function WizardLayout() {
     ? state.tasks.find((t) => (t.children ?? []).some((c) => c.id === activeChild.id))
     : undefined
   const isKycChild = activeChild?.childType === 'kyc'
+  const activeKycSubTask = isKycChild && state.activeChildSubTaskIndex != null
+    ? getChildTypeConfig('kyc').subTasks[state.activeChildSubTaskIndex]
+    : undefined
+  const showKycDocumentsSubTask = activeKycSubTask?.formKey === 'kyc-child-documents'
 
   /** Reviewer demo tabs only for this child once it is submitted / in review / complete — not from global `submittedAt` (e.g. after KYC approval elsewhere). */
   const childInReviewerPipeline =
@@ -643,7 +659,7 @@ export function WizardLayout() {
                   <ChildActionSidebar />
                   <div className="flex flex-1 min-h-0 overflow-hidden min-w-0">
                     <div className="flex-1 flex flex-col overflow-hidden min-w-0">
-                      <ChildAmlReviewContent />
+                      {showKycDocumentsSubTask ? <ChildActionContent /> : <ChildAmlReviewContent />}
                     </div>
                     <ChildActionRightSidebar />
                   </div>
@@ -656,7 +672,7 @@ export function WizardLayout() {
                   <ChildActionSidebar />
                   <div className="flex flex-1 min-h-0 overflow-hidden min-w-0">
                     <div className="flex-1 flex flex-col overflow-hidden min-w-0">
-                      <ChildHoKycViewContent />
+                      {showKycDocumentsSubTask ? <ChildActionContent /> : <ChildHoKycViewContent />}
                     </div>
                     <ChildActionRightSidebar />
                   </div>

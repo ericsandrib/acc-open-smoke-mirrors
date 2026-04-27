@@ -22,10 +22,11 @@ export function KycChildDocumentsForm() {
   const advisorResubmitEligible = useAdvisorResubmitEligible()
   const childMeta = child ? (state.taskData[child.id] as Record<string, unknown> | undefined) ?? {} : {}
   const isEntity = childMeta.kycSubjectType === 'entity'
+  const isAdvisorView = state.demoViewMode === 'advisor'
 
   const statusLocked = child ? (child.status === 'awaiting_review' || child.status === 'complete' || child.status === 'rejected') : false
-  const isLocked = statusLocked && !advisorFormsEditable
   const isApproved = child?.status === 'complete'
+  const isLocked = isApproved || (isAdvisorView && statusLocked && !advisorFormsEditable)
 
   const docs = [
     {
@@ -100,26 +101,15 @@ export function KycChildDocumentsForm() {
           </div>
         </div>
       )}
-      {isLocked && (
-        isApproved ? (
-          <div className="rounded-md border border-green-200 bg-green-50 dark:border-green-900/60 dark:bg-green-950/40 px-3 py-2.5">
-            <div className="flex items-center gap-2">
-              <CheckCircle2 className="h-4 w-4 text-green-600 dark:text-green-400 shrink-0" />
-              <p className="text-xs font-medium text-green-900 dark:text-green-100">
-                This KYC package has been approved. Documents are read-only.
-              </p>
-            </div>
+      {isLocked && isApproved && (
+        <div className="rounded-md border border-green-200 bg-green-50 dark:border-green-900/60 dark:bg-green-950/40 px-3 py-2.5">
+          <div className="flex items-center gap-2">
+            <CheckCircle2 className="h-4 w-4 text-green-600 dark:text-green-400 shrink-0" />
+            <p className="text-xs font-medium text-green-900 dark:text-green-100">
+              This KYC package has been approved. Documents are read-only.
+            </p>
           </div>
-        ) : (
-          <div className="rounded-md border border-amber-200 bg-amber-50 dark:border-amber-900/60 dark:bg-amber-950/40 px-3 py-2.5">
-            <div className="flex items-center gap-2">
-              <Lock className="h-4 w-4 text-amber-600 dark:text-amber-400 shrink-0" />
-              <p className="text-xs font-medium text-amber-900 dark:text-amber-100">
-                This submission is under review. Documents are locked and cannot be modified.
-              </p>
-            </div>
-          </div>
-        )
+        </div>
       )}
       {docs.map((doc) => {
         const instances = (data[`doc-instances-${doc.id}`] as DocumentUploadInstance[] | undefined) ?? []

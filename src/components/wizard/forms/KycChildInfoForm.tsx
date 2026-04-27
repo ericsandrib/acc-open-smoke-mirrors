@@ -25,6 +25,7 @@ const REQUIRED_RULES: { field: string; label: string }[] = [
   { field: 'dob', label: 'Date of birth' },
   { field: 'taxId', label: 'SSN / Tax ID' },
   { field: 'legalStreet', label: 'Legal address (street)' },
+  { field: 'employmentStatus', label: 'Employment status' },
   { field: 'sourceOfFunds', label: 'Source of funds' },
 ]
 
@@ -1373,6 +1374,67 @@ export function KycChildInfoForm() {
               className={inputErrorCls('taxId')}
             />
             {showError('taxId') && <InlineError message={errorMap.get('taxId')!} />}
+          </div>
+        </div>
+      </section>
+
+      <hr className="border-border" />
+
+      <section className="space-y-3">
+        <h4 className={sectionCls}>Financial Profile</h4>
+        <p className="text-xs text-muted-foreground">
+          Tell us about your current employment and primary source of funds.
+        </p>
+        <div className="space-y-3">
+          <div className="space-y-1.5" data-field="employmentStatus">
+            <Label className={fieldCls}>Employment status<RequiredStar /></Label>
+            <Select
+              value={str('employmentStatus') || ''}
+              onValueChange={(v) => {
+                updateField('employmentStatus', v)
+                markTouched('employmentStatus')
+              }}
+              disabled={isLocked}
+            >
+              <SelectTrigger className={inputErrorCls('employmentStatus')}>
+                <SelectValue placeholder="Select employment status" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="Employed">Employed</SelectItem>
+                <SelectItem value="Self-employed">Self-employed</SelectItem>
+                <SelectItem value="Retired">Retired</SelectItem>
+                <SelectItem value="Student">Student</SelectItem>
+                <SelectItem value="Unemployed">Unemployed</SelectItem>
+                <SelectItem value="Other">Other</SelectItem>
+              </SelectContent>
+            </Select>
+            {showError('employmentStatus') && <InlineError message={errorMap.get('employmentStatus')!} />}
+          </div>
+
+          <div className="space-y-1.5" data-field="sourceOfFunds">
+            <Label className={fieldCls}>Source of funds<RequiredStar /></Label>
+            <Select
+              value={str('sourceOfFunds') || ''}
+              onValueChange={(v) => {
+                updateField('sourceOfFunds', v)
+                markTouched('sourceOfFunds')
+              }}
+              disabled={isLocked}
+            >
+              <SelectTrigger className={inputErrorCls('sourceOfFunds')}>
+                <SelectValue placeholder="Select source of funds" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="Employment income">Employment income</SelectItem>
+                <SelectItem value="Business income">Business income</SelectItem>
+                <SelectItem value="Investment income">Investment income</SelectItem>
+                <SelectItem value="Retirement income">Retirement income</SelectItem>
+                <SelectItem value="Inheritance / gift">Inheritance / gift</SelectItem>
+                <SelectItem value="Sale of asset">Sale of asset</SelectItem>
+                <SelectItem value="Other">Other</SelectItem>
+              </SelectContent>
+            </Select>
+            {showError('sourceOfFunds') && <InlineError message={errorMap.get('sourceOfFunds')!} />}
           </div>
         </div>
       </section>

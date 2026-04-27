@@ -9,7 +9,9 @@ export function HoKycReviewFooter() {
   const { state, dispatch } = useWorkflow()
   const ctx = useChildActionContext()
   const [showApproveConfirm, setShowApproveConfirm] = useState(false)
-  const [showRequestChanges, setShowRequestChanges] = useState(false)
+  const [showRequestInfo, setShowRequestInfo] = useState(false)
+  const [showReject, setShowReject] = useState(false)
+  const [showEscalate, setShowEscalate] = useState(false)
   const [comments, setComments] = useState('')
 
   if (!ctx) return null
@@ -51,25 +53,25 @@ export function HoKycReviewFooter() {
     <>
       <footer className="border-t border-border bg-background px-6 py-3 min-h-14 flex items-center justify-center shrink-0 box-border">
         <div className="flex items-center gap-3">
-          {amlBlocked && (
-            <span className="text-xs text-amber-600 font-medium mr-2">
-              AML review must complete before approval
-            </span>
-          )}
-          <Button
-            variant="outline"
-            onClick={() => setShowRequestChanges(true)}
-          >
+          <Button size="sm" variant="outline" onClick={() => setShowRequestInfo(true)}>
             <MessageSquare className="h-4 w-4" />
-            Request Changes
+            Request Information
+          </Button>
+          <Button size="sm" variant="destructive" onClick={() => setShowReject(true)}>
+            Reject
+          </Button>
+          <Button size="sm" variant="destructive" onClick={() => setShowEscalate(true)}>
+            <ShieldAlert className="h-4 w-4" />
+            Escalate
           </Button>
           <Button
+            size="sm"
             className="bg-green-600 hover:bg-green-700 text-white"
             disabled={amlBlocked}
             onClick={() => setShowApproveConfirm(true)}
           >
             <CheckCircle2 className="h-4 w-4" />
-            Approve KYC
+            Approve
           </Button>
         </div>
       </footer>
@@ -107,50 +109,113 @@ export function HoKycReviewFooter() {
         </div>
       )}
 
-      {showRequestChanges && (
+      {showRequestInfo && (
         <div className="fixed inset-0 z-[60] flex items-center justify-center">
-          <div className="fixed inset-0 bg-black/50" onClick={() => setShowRequestChanges(false)} />
+          <div className="fixed inset-0 bg-black/50" onClick={() => setShowRequestInfo(false)} />
           <div className="relative z-10 bg-background rounded-lg border border-border shadow-lg max-w-md w-full mx-4 p-6 space-y-4">
             <div className="flex items-start gap-3">
               <div className="rounded-full bg-amber-50 p-2 shrink-0">
                 <MessageSquare className="h-5 w-5 text-amber-600" />
               </div>
               <div className="space-y-1">
-                <h3 className="text-base font-semibold">Request Changes</h3>
+                <h3 className="text-base font-semibold">Request Information</h3>
                 <p className="text-sm text-muted-foreground">
-                  Send this <span className="font-medium text-foreground">{subjectLabel}</span> submission (
-                  <span className="font-medium text-foreground">{child.name}</span>) back to the advisor for corrections.
+                  Request additional details for this <span className="font-medium text-foreground">{subjectLabel}</span> (
+                  <span className="font-medium text-foreground">{child.name}</span>) before final review.
                 </p>
               </div>
             </div>
 
             <div className="space-y-2">
-              <Label className="text-sm">Comments for Advisor</Label>
+              <Label className="text-sm">Request details</Label>
               <textarea
                 value={comments}
                 onChange={(e) => setComments(e.target.value)}
-                placeholder="Describe what needs to be corrected or updated..."
+                placeholder="Describe what additional information is needed..."
                 className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm min-h-[80px] resize-none focus:outline-none focus:ring-2 focus:ring-ring"
               />
             </div>
 
             <div className="flex items-center justify-end gap-3 pt-1">
-              <Button variant="outline" onClick={() => setShowRequestChanges(false)}>Cancel</Button>
+              <Button variant="outline" onClick={() => setShowRequestInfo(false)}>Cancel</Button>
               <Button
                 variant="default"
                 onClick={() => {
-                  const feedback = comments.trim() || 'Please review and resubmit.'
+                  const feedback = comments.trim() || 'Please provide additional information.'
                   dispatch({ type: 'HO_KYC_REQUEST_CHANGES', comments: feedback })
-                  setShowRequestChanges(false)
+                  setShowRequestInfo(false)
                   setComments('')
-                  toast('Document Review returned feedback', {
+                  toast('Document Review requested information', {
                     description: feedback,
                     icon: <MessageSquare className="h-4 w-4 text-amber-600" />,
                     duration: 6000,
                   })
                 }}
               >
-                Send Back to Advisor
+                Send Request
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showReject && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center">
+          <div className="fixed inset-0 bg-black/50" onClick={() => setShowReject(false)} />
+          <div className="relative z-10 bg-background rounded-lg border border-border shadow-lg max-w-md w-full mx-4 p-6 space-y-4">
+            <div className="space-y-1">
+              <h3 className="text-base font-semibold">Reject</h3>
+              <p className="text-sm text-muted-foreground">Reject this submission and return it to advisor with rationale.</p>
+            </div>
+            <textarea
+              value={comments}
+              onChange={(e) => setComments(e.target.value)}
+              placeholder="Describe the reason for rejection..."
+              className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm min-h-[80px] resize-none focus:outline-none focus:ring-2 focus:ring-ring"
+            />
+            <div className="flex items-center justify-end gap-3 pt-1">
+              <Button variant="outline" onClick={() => setShowReject(false)}>Cancel</Button>
+              <Button
+                variant="destructive"
+                onClick={() => {
+                  const feedback = comments.trim() || 'Rejected by Document Review.'
+                  dispatch({ type: 'HO_KYC_REQUEST_CHANGES', comments: feedback })
+                  setShowReject(false)
+                  setComments('')
+                }}
+              >
+                Confirm Reject
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showEscalate && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center">
+          <div className="fixed inset-0 bg-black/50" onClick={() => setShowEscalate(false)} />
+          <div className="relative z-10 bg-background rounded-lg border border-border shadow-lg max-w-md w-full mx-4 p-6 space-y-4">
+            <div className="space-y-1">
+              <h3 className="text-base font-semibold">Escalate</h3>
+              <p className="text-sm text-muted-foreground">Escalate this case for suspicious activity handling.</p>
+            </div>
+            <textarea
+              value={comments}
+              onChange={(e) => setComments(e.target.value)}
+              placeholder="Describe reason for escalation..."
+              className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm min-h-[80px] resize-none focus:outline-none focus:ring-2 focus:ring-ring"
+            />
+            <div className="flex items-center justify-end gap-3 pt-1">
+              <Button variant="outline" onClick={() => setShowEscalate(false)}>Cancel</Button>
+              <Button
+                variant="destructive"
+                onClick={() => {
+                  dispatch({ type: 'AML_ESCALATE_SAR', reason: comments.trim() || undefined })
+                  setShowEscalate(false)
+                  setComments('')
+                }}
+              >
+                Confirm Escalate
               </Button>
             </div>
           </div>
