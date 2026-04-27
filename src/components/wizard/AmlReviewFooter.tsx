@@ -110,10 +110,10 @@ export function AmlReviewFooter() {
                 <CheckCircle2 className="h-5 w-5 text-green-600" />
               </div>
               <div className="space-y-1">
-                <h3 className="text-base font-semibold">Clear AML Review</h3>
+                <h3 className="text-base font-semibold">Approve AML Review</h3>
                 <p className="text-sm text-muted-foreground">
-                  Confirm that <span className="font-medium text-foreground">{child?.name}</span> has
-                  passed all AML/sanctions screenings and can proceed.
+                  Confirm approval for <span className="font-medium text-foreground">{child?.name}</span> after
+                  AML/sanctions screening review is complete.
                 </p>
               </div>
             </div>
@@ -126,7 +126,7 @@ export function AmlReviewFooter() {
                   setShowClearConfirm(false)
                 }}
               >
-                Confirm Clear
+                Confirm Approval
               </Button>
             </div>
           </div>
