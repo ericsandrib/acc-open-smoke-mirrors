@@ -1,0 +1,200 @@
+# Stratos × Avantos — Onboarding Page Map manifest
+#
+# Maps stable page ids (P01–P16) to the .tsx files that drive each page in this
+# prototype. The pagemap-scanner reads this file and produces a structured field
+# inventory the stratos-pagemap agent pushes into the Stratos · Page Fields
+# Notion DB.
+#
+# v2 conventions:
+# - One entry per row in the canonical 16-page list. P14 is split into reviewer
+#   variants (P14a–P14d) because each role has its own component.
+# - `primary_files` are TSX files where labels/inputs/dropdowns live.
+# - `enum_files` (optional) are pure-data files that contribute dropdown options
+#   but no fields of their own.
+# - No `prod_path_overrides` / `guardian_path_overrides` — the scanner does not
+#   compare against upstream. Drift watching lives in the avantos-drift-watcher
+#   agent (`/drift` slash command).
+#
+# When the prototype team adds or restructures a page, update this file in the
+# same PR. The scanner is the source of truth for fields; this manifest is the
+# source of truth for which files compose each page.
+
+pages:
+  - id: P01
+    name: Relationships (main page)
+    route: /relationships
+    where_it_lives: Sidebar › Manage › Relationships
+    primary_files:
+      - src/pages/RelationshipsPage.tsx
+
+  - id: P02
+    name: Client Info — Household
+    route: /wizard
+    where_it_lives: Wizard › Collect Client Data › Client Info (Household)
+    form_key: related-parties
+    primary_files:
+      - src/components/wizard/forms/RelatedPartiesForm.tsx
+      - src/components/wizard/forms/AddPartySheet.tsx
+    enum_files:
+      - src/types/workflow.ts
+
+  - id: P03
+    name: Existing Accounts
+    route: /wizard
+    where_it_lives: Wizard › Collect Client Data › Existing Accounts
+    form_key: existing-accounts
+    primary_files:
+      - src/components/wizard/forms/ExistingAccountsForm.tsx
+      - src/components/wizard/forms/FinancialAccountSlotCard.tsx
+      - src/components/wizard/forms/FinancialAccountsForm.tsx
+
+  - id: P04
+    name: Client Info — Relationships sub-section
+    route: /wizard
+    where_it_lives: Wizard › Collect Client Data › Client Info (Related/Trusts/Entities/Professionals)
+    form_key: related-parties
+    primary_files:
+      - src/components/wizard/forms/RelatedPartiesForm.tsx
+      - src/components/wizard/forms/EditLegalEntitySheet.tsx
+
+  - id: P05
+    name: New Journey panel
+    route: /
+    where_it_lives: Sidebar › Create › New journey panel
+    primary_files:
+      - src/components/dashboard/ComposeDialog.tsx
+      - src/components/dashboard/DashboardContent.tsx
+
+  - id: P06
+    name: Add Accounts panel
+    route: /wizard
+    where_it_lives: Wizard › Open Accounts › Add Accounts panel
+    form_key: open-accounts
+    primary_files:
+      - src/components/wizard/forms/OpenAccountsForm.tsx
+      - src/components/wizard/forms/AccountTypePickerDialog.tsx
+
+  - id: P07
+    name: Open Accounts — Required Documents
+    route: /wizard
+    where_it_lives: Wizard › Open Accounts › Required Documents
+    form_key: open-accounts
+    primary_files:
+      - src/components/wizard/forms/OpenAccountsForm.tsx
+
+  - id: P08
+    name: Open Accounts — KYC Verification
+    route: /wizard
+    where_it_lives: Wizard › Open Accounts › KYC Verification
+    form_key: kyc
+    primary_files:
+      - src/components/wizard/forms/KycForm.tsx
+      - src/components/wizard/forms/KycChildInfoForm.tsx
+      - src/components/wizard/forms/KycChildDocumentsForm.tsx
+      - src/components/wizard/forms/KycChildResultsForm.tsx
+
+  - id: P09
+    name: Open Accounts — Envelopes
+    route: /wizard
+    where_it_lives: Wizard › Open Accounts › eSign Envelopes
+    primary_files:
+      - src/components/wizard/EsignDocumentsBundleViewer.tsx
+      - src/components/wizard/EsignFormPdfSampleActions.tsx
+      - src/components/wizard/forms/WetSignedFirmUploadsGroup.tsx
+
+  - id: P10
+    name: Account Detail — Account & Owners
+    route: /wizard
+    where_it_lives: Wizard › Open Accounts › Account child › Account & Owners
+    form_key: acct-child-account-owners
+    primary_files:
+      - src/components/wizard/forms/AcctChildOwnerInfoForm.tsx
+      - src/components/wizard/forms/AccountOwnerIndividualFormFields.tsx
+      - src/components/wizard/forms/AccountOwnerPartySheet.tsx
+      - src/components/wizard/forms/AccountProfileSection.tsx
+      - src/components/wizard/forms/PartySlotCard.tsx
+      - src/components/wizard/forms/AcctChildAnnuityForm.tsx
+
+  - id: P11
+    name: Account Detail — Funding & Asset Movement
+    route: /wizard
+    where_it_lives: Wizard › Open Accounts › Account child › Funding & Asset Movement
+    form_key: acct-child-funding-transfers
+    primary_files:
+      - src/components/wizard/forms/FundChildFundingForm.tsx
+      - src/components/wizard/forms/FundingLineSetupForm.tsx
+      - src/components/wizard/forms/FundingLinePickerDialog.tsx
+
+  - id: P12
+    name: Account Detail — Features & Services
+    route: /wizard
+    where_it_lives: Wizard › Open Accounts › Account child › Features & Services
+    form_key: acct-child-features-services
+    primary_files:
+      - src/components/wizard/forms/FundChildFeaturesForm.tsx
+      - src/components/wizard/forms/FeatureServiceLineSetupForm.tsx
+      - src/components/wizard/forms/FeatureServiceLinePickerDialog.tsx
+      - src/components/wizard/forms/AccountFeatureRequestsSection.tsx
+
+  - id: P13
+    name: Account Detail — Documents
+    route: /wizard
+    where_it_lives: Wizard › Open Accounts › Account child › Documents
+    form_key: acct-child-documents-review
+    primary_files:
+      - src/components/wizard/forms/AcctChildDocumentsReviewForm.tsx
+      - src/components/wizard/forms/WetSignedFirmUploadsGroup.tsx
+
+  - id: P14a
+    name: Reviewer view — AML / Compliance
+    route: /wizard
+    where_it_lives: Wizard › reviewer leg › AML
+    primary_files:
+      - src/components/wizard/ChildAmlReviewContent.tsx
+      - src/components/wizard/AmlReviewFooter.tsx
+
+  - id: P14b
+    name: Reviewer view — Home Office Document Review
+    route: /wizard
+    where_it_lives: Wizard › reviewer leg › Home Office Documents
+    primary_files:
+      - src/components/wizard/ChildHoDocumentViewContent.tsx
+      - src/components/wizard/HomeOfficeReviewFooter.tsx
+      - src/components/wizard/NigoDialog.tsx
+
+  - id: P14c
+    name: Reviewer view — Home Office KYC
+    route: /wizard
+    where_it_lives: Wizard › reviewer leg › Home Office KYC
+    primary_files:
+      - src/components/wizard/ChildHoKycViewContent.tsx
+      - src/components/wizard/HoKycReviewFooter.tsx
+      - src/components/wizard/ReviewRejectionDialog.tsx
+
+  - id: P14d
+    name: Reviewer view — Principal Review
+    route: /wizard
+    where_it_lives: Wizard › reviewer leg › Principal
+    primary_files:
+      - src/components/wizard/ChildHoPrincipalViewContent.tsx
+      - src/components/wizard/HomeOfficeViewContent.tsx
+
+  - id: P15
+    name: Onboarding dashboard
+    route: /onboarding
+    where_it_lives: Sidebar › Manage › Onboarding
+    primary_files:
+      - src/pages/OnboardingPage.tsx
+      - src/components/servicing/OnboardingContent.tsx
+      - src/components/servicing/OnboardingJourneysTable.tsx
+
+  - id: P16
+    name: Servicing dashboard
+    route: /servicing
+    where_it_lives: Sidebar › Manage › Servicing
+    primary_files:
+      - src/pages/ServicingPage.tsx
+      - src/components/servicing/ServicingContent.tsx
+      - src/components/servicing/JourneysTable.tsx
+      - src/components/servicing/ActionsTable.tsx
+      - src/components/servicing/TasksTable.tsx
