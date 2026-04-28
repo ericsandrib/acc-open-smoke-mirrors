@@ -30,6 +30,7 @@ import {
   WizardRightPanelProvider,
 } from '@/components/wizard/wizardRightPanelContext'
 import { getChildTypeConfig, getSubTaskDisplayTitle } from '@/utils/childTaskRegistry'
+import { OPEN_ACCOUNTS_WITH_ANNUITY_FORM_KEY } from '@/utils/openAccountsTaskContext'
 
 type WizardActionProgressItem = { id: string; title: string; pct: number }
 type HeaderBreadcrumb = {
@@ -74,15 +75,28 @@ function HeaderBreadcrumbTrail({ items, title }: { items: HeaderBreadcrumb[]; ti
                   </button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="start" sideOffset={6} className="min-w-[14rem]">
-                  {hiddenItems.map((hidden) => (
-                    <DropdownMenuItem
-                      key={hidden.id}
-                      onSelect={() => hidden.onClick?.()}
-                      className="max-w-[18rem] truncate"
-                      title={hidden.label}
-                    >
-                      {hidden.label}
-                    </DropdownMenuItem>
+                  {hiddenItems.map((hidden, hiddenIdx) => (
+                    <div key={hidden.id}>
+                      <DropdownMenuItem disabled className="max-w-[18rem] truncate text-[11px] uppercase tracking-wide text-muted-foreground">
+                        {hidden.label}
+                      </DropdownMenuItem>
+                      {(hidden.menuItems && hidden.menuItems.length > 0
+                        ? hidden.menuItems
+                        : hidden.onClick
+                          ? [{ id: `${hidden.id}-self`, label: hidden.label, onSelect: hidden.onClick }]
+                          : []
+                      ).map((menuItem) => (
+                        <DropdownMenuItem
+                          key={menuItem.id}
+                          onSelect={menuItem.onSelect}
+                          className="max-w-[18rem] truncate pl-6"
+                          title={menuItem.label}
+                        >
+                          {menuItem.label}
+                        </DropdownMenuItem>
+                      ))}
+                      {hiddenIdx < hiddenItems.length - 1 ? <div className="my-1 h-px bg-border" /> : null}
+                    </div>
                   ))}
                 </DropdownMenuContent>
               </DropdownMenu>
@@ -393,6 +407,14 @@ export function WizardLayout() {
           .sort((a, b) => a.order - b.order)
       : []
   const currentTopLevelActionId = inChildAction ? activeParentTask?.actionId : activeParentActionId
+  const accountOpeningBreadcrumbSubTasks =
+    activeParentTask?.formKey === OPEN_ACCOUNTS_WITH_ANNUITY_FORM_KEY
+      ? getChildTypeConfig('account-opening').subTasks.filter(
+          (s) => s.suffix === 'account-owners' || s.suffix === 'netx360-next-steps',
+        )
+      : getChildTypeConfig('account-opening').subTasks.filter(
+          (s) => s.suffix !== 'netx360-next-steps',
+        )
   const actionProgress = state.actions
     .filter((action) => action.id !== 'kyc')
     .sort((a, b) => a.order - b.order)
@@ -441,7 +463,7 @@ export function WizardLayout() {
             onSelect: () => dispatch({ type: 'GO_TO_TASK', taskId: t.id }),
           }))
           const accountSubTaskMenuItems = state.childActionResume
-            ? getChildTypeConfig('account-opening').subTasks.map((subTask, index) => ({
+            ? accountOpeningBreadcrumbSubTasks.map((subTask, index) => ({
                 id: `account-subtask-${subTask.suffix}`,
                 label: getSubTaskDisplayTitle('account-opening', subTask, state.demoViewMode),
                 onSelect: () => {
@@ -461,7 +483,7 @@ export function WizardLayout() {
             activeChild.name !== parentCrumb
           const resumeSubTask =
             state.childActionResume
-              ? getChildTypeConfig('account-opening').subTasks[state.childActionResume.subTaskIndex]
+              ? accountOpeningBreadcrumbSubTasks[state.childActionResume.subTaskIndex]
               : undefined
           const pathItems: HeaderBreadcrumb[] = [
             { id: 'root', label: rootCrumb, onClick: () => navigate('/onboarding') },

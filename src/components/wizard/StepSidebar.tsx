@@ -3,6 +3,7 @@ import type { TaskStatus, Task, WorkflowState } from '@/types/workflow'
 import { cn } from '@/lib/utils'
 import { parseChildSubTaskId } from '@/utils/childTaskRegistry'
 import { isOpenAccountsFormKey } from '@/utils/openAccountsTaskContext'
+import { taskSections } from './formRegistry'
 import { Circle, Loader, CheckCircle2, Ban, Clock, XCircle } from 'lucide-react'
 import {
   Tooltip,
@@ -10,6 +11,8 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from '@/components/ui/tooltip'
+
+const DEFAULT_TASK_SECTIONS = [{ id: '__top__', label: 'Overview' }] as const
 
 const statusColors: Record<TaskStatus, string> = {
   not_started: 'text-text-tertiary',
@@ -181,18 +184,21 @@ export function StepSidebar() {
                   {actionTasks.map((task) => {
                     const progress = getTaskFieldProgress(state, task)
                     const pct = progress.total > 0 ? progress.filled / progress.total : 0
+                    const isActiveTask =
+                      state.activeTaskId === task.id ||
+                      (task.children?.some((c) => {
+                        if (c.id === state.activeTaskId) return true
+                        const parsed = parseChildSubTaskId(state.activeTaskId)
+                        return parsed ? c.id === parsed.childId : false
+                      }) ?? false)
+                    const sections = taskSections[task.formKey] ?? DEFAULT_TASK_SECTIONS
                     return (
                       <li key={task.id}>
                         <button
                           onClick={() => dispatch({ type: 'SET_ACTIVE_TASK', taskId: task.id })}
                           className={cn(
                             'w-full text-left px-3 py-2 rounded-md text-sm flex items-center justify-between gap-2 transition-colors',
-                            state.activeTaskId === task.id ||
-                            (task.children?.some((c) => {
-                              if (c.id === state.activeTaskId) return true
-                              const parsed = parseChildSubTaskId(state.activeTaskId)
-                              return parsed ? c.id === parsed.childId : false
-                            }) ?? false)
+                            isActiveTask
                               ? 'bg-accent text-accent-foreground font-medium'
                               : 'hover:bg-muted text-foreground'
                           )}
@@ -200,6 +206,26 @@ export function StepSidebar() {
                           <span className="truncate min-w-0">{task.title}</span>
                           <DonutProgress progress={pct} edited={!!task.edited} />
                         </button>
+                        {isActiveTask && sections.length > 0 ? (
+                          <ul className="mt-1 ml-2 space-y-0.5">
+                            {sections.map((section) => (
+                              <li key={section.id}>
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    if (state.activeTaskId !== task.id) {
+                                      dispatch({ type: 'SET_ACTIVE_TASK', taskId: task.id })
+                                    }
+                                    dispatch({ type: 'FOCUS_PARENT_TASK_SECTION', sectionId: section.id })
+                                  }}
+                                  className="w-full text-left px-3 py-1 text-xs text-muted-foreground hover:text-foreground hover:bg-muted rounded-md transition-colors"
+                                >
+                                  {section.label}
+                                </button>
+                              </li>
+                            ))}
+                          </ul>
+                        ) : null}
                       </li>
                     )
                   })}

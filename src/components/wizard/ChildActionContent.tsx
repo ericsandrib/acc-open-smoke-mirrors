@@ -1,7 +1,8 @@
+import { useEffect } from 'react'
 import type { ChildReviewState } from '@/types/workflow'
 import { useWorkflow, useChildActionContext, useAdvisorFormsEditable, getChildReviewState, getChildReviewDecision } from '@/stores/workflowStore'
 import { getSubTaskDisplayTitle } from '@/utils/childTaskRegistry'
-import { formComponents, taskDescriptions } from './formRegistry'
+import { formComponents, taskDescriptions, taskSections } from './formRegistry'
 import { Badge } from '@/components/ui/badge'
 import { ShieldCheck, Lock, AlertTriangle, CheckCircle2, FileText, FileSearch } from 'lucide-react'
 
@@ -344,7 +345,7 @@ function AdvisorViewBanner() {
 }
 
 export function ChildActionContent() {
-  const { state } = useWorkflow()
+  const { state, dispatch } = useWorkflow()
   const ctx = useChildActionContext()
   const isAdvisorView = state.demoViewMode === 'advisor'
   const advisorFormsEditable = useAdvisorFormsEditable()
@@ -354,6 +355,7 @@ export function ChildActionContent() {
   const { child, currentSubTask } = ctx
   const FormComponent = formComponents[currentSubTask.formKey] ?? null
   const description = taskDescriptions[currentSubTask.formKey]
+  const hasExplicitSections = Boolean(taskSections[currentSubTask.formKey]?.length)
   const inReview = child.status === 'awaiting_review'
   const advisorDisabled = isAdvisorView && !advisorFormsEditable
   const childInReviewerPipeline =
@@ -373,6 +375,36 @@ export function ChildActionContent() {
   const amlFlagged = reviewState?.amlFlagged
   const amlNotes = reviewState?.amlNotes
   const formReadOnly = advisorDisabled || isHoTeamAccountOpening
+
+  useEffect(() => {
+    const targetSectionId = state.parentSectionFocusId
+    if (!targetSectionId) return
+    if (targetSectionId === '__top__') {
+      const main = document.querySelector('main')
+      if (main instanceof HTMLElement) {
+        main.scrollTo({ top: 0, behavior: 'smooth' })
+      } else {
+        window.scrollTo({ top: 0, behavior: 'smooth' })
+      }
+      dispatch({ type: 'CLEAR_PARENT_SECTION_FOCUS' })
+      return
+    }
+    const el = document.getElementById(targetSectionId)
+    if (el) {
+      const scrollContainer = el.closest('main')
+      if (scrollContainer instanceof HTMLElement) {
+        const top =
+          el.getBoundingClientRect().top -
+          scrollContainer.getBoundingClientRect().top +
+          scrollContainer.scrollTop -
+          16
+        scrollContainer.scrollTo({ top: Math.max(0, top), behavior: 'smooth' })
+      } else {
+        el.scrollIntoView({ behavior: 'smooth', block: 'start' })
+      }
+    }
+    dispatch({ type: 'CLEAR_PARENT_SECTION_FOCUS' })
+  }, [state.parentSectionFocusId, dispatch])
 
   return (
     <main className="flex-1 overflow-y-auto p-8">
@@ -424,6 +456,11 @@ export function ChildActionContent() {
         {description && (
           <p className="text-base text-muted-foreground mb-6">{description}</p>
         )}
+        {!hasExplicitSections ? (
+          <section id="__top__" className="space-y-1.5 scroll-mt-16 mb-6">
+            <h3 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">Overview</h3>
+          </section>
+        ) : null}
         <div className={formReadOnly ? 'pointer-events-none opacity-75 select-none' : ''}>
           {FormComponent ? <FormComponent /> : <p className="text-muted-foreground">No form available.</p>}
         </div>

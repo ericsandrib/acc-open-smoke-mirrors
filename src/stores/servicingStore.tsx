@@ -91,6 +91,7 @@ function deriveLiveJourney(state: WorkflowState): Journey | null {
 
 interface ServicingContextValue {
   journeys: Journey[]
+  onboardingJourneys: Journey[]
   allActions: JourneyAction[]
   allTasks: JourneyTask[]
   currentLiveJourney: Journey | null
@@ -141,6 +142,15 @@ export function ServicingProvider({ children }: { children: ReactNode }) {
     return override ? applyAssigneeOverride(j, override) : j
   })
 
+  const onboardingJourneys = [
+    ...(liveJourney ? [liveJourney] : []),
+    ...savedJourneys,
+    ...seededJourneys.filter((j) => j.category === 'Onboarding'),
+  ].map((j) => {
+    const override = assigneeOverrides[j.id]
+    return override ? applyAssigneeOverride(j, override) : j
+  })
+
   const allActions = journeys.flatMap((j) =>
     j.actions.map((a) => ({ ...a, journeyId: j.id })),
   )
@@ -152,7 +162,7 @@ export function ServicingProvider({ children }: { children: ReactNode }) {
   )
 
   return (
-    <ServicingContext.Provider value={{ journeys, allActions, allTasks, currentLiveJourney: liveJourney, saveCurrentJourney, updateJourneyAssignee }}>
+    <ServicingContext.Provider value={{ journeys, onboardingJourneys, allActions, allTasks, currentLiveJourney: liveJourney, saveCurrentJourney, updateJourneyAssignee }}>
       {children}
     </ServicingContext.Provider>
   )

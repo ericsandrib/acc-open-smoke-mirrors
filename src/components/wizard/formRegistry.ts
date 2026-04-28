@@ -11,6 +11,7 @@ import { FundingLineSetupForm } from './forms/FundingLineSetupForm'
 import { FundChildFeaturesForm } from './forms/FundChildFeaturesForm'
 import { FeatureServiceLineSetupForm } from './forms/FeatureServiceLineSetupForm'
 import { AcctChildDocumentsReviewForm } from './forms/AcctChildDocumentsReviewForm'
+import { AcctChildNetx360NextStepsForm } from './forms/AcctChildNetx360NextStepsForm'
 
 export const formComponents: Record<string, React.ComponentType> = {
   'existing-accounts': ExistingAccountsForm,
@@ -21,6 +22,7 @@ export const formComponents: Record<string, React.ComponentType> = {
   'open-accounts': OpenAccountsForm,
   'open-accounts-with-annuity': OpenAccountsForm,
   'acct-child-account-owners': AcctChildOwnerInfoForm,
+  'acct-child-netx360-next-steps': AcctChildNetx360NextStepsForm,
   'acct-child-funding-transfers': FundChildFundingForm,
   'funding-line-child-setup': FundingLineSetupForm,
   'acct-child-features-services': FundChildFeaturesForm,
@@ -45,6 +47,8 @@ export const taskDescriptions: Partial<Record<string, string>> = {
     'Annuity path: add accounts by registration type. KYC and eSign run outside this app.',
   'acct-child-account-owners':
     'Set up the account, add owners and participants, request margin and options, answer remaining account questions, and collect required owner documents.',
+  'acct-child-netx360-next-steps':
+    'Continue the account opening workflow in NetX360. Add the annuity as a separate subworkflow there, similar to funding and other related workflow lines.',
   'acct-child-funding-transfers':
     'Kick off one or more funding and account transfer workflows for this account—each line opens its own detail flow, similar to Accounts to Be Opened on the parent task.',
   'funding-line-child-setup':
@@ -55,4 +59,36 @@ export const taskDescriptions: Partial<Record<string, string>> = {
     'Capture status, routing, dates, and notes for this feature or service workflow line.',
   'acct-child-documents-review':
     'Finalize account documentation and collect required client documents',
+}
+
+export const taskSections: Partial<Record<string, Array<{ id: string; label: string }>>> = {
+  'related-parties': [
+    { id: 'rcd-household', label: 'Household' },
+    { id: 'rcd-related-individuals', label: 'Related Individuals' },
+    { id: 'rcd-trusts', label: 'Trusts' },
+    { id: 'rcd-other-entities', label: 'Other Entities' },
+    { id: 'rcd-professional-contacts', label: 'Professional Contacts' },
+  ],
+  'existing-accounts': [
+    { id: 'ea-existing-accounts', label: 'Existing Accounts' },
+    { id: 'ea-additional-instructions', label: 'Additional Instructions' },
+  ],
+  'open-accounts': [
+    { id: 'oa-accounts', label: 'Accounts to Be Opened' },
+    { id: 'oa-documents', label: 'Required Documents' },
+    { id: 'oa-kyc', label: 'KYC Verification' },
+    { id: 'oa-esign', label: 'eSign Envelopes' },
+  ],
+  'open-accounts-with-annuity': [
+    { id: 'oa-accounts', label: 'Accounts to Be Opened' },
+  ],
+  'acct-child-account-owners': [
+    { id: 'acct-owners', label: 'Account Owners' },
+    { id: 'acct-beneficiaries', label: 'Beneficiaries' },
+    { id: 'acct-info', label: 'Account Details' },
+    { id: 'acct-features', label: 'Account Features' },
+  ],
+  'acct-child-documents-review': [
+    { id: 'acct-docs-forms', label: 'Executed Forms' },
+  ],
 }

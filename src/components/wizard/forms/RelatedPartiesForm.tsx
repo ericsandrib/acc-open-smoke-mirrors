@@ -91,9 +91,16 @@ function HouseholdMemberCard({ party, onClick }: { party: RelatedParty; onClick:
   const isIncomplete = !party.email?.trim() || !party.phone?.trim()
   return (
     <div>
-      <button
-        type="button"
+      <div
+        role="button"
+        tabIndex={0}
         onClick={onClick}
+        onKeyDown={(e) => {
+          if (e.key === 'Enter' || e.key === ' ') {
+            e.preventDefault()
+            onClick()
+          }
+        }}
         className="flex items-center justify-between w-full p-3 hover:bg-muted/50 rounded-lg focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
       >
         <div className="flex items-center gap-3 min-w-0">
@@ -119,7 +126,7 @@ function HouseholdMemberCard({ party, onClick }: { party: RelatedParty; onClick:
           )}
           <DeleteButton party={party} />
         </div>
-      </button>
+      </div>
     </div>
   )
 }
@@ -127,9 +134,16 @@ function HouseholdMemberCard({ party, onClick }: { party: RelatedParty; onClick:
 function ContactCard({ party, onClick }: { party: RelatedParty; onClick: () => void }) {
   return (
     <div>
-      <button
-        type="button"
+      <div
+        role="button"
+        tabIndex={0}
         onClick={onClick}
+        onKeyDown={(e) => {
+          if (e.key === 'Enter' || e.key === ' ') {
+            e.preventDefault()
+            onClick()
+          }
+        }}
         className="flex items-center justify-between w-full p-3 hover:bg-muted/50 rounded-lg focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
       >
         <div className="flex items-center gap-3">
@@ -145,7 +159,7 @@ function ContactCard({ party, onClick }: { party: RelatedParty; onClick: () => v
           )}
         </div>
         <DeleteButton party={party} />
-      </button>
+      </div>
     </div>
   )
 }

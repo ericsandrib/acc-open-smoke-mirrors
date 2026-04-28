@@ -1,13 +1,14 @@
 import { useMemo } from 'react'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { PageTitle } from '@/components/page-title'
-import { AccessoryBar } from '@/components/accessory-bar'
 import { useServicing } from '@/stores/servicingStore'
-import { OnboardingJourneysTable } from './OnboardingJourneysTable'
+import { OnboardingJourneysTable, deriveOnboardingJourneyRows } from './OnboardingJourneysTable'
 import { ActionsTable, deriveActionRows } from './ActionsTable'
 import { TasksTable, deriveTaskRows } from './TasksTable'
 import { TableViewWrapper } from './table-view-wrapper'
 import {
+  journeyColumns,
+  journeyPresets,
   actionColumns,
   actionPresets,
   taskColumns,
@@ -15,24 +16,14 @@ import {
 } from '@/data/servicing-view-presets'
 
 export function OnboardingContent() {
-  const { journeys } = useServicing()
+  const { onboardingJourneys } = useServicing()
 
-  const onboardingJourneys = useMemo(
-    () => journeys.filter((j) => j.category === 'Onboarding'),
-    [journeys],
-  )
+  const journeyRows = useMemo(() => deriveOnboardingJourneyRows(onboardingJourneys), [onboardingJourneys])
   const actionRows = useMemo(() => deriveActionRows(onboardingJourneys), [onboardingJourneys])
   const taskRows = useMemo(() => deriveTaskRows(onboardingJourneys), [onboardingJourneys])
 
   return (
     <div className="max-w-6xl mx-auto">
-      <AccessoryBar
-        breadcrumbs={[{ label: 'Home', href: '/' }]}
-        currentPage="Onboarding"
-        showBackButton={true}
-        showBorder={false}
-        className="-mt-6 mb-2"
-      />
       <Tabs defaultValue="journeys">
         <div className="flex items-center justify-between mb-6">
           <PageTitle
@@ -47,7 +38,11 @@ export function OnboardingContent() {
         </div>
 
         <TabsContent value="journeys">
-          <OnboardingJourneysTable />
+          <TableViewWrapper tableId="onboarding-journeys" presets={journeyPresets} columns={journeyColumns} allRows={journeyRows}>
+            {({ rows, visibleColumns }) => (
+              <OnboardingJourneysTable rows={rows} visibleColumns={visibleColumns} />
+            )}
+          </TableViewWrapper>
         </TabsContent>
         <TabsContent value="actions">
           <TableViewWrapper tableId="onboarding-actions" presets={actionPresets} columns={actionColumns} allRows={actionRows}>

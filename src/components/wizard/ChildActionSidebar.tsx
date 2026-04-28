@@ -1,6 +1,7 @@
 import { useWorkflow, useChildActionContext, useAdvisorResubmitEligible } from '@/stores/workflowStore'
 import { cn } from '@/lib/utils'
 import { Badge } from '@/components/ui/badge'
+import { taskSections } from './formRegistry'
 import {
   Tooltip,
   TooltipContent,
@@ -14,6 +15,7 @@ import type { ChildDisplayStatus } from '@/utils/childStatusDisplay'
 
 const DONUT_R = 7
 const DONUT_CIRCUMFERENCE = 2 * Math.PI * DONUT_R
+const DEFAULT_TASK_SECTIONS = [{ id: '__top__', label: 'Overview' }] as const
 
 function SubTaskStatusBadge({
   subTaskId,
@@ -133,6 +135,7 @@ export function ChildActionSidebar() {
         <ul className="space-y-1">
           {config.subTasks.map((subTask, idx) => {
             const subTaskId = `${child.id}-${subTask.suffix}`
+            const sections = taskSections[subTask.formKey] ?? DEFAULT_TASK_SECTIONS
             return (
               <li key={subTask.suffix}>
                 <button
@@ -156,6 +159,26 @@ export function ChildActionSidebar() {
                     subTaskSuffix={child.childType === 'account-opening' ? subTask.suffix : undefined}
                   />
                 </button>
+                {idx === subTaskIndex && sections.length > 0 ? (
+                  <ul className="mt-1 ml-2 space-y-0.5">
+                    {sections.map((section) => (
+                      <li key={section.id}>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            if (idx !== subTaskIndex) {
+                              dispatch({ type: 'SET_CHILD_SUB_TASK', index: idx })
+                            }
+                            dispatch({ type: 'FOCUS_PARENT_TASK_SECTION', sectionId: section.id })
+                          }}
+                          className="w-full text-left px-3 py-1 text-xs text-muted-foreground hover:text-foreground hover:bg-muted rounded-md transition-colors"
+                        >
+                          {section.label}
+                        </button>
+                      </li>
+                    ))}
+                  </ul>
+                ) : null}
               </li>
             )
           })}

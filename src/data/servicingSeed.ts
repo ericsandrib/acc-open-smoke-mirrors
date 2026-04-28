@@ -69,12 +69,6 @@ function buildJourney(
 
 export const seededJourneys: Journey[] = [
   // Onboarding journeys
-  buildJourney('journey-smith', 'Smith Family Onboarding', 'Onboarding', 'The Smith Family', 'Alice Chen', 'Edward Kim', '2026-02-10', {
-    'existing-accounts': 'complete',
-    'related-parties': 'complete',
-    'kyc-review': 'complete',
-    'open-accounts': 'complete',
-  }),
   buildJourney('journey-johnson', 'Johnson Trust Onboarding', 'Onboarding', 'Johnson Trust', 'Bob Martinez', 'Alice Chen', '2026-03-05', {
     'existing-accounts': 'complete',
     'related-parties': 'complete',
@@ -90,6 +84,42 @@ export const seededJourneys: Journey[] = [
   buildJourney('journey-garcia', 'Garcia Family Onboarding', 'Onboarding', 'The Garcia Family', 'Diana Torres', 'Carol Williams', '2026-03-28', {
     'existing-accounts': 'complete',
     'related-parties': 'in_progress',
+    'kyc-review': 'not_started',
+    'open-accounts': 'not_started',
+  }),
+  buildJourney('journey-patel-onboarding', 'Patel Family Onboarding', 'Onboarding', 'Anita Patel', 'Alice Chen', 'Alice Chen', '2026-03-01', {
+    'existing-accounts': 'complete',
+    'related-parties': 'in_progress',
+    'kyc-review': 'not_started',
+    'open-accounts': 'not_started',
+  }),
+  buildJourney('journey-kim-onboarding', 'Kim Household Onboarding', 'Onboarding', 'Daniel Kim', 'Bob Martinez', 'Diana Torres', '2026-03-15', {
+    'existing-accounts': 'complete',
+    'related-parties': 'complete',
+    'kyc-review': 'in_progress',
+    'open-accounts': 'not_started',
+  }),
+  buildJourney('journey-thompson-onboarding', 'Thompson Family Onboarding', 'Onboarding', 'Laura Thompson', 'Carol Williams', 'Edward Kim', '2026-02-28', {
+    'existing-accounts': 'complete',
+    'related-parties': 'complete',
+    'kyc-review': 'complete',
+    'open-accounts': 'in_progress',
+  }),
+  buildJourney('journey-nakamura-onboarding', 'Nakamura Client Onboarding', 'Onboarding', 'Kenji Nakamura', 'Diana Torres', 'Alice Chen', '2026-03-10', {
+    'existing-accounts': 'in_progress',
+    'related-parties': 'not_started',
+    'kyc-review': 'not_started',
+    'open-accounts': 'not_started',
+  }),
+  buildJourney('journey-oconnor-onboarding', "O'Connor Estate Onboarding", 'Onboarding', "Bridget O'Connor", 'Alice Chen', 'Bob Martinez', '2026-01-15', {
+    'existing-accounts': 'complete',
+    'related-parties': 'complete',
+    'kyc-review': 'complete',
+    'open-accounts': 'in_progress',
+  }),
+  buildJourney('journey-brooks-onboarding', 'Brooks Family Onboarding', 'Onboarding', 'Hannah Brooks', 'Bob Martinez', 'Carol Williams', '2026-03-22', {
+    'existing-accounts': 'in_progress',
+    'related-parties': 'not_started',
     'kyc-review': 'not_started',
     'open-accounts': 'not_started',
   }),

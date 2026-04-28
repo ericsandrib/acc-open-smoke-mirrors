@@ -29,6 +29,7 @@ const CHILD_TYPE_CONFIGS: Record<ChildType, ChildTypeConfig> = {
     displayLabel: 'Open Financial Account',
     subTasks: [
       { suffix: 'account-owners', title: 'Account & Owners', formKey: 'acct-child-account-owners' },
+      { suffix: 'netx360-next-steps', title: 'Next Steps in NetX360', formKey: 'acct-child-netx360-next-steps' },
       { suffix: 'funding-transfers', title: 'Funding & Asset Movement', formKey: 'acct-child-funding-transfers' },
       { suffix: 'features-services', title: 'Account Features & Services', formKey: 'acct-child-features-services' },
       { suffix: 'documents-review', title: 'Documents', formKey: 'acct-child-documents-review' },

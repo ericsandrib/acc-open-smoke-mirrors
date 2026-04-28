@@ -1,7 +1,7 @@
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import { Checkbox } from '@/components/ui/checkbox'
 import { Button } from '@/components/ui/button'
-import { Settings2 } from 'lucide-react'
+import { SlidersHorizontal } from 'lucide-react'
 import type { ColumnDef } from '@/types/view-preset'
 
 interface ColumnSettingsPopoverProps {
@@ -27,8 +27,8 @@ export function ColumnSettingsPopover({
     <Popover>
       <PopoverTrigger asChild>
         <Button variant="ghost" size="sm" className="gap-1.5">
-          <Settings2 className="h-3.5 w-3.5" />
-          Columns
+          <SlidersHorizontal className="h-3.5 w-3.5" />
+          Display
         </Button>
       </PopoverTrigger>
       <PopoverContent align="end" className="w-52 p-2">
