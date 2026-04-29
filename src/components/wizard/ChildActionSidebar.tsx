@@ -1,3 +1,4 @@
+import { useEffect, useMemo, useState } from 'react'
 import { useWorkflow, useChildActionContext, useAdvisorResubmitEligible } from '@/stores/workflowStore'
 import { cn } from '@/lib/utils'
 import { Badge } from '@/components/ui/badge'
@@ -16,6 +17,7 @@ import type { ChildDisplayStatus } from '@/utils/childStatusDisplay'
 const DONUT_R = 7
 const DONUT_CIRCUMFERENCE = 2 * Math.PI * DONUT_R
 const DEFAULT_TASK_SECTIONS = [{ id: '__top__', label: 'Overview' }] as const
+const BENEFICIARY_ENABLED_REGISTRATIONS = new Set(['TOD_IND', 'TOD_JT', 'IRA', 'ROTH_IRA'])
 
 function SubTaskStatusBadge({
   subTaskId,
@@ -107,6 +109,7 @@ function useChildOverallStatus(childId: string): ChildDisplayStatus {
 export function ChildActionSidebar() {
   const { state, dispatch } = useWorkflow()
   const ctx = useChildActionContext()
+  const [activeSectionId, setActiveSectionId] = useState<string | null>(null)
 
   const overallStatus = useChildOverallStatus(ctx?.child.id ?? '')
   const statusCfg = childStatusConfig[overallStatus]
@@ -122,6 +125,15 @@ export function ChildActionSidebar() {
     child.childType !== 'funding-line' &&
     child.childType !== 'feature-service-line'
   const viewMode = state.demoViewMode
+  const activeSubTask = config.subTasks[subTaskIndex]
+  const activeSections = useMemo(
+    () => (activeSubTask ? taskSections[activeSubTask.formKey] ?? DEFAULT_TASK_SECTIONS : DEFAULT_TASK_SECTIONS),
+    [activeSubTask],
+  )
+
+  useEffect(() => {
+    setActiveSectionId(activeSections[0]?.id ?? null)
+  }, [subTaskIndex, activeSections])
 
   return (
     <TooltipProvider delayDuration={300}>
@@ -135,7 +147,13 @@ export function ChildActionSidebar() {
         <ul className="space-y-1">
           {config.subTasks.map((subTask, idx) => {
             const subTaskId = `${child.id}-${subTask.suffix}`
-            const sections = taskSections[subTask.formKey] ?? DEFAULT_TASK_SECTIONS
+            const childMeta = state.taskData[child.id] as Record<string, unknown> | undefined
+            const childRegType = (childMeta?.registrationType as string | undefined) ?? null
+            const sections = (taskSections[subTask.formKey] ?? DEFAULT_TASK_SECTIONS).filter((section) => {
+              if (subTask.formKey !== 'acct-child-account-owners') return true
+              if (section.id !== 'acct-beneficiaries') return true
+              return childRegType != null && BENEFICIARY_ENABLED_REGISTRATIONS.has(childRegType)
+            })
             return (
               <li key={subTask.suffix}>
                 <button
@@ -169,9 +187,15 @@ export function ChildActionSidebar() {
                             if (idx !== subTaskIndex) {
                               dispatch({ type: 'SET_CHILD_SUB_TASK', index: idx })
                             }
+                            setActiveSectionId(section.id)
                             dispatch({ type: 'FOCUS_PARENT_TASK_SECTION', sectionId: section.id })
                           }}
-                          className="w-full text-left px-3 py-1 text-xs text-muted-foreground hover:text-foreground hover:bg-muted rounded-md transition-colors"
+                          className={cn(
+                            'w-full text-left px-3 py-1 text-xs rounded-md transition-colors',
+                            activeSectionId === section.id
+                              ? 'bg-accent text-accent-foreground'
+                              : 'text-muted-foreground hover:text-foreground hover:bg-muted',
+                          )}
                         >
                           {section.label}
                         </button>

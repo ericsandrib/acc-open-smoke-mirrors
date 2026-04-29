@@ -255,7 +255,7 @@ function WizardProgressHeaderRow({
           </div>
         </div>
         <div className="flex-1 min-w-0 px-8 relative z-10">
-          <div className="max-w-2xl w-full min-w-0 mx-auto">
+          <div className="max-w-2xl w-full min-w-0 mx-auto hidden">
             <WizardActionProgressBar
               actions={actions}
               activeActionId={activeActionId}

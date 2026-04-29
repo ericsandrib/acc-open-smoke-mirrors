@@ -16,7 +16,7 @@ import {
 } from '@/data/servicing-view-presets'
 
 export function OnboardingContent() {
-  const { onboardingJourneys } = useServicing()
+  const { onboardingJourneys, currentLiveJourney } = useServicing()
 
   const journeyRows = useMemo(() => deriveOnboardingJourneyRows(onboardingJourneys), [onboardingJourneys])
   const actionRows = useMemo(() => deriveActionRows(onboardingJourneys), [onboardingJourneys])
@@ -38,21 +38,28 @@ export function OnboardingContent() {
         </div>
 
         <TabsContent value="journeys">
-          <TableViewWrapper tableId="onboarding-journeys" presets={journeyPresets} columns={journeyColumns} allRows={journeyRows}>
+          <TableViewWrapper
+            tableId="onboarding-journeys"
+            presets={journeyPresets}
+            columns={journeyColumns}
+            allRows={journeyRows}
+            defaultRelationshipScope="all"
+            pinRowId={currentLiveJourney?.id}
+          >
             {({ rows, visibleColumns }) => (
               <OnboardingJourneysTable rows={rows} visibleColumns={visibleColumns} />
             )}
           </TableViewWrapper>
         </TabsContent>
         <TabsContent value="actions">
-          <TableViewWrapper tableId="onboarding-actions" presets={actionPresets} columns={actionColumns} allRows={actionRows}>
+          <TableViewWrapper tableId="onboarding-actions" presets={actionPresets} columns={actionColumns} allRows={actionRows} defaultRelationshipScope="all">
             {({ rows, visibleColumns }) => (
               <ActionsTable rows={rows} visibleColumns={visibleColumns} />
             )}
           </TableViewWrapper>
         </TabsContent>
         <TabsContent value="tasks">
-          <TableViewWrapper tableId="onboarding-tasks" presets={taskPresets} columns={taskColumns} allRows={taskRows}>
+          <TableViewWrapper tableId="onboarding-tasks" presets={taskPresets} columns={taskColumns} allRows={taskRows} defaultRelationshipScope="all">
             {({ rows, visibleColumns }) => (
               <TasksTable rows={rows} visibleColumns={visibleColumns} />
             )}

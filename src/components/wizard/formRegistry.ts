@@ -75,20 +75,27 @@ export const taskSections: Partial<Record<string, Array<{ id: string; label: str
   ],
   'open-accounts': [
     { id: 'oa-accounts', label: 'Accounts to Be Opened' },
-    { id: 'oa-documents', label: 'Required Documents' },
+    { id: 'oa-documents', label: 'Supporting Documents' },
     { id: 'oa-kyc', label: 'KYC Verification' },
-    { id: 'oa-esign', label: 'eSign Envelopes' },
+    { id: 'oa-esign', label: 'Envelopes' },
   ],
   'open-accounts-with-annuity': [
     { id: 'oa-accounts', label: 'Accounts to Be Opened' },
   ],
   'acct-child-account-owners': [
-    { id: 'acct-owners', label: 'Account Owners' },
+    { id: 'acct-owners', label: 'Owners & Participants' },
     { id: 'acct-beneficiaries', label: 'Beneficiaries' },
-    { id: 'acct-info', label: 'Account Details' },
-    { id: 'acct-features', label: 'Account Features' },
+    { id: 'acct-info', label: 'Account Information' },
+    { id: 'acct-features', label: 'Investment Elections' },
   ],
   'acct-child-documents-review': [
-    { id: 'acct-docs-forms', label: 'Executed Forms' },
+    { id: 'acct-docs-forms', label: 'Forms for This Account' },
+    { id: 'acct-docs-client-upload', label: 'Supporting Client Documents' },
+  ],
+  'acct-child-funding-transfers': [
+    { id: '__top__', label: 'Movement Details' },
+  ],
+  'acct-child-features-services': [
+    { id: '__top__', label: 'Feature Details' },
   ],
 }

@@ -13,6 +13,8 @@ interface TableViewWrapperProps<T> {
   presets: ViewPreset[]
   columns: ColumnDef[]
   allRows: T[]
+  defaultRelationshipScope?: RelationshipScope
+  pinRowId?: string
   children: (props: { rows: T[]; visibleColumns: string[] }) => ReactNode
 }
 
@@ -21,11 +23,13 @@ export function TableViewWrapper<T>({
   presets,
   columns,
   allRows,
+  defaultRelationshipScope = 'my',
+  pinRowId,
   children,
 }: TableViewWrapperProps<T>) {
   const vm = useViewManager<T>(tableId, presets, columns)
   const [filterOpen, setFilterOpen] = useState(false)
-  const [relationshipScope, setRelationshipScope] = useState<RelationshipScope>('my')
+  const [relationshipScope, setRelationshipScope] = useState<RelationshipScope>(defaultRelationshipScope)
   const [quickSortKey, setQuickSortKey] = useState<QuickSortKey>('ready_to_begin')
   const [quickSortDirection, setQuickSortDirection] = useState<QuickSortDirection>('asc')
 
@@ -60,6 +64,15 @@ export function TableViewWrapper<T>({
     }
     return dir * (rank(ra.status) - rank(rb.status))
   })
+
+  const withPinnedRow = (() => {
+    if (!pinRowId) return sortedRows
+    const hasPinned = sortedRows.some((r) => String((r as Record<string, unknown>).id ?? '') === pinRowId)
+    if (hasPinned) return sortedRows
+    const pinned = allRows.find((r) => String((r as Record<string, unknown>).id ?? '') === pinRowId)
+    if (!pinned) return sortedRows
+    return [pinned, ...sortedRows]
+  })()
 
   const getRowCount = useCallback(
     (preset: ViewPreset) => {
@@ -111,7 +124,7 @@ export function TableViewWrapper<T>({
         />
       </div>
 
-      {sortedRows.length === 0 ? (
+      {withPinnedRow.length === 0 ? (
         <div className="flex flex-col items-center justify-center py-12 text-muted-foreground">
           <SearchX className="h-8 w-8 mb-3" />
           <p className="text-sm font-medium">No results match your filters</p>
@@ -120,7 +133,7 @@ export function TableViewWrapper<T>({
           </Button>
         </div>
       ) : (
-        children({ rows: sortedRows, visibleColumns: vm.visibleColumns })
+        children({ rows: withPinnedRow, visibleColumns: vm.visibleColumns })
       )}
 
       {/* Sidebar renders via portal — DOM goes to AppShell level */}

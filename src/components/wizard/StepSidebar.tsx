@@ -1,3 +1,4 @@
+import { useEffect, useMemo, useState } from 'react'
 import { useWorkflow } from '@/stores/workflowStore'
 import type { TaskStatus, Task, WorkflowState } from '@/types/workflow'
 import { cn } from '@/lib/utils'
@@ -156,6 +157,17 @@ function DonutProgress({ progress, edited }: { progress: number; edited: boolean
 
 export function StepSidebar() {
   const { state, dispatch } = useWorkflow()
+  const [activeSectionId, setActiveSectionId] = useState<string | null>(null)
+
+  const activeTask = state.tasks.find((t) => t.id === state.activeTaskId)
+  const activeSections = useMemo(
+    () => (activeTask ? taskSections[activeTask.formKey] ?? DEFAULT_TASK_SECTIONS : DEFAULT_TASK_SECTIONS),
+    [activeTask],
+  )
+
+  useEffect(() => {
+    setActiveSectionId(activeSections[0]?.id ?? null)
+  }, [state.activeTaskId, activeSections])
 
   return (
     <TooltipProvider delayDuration={300}>
@@ -216,9 +228,15 @@ export function StepSidebar() {
                                     if (state.activeTaskId !== task.id) {
                                       dispatch({ type: 'SET_ACTIVE_TASK', taskId: task.id })
                                     }
+                                    setActiveSectionId(section.id)
                                     dispatch({ type: 'FOCUS_PARENT_TASK_SECTION', sectionId: section.id })
                                   }}
-                                  className="w-full text-left px-3 py-1 text-xs text-muted-foreground hover:text-foreground hover:bg-muted rounded-md transition-colors"
+                                  className={cn(
+                                    'w-full text-left px-3 py-1 text-xs rounded-md transition-colors',
+                                    activeSectionId === section.id
+                                      ? 'bg-accent text-accent-foreground'
+                                      : 'text-muted-foreground hover:text-foreground hover:bg-muted',
+                                  )}
                                 >
                                   {section.label}
                                 </button>

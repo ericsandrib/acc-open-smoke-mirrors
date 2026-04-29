@@ -9,7 +9,7 @@ import {
   SelectContent,
   SelectItem,
 } from '@/components/ui/select'
-import { Plus, Trash2, FileText, Paperclip, Upload, X } from 'lucide-react'
+import { Plus, Trash2, FileText, Paperclip, Upload, X, FolderOpen } from 'lucide-react'
 import { EsignFormPdfSampleActions } from '@/components/wizard/EsignFormPdfSampleActions'
 import { EsignDocumentsBundleViewerButton } from '@/components/wizard/EsignDocumentsBundleViewer'
 import type { RegistrationType } from '@/utils/registrationDocuments'
@@ -253,13 +253,16 @@ export function AcctChildDocumentsReviewForm() {
   return (
     <div className="space-y-8">
       <section id="acct-docs-forms" className="space-y-4 scroll-mt-16">
-        <h3 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
-          Forms for This Account
-        </h3>
-        <p className="text-sm text-muted-foreground">
-          These required forms are generated automatically from this account&apos;s registration type using the same rules
-          as the Documents panel and eSign envelope builder.
-        </p>
+        <div>
+          <h3 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground flex items-center gap-2 mb-1">
+            <FileText className="h-4 w-4" />
+            Forms for This Account
+          </h3>
+          <p className="text-sm text-muted-foreground">
+            These required forms are generated automatically from this account&apos;s registration type using the same rules
+            as the Documents panel and eSign envelope builder.
+          </p>
+        </div>
 
         <div className="rounded-md border border-border bg-card p-3 space-y-3">
           <div className="flex flex-wrap items-center justify-between gap-2">
@@ -345,7 +348,17 @@ export function AcctChildDocumentsReviewForm() {
           )}
         </div>
 
-        <div id="acct-docs-client-upload" className="scroll-mt-16" />
+        <section id="acct-docs-client-upload" className="space-y-4 scroll-mt-16">
+          <div>
+            <h3 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground flex items-center gap-2 mb-1">
+              <FolderOpen className="h-4 w-4" />
+              Supporting Client Documents
+            </h3>
+            <p className="text-sm text-muted-foreground">
+              End-client uploads such as government-issued ID, trust documents, and other supporting files.
+            </p>
+          </div>
+
         {ruleDrivenDocs.clientUpload.length === 0 ? (
           <div className="rounded-lg border border-dashed border-border p-6 text-center">
             <FileText className="mx-auto mb-2 h-8 w-8 text-muted-foreground/50" />
@@ -518,6 +531,7 @@ export function AcctChildDocumentsReviewForm() {
             })}
           </div>
         )}
+        </section>
 
         <div id="acct-docs-notes" className="space-y-2 scroll-mt-16">
           <Label>Exceptions / notes</Label>

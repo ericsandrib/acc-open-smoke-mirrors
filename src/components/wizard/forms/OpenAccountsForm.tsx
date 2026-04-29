@@ -749,12 +749,12 @@ export function OpenAccountsForm() {
         />
       </section>
 
-      {/* Section 4: Required Documents */}
+      {/* Section 4: Supporting Documents */}
       {!externalAnnuityPlatform ? (
       <section id="oa-documents" className="scroll-mt-16">
         <div className="mb-4">
           <h3 className="text-base font-semibold">
-            Required Documents
+            Supporting Documents
           </h3>
           <p className="text-base text-muted-foreground">
             {externalAnnuityPlatform ? (
@@ -764,7 +764,7 @@ export function OpenAccountsForm() {
               </>
             ) : (
               <>
-                Client file uploads (for example ID or trust documents) go here. Firm and custodian forms are configured under{' '}
+                Supporting client uploads (for example ID or trust documents) go here. Firm and custodian forms are configured under{' '}
                 <span className="font-medium text-foreground">eSign envelopes</span> below—not in this section.
               </>
             )}
