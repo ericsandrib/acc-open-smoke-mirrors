@@ -7,6 +7,7 @@ import {
   UsersRound,
   ArrowUpDown,
   Filter,
+  Plus,
 } from 'lucide-react'
 import { AccessoryBar } from '@/components/accessory-bar'
 import { Button } from '@/components/ui/button'
@@ -17,6 +18,7 @@ import {
   type Relationship,
 } from '@/data/relationshipsSeed'
 import { cn } from '@/lib/utils'
+import { CreateProspectDialog } from './CreateProspectDialog'
 
 // --- summary cards ---------------------------------------------------------
 
@@ -211,6 +213,7 @@ function RelationshipsTable({ rows }: { rows: Relationship[] }) {
 
 export function RelationshipsContent() {
   const [view, setView] = useState<ViewTab>('all')
+  const [createOpen, setCreateOpen] = useState(false)
   const m = RELATIONSHIP_METRICS
 
   const rows = useMemo(() => RELATIONSHIPS_SEED, [view])
@@ -225,9 +228,18 @@ export function RelationshipsContent() {
         className="-mt-6 mb-2"
       />
 
-      <h1 className="text-3xl font-semibold tracking-tight text-foreground mb-5">
-        Relationships
-      </h1>
+      <div className="flex items-start justify-between gap-4 mb-5">
+        <h1 className="text-3xl font-semibold tracking-tight text-foreground">
+          Relationships
+        </h1>
+        <Button
+          onClick={() => setCreateOpen(true)}
+          className="bg-foreground text-background hover:bg-foreground/90 h-9 gap-1.5"
+        >
+          <Plus className="h-4 w-4" />
+          New Prospect
+        </Button>
+      </div>
 
       {/* Prospective / New / Existing summary cards (exact mercer-live header layout) */}
       <div className="flex items-stretch gap-3 mb-6 flex-wrap">
@@ -266,6 +278,9 @@ export function RelationshipsContent() {
         Zip → <code className="font-mono">address_entity_relationships.postal_code</code>{' '}
         (S042).
       </p>
+
+      <CreateProspectDialog open={createOpen} onClose={() => setCreateOpen(false)} />
+
     </div>
   )
 }
