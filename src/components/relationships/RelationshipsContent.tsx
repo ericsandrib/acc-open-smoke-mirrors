@@ -151,9 +151,9 @@ const COLUMNS: {
   render?: (r: Relationship) => React.ReactNode
 }[] = [
   {
-    key: 'relationship',
-    label: 'Relationship',
-    width: 'min-w-[180px]',
+    key: 'household',
+    label: 'Household',
+    width: 'min-w-[200px]',
     render: (r) => (
       <div className="flex items-center gap-2">
         <UsersRound className="h-4 w-4 text-muted-foreground" />
@@ -161,23 +161,21 @@ const COLUMNS: {
           to={`/relationships/${r.id}`}
           className="underline underline-offset-2 text-foreground hover:text-primary"
         >
-          {r.relationship}
+          {r.household}
         </Link>
       </div>
     ),
   },
   { key: 'advisor', label: 'Advisor', width: 'min-w-[140px]' },
   { key: 'type', label: 'Type', width: 'min-w-[110px]' },
-  { key: 'status', label: 'Status', width: 'min-w-[220px]' },
+  { key: 'status', label: 'Status', width: 'min-w-[240px]' },
   {
     key: 'aum',
     label: 'AUM',
-    width: 'min-w-[120px]',
+    width: 'min-w-[140px]',
     render: (r) => <span>{formatMoney(r.aum)}</span>,
   },
-  { key: 'firm', label: 'Firm', width: 'min-w-[110px]' },
-  { key: 'zipCode', label: 'Zip Code', width: 'min-w-[100px]' },
-  { key: 'updatedAt', label: 'Updated At', width: 'min-w-[110px]' },
+  { key: 'updatedAt', label: 'Updated At', width: 'min-w-[120px]' },
 ]
 
 function RelationshipsTable({ rows }: { rows: Relationship[] }) {
