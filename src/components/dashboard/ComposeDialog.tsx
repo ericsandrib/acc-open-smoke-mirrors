@@ -47,6 +47,7 @@ type ComposeDraftFields = {
   journeyName: string
   actionType: string
   relationshipId: string
+  openMultipleAccounts: 'yes' | 'no' | ''
   openAnnuityAccount: 'yes' | 'no' | ''
   createMore: boolean
 }
@@ -56,6 +57,7 @@ function loadComposeDraft(): ComposeDraftFields {
     journeyName: '',
     actionType: '',
     relationshipId: '',
+    openMultipleAccounts: '',
     openAnnuityAccount: '',
     createMore: false,
   }
@@ -67,6 +69,10 @@ function loadComposeDraft(): ComposeDraftFields {
       journeyName: typeof d.journeyName === 'string' ? d.journeyName : '',
       actionType: typeof d.actionType === 'string' ? d.actionType : '',
       relationshipId: typeof d.relationshipId === 'string' ? d.relationshipId : '',
+      openMultipleAccounts:
+        d.openMultipleAccounts === 'yes' || d.openMultipleAccounts === 'no' || d.openMultipleAccounts === ''
+          ? d.openMultipleAccounts
+          : '',
       openAnnuityAccount:
         d.openAnnuityAccount === 'yes' || d.openAnnuityAccount === 'no' || d.openAnnuityAccount === ''
           ? d.openAnnuityAccount
@@ -89,6 +95,9 @@ export function ComposeDialog({ onClose }: ComposeDialogProps) {
   const [journeyName, setJourneyName] = useState(draftInitial.journeyName)
   const [actionType, setActionType] = useState(draftInitial.actionType)
   const [relationshipId, setRelationshipId] = useState(draftInitial.relationshipId)
+  const [openMultipleAccounts, setOpenMultipleAccounts] = useState<'yes' | 'no' | ''>(
+    draftInitial.openMultipleAccounts,
+  )
   const [openAnnuityAccount, setOpenAnnuityAccount] = useState<'yes' | 'no' | ''>(
     draftInitial.openAnnuityAccount,
   )
@@ -120,6 +129,7 @@ export function ComposeDialog({ onClose }: ComposeDialogProps) {
   const canSubmit =
     actionType === 'client-onboarding' &&
     relationshipId !== '' &&
+    (openMultipleAccounts === 'yes' || openMultipleAccounts === 'no') &&
     (openAnnuityAccount === 'yes' || openAnnuityAccount === 'no')
 
   function handleSnooze() {
@@ -137,6 +147,7 @@ export function ComposeDialog({ onClose }: ComposeDialogProps) {
       journeyName,
       actionType,
       relationshipId,
+      openMultipleAccounts,
       openAnnuityAccount,
       createMore,
       savedAt: new Date().toISOString(),
@@ -178,6 +189,7 @@ export function ComposeDialog({ onClose }: ComposeDialogProps) {
       journeyOnboardingConfig: {
         office: '',
         investmentProfessionalId: '',
+        openMultipleAccounts: openMultipleAccounts === 'yes',
         openAnnuityAccount: openAnnuityAccount === 'yes',
       },
     })
@@ -187,6 +199,7 @@ export function ComposeDialog({ onClose }: ComposeDialogProps) {
       setJourneyName('')
       setActionType('')
       setRelationshipId('')
+      setOpenMultipleAccounts('')
       setOpenAnnuityAccount('')
       setCreateMore(false)
       toast.message('Add another journey, or close when you are done.')
@@ -306,8 +319,26 @@ export function ComposeDialog({ onClose }: ComposeDialogProps) {
               {actionType === 'client-onboarding' && (
                 <div className="space-y-4 rounded-xl border border-border bg-background/80 p-4 shadow-sm sm:p-5">
                   <div className="space-y-2">
+                    <Label htmlFor="compose-multi-account">
+                      Do you plan to open more than one account for this client?
+                      <RequiredMark />
+                    </Label>
+                    <Select
+                      value={openMultipleAccounts}
+                      onValueChange={(v) => setOpenMultipleAccounts(v as 'yes' | 'no' | '')}
+                    >
+                      <SelectTrigger id="compose-multi-account">
+                        <SelectValue placeholder="Select…" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="yes">Yes</SelectItem>
+                        <SelectItem value="no">No</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-2">
                     <Label htmlFor="compose-annuity">
-                      Will this client open an account that includes an annuity?
+                      Do you expect to add an annuity to any of the accounts?
                       <RequiredMark />
                     </Label>
                     <Select

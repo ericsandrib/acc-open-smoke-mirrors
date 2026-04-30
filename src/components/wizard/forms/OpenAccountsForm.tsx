@@ -625,10 +625,10 @@ export function OpenAccountsForm() {
       <section id="oa-accounts" className="scroll-mt-16">
         <div className="mb-4">
           <h3 className="text-base font-semibold">
-            Accounts to Be Opened
+            Accounts
           </h3>
           <p className="text-base text-muted-foreground mt-2">
-            New accounts to open at the custodian, with funding instructions for each row.
+            Add the accounts you plan to open at the custodian, including funding details for each.
           </p>
         </div>
 
@@ -727,7 +727,7 @@ export function OpenAccountsForm() {
           <div className="rounded-lg border border-border p-6 text-center">
             <Wallet className="mx-auto mb-2 h-8 w-8 text-muted-foreground/50" />
             <p className="text-sm text-muted-foreground mb-3">
-              No accounts to open yet. Add the types of accounts you want to open.
+              No accounts added yet. Add the account types you want to open.
             </p>
             <Button onClick={() => setPickerOpen(true)}>
               <Plus className="h-4 w-4 mr-1" />
@@ -764,8 +764,8 @@ export function OpenAccountsForm() {
               </>
             ) : (
               <>
-                Supporting client uploads (for example ID or trust documents) go here. Firm and custodian forms are configured under{' '}
-                <span className="font-medium text-foreground">eSign envelopes</span> below—not in this section.
+                Upload client-provided documents (for example ID or trust documents). Firm and custodian forms are handled in{' '}
+                <span className="font-medium text-foreground">Envelopes</span>, not here.
               </>
             )}
           </p>
@@ -872,15 +872,15 @@ export function OpenAccountsForm() {
         <div className="mb-4">
           <h3 className="text-base font-semibold">KYC Verification</h3>
           <p className="text-base text-muted-foreground">
-            Identity verification (KYC/KYB) must be completed before accounts can be opened. For trust-owned accounts,
-            this includes trustees and beneficial owners in addition to account owners.
+            Complete identity verification (KYC/KYB) before accounts can be opened. For trust accounts, include trustees
+            and beneficial owners.
           </p>
         </div>
 
         <div className="mb-3">
           <h4 className="text-sm font-semibold text-foreground">Account Owners</h4>
           <p className="text-sm text-muted-foreground mt-1">
-            One row per account owner. Trust members are covered within the trust KYC case.
+            Add all individuals who require identity verification.
           </p>
         </div>
         {kycOwnerParties.length > 0 ? (
@@ -995,9 +995,9 @@ export function OpenAccountsForm() {
 
         <div className="mt-6">
           <div className="mb-3">
-            <h4 className="text-sm font-semibold text-foreground">KYC Initiation</h4>
+            <h4 className="text-sm font-semibold text-foreground">KYC Cases</h4>
             <p className="text-sm text-muted-foreground mt-1">
-              Each row is one KYC initiation—open it to complete and submit for review.
+              Each row represents a KYC case. Open a case to complete and submit it for review.
             </p>
           </div>
           <div className="rounded-lg border border-border p-1">
@@ -1071,8 +1071,8 @@ export function OpenAccountsForm() {
               </div>
               <p className="text-sm text-muted-foreground">
                 {kycOwnerParties.length > 0
-                  ? 'No initiations yet. Add a new contact if needed, then start KYC initiation from the Account Owners table above.'
-                  : 'No KYC initiation started yet.'}
+                  ? 'No KYC cases started yet.'
+                  : 'No KYC cases started yet.'}
               </p>
               <Button type="button" className="mt-4" onClick={() => setKycAddSheetOpen(true)}>
                 <UserPlus className="h-4 w-4 mr-2" />
@@ -1111,28 +1111,28 @@ export function OpenAccountsForm() {
       <>
       {/* Envelopes */}
       <section id="oa-esign" className="scroll-mt-16">
-        <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-          <div>
-            <h3 className="text-base font-semibold">Envelopes</h3>
-            <p className="text-sm text-muted-foreground mt-1">
-              Create one or more signing envelopes for this application. Required firm and custodian forms are grouped by
-              account number. When you create or edit an envelope, you can view executed PDFs; wet-signed uploads are
-              managed in each account&apos;s Documents step.
-            </p>
-          </div>
-          {esignEnvelopes.length > 0 ? (
+        <div className="mb-4">
+          <h3 className="text-base font-semibold">Envelopes</h3>
+          <p className="text-base text-muted-foreground mt-2">
+            Create eSign envelopes for client signatures. Required firm and custodian forms are automatically grouped by
+            account. You can review generated forms when creating or editing an envelope. Wet-signed documents should
+            be uploaded in each account&apos;s Documents step.
+          </p>
+        </div>
+        {esignEnvelopes.length > 0 ? (
+          <div className="mb-3 flex justify-end">
             <Button type="button" variant="outline" size="sm" className="gap-1.5 shrink-0" onClick={openNewEnvelopeDrawer}>
               <Plus className="h-3.5 w-3.5" />
               Add envelope
             </Button>
-          ) : null}
-        </div>
+          </div>
+        ) : null}
         {esignEnvelopes.length === 0 ? (
           <div className="rounded-lg border border-dashed border-border p-6 text-center">
             <FileSignature className="mx-auto mb-2 h-8 w-8 text-muted-foreground/50" />
-            <p className="text-sm font-medium text-muted-foreground mb-1">No envelopes yet</p>
+            <p className="text-sm font-medium text-muted-foreground mb-1">No envelopes created yet.</p>
             <p className="text-sm text-muted-foreground mb-4 max-w-md mx-auto">
-              Choose delivery, template, and which generated forms to include.
+              Select delivery method, template, and forms to include.
             </p>
             <Button type="button" onClick={openNewEnvelopeDrawer}>
               <Plus className="h-4 w-4 mr-2" />
@@ -1145,7 +1145,7 @@ export function OpenAccountsForm() {
               {esignEnvelopes.map((env) => (
                 <li
                   key={env.id}
-                  className="group flex items-center justify-between rounded-lg p-3 hover:bg-muted/50 transition-colors"
+                  className="group flex cursor-pointer items-center justify-between rounded-lg p-3 hover:bg-muted/50 transition-colors"
                   role="button"
                   tabIndex={0}
                   onClick={() => openEditEnvelopeDrawer(env)}

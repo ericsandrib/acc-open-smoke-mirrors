@@ -106,7 +106,7 @@ export function DocumentUploadInstancesTable({
                         </SelectContent>
                       </Select>
                     ) : (
-                      <div className="flex min-w-0 max-w-full items-center h-8 px-3 rounded-md border border-border bg-muted/30">
+                      <div className="flex min-w-0 max-w-full cursor-default items-center h-8 px-3 rounded-md border border-border bg-muted/30">
                         <span className="text-xs text-foreground truncate min-w-0" title={docLabel}>
                           {docLabel}
                         </span>

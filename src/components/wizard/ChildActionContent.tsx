@@ -2,6 +2,7 @@ import { useEffect } from 'react'
 import type { ChildReviewState } from '@/types/workflow'
 import { useWorkflow, useChildActionContext, useAdvisorFormsEditable, getChildReviewState, getChildReviewDecision } from '@/stores/workflowStore'
 import { getSubTaskDisplayTitle } from '@/utils/childTaskRegistry'
+import { OPEN_ACCOUNTS_WITH_ANNUITY_FORM_KEY } from '@/utils/openAccountsTaskContext'
 import { formComponents, taskDescriptions, taskSections } from './formRegistry'
 import { Badge } from '@/components/ui/badge'
 import { ShieldCheck, Lock, AlertTriangle, CheckCircle2, FileText, FileSearch } from 'lucide-react'
@@ -161,6 +162,9 @@ function AdvisorViewBanner() {
 
   if (!ctx) return null
   const { child } = ctx
+  const isAnnuityAccountOpeningChild =
+    child.childType === 'account-opening' &&
+    ctx.parentTask?.formKey === OPEN_ACCOUNTS_WITH_ANNUITY_FORM_KEY
   const currentSubTaskFormKey = ctx.currentSubTask.formKey
   const isKycInfoStep = child.childType === 'kyc' && currentSubTaskFormKey === 'kyc-child-info'
   const isKycDocumentsStep = child.childType === 'kyc' && currentSubTaskFormKey === 'kyc-child-documents'
@@ -256,7 +260,10 @@ function AdvisorViewBanner() {
     )
   }
 
-  if (decision?.outcome === 'approved') {
+  if (decision?.outcome === 'approved' && child.status === 'complete') {
+    if (isAnnuityAccountOpeningChild) {
+      return null
+    }
     if (isKyc && amlReview?.status === 'cleared') {
       return (
         <div className="rounded-lg border border-green-200 bg-green-50 dark:border-green-900/60 dark:bg-green-950/40 px-4 py-3 mb-6">
@@ -407,8 +414,8 @@ export function ChildActionContent() {
   }, [state.parentSectionFocusId, dispatch])
 
   return (
-    <main className="flex-1 overflow-y-auto p-8">
-      <div className="max-w-2xl mx-auto">
+    <main className="flex-1 overflow-y-auto overscroll-contain p-8">
+      <div className="max-w-[52.5rem] mx-auto">
         {inReview && !isAdvisorView && !isHoTeamAccountOpening && child.childType === 'account-opening' && (
           <div className="rounded-lg border border-violet-200 bg-violet-50 dark:border-violet-900/60 dark:bg-violet-950/40 px-4 py-3 mb-6">
             <div className="flex items-start gap-3">

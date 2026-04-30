@@ -19,10 +19,10 @@ export function ExistingAccountsForm() {
       <section id="ea-existing-accounts" className="scroll-mt-16">
         <div className="mb-4">
           <h3 className="text-base font-semibold">
-            Existing Accounts
+            Accounts
           </h3>
           <p className="text-base text-muted-foreground">
-            These are the financial accounts currently held by the client, including brokerage, retirement, and trust accounts.
+            Add or update the client&apos;s existing accounts to provide a complete financial picture.
           </p>
         </div>
         <FinancialAccountsForm />
@@ -32,7 +32,7 @@ export function ExistingAccountsForm() {
         <div className="mb-4">
           <h3 className="text-base font-semibold">Additional Instructions</h3>
           <p className="text-base text-muted-foreground mt-2">
-            Account opening and funding instructions for the new accounts to be opened.
+            Provide any special instructions related to opening or funding new accounts (e.g., transfers, rollovers, or funding sources).
           </p>
         </div>
         <textarea

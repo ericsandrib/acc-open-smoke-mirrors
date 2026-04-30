@@ -294,8 +294,12 @@ export function WizardLayout() {
     (activeChild.status === 'awaiting_review' ||
       activeChild.status === 'complete' ||
       activeChild.status === 'rejected')
+  const isAnnuityAccountOpeningChild =
+    activeChild?.childType === 'account-opening' &&
+    activeParentTask?.formKey === OPEN_ACCOUNTS_WITH_ANNUITY_FORM_KEY
   const childSupportsReviewerDemoTabs =
-    activeChild?.childType === 'kyc' || activeChild?.childType === 'account-opening'
+    activeChild?.childType === 'kyc' ||
+    (activeChild?.childType === 'account-opening' && !isAnnuityAccountOpeningChild)
 
   const isAdvisorView = viewMode === 'advisor'
   const isHoDocView = viewMode === 'ho-documents'
@@ -544,10 +548,10 @@ export function WizardLayout() {
     ) : null
 
   return (
-    <div className="flex h-screen bg-background">
+    <div className="flex h-screen overflow-hidden bg-background">
       <VerticalNav defaultCollapsed onCreateClick={() => setComposeOpen(true)} />
       <WizardRightPanelProvider>
-      <div className="flex flex-col flex-1 min-w-0">
+      <div className="flex min-h-0 flex-col flex-1 min-w-0">
         {showViewToggle && (
           <header className="border-b border-border px-8 py-2 flex items-center justify-end shrink-0">
             <div className="flex items-center gap-1 rounded-lg border border-border p-0.5">
@@ -732,7 +736,7 @@ export function WizardLayout() {
             ) : (
               <>
                 <ChildActionSidebar />
-                <div className="flex-1 flex flex-col overflow-hidden">
+                <div className="flex-1 min-h-0 flex flex-col overflow-hidden">
                   <ChildActionContent />
                   <ChildActionFooter />
                 </div>
@@ -742,7 +746,7 @@ export function WizardLayout() {
           ) : (
             <>
               <StepSidebar />
-              <div className="flex-1 flex flex-col overflow-hidden">
+              <div className="flex-1 min-h-0 flex flex-col overflow-hidden">
                 <TaskContent />
                 <WizardFooter />
               </div>

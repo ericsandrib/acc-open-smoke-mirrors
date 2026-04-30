@@ -136,6 +136,7 @@ export function OnboardingJourneysTable({ rows, visibleColumns }: OnboardingJour
                   journeyOnboardingConfig: {
                     office: '',
                     investmentProfessionalId: '',
+                    openMultipleAccounts: false,
                     openAnnuityAccount: false,
                   },
                 })

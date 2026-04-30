@@ -495,3 +495,14 @@ body {
   color: var(--color-foreground);
   background-color: var(--color-background);
 }
+
+/* Use hand cursor consistently for interactive UI controls app-wide. */
+button:not(:disabled),
+a[href],
+[role="button"]:not([aria-disabled="true"]),
+label[for],
+summary,
+input[type="checkbox"]:not(:disabled),
+input[type="radio"]:not(:disabled) {
+  cursor: pointer;
+}

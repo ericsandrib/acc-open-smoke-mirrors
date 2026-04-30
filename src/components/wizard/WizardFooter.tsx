@@ -121,67 +121,69 @@ export function WizardFooter() {
   return (
     <>
     <footer className="border-t border-border bg-background px-6 py-3 min-h-14 flex justify-between items-center shrink-0 box-border">
-      <div>
-        {!isFirst && (
-          <Button
-            variant="outline"
-            onClick={() => dispatch({ type: 'GO_BACK' })}
-          >
-            <ChevronLeft className="h-4 w-4" />
-            Back
-          </Button>
-        )}
-      </div>
+      <div className="max-w-[52.5rem] mx-auto w-full flex items-center justify-between">
+        <div>
+          {!isFirst && (
+            <Button
+              variant="outline"
+              onClick={() => dispatch({ type: 'GO_BACK' })}
+            >
+              <ChevronLeft className="h-4 w-4" />
+              Back
+            </Button>
+          )}
+        </div>
 
-      <div className="flex items-center gap-2">
-        {isSubmitted && activeStatus === 'in_progress' && (
-          <Button
-            variant="outline"
-            onClick={() => dispatch({ type: 'REOPEN_TASK', taskId: state.activeTaskId })}
-          >
-            <Pencil className="h-4 w-4" />
-            Edit
-          </Button>
-        )}
-        {activeStatus === 'complete' && (
-          <Button
-            variant="outline"
-            onClick={() => dispatch({ type: 'REOPEN_TASK', taskId: state.activeTaskId })}
-          >
-            <Pencil className="h-4 w-4" />
-            Edit
-          </Button>
-        )}
-        {activeStatus === 'blocked' && (
-          <span className="text-sm text-muted-foreground">Assigned to compliance</span>
-        )}
+        <div className="flex items-center gap-2">
+          {isSubmitted && activeStatus === 'in_progress' && (
+            <Button
+              variant="outline"
+              onClick={() => dispatch({ type: 'REOPEN_TASK', taskId: state.activeTaskId })}
+            >
+              <Pencil className="h-4 w-4" />
+              Edit
+            </Button>
+          )}
+          {activeStatus === 'complete' && (
+            <Button
+              variant="outline"
+              onClick={() => dispatch({ type: 'REOPEN_TASK', taskId: state.activeTaskId })}
+            >
+              <Pencil className="h-4 w-4" />
+              Edit
+            </Button>
+          )}
+          {activeStatus === 'blocked' && (
+            <span className="text-sm text-muted-foreground">Assigned to compliance</span>
+          )}
 
-        {isLast || showsOpenAccountsSubmit ? (
-          <Button
-            onClick={() => {
-              setCompleteAccountOpeningWarnings([])
-              setCompleteAccountOpeningOpen(true)
-            }}
-            disabled={
-              isOnOpenAccountsTask
-                ? false
-                : activeStatus === 'complete' || isSubmitted
-            }
-          >
-            {isOnOpenAccountsTask
-              ? allAccountChildrenTerminal
-                ? 'Complete'
-                : openAccountsSubmitLabel
-              : 'Complete'}
-          </Button>
-        ) : (
-          <Button
-            onClick={() => dispatch({ type: 'GO_NEXT' })}
-          >
-            Next
-            <ChevronRight className="h-4 w-4" />
-          </Button>
-        )}
+          {isLast || showsOpenAccountsSubmit ? (
+            <Button
+              onClick={() => {
+                setCompleteAccountOpeningWarnings([])
+                setCompleteAccountOpeningOpen(true)
+              }}
+              disabled={
+                isOnOpenAccountsTask
+                  ? false
+                  : activeStatus === 'complete' || isSubmitted
+              }
+            >
+              {isOnOpenAccountsTask
+                ? allAccountChildrenTerminal
+                  ? 'Complete'
+                  : openAccountsSubmitLabel
+                : 'Complete'}
+            </Button>
+          ) : (
+            <Button
+              onClick={() => dispatch({ type: 'GO_NEXT' })}
+            >
+              Next
+              <ChevronRight className="h-4 w-4" />
+            </Button>
+          )}
+        </div>
       </div>
     </footer>
     {completeAccountOpeningOpen && (

@@ -254,8 +254,7 @@ export function AcctChildDocumentsReviewForm() {
     <div className="space-y-8">
       <section id="acct-docs-forms" className="space-y-4 scroll-mt-16">
         <div>
-          <h3 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground flex items-center gap-2 mb-1">
-            <FileText className="h-4 w-4" />
+          <h3 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground mb-1">
             Forms for This Account
           </h3>
           <p className="text-sm text-muted-foreground">
@@ -350,8 +349,7 @@ export function AcctChildDocumentsReviewForm() {
 
         <section id="acct-docs-client-upload" className="space-y-4 scroll-mt-16">
           <div>
-            <h3 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground flex items-center gap-2 mb-1">
-              <FolderOpen className="h-4 w-4" />
+            <h3 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground mb-1">
               Supporting Client Documents
             </h3>
             <p className="text-sm text-muted-foreground">
@@ -446,7 +444,7 @@ export function AcctChildDocumentsReviewForm() {
                                     </SelectContent>
                                   </Select>
                                 ) : (
-                                  <div className="flex min-w-0 max-w-full items-center h-8 px-3 rounded-md border border-border bg-muted/30">
+                                  <div className="flex min-w-0 max-w-full cursor-default items-center h-8 px-3 rounded-md border border-border bg-muted/30">
                                     <span className="text-xs text-foreground truncate min-w-0" title={doc.label}>
                                       {doc.label}
                                     </span>

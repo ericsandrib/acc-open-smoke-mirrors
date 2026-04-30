@@ -703,6 +703,8 @@ function workflowReducer(state: WorkflowState, action: WorkflowAction): Workflow
     case 'SUBMIT_ALL_ACCOUNT_OPENING_CHILDREN_FOR_REVIEW': {
       const openAccountsTask = state.tasks.find((t) => t.id === action.openAccountsTaskId)
       if (!openAccountsTask?.children?.length) return state
+      const isAnnuityExternalSubmission =
+        openAccountsTask.formKey === OPEN_ACCOUNTS_WITH_ANNUITY_FORM_KEY
 
       const accountOpeningIds = new Set(
         openAccountsTask.children
@@ -716,20 +718,37 @@ function workflowReducer(state: WorkflowState, action: WorkflowAction): Workflow
         return {
           ...t,
           children: t.children.map((c) =>
-            accountOpeningIds.has(c.id) ? { ...c, status: 'awaiting_review' as const } : c,
+            accountOpeningIds.has(c.id)
+              ? { ...c, status: isAnnuityExternalSubmission ? 'in_progress' as const : 'awaiting_review' as const }
+              : c,
           ),
         }
       })
 
       const nextChildReviews = { ...(state.childReviewsByChildId ?? {}) }
-      for (const childId of accountOpeningIds) {
-        const prev = nextChildReviews[childId] ?? {}
-        nextChildReviews[childId] = {
-          ...prev,
-          documentReview: prev.documentReview ?? { status: 'pending' },
-          principalReview: prev.principalReview ?? { status: 'pending' },
-          accountOpeningPreReviewTimeline:
-            prev.accountOpeningPreReviewTimeline ?? buildAccountOpeningPreReviewTimeline(),
+      const submittedAt = new Date().toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })
+      if (!isAnnuityExternalSubmission) {
+        for (const childId of accountOpeningIds) {
+          const prev = nextChildReviews[childId] ?? {}
+          nextChildReviews[childId] = {
+            ...prev,
+            documentReview: prev.documentReview ?? { status: 'pending' },
+            principalReview: prev.principalReview ?? { status: 'pending' },
+            accountOpeningPreReviewTimeline:
+              prev.accountOpeningPreReviewTimeline ?? buildAccountOpeningPreReviewTimeline(),
+          }
+        }
+      }
+
+      const nextTaskData = { ...state.taskData }
+      if (isAnnuityExternalSubmission) {
+        for (const childId of accountOpeningIds) {
+          const ownersTaskId = `${childId}-account-owners`
+          nextTaskData[ownersTaskId] = {
+            ...(nextTaskData[ownersTaskId] ?? {}),
+            submittedToNetX360: true,
+            submittedToNetX360At: submittedAt,
+          }
         }
       }
 
@@ -737,6 +756,12 @@ function workflowReducer(state: WorkflowState, action: WorkflowAction): Workflow
         ...state,
         tasks: updatedTasks,
         childReviewsByChildId: nextChildReviews,
+        childReviewDecisionsByChildId: Object.fromEntries(
+          Object.entries(state.childReviewDecisionsByChildId ?? {}).filter(
+            ([childId]) => !accountOpeningIds.has(childId),
+          ),
+        ),
+        taskData: nextTaskData,
       }
     }
 
@@ -829,6 +854,11 @@ function workflowReducer(state: WorkflowState, action: WorkflowAction): Workflow
           ...state.childReviewsByChildId,
           [cid]: initialForChild,
         },
+        childReviewDecisionsByChildId: Object.fromEntries(
+          Object.entries(state.childReviewDecisionsByChildId ?? {}).filter(
+            ([childId]) => childId !== cid,
+          ),
+        ),
       }
     }
 

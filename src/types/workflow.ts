@@ -190,6 +190,8 @@ export interface JourneyOnboardingConfig {
   office: string
   /** Selected investment professional (team member id). */
   investmentProfessionalId: string
+  /** Whether advisor expects to open more than one account for this client. */
+  openMultipleAccounts: boolean
   /** Whether the client will open an account that includes an annuity. */
   openAnnuityAccount: boolean
 }

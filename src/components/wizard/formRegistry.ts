@@ -32,9 +32,9 @@ export const formComponents: Record<string, React.ComponentType> = {
 
 export const taskDescriptions: Partial<Record<string, string>> = {
   'existing-accounts':
-    'Review and maintain the client\'s current financial accounts held elsewhere (brokerage, retirement, trust, and banking).',
+    'Review and maintain the client\'s current accounts held at other institutions (e.g., brokerage, retirement, trust, banking).',
   'related-parties':
-    'Capture household members and related contacts for this client.',
+    'Add the people and entities associated with this client to support account opening and servicing.',
   'kyc':
     'Review household members and select who requires identity verification.',
   'kyc-child-info':
@@ -42,7 +42,7 @@ export const taskDescriptions: Partial<Record<string, string>> = {
   'kyc-child-documents':
     'Upload supporting KYC/KYB documents if step-up verification is required.',
   'open-accounts':
-    'Add accounts by registration type, run KYC verification, and create eSign envelopes in this app.',
+    'Set up new accounts, complete KYC, and prepare documents for client signature.',
   'open-accounts-with-annuity':
     'Annuity path: add accounts by registration type. KYC and eSign run outside this app.',
   'acct-child-account-owners':
@@ -70,23 +70,26 @@ export const taskSections: Partial<Record<string, Array<{ id: string; label: str
     { id: 'rcd-professional-contacts', label: 'Professional Contacts' },
   ],
   'existing-accounts': [
-    { id: 'ea-existing-accounts', label: 'Existing Accounts' },
+    { id: 'ea-existing-accounts', label: 'Accounts' },
     { id: 'ea-additional-instructions', label: 'Additional Instructions' },
   ],
   'open-accounts': [
-    { id: 'oa-accounts', label: 'Accounts to Be Opened' },
+    { id: 'oa-accounts', label: 'Accounts' },
     { id: 'oa-documents', label: 'Supporting Documents' },
     { id: 'oa-kyc', label: 'KYC Verification' },
     { id: 'oa-esign', label: 'Envelopes' },
   ],
   'open-accounts-with-annuity': [
-    { id: 'oa-accounts', label: 'Accounts to Be Opened' },
+    { id: 'oa-accounts', label: 'Accounts' },
   ],
   'acct-child-account-owners': [
     { id: 'acct-owners', label: 'Owners & Participants' },
     { id: 'acct-beneficiaries', label: 'Beneficiaries' },
     { id: 'acct-info', label: 'Account Information' },
     { id: 'acct-features', label: 'Investment Elections' },
+  ],
+  'acct-child-netx360-next-steps': [
+    { id: '__top__', label: 'Next Steps Checklist' },
   ],
   'acct-child-documents-review': [
     { id: 'acct-docs-forms', label: 'Forms for This Account' },

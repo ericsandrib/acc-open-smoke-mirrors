@@ -101,7 +101,7 @@ export function TaskContent() {
 
   return (
     <main className="flex-1 overflow-y-auto p-8">
-      <div className="max-w-2xl mx-auto">
+      <div className="max-w-[52.5rem] mx-auto">
         <ReviewBanner />
         <h2 className="text-3xl font-semibold text-foreground mb-2">{title}</h2>
         {formKey && taskDescriptions[formKey] && (
