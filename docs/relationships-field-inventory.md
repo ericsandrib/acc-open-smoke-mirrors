@@ -17,21 +17,29 @@ list view, ranked by how cheaply each field can be lit up.
 
 ---
 
-## Tier 1 — already shipped on `/relationships`
+## Tier 1 — shipped on `/relationships` (post 2026-04-28 session)
 
-These are the 8 columns in production today. Each has a real source path in
-both Avantos and Stratos.
+Six columns post the working session with Chris Radzinski & Wes Hawkins.
+Each has a real source path; sources clarified during the session are noted.
 
-| Column | Avantos field | Stratos | Tier |
+| Column | Source | Stratos | Notes |
 |---|---|---|---|
-| Relationship | `client_organisations.name` | S142 Household Name | 1 |
-| Advisor | `agents.first_name + last_name` via `agent_client_org_relationships` | S195 IAR Name | 1 |
-| Type | `client_organisations.client_organisation_type` | S244 Contact Type | 1 |
-| Status | `client_organisations.relationship_status` | S244 Contact Record Type | 1 |
-| AUM | `sum(position_valuations.valuation_amount)` per household | S141/S142 | 1 |
-| Firm | `agent_organisations.name` | S093 BD Firm Name | 1 |
-| Zip Code | `address_entity_relationships.postal_code` | S042 Legal ZIP | 1 |
-| Updated At | `client_organisations.updated_at` | — | 1 |
+| Household | `client_organisations.name` (Avantos) | S142 Household Name | Renamed from "Relationship" per Chris: *"If it's household level, I would just call it household."* |
+| Advisor | `agents.*` via `agent_client_org_relationships` (Avantos) — cross-walked with Salesforce ownership + Orion rep mapping | S195 IAR Name | Cross-system identity is open; SSN at the account level is current backstop |
+| Type | `client_organisations.client_organisation_type` (Avantos) | S244 Contact Type | Prospective / New / Existing |
+| Status | `client_organisations.relationship_status` (**Avantos** — not Salesforce/Orion) | — | Onboarding state + relationship record |
+| AUM | `sum(position_valuations.valuation_amount)` per household (**Orion** rollup, existing clients only) | S141/S142 | Prospects do not roll up AUM in MVP |
+| Updated At | `client_organisations.updated_at` (**Avantos** — not Salesforce) | — | Default sort candidate (advisor council to confirm) |
+
+### Removed in 4/28 session
+
+| Column | Reason |
+|---|---|
+| Firm | Custodian was floated as a replacement; rejected due to multi-custodian per household. Dropped from the overview. |
+| Zip Code | Not relevant on the relationships overview. |
+
+The previous 8-column shape is preserved in git history; nothing was lost,
+just trimmed.
 
 ---
 

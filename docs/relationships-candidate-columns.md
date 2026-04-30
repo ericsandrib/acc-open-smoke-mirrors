@@ -1,26 +1,28 @@
 # Relationships — candidate columns (not currently in the app)
 
-The table at `/relationships` ships with 8 columns, each mapped 1:1 to a real
-field in both the **Avantos canonical data model** (Guardian reference ingest) and the
-**Stratos Data Dictionary**.
+The table at `/relationships` ships with 6 columns post the 2026-04-28 working
+session with Chris Radzinski & Wes Hawkins.
 
 This doc is your reference list of columns **considered and deferred** for MVP —
 what they'd need to light up, and what they'd look like.
 
 ---
 
-## Currently shipped (MVP)
+## Currently shipped (MVP — post 4/28 session)
 
-| # | Column | Avantos source | Stratos dict | Notes |
+| # | Column | Source | Stratos dict | Notes |
 |---|---|---|---|---|
-| 1 | Relationship | `client_organisations.name` | S142 | Household / legal entity name |
-| 2 | Advisor | `agents.*` via `agent_client_org_relationships` | S195 IAR Name | First primary advisor |
-| 3 | Type | `client_organisations.client_organisation_type` | S244 Contact Type | Prospective / New / Existing |
-| 4 | Status | `client_organisations.relationship_status` | S244 Contact Record Type | Pipeline stage |
-| 5 | AUM | `sum(position_valuations.valuation_amount)` per household | S141/S142 Household totals | Wealth-side only |
-| 6 | Firm | `agent_organisations.name` | S093 Broker-Dealer Firm | For multi-firm advisors |
-| 7 | Zip Code | `address_entity_relationships.postal_code` | S042 Legal ZIP | Primary address |
-| 8 | Updated At | `client_organisations.updated_at` | — | Last ingest touch |
+| 1 | Household | `client_organisations.name` (Avantos) | S142 | Renamed from "Relationship" per Chris |
+| 2 | Advisor | `agents.*` via `agent_client_org_relationships` (Avantos) | S195 IAR Name | Cross-walked with SF ownership + Orion rep |
+| 3 | Type | `client_organisations.client_organisation_type` (Avantos) | S244 Contact Type | Prospective / New / Existing |
+| 4 | Status | `client_organisations.relationship_status` (**Avantos**) | — | Onboarding state + relationship record |
+| 5 | AUM | `sum(position_valuations.valuation_amount)` per household (**Orion** rollup, existing only) | S141/S142 | Prospects don't roll up in MVP |
+| 6 | Updated At | `client_organisations.updated_at` (**Avantos**) | — | Likely default sort |
+
+### Removed in 4/28 session
+
+- **Firm** — custodian rejected as replacement; multi-custodian per household made it untenable
+- **Zip Code** — not relevant on the overview
 
 ---
 
