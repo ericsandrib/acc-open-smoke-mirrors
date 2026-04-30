@@ -340,11 +340,11 @@ export function VerticalNav({
               role="navigation"
               aria-label="Main navigation"
             >
-              <div className="h-14 px-4 flex items-center shrink-0">
+              <div className="h-18 px-4 flex items-center shrink-0">
                 <img
                   src="/stratos-logo.png"
                   alt="Stratos Wealth Partners"
-                  className="h-7 w-auto"
+                  className="h-11 w-auto"
                 />
               </div>
 
@@ -383,14 +383,14 @@ export function VerticalNav({
             onMouseEnter={() => !isExpanded && setIsCollapsedHovered(true)}
             onMouseLeave={() => setIsCollapsedHovered(false)}
           >
-            {/* Header: G logo + panel toggle */}
-            <div className="h-14 px-4 flex items-center shrink-0 justify-between">
+            {/* Header: Stratos logo + panel toggle */}
+            <div className="h-18 px-4 flex items-center shrink-0 justify-between">
               {isExpanded ? (
                 <>
                   <img
                     src="/stratos-logo.png"
                     alt="Stratos Wealth Partners"
-                    className="h-7 w-auto"
+                    className="h-11 w-auto"
                   />
                   <Tooltip>
                     <TooltipTrigger asChild>
@@ -420,12 +420,12 @@ export function VerticalNav({
                   <img
                     src="/stratos-logo.png"
                     alt="Stratos"
-                    className={`h-6 w-auto mx-auto pointer-events-none object-contain ${
+                    className={`h-9 w-auto mx-auto pointer-events-none object-contain ${
                       isCollapsedHovered ? "invisible" : ""
                     }`}
                   />
                   {isCollapsedHovered && (
-                    <div className="absolute inset-x-0 top-0 h-14 flex items-center justify-center pointer-events-none">
+                    <div className="absolute inset-x-0 top-0 h-18 flex items-center justify-center pointer-events-none">
                       <div className="pointer-events-auto">
                         <Tooltip>
                           <TooltipTrigger asChild>
