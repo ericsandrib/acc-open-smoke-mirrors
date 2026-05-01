@@ -11,6 +11,7 @@ import { ChildActionKebabMenu } from '@/components/wizard/ChildActionKebabMenu'
 import { ChildActionTimelineSheet } from '@/components/wizard/ChildActionTimelineSheet'
 import { childStatusConfig, deriveChildDisplayStatus } from '@/utils/childStatusDisplay'
 import { cn } from '@/lib/utils'
+import { findParentTaskForChild } from '@/utils/openAccountsTaskContext'
 
 /**
  * Hub step (per account child): list account feature / service workflows—mirrors Funding & asset movement on the same account.
@@ -21,7 +22,7 @@ export function FundChildFeaturesForm() {
   const [pickerOpen, setPickerOpen] = useState(false)
   const [timelineChild, setTimelineChild] = useState<ChildTask | null>(null)
 
-  const openAccountsTask = state.tasks.find((t) => t.formKey === 'open-accounts')
+  const openAccountsTask = ctx ? findParentTaskForChild(state, ctx.child.id) : undefined
   const featuresSubTaskIndex = getSubTaskIndexByFormKey('account-opening', 'acct-child-features-services')
 
   const linesForAccount = useMemo(() => {
@@ -74,13 +75,6 @@ export function FundChildFeaturesForm() {
             </Button>
           )}
         </div>
-        <p className="text-sm text-muted-foreground mb-3">
-          <span className="font-medium text-foreground">Margin</span> and{' '}
-          <span className="font-medium text-foreground">options</span> are requested on the{' '}
-          <span className="font-medium text-foreground">Account &amp; owners</span> step for this account—not here. Use
-          this list for service-style workflows (eDelivery, SelectLink, etc.).
-        </p>
-
         {linesForAccount.length > 0 ? (
           <div className="space-y-2">
             {linesForAccount.map((line) => (

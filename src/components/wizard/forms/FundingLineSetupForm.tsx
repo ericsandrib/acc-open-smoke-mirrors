@@ -28,7 +28,7 @@ const dividendOptions = [
 
 /** Detail form for a single funding / asset movement workflow line. */
 export function FundingLineSetupForm() {
-  const NETX360_ANNUITIES_DEEPLINK = 'https://netx360.pershing.com/annuities'
+  const NETX360_ANNUITIES_DEEPLINK = 'https://xat-www2.netx360.inautix.com/plus/servicing/account-service/client-onboarding'
   const { state } = useWorkflow()
   const ctx = useChildActionContext()
   const taskId = ctx?.subTaskId ?? ''

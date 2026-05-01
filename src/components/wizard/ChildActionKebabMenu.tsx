@@ -5,6 +5,7 @@ import { cn } from '@/lib/utils'
 interface ChildActionKebabMenuProps {
   onViewDetails: () => void
   onSubmitForReview?: () => void
+  submitForReviewLabel?: string
   onDelete?: () => void
   className?: string
 }
@@ -12,6 +13,7 @@ interface ChildActionKebabMenuProps {
 export function ChildActionKebabMenu({
   onViewDetails,
   onSubmitForReview,
+  submitForReviewLabel = 'Submit for Review',
   onDelete,
   className,
 }: ChildActionKebabMenuProps) {
@@ -67,7 +69,7 @@ export function ChildActionKebabMenu({
               className="w-full flex items-center gap-2.5 px-3 py-2 text-sm text-foreground hover:bg-muted transition-colors whitespace-nowrap"
             >
               <Send className="h-4 w-4" />
-              Submit for Review
+              {submitForReviewLabel}
             </button>
           )}
           {onDelete && (

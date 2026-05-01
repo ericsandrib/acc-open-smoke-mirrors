@@ -3,6 +3,7 @@ export const ACCOUNT_EMBEDDED_FEATURE_VALUES = ['margin', 'options', 'alternativ
 
 /** Account features & services — administrative, setup, or lifecycle (not transactional movements). */
 export const ACCOUNT_FEATURE_SERVICE_OPTIONS = [
+  { value: 'corestone_agreement_checking_accounts', label: 'Corestone Agreement — Checking Accounts' },
   { value: 'edelivery', label: 'eDelivery' },
   { value: 'margin', label: 'Margin' },
   { value: 'options', label: 'Options' },

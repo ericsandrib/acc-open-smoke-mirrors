@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useWorkflow, useTaskData, useChildActionContext } from '@/stores/workflowStore'
+import { findParentTaskForChild, OPEN_ACCOUNTS_WITH_ANNUITY_FORM_KEY } from '@/utils/openAccountsTaskContext'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -13,7 +14,7 @@ import {
   getMaxAccountOwnersForRegistration,
   registrationAllowsLegalEntityAsAccountOwner,
 } from '@/utils/registrationOwnerLimits'
-import { Plus, Trash2, UserPlus } from 'lucide-react'
+import { Plus, Trash2 } from 'lucide-react'
 import {
   AddClientInfoLegalEntitySheet,
   AddHouseholdMemberSheet,
@@ -88,7 +89,6 @@ export function AcctChildOwnerInfoForm() {
   const childId = ctx?.child.id ?? ''
   const childMeta = state.taskData[childId] as Record<string, unknown> | undefined
   const childRegType = (childMeta?.registrationType as RegistrationType | undefined) ?? null
-  const isJointRegistration = childRegType === 'JT' || childRegType === 'TOD_JT'
   const showBeneficiariesSection =
     childRegType != null && BENEFICIARY_ENABLED_REGISTRATIONS.has(childRegType)
   const trustEntityOwnersOnly = childRegType === 'TRUST'
@@ -125,24 +125,24 @@ export function AcctChildOwnerInfoForm() {
   )
 
   const maxOwners = getMaxAccountOwnersForRegistration(childRegType)
-  const canAddMoreOwners = owners.length < maxOwners
+  const requiredOwnerSlots = Math.max(1, maxOwners)
 
   const [addMemberSheetOwnerId, setAddMemberSheetOwnerId] = useState<string | null>(null)
+  const openAccountsParent = ctx ? findParentTaskForChild(state, ctx.child.id) : undefined
+  const kycExternalForThisAccount =
+    openAccountsParent?.formKey === OPEN_ACCOUNTS_WITH_ANNUITY_FORM_KEY
+  const netx360Submitted = data.submittedToNetX360 === true
+  const lockForExternalSubmission = kycExternalForThisAccount && netx360Submitted
   const kycParentTask =
     state.tasks.find((t) => t.formKey === 'kyc')
-    ?? state.tasks.find((t) => t.formKey === 'open-accounts')
+    ?? (openAccountsParent?.formKey === OPEN_ACCOUNTS_WITH_ANNUITY_FORM_KEY
+      ? undefined
+      : openAccountsParent)
 
   useEffect(() => {
     if (!ctx) return
-    if (owners.length <= maxOwners) return
-    updateField('owners', owners.slice(0, maxOwners))
-    toast.info('Owner list was adjusted to match this registration type.', { duration: 4500 })
-  }, [ctx, maxOwners, owners, updateField])
-
-  useEffect(() => {
-    if (!ctx || !isJointRegistration) return
-    const next: OwnerRow[] = [...owners.slice(0, 2)]
-    while (next.length < 2) {
+    const next: OwnerRow[] = [...owners.slice(0, requiredOwnerSlots)]
+    while (next.length < requiredOwnerSlots) {
       next.push({ id: `owner-${Date.now()}-${next.length + 1}`, type: 'existing' })
     }
     const changed =
@@ -150,8 +150,11 @@ export function AcctChildOwnerInfoForm() {
       next.some((row, idx) => owners[idx]?.id !== row.id || owners[idx]?.partyId !== row.partyId)
     if (changed) {
       updateField('owners', next)
+      if (owners.length > requiredOwnerSlots) {
+        toast.info('Owner list was adjusted to match this registration type.', { duration: 4500 })
+      }
     }
-  }, [ctx, isJointRegistration, owners, updateField])
+  }, [ctx, owners, requiredOwnerSlots, updateField])
 
   useEffect(() => {
     if (!ctx || !trustEntityOwnersOnly) return
@@ -200,54 +203,6 @@ export function AcctChildOwnerInfoForm() {
     updateField('beneficiaries', [])
   }, [ctx, showBeneficiariesSection, beneficiaries.length, updateField])
 
-  const handleStartKyc = (partyId: string) => {
-    const party = state.relatedParties.find((p) => p.id === partyId)
-    if (!party || !kycParentTask) return
-
-    const linkedTrustPartyIds =
-      party.type === 'related_organization'
-        ? [
-            ...(party.trustParties ?? []).map((t) => t.partyId).filter((id): id is string => Boolean(id)),
-            ...(party.beneficialOwners ?? [])
-              .map((b) =>
-                state.relatedParties.find(
-                  (p) => p.type !== 'related_organization' && p.name === b.name && !p.isHidden,
-                )?.id,
-              )
-              .filter((id): id is string => Boolean(id)),
-          ]
-        : []
-    const relatedSubjectPartyIds = Array.from(new Set(linkedTrustPartyIds))
-
-    dispatch({
-      type: 'SPAWN_CHILD',
-      parentTaskId: kycParentTask.id,
-      childName: party.name,
-      childType: 'kyc',
-      metadata: {
-        kycSubjectPartyId: party.id,
-        kycSubjectType: party.type === 'related_organization' ? 'entity' : 'individual',
-        ...(relatedSubjectPartyIds.length > 0 ? { kycRelatedSubjectPartyIds: relatedSubjectPartyIds } : {}),
-      },
-    })
-    dispatch({
-      type: 'UPDATE_RELATED_PARTY',
-      partyId,
-      updates: { kycStatus: 'pending' },
-    })
-
-    toast(`KYC verification started for ${party.name}`, {
-      description: 'Identity verification has been initiated. You can continue here or go to Open Accounts.',
-      action: {
-        label: 'Go to Open Accounts',
-        onClick: () => {
-          dispatch({ type: 'EXIT_CHILD_ACTION' })
-          dispatch({ type: 'SET_ACTIVE_TASK', taskId: kycParentTask.id })
-        },
-      },
-    })
-  }
-
   const handleGoToKyc = (partyId: string) => {
     const party = state.relatedParties.find((p) => p.id === partyId)
     if (!party || !kycParentTask) return
@@ -263,15 +218,6 @@ export function AcctChildOwnerInfoForm() {
     if (kycChild) {
       dispatch({ type: 'ENTER_CHILD_ACTION', childId: kycChild.id })
     }
-  }
-
-  const addOwnerSlot = () => {
-    if (!canAddMoreOwners) return
-    updateField('owners', [...owners, { id: `owner-${Date.now()}`, type: 'existing' }])
-  }
-
-  const removeOwner = (ownerId: string) => {
-    updateField('owners', owners.filter((o) => o.id !== ownerId))
   }
 
   const updateOwner = (ownerId: string, updates: Record<string, unknown>) => {
@@ -344,11 +290,18 @@ export function AcctChildOwnerInfoForm() {
 
   return (
     <div className="space-y-8">
-      <section className="space-y-6">
+      {lockForExternalSubmission ? (
+        <div className="rounded-md border border-blue-200 bg-blue-50 dark:border-blue-900/60 dark:bg-blue-950/40 px-3 py-2.5">
+          <p className="text-xs font-medium text-blue-900 dark:text-blue-100">
+            Submitted to NetX360. This form is now read-only.
+          </p>
+        </div>
+      ) : null}
+      <div className={lockForExternalSubmission ? 'space-y-8 pointer-events-none opacity-75 select-none' : 'space-y-8'}>
+      <section id="acct-owners" className="space-y-6 scroll-mt-16">
         <div>
-          <h3 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground flex items-center gap-2 mb-1">
-            <UserPlus className="h-4 w-4" />
-            Owners & participants
+          <h3 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground mb-1">
+            Owners & Participants
           </h3>
           <p className="text-sm text-muted-foreground">
             {trustEntityOwnersOnly ? (
@@ -370,19 +323,6 @@ export function AcctChildOwnerInfoForm() {
           </p>
         </div>
 
-        {!isJointRegistration && owners.length === 0 && (
-          <div className="rounded-lg border border-dashed border-border p-6 text-center">
-            <UserPlus className="mx-auto mb-2 h-8 w-8 text-muted-foreground/50" />
-            <p className="text-sm text-muted-foreground mb-3">
-              No owners added yet.
-            </p>
-            <Button onClick={addOwnerSlot} disabled={!canAddMoreOwners}>
-              <Plus className="h-4 w-4 mr-1" />
-              Add Owner
-            </Button>
-          </div>
-        )}
-
         {owners.map((owner, idx) => (
           <PartySlotCard
             key={owner.id}
@@ -391,7 +331,7 @@ export function AcctChildOwnerInfoForm() {
             selectLabel="Select account owner"
             partyId={owner.partyId}
             onPartyIdChange={(v) => selectExistingOwner(owner.id, v)}
-            onRemove={isJointRegistration ? undefined : () => removeOwner(owner.id)}
+            onRemove={() => updateOwner(owner.id, { partyId: undefined })}
             parties={state.relatedParties}
             selectCandidates={accountOwnerCandidates}
             onOpenAddParty={() => setAddMemberSheetOwnerId(owner.id)}
@@ -412,17 +352,10 @@ export function AcctChildOwnerInfoForm() {
                   ? 'Adds to this household for use as account owner.'
                   : 'Adds a person to this household for use as account owner.'
             }
-            onStartKyc={handleStartKyc}
+            showKycStatus={!kycExternalForThisAccount}
             onGoToKyc={handleGoToKyc}
           />
         ))}
-
-        {!isJointRegistration && owners.length > 0 && canAddMoreOwners && (
-          <Button variant="outline" className="w-full" onClick={addOwnerSlot}>
-            <Plus className="h-4 w-4 mr-1" />
-            Add Another Owner
-          </Button>
-        )}
 
         {trustEntityOwnersOnly ? (
           <AddClientInfoLegalEntitySheet
@@ -484,10 +417,9 @@ export function AcctChildOwnerInfoForm() {
       </section>
 
       {showBeneficiariesSection ? (
-      <section className="space-y-6">
+      <section id="acct-beneficiaries" className="space-y-6 scroll-mt-16">
         <div>
-          <h3 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground flex items-center gap-2 mb-1">
-            <UserPlus className="h-4 w-4" />
+          <h3 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground mb-1">
             Beneficiaries
           </h3>
           <p className="text-sm text-muted-foreground">
@@ -771,21 +703,32 @@ export function AcctChildOwnerInfoForm() {
       </section>
       ) : null}
 
-      <AccountProfileSection
-        data={data}
-        updateField={updateField}
-        registrationType={childRegType}
-        productAccountTypeOverride={productAccountTypeOverride}
-        prefilledAccountNumber={(childMeta?.accountNumber as string) ?? ''}
-      />
+      <section id="acct-info" className="space-y-6 scroll-mt-16">
+        <div>
+          <h3 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground mb-1">
+            Account Information
+          </h3>
+          <p className="text-sm text-muted-foreground">
+            Define account setup details, servicing metadata, suitability profile, and additional account-level fields.
+          </p>
+        </div>
+        <AccountProfileSection
+          data={data}
+          updateField={updateField}
+          registrationType={childRegType}
+          productAccountTypeOverride={productAccountTypeOverride}
+          prefilledAccountNumber={(childMeta?.accountNumber as string) ?? ''}
+          hideHeader
+        />
+        <AccountAdditionalInformationSection data={data} updateField={updateField} hideHeader />
+      </section>
 
       {childId ? (
-        <section className="space-y-6">
+        <section id="acct-features" className="space-y-6 scroll-mt-16">
           <AccountFeatureRequestsSection accountChildId={childId} />
         </section>
       ) : null}
-
-      <AccountAdditionalInformationSection data={data} updateField={updateField} />
+      </div>
     </div>
   )
 }

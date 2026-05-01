@@ -482,7 +482,7 @@ function BeneficiaryDirectorySearchPanel({
     return () => ro.disconnect()
   }, [])
 
-  const searchPopoverOpen = query.trim() !== '' && !searchDismissed
+  const searchPopoverOpen = query.trim() !== '' && debouncedQuery.trim() !== '' && !searchDismissed
 
   const handleSelectPerson = (person: DirectoryPerson) => {
     setQuery('')
@@ -1213,7 +1213,7 @@ function SearchPersonReviewPanel(props: SearchPersonReviewPanelProps & SearchPer
     return () => ro.disconnect()
   }, [])
 
-  const searchPopoverOpen = query.trim() !== '' && !searchDismissed
+  const searchPopoverOpen = query.trim() !== '' && debouncedQuery.trim() !== '' && !searchDismissed
 
   return (
     <div className="space-y-6 pb-20">

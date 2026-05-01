@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { toast } from 'sonner'
 import {
   useWorkflow,
@@ -15,6 +15,7 @@ import {
   getAccountOpeningChildSubmissionIssues,
   hasAccountOpeningChildBeenSubmittedForReview,
 } from '@/utils/accountOpeningChildProgress'
+import { OPEN_ACCOUNTS_WITH_ANNUITY_FORM_KEY } from '@/utils/openAccountsTaskContext'
 
 function SubmissionBlockedModal({
   issues,
@@ -112,6 +113,7 @@ function SubmitConfirmModal({
 export function ChildActionFooter() {
   const { state, dispatch } = useWorkflow()
   const ctx = useChildActionContext()
+  const footerRef = useRef<HTMLElement | null>(null)
   const [showConfirmModal, setShowConfirmModal] = useState(false)
   const [showResubmitModal, setShowResubmitModal] = useState(false)
   const [showCompleteStepModal, setShowCompleteStepModal] = useState(false)
@@ -137,33 +139,63 @@ export function ChildActionFooter() {
     state.taskData[child.id]?.kycSubjectType === 'entity' || kycParty?.type === 'related_organization'
       ? 'entity'
       : 'individual'
+  const annuityOwnersTaskId = `${child.id}-account-owners`
+  const annuityOwnersTaskData = state.taskData[annuityOwnersTaskId] as Record<string, unknown> | undefined
+  const isAnnuityNetx360NextStepsSubTask =
+    child.childType === 'account-opening' &&
+    ctx.parentTask?.formKey === OPEN_ACCOUNTS_WITH_ANNUITY_FORM_KEY &&
+    ctx.currentSubTask.suffix === 'netx360-next-steps'
+  const isAnnuityAccountOwnersSubTask =
+    child.childType === 'account-opening' &&
+    ctx.parentTask?.formKey === OPEN_ACCOUNTS_WITH_ANNUITY_FORM_KEY &&
+    ctx.currentSubTask.suffix === 'account-owners'
+  const hideNavForCompletedNetx360Step =
+    isAnnuityNetx360NextStepsSubTask && child.status === 'complete'
+  const hideNextForCompletedAnnuityOwners =
+    isAnnuityAccountOwnersSubTask && child.status === 'complete'
+  useEffect(() => {
+    const node = footerRef.current
+    if (!node) return
+    const blockFooterWheelScroll = (e: WheelEvent) => {
+      e.preventDefault()
+    }
+    node.addEventListener('wheel', blockFooterWheelScroll, { passive: false })
+    return () => {
+      node.removeEventListener('wheel', blockFooterWheelScroll as EventListener)
+    }
+  }, [])
 
   if (isNestedAccountLineChild) {
     return (
-      <footer className="border-t border-border bg-background px-6 py-3 min-h-14 flex justify-between items-center shrink-0 box-border">
-        <div>
-          {!isFirst && (
-            <Button
-              variant="outline"
-              onClick={() => dispatch({ type: 'CHILD_GO_BACK' })}
-            >
-              <ChevronLeft className="h-4 w-4" />
-              Back
-            </Button>
-          )}
-        </div>
-        <div className="flex items-center gap-2">
-          {isLast ? (
-            <Button onClick={() => dispatch({ type: 'EXIT_CHILD_ACTION' })}>
-              Next
-              <ChevronRight className="h-4 w-4" />
-            </Button>
-          ) : (
-            <Button onClick={() => dispatch({ type: 'CHILD_GO_NEXT' })}>
-              Next
-              <ChevronRight className="h-4 w-4" />
-            </Button>
-          )}
+      <footer
+        ref={footerRef}
+        className="border-t border-border bg-background px-6 py-3 min-h-14 flex justify-between items-center shrink-0 box-border"
+      >
+        <div className="max-w-[52.5rem] mx-auto w-full flex items-center justify-between">
+          <div>
+            {!isFirst && (
+              <Button
+                variant="outline"
+                onClick={() => dispatch({ type: 'CHILD_GO_BACK' })}
+              >
+                <ChevronLeft className="h-4 w-4" />
+                Back
+              </Button>
+            )}
+          </div>
+          <div className="flex items-center gap-2">
+            {isLast ? (
+              <Button onClick={() => dispatch({ type: 'EXIT_CHILD_ACTION' })}>
+                Next
+                <ChevronRight className="h-4 w-4" />
+              </Button>
+            ) : (
+              <Button onClick={() => dispatch({ type: 'CHILD_GO_NEXT' })}>
+                Next
+                <ChevronRight className="h-4 w-4" />
+              </Button>
+            )}
+          </div>
         </div>
       </footer>
     )
@@ -285,24 +317,20 @@ export function ChildActionFooter() {
   if (isAdvisorView || isAmlView || isHoKycView) {
     return (
       <>
-        <footer className="border-t border-border bg-background px-6 py-3 min-h-14 flex justify-between items-center shrink-0 box-border">
-          <div>
-            {isAdvisorView && isLast ? (
-              <Button
-                variant="outline"
-                onClick={() => dispatch({ type: 'EXIT_CHILD_ACTION' })}
-              >
-                <ChevronLeft className="h-4 w-4" />
-                Save &amp; Return to Accounts Hub
-              </Button>
-            ) : !isFirst ? (
-              <Button variant="outline" onClick={() => dispatch({ type: 'CHILD_GO_BACK' })}>
-                <ChevronLeft className="h-4 w-4" />
-                Back
-              </Button>
-            ) : null}
-          </div>
-          <div className="flex items-center gap-3">
+        <footer
+          ref={footerRef}
+          className="border-t border-border bg-background px-6 py-3 min-h-14 flex justify-between items-center shrink-0 box-border"
+        >
+          <div className="max-w-[52.5rem] mx-auto w-full flex items-center justify-between">
+            <div>
+              {!isFirst && !hideNavForCompletedNetx360Step && (
+                <Button variant="outline" onClick={() => dispatch({ type: 'CHILD_GO_BACK' })}>
+                  <ChevronLeft className="h-4 w-4" />
+                  Back
+                </Button>
+              )}
+            </div>
+            <div className="flex items-center gap-3">
             {advisorResubmitEligible && isLast ? (
               <Button onClick={handleResubmit}>
                 <RotateCcw className="h-4 w-4" />
@@ -316,6 +344,9 @@ export function ChildActionFooter() {
                   {(() => {
                     const rs = getChildReviewState(state, child.id)
                     const dec = getChildReviewDecision(state, child.id)
+                    if (child.childType === 'account-opening' && ctx.parentTask?.formKey === OPEN_ACCOUNTS_WITH_ANNUITY_FORM_KEY) {
+                      return (annuityOwnersTaskData?.submittedToNetX360At as string | undefined) ?? state.submittedAt ?? 'N/A'
+                    }
                     if (isKyc) return rs?.hoKycReview?.decidedAt ?? state.submittedAt ?? 'N/A'
                     return rs?.principalReview?.decidedAt ?? dec?.decidedAt ?? state.submittedAt ?? 'N/A'
                   })()}
@@ -342,12 +373,13 @@ export function ChildActionFooter() {
                 </Button>
               )
             ) : null}
-            {!isLast && !hideNextInAdvisorAfterSubmit && (
+            {!isLast && !hideNextInAdvisorAfterSubmit && !hideNavForCompletedNetx360Step && !hideNextForCompletedAnnuityOwners && (
               <Button onClick={() => dispatch({ type: 'CHILD_GO_NEXT' })}>
                 Next
                 <ChevronRight className="h-4 w-4" />
               </Button>
             )}
+            </div>
           </div>
         </footer>
 
@@ -387,47 +419,52 @@ export function ChildActionFooter() {
 
   return (
     <>
-      <footer className="border-t border-border bg-background px-6 py-3 min-h-14 flex justify-between items-center shrink-0 box-border">
-        <div>
-          {!isFirst && (
-            <Button
-              variant="outline"
-              onClick={() => dispatch({ type: 'CHILD_GO_BACK' })}
-            >
-              <ChevronLeft className="h-4 w-4" />
-              Back
-            </Button>
-          )}
-        </div>
-
-        <div className="flex items-center gap-2">
-          {isLast ? (
-            child.status === 'complete' ? (
-              <div className="flex items-center gap-1.5 text-sm text-green-700">
-                <CheckCircle2 className="h-3.5 w-3.5" />
-                <span>
-                  Completed at{' '}
-                  {isKyc
-                    ? getChildReviewState(state, child.id)?.hoKycReview?.decidedAt ??
-                      state.submittedAt ??
-                      'N/A'
-                    : getChildReviewState(state, child.id)?.principalReview?.decidedAt ??
-                      getChildReviewDecision(state, child.id)?.decidedAt ??
-                      state.submittedAt ??
-                      'N/A'}
-                </span>
-              </div>
-            ) : (
-              <Button onClick={handleDone}>
-                Submit for Review
+      <footer
+        ref={footerRef}
+        className="border-t border-border bg-background px-6 py-3 min-h-14 flex justify-between items-center shrink-0 box-border"
+      >
+        <div className="max-w-[52.5rem] mx-auto w-full flex items-center justify-between">
+          <div>
+            {!isFirst && (
+              <Button
+                variant="outline"
+                onClick={() => dispatch({ type: 'CHILD_GO_BACK' })}
+              >
+                <ChevronLeft className="h-4 w-4" />
+                Back
               </Button>
-            )
-          ) : (
-            <Button onClick={() => dispatch({ type: 'CHILD_GO_NEXT' })}>
-              Next
-              <ChevronRight className="h-4 w-4" />
-            </Button>
-          )}
+            )}
+          </div>
+
+          <div className="flex items-center gap-2">
+            {isLast ? (
+              child.status === 'complete' ? (
+                <div className="flex items-center gap-1.5 text-sm text-green-700">
+                  <CheckCircle2 className="h-3.5 w-3.5" />
+                  <span>
+                    Completed at{' '}
+                    {isKyc
+                      ? getChildReviewState(state, child.id)?.hoKycReview?.decidedAt ??
+                        state.submittedAt ??
+                        'N/A'
+                      : getChildReviewState(state, child.id)?.principalReview?.decidedAt ??
+                        getChildReviewDecision(state, child.id)?.decidedAt ??
+                        state.submittedAt ??
+                        'N/A'}
+                  </span>
+                </div>
+              ) : (
+                <Button onClick={handleDone}>
+                  Submit for Review
+                </Button>
+              )
+            ) : (
+              <Button onClick={() => dispatch({ type: 'CHILD_GO_NEXT' })}>
+                Next
+                <ChevronRight className="h-4 w-4" />
+              </Button>
+            )}
+          </div>
         </div>
       </footer>
 

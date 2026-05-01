@@ -15,6 +15,7 @@ import {
   SelectSeparator,
 } from '@/components/ui/select'
 import { buildAccountOwnerPreview, buildDesignationPartyPreview } from '@/utils/accountOwnerPreview'
+import { isOpenAccountsTask } from '@/utils/openAccountsTaskContext'
 import { Plus, Trash2, Pencil, AlertTriangle, Info } from 'lucide-react'
 
 const ADD_PARTY_VALUE = '__add_party__'
@@ -46,6 +47,7 @@ export type PartySlotCardProps = {
   footer?: ReactNode
   onStartKyc?: (partyId: string) => void
   onGoToKyc?: (partyId: string) => void
+  showKycStatus?: boolean
 }
 
 export function PartySlotCard({
@@ -68,20 +70,26 @@ export function PartySlotCard({
   footer,
   onStartKyc,
   onGoToKyc,
+  showKycStatus = true,
 }: PartySlotCardProps) {
   const { state } = useWorkflow()
   const matchedParty = partyId ? parties.find((p) => p.id === partyId) ?? null : null
   const findKycChildForParty = useCallback((party: RelatedParty | undefined) => {
     if (!party) return null
-    const kycParentTask = state.tasks.find((t) => t.formKey === 'kyc') ?? state.tasks.find((t) => t.formKey === 'open-accounts')
-    return (
-      kycParentTask?.children?.find((c) => {
+    const kycStandalone = state.tasks.find((t) => t.formKey === 'kyc')
+    const parents = kycStandalone
+      ? [kycStandalone]
+      : state.tasks.filter((t) => isOpenAccountsTask(t))
+    for (const kycParentTask of parents) {
+      const found = kycParentTask.children?.find((c) => {
         if (c.childType !== 'kyc') return false
         const meta = state.taskData[c.id] as Record<string, unknown> | undefined
         if ((meta?.kycSubjectPartyId as string | undefined) === party.id) return true
         return c.name === party.name
-      }) ?? null
-    )
+      })
+      if (found) return found
+    }
+    return null
   }, [state.tasks, state.taskData])
 
   const getPartyKycDisplayStatus = useCallback((party: RelatedParty | undefined) => {
@@ -427,7 +435,7 @@ export function PartySlotCard({
               </div>
             )}
 
-          {!hideDefaultDetails && !isDesignationPreview && (kycDisplayStatus || matchedParty.kycStatus) && matchedParty.type !== 'related_organization' && (
+          {showKycStatus && !hideDefaultDetails && !isDesignationPreview && (kycDisplayStatus || matchedParty.kycStatus) && matchedParty.type !== 'related_organization' && (
             <div className="flex flex-wrap items-center gap-2 text-sm pt-1 border-t border-border/60">
               <span className="text-muted-foreground">
                 KYC status:
@@ -448,7 +456,7 @@ export function PartySlotCard({
                   type="button"
                   onClick={() => onStartKyc(matchedParty.id)}
                 >
-                  Start
+                  Start KYC initiation
                 </Button>
               )}
               {matchedParty.kycStatus === 'pending' && onGoToKyc && getPartyKycAction(matchedParty) === 'go' && (

@@ -25,20 +25,6 @@ const ACCOUNT_OPENING_STAGES: TimelineStage[] = [
   { label: 'Complete', description: 'Account opened at Pershing. Confirmation sent to client.', matchStatuses: ['complete'] },
 ]
 
-/**
- * Advisor-facing simplification of the 7-stage account-opening tracker.
- * Same underlying status machine, fewer rows. Advisors only need to know
- * "is it on my desk or theirs?" — Document Review and Principal Review
- * collapse into a single "In Review" row. Home Office views keep the full
- * 7-stage timeline (this 4-stage view is opt-in via `advisorView`).
- */
-const ADVISOR_ACCOUNT_OPENING_STAGES: TimelineStage[] = [
-  { label: 'Draft', description: 'Action required — capture client info, KYC, funding, and features.', matchStatuses: ['not_started', 'in_progress'] },
-  { label: 'Pending Client', description: 'eSign envelope sent — waiting on client signature.', matchStatuses: [] },
-  { label: 'In Review', description: 'Submitted to home office for document and principal review.', matchStatuses: ['awaiting_review', 'doc_review_pending', 'principal_review_pending', 'rejected'] },
-  { label: 'Complete', description: 'Account opened at Pershing.', matchStatuses: ['complete'] },
-]
-
 const KYC_STAGES: TimelineStage[] = [
   { label: 'Draft', description: 'KYC verification initiated. Client data captured.', matchStatuses: ['not_started', 'in_progress'] },
   { label: 'ID Verification', description: 'Identity verification performed by Avantos.', matchStatuses: [] },
@@ -51,9 +37,8 @@ const KYC_STAGES: TimelineStage[] = [
 const KYC_AML_STAGE_INDEX = KYC_STAGES.findIndex((s) => s.label === 'AML Review')
 const ACCOUNT_OPENING_DOC_STAGE_INDEX = ACCOUNT_OPENING_STAGES.findIndex((s) => s.label === 'Document Review')
 
-function getStagesForType(childType: ChildType, advisorView = false): TimelineStage[] {
-  if (childType === 'kyc') return KYC_STAGES
-  return advisorView ? ADVISOR_ACCOUNT_OPENING_STAGES : ACCOUNT_OPENING_STAGES
+function getStagesForType(childType: ChildType): TimelineStage[] {
+  return childType === 'kyc' ? KYC_STAGES : ACCOUNT_OPENING_STAGES
 }
 
 function deriveEffectiveStatus(
@@ -133,10 +118,9 @@ export function getActiveStageLabel(
   rawStatus: string,
   childType: ChildType,
   reviewState?: ChildReviewState,
-  advisorView = false,
 ): string {
   const effectiveStatus = deriveEffectiveStatus(rawStatus, childType, reviewState)
-  const stages = getStagesForType(childType, advisorView)
+  const stages = getStagesForType(childType)
   const idx = getActiveStageIndex(stages, effectiveStatus)
   return stages[idx].label
 }
@@ -146,22 +130,14 @@ export function ChildActionTimeline({
   status,
   compact = false,
   reviewState,
-  advisorView = true,
 }: {
   childType: ChildType
   status: string
   compact?: boolean
   reviewState?: ChildReviewState
-  /**
-   * When true (default), account-opening renders a 4-stage simplified
-   * timeline. Home Office contexts pass `advisorView={false}` to keep the
-   * full 7-stage breakdown (Draft → Client Signature → Submitted →
-   * Document Review → Principal Review → Pending Release → Complete).
-   */
-  advisorView?: boolean
 }) {
   const effectiveStatus = deriveEffectiveStatus(status, childType, reviewState)
-  const stages = getStagesForType(childType, advisorView)
+  const stages = getStagesForType(childType)
   const activeIndex = getActiveStageIndex(stages, effectiveStatus)
   const isRejected = effectiveStatus === 'rejected'
   const isWorkflowComplete = effectiveStatus === 'complete'
@@ -256,9 +232,9 @@ export function ChildActionTimeline({
         ) {
           if (stage.label === 'Draft') {
             accountOpeningPreAnnotation = `Completed at ${aoPre.draftAt} by Jane Advisor`
-          } else if (stage.label === 'Client Signature' || stage.label === 'Pending Client') {
+          } else if (stage.label === 'Client Signature') {
             accountOpeningPreAnnotation = `Completed at ${aoPre.clientSignatureAt} by Jane Advisor`
-          } else if (stage.label === 'Submitted' || stage.label === 'In Review') {
+          } else if (stage.label === 'Submitted') {
             accountOpeningPreAnnotation = `Submitted for review at ${aoPre.submittedForReviewAt} by Jane Advisor`
           }
         }

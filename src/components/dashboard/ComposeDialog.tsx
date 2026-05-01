@@ -11,6 +11,13 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
+import {
+  Select,
+  SelectTrigger,
+  SelectValue,
+  SelectContent,
+  SelectItem,
+} from '@/components/ui/select'
 import { toast } from 'sonner'
 import { useWorkflow } from '@/stores/workflowStore'
 import { useServicing } from '@/stores/servicingStore'
@@ -40,7 +47,7 @@ type ComposeDraftFields = {
   journeyName: string
   actionType: string
   relationshipId: string
-  openAnnuityAccount: 'yes' | 'no' | ''
+  openMultipleAccounts: 'yes' | 'no' | ''
   createMore: boolean
 }
 
@@ -49,7 +56,7 @@ function loadComposeDraft(): ComposeDraftFields {
     journeyName: '',
     actionType: '',
     relationshipId: '',
-    openAnnuityAccount: '',
+    openMultipleAccounts: '',
     createMore: false,
   }
   try {
@@ -60,9 +67,9 @@ function loadComposeDraft(): ComposeDraftFields {
       journeyName: typeof d.journeyName === 'string' ? d.journeyName : '',
       actionType: typeof d.actionType === 'string' ? d.actionType : '',
       relationshipId: typeof d.relationshipId === 'string' ? d.relationshipId : '',
-      openAnnuityAccount:
-        d.openAnnuityAccount === 'yes' || d.openAnnuityAccount === 'no' || d.openAnnuityAccount === ''
-          ? d.openAnnuityAccount
+      openMultipleAccounts:
+        d.openMultipleAccounts === 'yes' || d.openMultipleAccounts === 'no' || d.openMultipleAccounts === ''
+          ? d.openMultipleAccounts
           : '',
       createMore: typeof d.createMore === 'boolean' ? d.createMore : false,
     }
@@ -82,10 +89,9 @@ export function ComposeDialog({ onClose }: ComposeDialogProps) {
   const [journeyName, setJourneyName] = useState(draftInitial.journeyName)
   const [actionType, setActionType] = useState(draftInitial.actionType)
   const [relationshipId, setRelationshipId] = useState(draftInitial.relationshipId)
-  // Annuity question removed from the UX so advisors aren't forced to commit
-  // before they need to. The INITIALIZE_FROM_RELATIONSHIP dispatch always
-  // sends openAnnuityAccount: false; advisors can add an annuity registration
-  // later from inside Open Accounts.
+  const [openMultipleAccounts, setOpenMultipleAccounts] = useState<'yes' | 'no' | ''>(
+    draftInitial.openMultipleAccounts,
+  )
   const [createMore, setCreateMore] = useState(draftInitial.createMore)
 
   function handleClose() {
@@ -111,7 +117,10 @@ export function ComposeDialog({ onClose }: ComposeDialogProps) {
     [],
   )
 
-  const canSubmit = actionType === 'client-onboarding' && relationshipId !== ''
+  const canSubmit =
+    actionType === 'client-onboarding' &&
+    relationshipId !== '' &&
+    (openMultipleAccounts === 'yes' || openMultipleAccounts === 'no')
 
   function handleSnooze() {
     toast.message('Snooze scheduled (demo)', {
@@ -128,9 +137,7 @@ export function ComposeDialog({ onClose }: ComposeDialogProps) {
       journeyName,
       actionType,
       relationshipId,
-      // Annuity question removed; persist '' so legacy drafts are still
-      // readable by `loadComposeDraft`.
-      openAnnuityAccount: '' as const,
+      openMultipleAccounts,
       createMore,
       savedAt: new Date().toISOString(),
     }
@@ -171,7 +178,7 @@ export function ComposeDialog({ onClose }: ComposeDialogProps) {
       journeyOnboardingConfig: {
         office: '',
         investmentProfessionalId: '',
-        openAnnuityAccount: false,
+        openMultipleAccounts: openMultipleAccounts === 'yes',
       },
     })
     toast.success(`Journey "${name}" created for ${relationship.name}`)
@@ -180,12 +187,13 @@ export function ComposeDialog({ onClose }: ComposeDialogProps) {
       setJourneyName('')
       setActionType('')
       setRelationshipId('')
+      setOpenMultipleAccounts('')
       setCreateMore(false)
       toast.message('Add another journey, or close when you are done.')
       return
     }
 
-    const inServicingView = location.pathname.startsWith('/onboarding') || location.pathname.startsWith('/servicing')
+    const inServicingView = location.pathname.startsWith('/servicing')
     navigate(
       inServicingView ? `/servicing/${newJourneyId}` : '/wizard',
       inServicingView ? undefined : { state: { collapseMainNav: true } },
@@ -286,19 +294,48 @@ export function ComposeDialog({ onClose }: ComposeDialogProps) {
               </div>
             </section>
 
-            {actionType === '' && (
-              <section className="space-y-4">
-                <div>
-                  <h3 className="text-sm font-semibold text-foreground">Action settings</h3>
-                  <p className="mt-0.5 text-xs text-muted-foreground">
-                    Fields here depend on the action type.
-                  </p>
+            {/* Settings vary by action type — client onboarding fields shown when that action is selected */}
+            <section className="space-y-4">
+              <div>
+                <h3 className="text-sm font-semibold text-foreground">Action settings</h3>
+                <p className="mt-0.5 text-xs text-muted-foreground">
+                  Fields here depend on the action type. Different actions may ask for routing, product details, or other
+                  options.
+                </p>
+              </div>
+              {actionType === 'client-onboarding' && (
+                <div className="space-y-4 rounded-xl border border-border bg-background/80 p-4 shadow-sm sm:p-5">
+                  <div className="space-y-2">
+                    <Label htmlFor="compose-multi-account">
+                      Do you plan to open more than one account for this client?
+                      <RequiredMark />
+                    </Label>
+                    <Select
+                      value={openMultipleAccounts}
+                      onValueChange={(v) => setOpenMultipleAccounts(v as 'yes' | 'no' | '')}
+                    >
+                      <SelectTrigger id="compose-multi-account">
+                        <SelectValue placeholder="Select…" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="yes">Yes</SelectItem>
+                        <SelectItem value="no">No</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
                 </div>
+              )}
+              {actionType === '' && (
                 <div className="rounded-xl border border-dashed border-border bg-muted/20 px-4 py-8 text-center text-sm text-muted-foreground">
-                  Select an action type to see which settings apply.
+                  Select an action type to see which settings apply to this journey.
                 </div>
-              </section>
-            )}
+              )}
+              {actionType !== '' && actionType !== 'client-onboarding' && (
+                <div className="rounded-xl border border-dashed border-border bg-muted/20 px-4 py-8 text-center text-sm text-muted-foreground">
+                  No additional settings for this action type in the demo yet.
+                </div>
+              )}
+            </section>
           </div>
         </div>
 

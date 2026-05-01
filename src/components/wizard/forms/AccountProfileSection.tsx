@@ -61,11 +61,13 @@ interface AccountProfileSectionProps {
   /** Optional explicit product override (e.g. from custody); otherwise derived from registration. */
   productAccountTypeOverride?: AccountType | null
   prefilledAccountNumber: string
+  hideHeader?: boolean
 }
 
 interface AccountAdditionalInformationSectionProps {
   data: TaskData
   updateField: UpdateField
+  hideHeader?: boolean
 }
 
 export function AccountProfileSection({
@@ -74,6 +76,7 @@ export function AccountProfileSection({
   registrationType,
   productAccountTypeOverride,
   prefilledAccountNumber,
+  hideHeader = false,
 }: AccountProfileSectionProps) {
   const resolvedProduct =
     productAccountTypeOverride ?? getAccountProductTypeForRegistration(registrationType)
@@ -82,14 +85,16 @@ export function AccountProfileSection({
   return (
     <div className="space-y-10">
       <section className="space-y-6">
-        <div>
-          <h3 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground mb-1">
-            Account details
-          </h3>
-          <p className="text-sm text-muted-foreground">
-            Define the account itself: title, servicing details, assigned account number, and product-specific attributes.
-          </p>
-        </div>
+        {!hideHeader ? (
+          <div>
+            <h3 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground mb-1">
+              Account Details
+            </h3>
+            <p className="text-sm text-muted-foreground">
+              Define the account itself: title, servicing details, assigned account number, and product-specific attributes.
+            </p>
+          </div>
+        ) : null}
 
         <div className="space-y-4">
           <div className="space-y-2">
@@ -135,18 +140,24 @@ export function AccountProfileSection({
   )
 }
 
-export function AccountAdditionalInformationSection({ data, updateField }: AccountAdditionalInformationSectionProps) {
+export function AccountAdditionalInformationSection({
+  data,
+  updateField,
+  hideHeader = false,
+}: AccountAdditionalInformationSectionProps) {
   return (
     <div className="space-y-10">
       <section className="space-y-4">
-        <div>
-          <h3 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground mb-1">
-            Additional account information
-          </h3>
-          <p className="text-sm text-muted-foreground">
-            Additional account-level regulatory, objective, liquidity, and internal/correspondent fields.
-          </p>
-        </div>
+        {!hideHeader ? (
+          <div>
+            <h3 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground mb-1">
+              Additional Account Information
+            </h3>
+            <p className="text-sm text-muted-foreground">
+              Additional account-level regulatory, objective, liquidity, and internal/correspondent fields.
+            </p>
+          </div>
+        ) : null}
 
         <div className="space-y-4">
           <div className="space-y-2">

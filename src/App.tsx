@@ -8,9 +8,6 @@ import { WorkflowPage } from '@/pages/WorkflowPage'
 import { ServicingPage } from '@/pages/ServicingPage'
 import { OnboardingPage } from '@/pages/OnboardingPage'
 import { JourneyDetailPage } from '@/pages/JourneyDetailPage'
-import { TestClientFlowPage } from '@/pages/TestClientFlowPage'
-import { AccountOpeningFundingPage } from '@/pages/AccountOpeningFundingPage'
-import { FlowStepPlaceholderPage } from '@/pages/FlowStepPlaceholderPage'
 import { RelationshipsPage } from '@/pages/RelationshipsPage'
 import { SettingsPage } from '@/pages/SettingsPage'
 import { Toaster } from '@/components/ui/sonner'
@@ -31,15 +28,6 @@ export default function App() {
                 <Route path="/servicing/:journeyId" element={<JourneyDetailPage />} />
                 <Route path="/servicing/:journeyId/action/:actionId" element={<JourneyDetailPage />} />
                 <Route path="/onboarding" element={<OnboardingPage />} />
-                <Route path="/onboarding/flow" element={<TestClientFlowPage />} />
-                <Route
-                  path="/onboarding/flow/account-opening-funding"
-                  element={<AccountOpeningFundingPage />}
-                />
-                <Route
-                  path="/onboarding/flow/:stepSlug"
-                  element={<FlowStepPlaceholderPage />}
-                />
                 <Route path="/relationships" element={<RelationshipsPage />} />
                 <Route path="/settings" element={<SettingsPage />} />
                 <Route path="*" element={<Navigate to="/" replace />} />

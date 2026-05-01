@@ -3,6 +3,7 @@ import { useWorkflow, getChildReviewState, getChildReviewDecision } from '@/stor
 import { Button } from '@/components/ui/button'
 import { CheckCircle2, XCircle, ShieldAlert } from 'lucide-react'
 import { NigoDialog } from './NigoDialog'
+import { getAccountOwnersMissingKyc } from '@/utils/accountOpeningOwnerKyc'
 
 export function HomeOfficeReviewFooter() {
   const { state, dispatch } = useWorkflow()
@@ -171,12 +172,19 @@ export function HomeOfficeReviewFooter() {
     /** Account opening has no AML gate; KYC / legacy flows may still require AML cleared before principal approval. */
     const amlGateApplies = amlReview != null
     const amlCleared = amlReview?.status === 'cleared'
-    const blocked = !docIgo || (amlGateApplies && !amlCleared)
+  const kycBlockedOwners =
+    child?.childType === 'account-opening' ? getAccountOwnersMissingKyc(state, child.id).names : []
+  const blocked = !docIgo || (amlGateApplies && !amlCleared) || kycBlockedOwners.length > 0
 
     return (
       <>
         <footer className="border-t border-border bg-background px-6 py-3 min-h-14 flex items-center justify-center shrink-0 box-border">
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-3">
+            {kycBlockedOwners.length > 0 ? (
+              <span className="text-xs text-amber-700 dark:text-amber-300">
+                Waiting on KYC approval: {kycBlockedOwners.join(', ')}
+              </span>
+            ) : null}
             <Button
               variant="destructive"
               size="sm"

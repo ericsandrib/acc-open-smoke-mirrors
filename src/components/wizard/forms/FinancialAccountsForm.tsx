@@ -194,7 +194,7 @@ function AccountCard({ account, onClick }: { account: FinancialAccount; onClick:
     <button
       type="button"
       onClick={onClick}
-      className="flex items-center justify-between w-full p-3 hover:bg-muted/50 rounded-lg focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+      className="flex w-full cursor-pointer items-center justify-between rounded-lg p-3 hover:bg-muted/50 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
     >
       <div className="flex items-center gap-3 min-w-0">
         <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary/10 text-primary text-xs font-medium shrink-0">

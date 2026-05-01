@@ -1,7 +1,9 @@
+import { useEffect } from 'react'
 import type { ChildReviewState } from '@/types/workflow'
 import { useWorkflow, useChildActionContext, useAdvisorFormsEditable, getChildReviewState, getChildReviewDecision } from '@/stores/workflowStore'
 import { getSubTaskDisplayTitle } from '@/utils/childTaskRegistry'
-import { formComponents, taskDescriptions } from './formRegistry'
+import { OPEN_ACCOUNTS_WITH_ANNUITY_FORM_KEY } from '@/utils/openAccountsTaskContext'
+import { formComponents, taskDescriptions, taskSections } from './formRegistry'
 import { Badge } from '@/components/ui/badge'
 import { ShieldCheck, Lock, AlertTriangle, CheckCircle2, FileText, FileSearch } from 'lucide-react'
 
@@ -160,6 +162,17 @@ function AdvisorViewBanner() {
 
   if (!ctx) return null
   const { child } = ctx
+  const isAnnuityAccountOpeningChild =
+    child.childType === 'account-opening' &&
+    ctx.parentTask?.formKey === OPEN_ACCOUNTS_WITH_ANNUITY_FORM_KEY
+  const currentSubTaskFormKey = ctx.currentSubTask.formKey
+  const isKycInfoStep = child.childType === 'kyc' && currentSubTaskFormKey === 'kyc-child-info'
+  const isKycDocumentsStep = child.childType === 'kyc' && currentSubTaskFormKey === 'kyc-child-documents'
+
+  // Keep reviewer/advisor status context on the primary KYC step only; do not duplicate
+  // the same banner on the Documents step.
+  if (isKycDocumentsStep) return null
+
   if (child.status === 'in_progress' || child.status === 'not_started') {
     return null
   }
@@ -247,7 +260,10 @@ function AdvisorViewBanner() {
     )
   }
 
-  if (decision?.outcome === 'approved') {
+  if (decision?.outcome === 'approved' && child.status === 'complete') {
+    if (isAnnuityAccountOpeningChild) {
+      return null
+    }
     if (isKyc && amlReview?.status === 'cleared') {
       return (
         <div className="rounded-lg border border-green-200 bg-green-50 dark:border-green-900/60 dark:bg-green-950/40 px-4 py-3 mb-6">
@@ -317,11 +333,11 @@ function AdvisorViewBanner() {
         <Lock className="h-5 w-5 text-blue-600 dark:text-blue-400 mt-0.5 shrink-0" />
         <div className="space-y-0.5">
           <p className="text-sm font-medium text-blue-900 dark:text-blue-100">
-            {isKyc ? 'Submitted for document review' : 'Read-Only — Under Home Office Review'}
+            {isKycInfoStep ? 'Conditionally submitted — pending requested documents' : 'Read-Only — Under Home Office Review'}
           </p>
           <p className="text-xs text-blue-800/80 dark:text-blue-200/70">
             {isKyc
-              ? 'Your submission has been sent for document review. AML screening is in progress. You will be notified when the review is complete.'
+              ? 'Your KYC submission is in review. Documents may be requested if provider matching is insufficient or additional information is needed.'
               : 'This submission is being reviewed by the home office team. All fields are locked until the review is complete.'}
           </p>
           {progressParts.length > 0 && (
@@ -336,7 +352,7 @@ function AdvisorViewBanner() {
 }
 
 export function ChildActionContent() {
-  const { state } = useWorkflow()
+  const { state, dispatch } = useWorkflow()
   const ctx = useChildActionContext()
   const isAdvisorView = state.demoViewMode === 'advisor'
   const advisorFormsEditable = useAdvisorFormsEditable()
@@ -346,6 +362,7 @@ export function ChildActionContent() {
   const { child, currentSubTask } = ctx
   const FormComponent = formComponents[currentSubTask.formKey] ?? null
   const description = taskDescriptions[currentSubTask.formKey]
+  const hasExplicitSections = Boolean(taskSections[currentSubTask.formKey]?.length)
   const inReview = child.status === 'awaiting_review'
   const advisorDisabled = isAdvisorView && !advisorFormsEditable
   const childInReviewerPipeline =
@@ -366,10 +383,40 @@ export function ChildActionContent() {
   const amlNotes = reviewState?.amlNotes
   const formReadOnly = advisorDisabled || isHoTeamAccountOpening
 
+  useEffect(() => {
+    const targetSectionId = state.parentSectionFocusId
+    if (!targetSectionId) return
+    if (targetSectionId === '__top__') {
+      const main = document.querySelector('main')
+      if (main instanceof HTMLElement) {
+        main.scrollTo({ top: 0, behavior: 'smooth' })
+      } else {
+        window.scrollTo({ top: 0, behavior: 'smooth' })
+      }
+      dispatch({ type: 'CLEAR_PARENT_SECTION_FOCUS' })
+      return
+    }
+    const el = document.getElementById(targetSectionId)
+    if (el) {
+      const scrollContainer = el.closest('main')
+      if (scrollContainer instanceof HTMLElement) {
+        const top =
+          el.getBoundingClientRect().top -
+          scrollContainer.getBoundingClientRect().top +
+          scrollContainer.scrollTop -
+          16
+        scrollContainer.scrollTo({ top: Math.max(0, top), behavior: 'smooth' })
+      } else {
+        el.scrollIntoView({ behavior: 'smooth', block: 'start' })
+      }
+    }
+    dispatch({ type: 'CLEAR_PARENT_SECTION_FOCUS' })
+  }, [state.parentSectionFocusId, dispatch])
+
   return (
-    <main className="flex-1 overflow-y-auto p-8">
-      <div className="max-w-2xl mx-auto">
-        {inReview && !isAdvisorView && !isHoTeamAccountOpening && (
+    <main className="flex-1 overflow-y-auto overscroll-contain p-8">
+      <div className="max-w-[52.5rem] mx-auto">
+        {inReview && !isAdvisorView && !isHoTeamAccountOpening && child.childType === 'account-opening' && (
           <div className="rounded-lg border border-violet-200 bg-violet-50 dark:border-violet-900/60 dark:bg-violet-950/40 px-4 py-3 mb-6">
             <div className="flex items-start gap-3">
               <ShieldCheck className="h-5 w-5 text-violet-600 dark:text-violet-400 mt-0.5 shrink-0" />
@@ -410,12 +457,17 @@ export function ChildActionContent() {
             </Badge>
           </div>
         )}
-        <h2 className="text-3xl font-semibold text-foreground mb-6">
+        <h2 className="text-3xl font-semibold text-foreground mb-2">
           {getSubTaskDisplayTitle(child.childType, currentSubTask, state.demoViewMode)}
         </h2>
         {description && (
           <p className="text-base text-muted-foreground mb-6">{description}</p>
         )}
+        {!hasExplicitSections ? (
+          <section id="__top__" className="space-y-1.5 scroll-mt-16 mb-6">
+            <h3 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">Overview</h3>
+          </section>
+        ) : null}
         <div className={formReadOnly ? 'pointer-events-none opacity-75 select-none' : ''}>
           {FormComponent ? <FormComponent /> : <p className="text-muted-foreground">No form available.</p>}
         </div>

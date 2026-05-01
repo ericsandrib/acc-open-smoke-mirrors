@@ -73,7 +73,7 @@ const PRIMARY_OBJECTIVE_OPTIONS = [
   { value: 'inflation_hedge', label: 'Inflation hedge' },
 ] as const
 
-/** Margin & options + alternative strategy election on the account child root (embedded under Account & owners). */
+/** Margin/options + alternative strategy election on the account child root (embedded under Account & owners). */
 export function AccountFeatureRequestsSection({ accountChildId }: { accountChildId: string }) {
   const { state, dispatch } = useWorkflow()
   const uid = useId()
@@ -178,9 +178,10 @@ export function AccountFeatureRequestsSection({ accountChildId }: { accountChild
   return (
     <div className="space-y-6">
       <div>
-        <SectionTitle>Margin &amp; options</SectionTitle>
+        <SectionTitle>Investment Elections</SectionTitle>
         <p className="text-sm text-muted-foreground mt-1">
-          Request margin and/or options on this account. Identity and suitability stay on the owners above.
+          Request margin, options, and related investment elections on this account. Identity and suitability stay on
+          the owners above.
         </p>
       </div>
 

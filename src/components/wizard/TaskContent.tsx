@@ -1,5 +1,6 @@
+import { useEffect } from 'react'
 import { useWorkflow } from '@/stores/workflowStore'
-import { formComponents, taskDescriptions } from './formRegistry'
+import { formComponents, taskDescriptions, taskSections } from './formRegistry'
 import { parseChildSubTaskId, getSubTaskDisplayTitle } from '@/utils/childTaskRegistry'
 import { Clock, AlertTriangle } from 'lucide-react'
 
@@ -52,7 +53,7 @@ function ReviewBanner() {
 }
 
 export function TaskContent() {
-  const { state } = useWorkflow()
+  const { state, dispatch } = useWorkflow()
 
   const activeTask = state.tasks.find((t) => t.id === state.activeTaskId)
   const activeChild = state.tasks
@@ -76,15 +77,41 @@ export function TaskContent() {
     ?? ''
 
   const FormComponent = formKey ? formComponents[formKey] : null
+  const hasExplicitSections = Boolean(formKey && taskSections[formKey]?.length)
+
+  useEffect(() => {
+    const targetSectionId = state.parentSectionFocusId
+    if (!targetSectionId) return
+    if (targetSectionId === '__top__') {
+      const main = document.querySelector('main')
+      if (main instanceof HTMLElement) {
+        main.scrollTo({ top: 0, behavior: 'smooth' })
+      } else {
+        window.scrollTo({ top: 0, behavior: 'smooth' })
+      }
+      dispatch({ type: 'CLEAR_PARENT_SECTION_FOCUS' })
+      return
+    }
+    const el = document.getElementById(targetSectionId)
+    if (el) {
+      el.scrollIntoView({ behavior: 'smooth', block: 'start' })
+    }
+    dispatch({ type: 'CLEAR_PARENT_SECTION_FOCUS' })
+  }, [state.parentSectionFocusId, dispatch])
 
   return (
     <main className="flex-1 overflow-y-auto p-8">
-      <div className="max-w-2xl mx-auto">
+      <div className="max-w-[52.5rem] mx-auto">
         <ReviewBanner />
         <h2 className="text-3xl font-semibold text-foreground mb-2">{title}</h2>
         {formKey && taskDescriptions[formKey] && (
           <p className="text-base text-muted-foreground mb-6">{taskDescriptions[formKey]}</p>
         )}
+        {!hasExplicitSections ? (
+          <section id="__top__" className="space-y-1.5 scroll-mt-16 mb-6">
+            <h3 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">Overview</h3>
+          </section>
+        ) : null}
         {FormComponent ? <FormComponent /> : <p className="text-muted-foreground">No form available.</p>}
       </div>
     </main>

@@ -11,9 +11,10 @@ import { ChildActionKebabMenu } from '@/components/wizard/ChildActionKebabMenu'
 import { ChildActionTimelineSheet } from '@/components/wizard/ChildActionTimelineSheet'
 import { childStatusConfig, deriveChildDisplayStatus } from '@/utils/childStatusDisplay'
 import { cn } from '@/lib/utils'
+import { findParentTaskForChild } from '@/utils/openAccountsTaskContext'
 
 /**
- * Hub step (per account child): list funding / account transfer workflows—mirrors "Accounts to be Opened" on Open Accounts.
+ * Hub step (per account child): list funding / account transfer workflows—mirrors "Accounts to Be Opened" on Open Accounts.
  */
 export function FundChildFundingForm() {
   const { state, dispatch } = useWorkflow()
@@ -21,7 +22,7 @@ export function FundChildFundingForm() {
   const [pickerOpen, setPickerOpen] = useState(false)
   const [timelineChild, setTimelineChild] = useState<ChildTask | null>(null)
 
-  const openAccountsTask = state.tasks.find((t) => t.formKey === 'open-accounts')
+  const openAccountsTask = ctx ? findParentTaskForChild(state, ctx.child.id) : undefined
   const fundingSubTaskIndex = getSubTaskIndexByFormKey('account-opening', 'acct-child-funding-transfers')
 
   const linesForAccount = useMemo(() => {

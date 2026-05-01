@@ -12,6 +12,7 @@ import {
 import type { RegistrationType } from '@/utils/registrationDocuments'
 import { getEsignEnvelopeStatus } from '@/utils/esignEnvelopeStatus'
 import { getAlternativeStrategyEsignSubmitBlockers } from '@/utils/alternativeStrategyValidation'
+import { isAnnuityExternalPlatformOpenAccountsTask } from '@/utils/openAccountsTaskContext'
 
 type OwnerSlot = { partyId?: string; type: string }
 
@@ -53,8 +54,9 @@ interface DocInstance {
  */
 export function getOpenAccountsMissingDocumentSpecificationIssues(
   state: WorkflowState,
+  openAccountsTaskId: string,
 ): string[] {
-  const openAccountsTask = state.tasks.find((t) => t.formKey === 'open-accounts')
+  const openAccountsTask = state.tasks.find((t) => t.id === openAccountsTaskId)
   if (!openAccountsTask) return []
 
   const accountOpeningChildren = (openAccountsTask.children ?? []).filter(
@@ -71,7 +73,7 @@ export function getOpenAccountsMissingDocumentSpecificationIssues(
   )
   const uploadDocs = sortUploadDocumentsForOpenAccounts(upload)
 
-  const taskData = (state.taskData['open-accounts'] as Record<string, unknown> | undefined) ?? {}
+  const taskData = (state.taskData[openAccountsTaskId] as Record<string, unknown> | undefined) ?? {}
   const issues: string[] = []
 
   for (const doc of uploadDocs) {
@@ -92,36 +94,44 @@ export function getOpenAccountsMissingDocumentSpecificationIssues(
 /**
  * All reasons the Open Accounts task cannot be marked complete. Used by the wizard footer confirmation modal.
  */
-export function getOpenAccountsCompletionBlockers(state: WorkflowState): string[] {
+export function getOpenAccountsCompletionBlockers(
+  state: WorkflowState,
+  openAccountsTaskId: string,
+): string[] {
   const blockers: string[] = []
 
-  blockers.push(...getOpenAccountsMissingDocumentSpecificationIssues(state))
+  blockers.push(...getOpenAccountsMissingDocumentSpecificationIssues(state, openAccountsTaskId))
 
-  const openAccountsTask = state.tasks.find((t) => t.formKey === 'open-accounts')
+  const openAccountsTask = state.tasks.find((t) => t.id === openAccountsTaskId)
   const accountOpeningChildren =
     openAccountsTask?.children?.filter((c) => c.childType === 'account-opening') ?? []
+  const externalAnnuityPlatform = isAnnuityExternalPlatformOpenAccountsTask(openAccountsTask)
 
-  for (const c of accountOpeningChildren) {
-    const { names } = getAccountOwnersMissingKyc(state, c.id)
-    if (names.length > 0) {
-      blockers.push(
-        `${c.name}: KYC is not complete for — ${names.join(', ')}`,
-      )
+  if (!externalAnnuityPlatform) {
+    for (const c of accountOpeningChildren) {
+      const { names } = getAccountOwnersMissingKyc(state, c.id)
+      if (names.length > 0) {
+        blockers.push(
+          `${c.name}: KYC is not complete for — ${names.join(', ')}`,
+        )
+      }
     }
   }
 
-  const openData = (state.taskData['open-accounts'] as Record<string, unknown> | undefined) ?? {}
-  const envelopes = (openData.esignEnvelopes as EsignEnvelope[] | undefined) ?? []
+  if (!externalAnnuityPlatform) {
+    const openData = (state.taskData[openAccountsTaskId] as Record<string, unknown> | undefined) ?? {}
+    const envelopes = (openData.esignEnvelopes as EsignEnvelope[] | undefined) ?? []
 
-  if (envelopes.length === 0) {
-    blockers.push('Create at least one eSign envelope.')
-  } else {
-    const hasCompletedEnvelope = envelopes.some((env) => getEsignEnvelopeStatus(env) === 'completed')
-    if (!hasCompletedEnvelope) {
-      const names = envelopes.map((env) => getEnvelopeDisplayName(env)).join(', ')
-      blockers.push(
-        `eSign required: at least one envelope must be Completed. Current envelope(s): ${names}.`,
-      )
+    if (envelopes.length === 0) {
+      blockers.push('Create at least one eSign envelope.')
+    } else {
+      const hasCompletedEnvelope = envelopes.some((env) => getEsignEnvelopeStatus(env) === 'completed')
+      if (!hasCompletedEnvelope) {
+        const names = envelopes.map((env) => getEnvelopeDisplayName(env)).join(', ')
+        blockers.push(
+          `eSign required: at least one envelope must be Completed. Current envelope(s): ${names}.`,
+        )
+      }
     }
   }
 
@@ -131,17 +141,21 @@ export function getOpenAccountsCompletionBlockers(state: WorkflowState): string[
 /**
  * Readiness checks for submitting all account-opening child workflows for review from Open Accounts.
  */
-export function getOpenAccountsSubmitForReviewBlockers(state: WorkflowState): string[] {
+export function getOpenAccountsSubmitForReviewBlockers(
+  state: WorkflowState,
+  openAccountsTaskId: string,
+): string[] {
   const blockers: string[] = []
-  const openAccountsTask = state.tasks.find((t) => t.formKey === 'open-accounts')
+  const openAccountsTask = state.tasks.find((t) => t.id === openAccountsTaskId)
   const accountOpeningChildren =
     openAccountsTask?.children?.filter((c) => c.childType === 'account-opening') ?? []
+  const externalAnnuityPlatform = isAnnuityExternalPlatformOpenAccountsTask(openAccountsTask)
 
   if (accountOpeningChildren.length === 0) {
-    return ['Add at least one account in Accounts to be Opened before submitting for review.']
+    return ['Add at least one account in Accounts to Be Opened before submitting for review.']
   }
 
-  blockers.push(...getOpenAccountsMissingDocumentSpecificationIssues(state))
+  blockers.push(...getOpenAccountsMissingDocumentSpecificationIssues(state, openAccountsTaskId))
 
   for (const child of accountOpeningChildren) {
     const childIssues = getAccountOpeningChildSubmissionIssues(state, child.id)
@@ -150,7 +164,11 @@ export function getOpenAccountsSubmitForReviewBlockers(state: WorkflowState): st
     }
   }
 
-  const openData = (state.taskData['open-accounts'] as Record<string, unknown> | undefined) ?? {}
+  if (externalAnnuityPlatform) {
+    return blockers
+  }
+
+  const openData = (state.taskData[openAccountsTaskId] as Record<string, unknown> | undefined) ?? {}
   const envelopes = (openData.esignEnvelopes as EsignEnvelope[] | undefined) ?? []
   const sentEnvelopes = envelopes.filter((env) => env.sentToClient === true)
 

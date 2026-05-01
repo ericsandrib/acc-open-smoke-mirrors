@@ -91,10 +91,17 @@ function HouseholdMemberCard({ party, onClick }: { party: RelatedParty; onClick:
   const isIncomplete = !party.email?.trim() || !party.phone?.trim()
   return (
     <div>
-      <button
-        type="button"
+      <div
+        role="button"
+        tabIndex={0}
         onClick={onClick}
-        className="flex items-center justify-between w-full p-3 hover:bg-muted/50 rounded-lg focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+        onKeyDown={(e) => {
+          if (e.key === 'Enter' || e.key === ' ') {
+            e.preventDefault()
+            onClick()
+          }
+        }}
+        className="flex w-full cursor-pointer items-center justify-between rounded-lg p-3 hover:bg-muted/50 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
       >
         <div className="flex items-center gap-3 min-w-0">
           <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary/10 text-primary text-xs font-medium shrink-0">
@@ -119,7 +126,7 @@ function HouseholdMemberCard({ party, onClick }: { party: RelatedParty; onClick:
           )}
           <DeleteButton party={party} />
         </div>
-      </button>
+      </div>
     </div>
   )
 }
@@ -127,10 +134,17 @@ function HouseholdMemberCard({ party, onClick }: { party: RelatedParty; onClick:
 function ContactCard({ party, onClick }: { party: RelatedParty; onClick: () => void }) {
   return (
     <div>
-      <button
-        type="button"
+      <div
+        role="button"
+        tabIndex={0}
         onClick={onClick}
-        className="flex items-center justify-between w-full p-3 hover:bg-muted/50 rounded-lg focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+        onKeyDown={(e) => {
+          if (e.key === 'Enter' || e.key === ' ') {
+            e.preventDefault()
+            onClick()
+          }
+        }}
+        className="flex w-full cursor-pointer items-center justify-between rounded-lg p-3 hover:bg-muted/50 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
       >
         <div className="flex items-center gap-3">
           <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary/10 text-primary text-xs font-medium shrink-0">
@@ -145,7 +159,7 @@ function ContactCard({ party, onClick }: { party: RelatedParty; onClick: () => v
           )}
         </div>
         <DeleteButton party={party} />
-      </button>
+      </div>
     </div>
   )
 }
@@ -618,11 +632,11 @@ export function RelatedPartiesForm() {
 
   return (
     <div className="space-y-8">
-      <section className="space-y-4">
+      <section id="rcd-household" className="space-y-4 scroll-mt-16">
         <div>
           <h3 className="text-base font-semibold">Household</h3>
           <p className="text-base text-muted-foreground">
-            People in the household you are onboarding - the primary contact and their family.
+            Add the primary client and their household members (e.g., spouse, dependents).
           </p>
         </div>
 
@@ -649,11 +663,11 @@ export function RelatedPartiesForm() {
         />
       </section>
 
-      <section className="space-y-4">
+      <section id="rcd-related-individuals" className="space-y-4 scroll-mt-16">
         <div>
           <h3 className="text-base font-semibold">Related Individuals</h3>
           <p className="text-base text-muted-foreground">
-            Family and other non-professional individuals connected to this household.
+            Add other individuals connected to the client (e.g., family members not in the household, beneficiaries, or trusted contacts).
           </p>
         </div>
 
@@ -682,11 +696,11 @@ export function RelatedPartiesForm() {
         />
       </section>
 
-      <section className="space-y-4">
+      <section id="rcd-trusts" className="space-y-4 scroll-mt-16">
         <div>
           <h3 className="text-base font-semibold">Trusts</h3>
           <p className="text-base text-muted-foreground">
-            Trust entities associated with this client.
+            Add any trusts associated with this client.
           </p>
         </div>
 
@@ -715,11 +729,11 @@ export function RelatedPartiesForm() {
         />
       </section>
 
-      <section className="space-y-4">
+      <section id="rcd-other-entities" className="space-y-4 scroll-mt-16">
         <div>
           <h3 className="text-base font-semibold">Other Entities</h3>
           <p className="text-base text-muted-foreground">
-            Other legal entities such as LLCs, corporations, or partnerships.
+            Add other legal entities related to the client (e.g., LLCs, corporations, partnerships).
           </p>
         </div>
 
@@ -748,11 +762,11 @@ export function RelatedPartiesForm() {
         />
       </section>
 
-      <section className="space-y-4">
+      <section id="rcd-professional-contacts" className="space-y-4 scroll-mt-16">
         <div>
           <h3 className="text-base font-semibold">Professional Contacts</h3>
           <p className="text-base text-muted-foreground">
-            Attorneys, accountants, advisors, and other professional relationships.
+            Add the client&apos;s professional contacts (e.g., attorney, accountant, other advisors).
           </p>
         </div>
 

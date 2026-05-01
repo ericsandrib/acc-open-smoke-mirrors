@@ -1,6 +1,7 @@
 import type { WorkflowState } from '@/types/workflow'
 import { computeSmartDocuments } from '@/utils/smartDocuments'
 import { getAccountOwnersMissingKyc } from '@/utils/accountOpeningOwnerKyc'
+import { getAllOpenAccountsTasks, OPEN_ACCOUNTS_WITH_ANNUITY_FORM_KEY } from '@/utils/openAccountsTaskContext'
 
 export type MissingDataEntry = {
   taskId: string
@@ -77,11 +78,6 @@ export function computeWorkflowMissingData(state: WorkflowState): MissingDataEnt
       if (!first || !last || !dob || !email) {
         issues.push(`${short}: complete identity fields (name, date of birth, email)`)
       }
-      const docData = state.taskData[`${c.id}-documents`] ?? {}
-      const govFiles = (docData['doc-gov-id'] as unknown[] | undefined) ?? []
-      const supportFiles = (docData['doc-supporting-docs'] as unknown[] | undefined) ?? []
-      if (!govFiles.length) issues.push(`${short}: upload government-issued ID`)
-      if (!supportFiles.length) issues.push(`${short}: upload supporting documents`)
     }
     if (issues.length) {
       entries.push({
@@ -93,8 +89,7 @@ export function computeWorkflowMissingData(state: WorkflowState): MissingDataEnt
     }
   }
 
-  const openTask = state.tasks.find((t) => t.formKey === 'open-accounts')
-  if (openTask) {
+  for (const openTask of getAllOpenAccountsTasks(state)) {
     const issues: string[] = []
     const accountChildren = (openTask.children ?? []).filter((c) => c.childType === 'account-opening')
     if (accountChildren.length === 0) {
@@ -112,7 +107,7 @@ export function computeWorkflowMissingData(state: WorkflowState): MissingDataEnt
         issues.push(`${c.name}: add at least one account owner`)
       } else if (owners.some((o) => o.type === 'existing' && !o.partyId)) {
         issues.push(`${c.name}: finish assigning each owner slot`)
-      } else {
+      } else if (openTask.formKey !== OPEN_ACCOUNTS_WITH_ANNUITY_FORM_KEY) {
         const kycGap = getAccountOwnersMissingKyc(state, c.id)
         if (kycGap.names.length > 0) {
           issues.push(

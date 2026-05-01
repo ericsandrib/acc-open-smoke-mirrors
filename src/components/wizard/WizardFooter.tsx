@@ -5,6 +5,10 @@ import { ChevronLeft, ChevronRight, Pencil, ShieldAlert } from 'lucide-react'
 import type { TaskStatus } from '@/types/workflow'
 import { parseChildSubTaskId } from '@/utils/childTaskRegistry'
 import { getOpenAccountsSubmitForReviewBlockers } from '@/utils/openAccountsDocumentValidation'
+import {
+  isAnnuityExternalPlatformOpenAccountsTask,
+  isOpenAccountsTask,
+} from '@/utils/openAccountsTaskContext'
 
 function getActiveTaskStatus(state: ReturnType<typeof useWorkflow>['state']): TaskStatus {
   // Check parent tasks
@@ -31,11 +35,13 @@ export function CompleteAccountOpeningConfirmModal({
   onCancel,
   warnings,
   mode = 'submit-children',
+  submitButtonLabel = 'Submit for Review',
 }: {
   onConfirm: () => void
   onCancel: () => void
   warnings: string[]
   mode?: 'submit-children' | 'complete-parent'
+  submitButtonLabel?: string
 }) {
   const isCompleteParent = mode === 'complete-parent'
   return (
@@ -58,7 +64,7 @@ export function CompleteAccountOpeningConfirmModal({
             <p className="text-sm text-muted-foreground">
               {isCompleteParent
                 ? 'All account workflows are in terminal states (approved or canceled). Confirm to complete the Open Accounts task.'
-                : 'This submits ready account workflows under Accounts to be Opened for home office review. Each account is reviewed independently in its child workflow.'}
+                : 'This submits ready account workflows under Accounts to Be Opened for home office review. Each account is reviewed independently in its child workflow.'}
             </p>
           </div>
         </div>
@@ -80,7 +86,7 @@ export function CompleteAccountOpeningConfirmModal({
             Cancel
           </Button>
           <Button type="button" onClick={onConfirm}>
-            {isCompleteParent ? 'Complete task' : 'Submit for review'}
+            {isCompleteParent ? 'Complete task' : submitButtonLabel}
           </Button>
         </div>
       </div>
@@ -98,7 +104,8 @@ export function WizardFooter() {
   const activeStatus = getActiveTaskStatus(state)
   const isSubmitted = state.submittedTaskIds.includes(state.activeTaskId)
   const active = state.tasks.find((t) => t.id === state.activeTaskId)
-  const isOpenAccountsTask = active?.formKey === 'open-accounts'
+  const isOnOpenAccountsTask = isOpenAccountsTask(active)
+  const isAnnuityOpenAccountsTask = isAnnuityExternalPlatformOpenAccountsTask(active)
   const openAccountsChildren = active?.children ?? []
   const accountOpeningChildren = openAccountsChildren.filter((c) => c.childType === 'account-opening')
   const allAccountChildrenTerminal =
@@ -106,99 +113,109 @@ export function WizardFooter() {
     accountOpeningChildren.every((c) =>
       c.status === 'complete' || c.status === 'canceled',
     )
+  const showsOpenAccountsSubmit = isOnOpenAccountsTask && !allAccountChildrenTerminal
+  const openAccountsSubmitLabel = isAnnuityOpenAccountsTask
+    ? 'Submit to NetX360'
+    : 'Submit for Review'
 
   return (
     <>
     <footer className="border-t border-border bg-background px-6 py-3 min-h-14 flex justify-between items-center shrink-0 box-border">
-      <div>
-        {!isFirst && (
-          <Button
-            variant="outline"
-            onClick={() => dispatch({ type: 'GO_BACK' })}
-          >
-            <ChevronLeft className="h-4 w-4" />
-            Back
-          </Button>
-        )}
-      </div>
+      <div className="max-w-[52.5rem] mx-auto w-full flex items-center justify-between">
+        <div>
+          {!isFirst && (
+            <Button
+              variant="outline"
+              onClick={() => dispatch({ type: 'GO_BACK' })}
+            >
+              <ChevronLeft className="h-4 w-4" />
+              Back
+            </Button>
+          )}
+        </div>
 
-      <div className="flex items-center gap-2">
-        {isSubmitted && activeStatus === 'in_progress' && (
-          <Button
-            variant="outline"
-            onClick={() => dispatch({ type: 'REOPEN_TASK', taskId: state.activeTaskId })}
-          >
-            <Pencil className="h-4 w-4" />
-            Edit
-          </Button>
-        )}
-        {activeStatus === 'complete' && (
-          <Button
-            variant="outline"
-            onClick={() => dispatch({ type: 'REOPEN_TASK', taskId: state.activeTaskId })}
-          >
-            <Pencil className="h-4 w-4" />
-            Edit
-          </Button>
-        )}
-        {activeStatus === 'blocked' && (
-          <span className="text-sm text-muted-foreground">Assigned to compliance</span>
-        )}
+        <div className="flex items-center gap-2">
+          {isSubmitted && activeStatus === 'in_progress' && (
+            <Button
+              variant="outline"
+              onClick={() => dispatch({ type: 'REOPEN_TASK', taskId: state.activeTaskId })}
+            >
+              <Pencil className="h-4 w-4" />
+              Edit
+            </Button>
+          )}
+          {activeStatus === 'complete' && (
+            <Button
+              variant="outline"
+              onClick={() => dispatch({ type: 'REOPEN_TASK', taskId: state.activeTaskId })}
+            >
+              <Pencil className="h-4 w-4" />
+              Edit
+            </Button>
+          )}
+          {activeStatus === 'blocked' && (
+            <span className="text-sm text-muted-foreground">Assigned to compliance</span>
+          )}
 
-        {isLast ? (
-          <Button
-            onClick={() => {
-              setCompleteAccountOpeningWarnings([])
-              setCompleteAccountOpeningOpen(true)
-            }}
-            disabled={
-              isOpenAccountsTask
-                ? false
-                : activeStatus === 'complete' || isSubmitted
-            }
-          >
-            {isOpenAccountsTask
-              ? allAccountChildrenTerminal
-                ? 'Complete'
-                : 'Submit for review'
-              : 'Complete'}
-          </Button>
-        ) : (
-          <Button
-            onClick={() => dispatch({ type: 'GO_NEXT' })}
-          >
-            Next
-            <ChevronRight className="h-4 w-4" />
-          </Button>
-        )}
+          {isLast || showsOpenAccountsSubmit ? (
+            <Button
+              onClick={() => {
+                setCompleteAccountOpeningWarnings([])
+                setCompleteAccountOpeningOpen(true)
+              }}
+              disabled={
+                isOnOpenAccountsTask
+                  ? false
+                  : activeStatus === 'complete' || isSubmitted
+              }
+            >
+              {isOnOpenAccountsTask
+                ? allAccountChildrenTerminal
+                  ? 'Complete'
+                  : openAccountsSubmitLabel
+                : 'Complete'}
+            </Button>
+          ) : (
+            <Button
+              onClick={() => dispatch({ type: 'GO_NEXT' })}
+            >
+              Next
+              <ChevronRight className="h-4 w-4" />
+            </Button>
+          )}
+        </div>
       </div>
     </footer>
     {completeAccountOpeningOpen && (
       <CompleteAccountOpeningConfirmModal
         warnings={completeAccountOpeningWarnings}
         mode={
-          isOpenAccountsTask && allAccountChildrenTerminal
+          isOnOpenAccountsTask && allAccountChildrenTerminal
             ? 'complete-parent'
             : 'submit-children'
         }
+        submitButtonLabel={openAccountsSubmitLabel}
         onCancel={() => {
           setCompleteAccountOpeningOpen(false)
           setCompleteAccountOpeningWarnings([])
         }}
         onConfirm={() => {
-          if (isOpenAccountsTask) {
+          if (isOnOpenAccountsTask) {
             if (allAccountChildrenTerminal) {
               dispatch({ type: 'CONFIRM_TASK', taskId: state.activeTaskId })
               setCompleteAccountOpeningOpen(false)
               setCompleteAccountOpeningWarnings([])
               return
             }
-            const blockers = getOpenAccountsSubmitForReviewBlockers(state)
+            const blockers = getOpenAccountsSubmitForReviewBlockers(state, state.activeTaskId)
             if (blockers.length > 0) {
               setCompleteAccountOpeningWarnings(blockers)
               return
             }
-            dispatch({ type: 'SUBMIT_ALL_ACCOUNT_OPENING_CHILDREN_FOR_REVIEW' })
+            dispatch({
+              type: 'SUBMIT_ALL_ACCOUNT_OPENING_CHILDREN_FOR_REVIEW',
+              openAccountsTaskId: state.activeTaskId,
+            })
             setCompleteAccountOpeningOpen(false)
             setCompleteAccountOpeningWarnings([])
             return

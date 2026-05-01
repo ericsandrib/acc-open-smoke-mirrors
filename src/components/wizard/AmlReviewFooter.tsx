@@ -70,7 +70,8 @@ export function AmlReviewFooter() {
   return (
     <>
       <footer className="border-t border-border bg-background px-6 py-3 min-h-14 flex items-center justify-center shrink-0 box-border">
-        <div className="flex items-center gap-2">
+        <div className="flex flex-col items-center gap-2">
+          <div className="flex items-center gap-2">
           <Button
             variant="outline"
             size="sm"
@@ -78,7 +79,7 @@ export function AmlReviewFooter() {
             onClick={() => setShowFlagModal(true)}
           >
             <AlertTriangle className="h-4 w-4" />
-            Flag for Further Review
+            Approve w/ Monitoring
           </Button>
           <Button
             variant="destructive"
@@ -94,8 +95,9 @@ export function AmlReviewFooter() {
             onClick={() => setShowClearConfirm(true)}
           >
             <CheckCircle2 className="h-4 w-4" />
-            Clear
+            Approve
           </Button>
+          </div>
         </div>
       </footer>
 
@@ -108,10 +110,10 @@ export function AmlReviewFooter() {
                 <CheckCircle2 className="h-5 w-5 text-green-600" />
               </div>
               <div className="space-y-1">
-                <h3 className="text-base font-semibold">Clear AML Review</h3>
+                <h3 className="text-base font-semibold">Approve AML Review</h3>
                 <p className="text-sm text-muted-foreground">
-                  Confirm that <span className="font-medium text-foreground">{child?.name}</span> has
-                  passed all AML/sanctions screenings and can proceed.
+                  Confirm approval for <span className="font-medium text-foreground">{child?.name}</span> after
+                  AML/sanctions screening review is complete.
                 </p>
               </div>
             </div>
@@ -124,7 +126,7 @@ export function AmlReviewFooter() {
                   setShowClearConfirm(false)
                 }}
               >
-                Confirm Clear
+                Confirm Approval
               </Button>
             </div>
           </div>

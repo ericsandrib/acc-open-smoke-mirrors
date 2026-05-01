@@ -25,6 +25,7 @@ import {
   WET_SIGNED_FIRM_UPLOADS_KEY,
   type WetSignedFirmUpload,
 } from '@/utils/wetSignedFirmUploads'
+import { findParentTaskForChild } from '@/utils/openAccountsTaskContext'
 
 interface DocInstance {
   id: string
@@ -51,7 +52,10 @@ export function AcctChildDocumentsReviewForm() {
   const ctx = useChildActionContext()
   const taskId = ctx?.subTaskId ?? ''
   const { data, updateField } = useTaskData(taskId || '__no_child__')
-  const { data: openAccountsData, updateField: updateOpenAccountsField } = useTaskData('open-accounts')
+  const openAccountsParentId = ctx
+    ? findParentTaskForChild(state, ctx.child.id)?.id ?? 'open-accounts'
+    : 'open-accounts'
+  const { data: openAccountsData, updateField: updateOpenAccountsField } = useTaskData(openAccountsParentId)
 
   const childMeta = ctx
     ? ((state.taskData[ctx.child.id] as Record<string, unknown> | undefined) ?? undefined)
@@ -68,7 +72,7 @@ export function AcctChildDocumentsReviewForm() {
     }
   }, [registrationType, state.relatedParties])
 
-  const openAccountsTask = state.tasks.find((t) => t.formKey === 'open-accounts')
+  const openAccountsTask = ctx ? findParentTaskForChild(state, ctx.child.id) : undefined
   const accountOpeningChildren = (openAccountsTask?.children ?? []).filter((c) => c.childType === 'account-opening')
 
   const wetSignedAccountOptions = useMemo(() => {
@@ -248,14 +252,16 @@ export function AcctChildDocumentsReviewForm() {
 
   return (
     <div className="space-y-8">
-      <section className="space-y-4">
-        <h3 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
-          Forms for this account
-        </h3>
-        <p className="text-sm text-muted-foreground">
-          These required forms are generated automatically from this account&apos;s registration type using the same rules
-          as the Documents panel and eSign envelope builder.
-        </p>
+      <section id="acct-docs-forms" className="space-y-4 scroll-mt-16">
+        <div>
+          <h3 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground mb-1">
+            Forms for This Account
+          </h3>
+          <p className="text-sm text-muted-foreground">
+            These required forms are generated automatically from this account&apos;s registration type using the same rules
+            as the Documents panel and eSign envelope builder.
+          </p>
+        </div>
 
         <div className="rounded-md border border-border bg-card p-3 space-y-3">
           <div className="flex flex-wrap items-center justify-between gap-2">
@@ -340,6 +346,16 @@ export function AcctChildDocumentsReviewForm() {
             <p className="text-xs text-muted-foreground">No eSign firm/custodian forms required for this registration type.</p>
           )}
         </div>
+
+        <section id="acct-docs-client-upload" className="space-y-4 scroll-mt-16">
+          <div>
+            <h3 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground mb-1">
+              Supporting Client Documents
+            </h3>
+            <p className="text-sm text-muted-foreground">
+              End-client uploads such as government-issued ID, trust documents, and other supporting files.
+            </p>
+          </div>
 
         {ruleDrivenDocs.clientUpload.length === 0 ? (
           <div className="rounded-lg border border-dashed border-border p-6 text-center">
@@ -428,7 +444,7 @@ export function AcctChildDocumentsReviewForm() {
                                     </SelectContent>
                                   </Select>
                                 ) : (
-                                  <div className="flex min-w-0 max-w-full items-center h-8 px-3 rounded-md border border-border bg-muted/30">
+                                  <div className="flex min-w-0 max-w-full cursor-default items-center h-8 px-3 rounded-md border border-border bg-muted/30">
                                     <span className="text-xs text-foreground truncate min-w-0" title={doc.label}>
                                       {doc.label}
                                     </span>
@@ -513,8 +529,9 @@ export function AcctChildDocumentsReviewForm() {
             })}
           </div>
         )}
+        </section>
 
-        <div className="space-y-2">
+        <div id="acct-docs-notes" className="space-y-2 scroll-mt-16">
           <Label>Exceptions / notes</Label>
           <textarea
             className="flex min-h-[88px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm"

@@ -1,9 +1,18 @@
-# Upstream deltas — proposed changes for `mosaic-avantos/acc-open-smoke-mirrors`
+# Upstream deltas — historical reference
 
-This doc tracks UX changes the Stratos fork has made to the original onboarding
-journey. They are **siloed** in `ericsandrib/acc-open-smoke-mirrors` and have
-**not** been pushed to the upstream. Use this list to draft upstream PRs or
-GitHub issues when ready.
+> **Status (2026-05-01):** the wizard has been **reset to upstream parity** at
+> `mosaic-avantos/acc-open-smoke-mirrors@7180a6d`. The deltas documented below
+> are no longer present in the live fork. Keep this doc as historical reference
+> for potential future re-introduction. The only insurance-specific carve-out
+> from upstream is the removal of annuity / NetX360 split-path code paths
+> (Delta 1 plus deletion of `AcctChildAnnuityForm.tsx` and
+> `AcctChildNetx360NextStepsForm.tsx`).
+>
+> See [upstream-reset-2026-05-01.md](./upstream-reset-2026-05-01.md) for the
+> reset summary, what was archived, and how to verify.
+
+This doc tracks UX changes the Stratos fork **previously** made to the original
+onboarding journey. They are siloed in this branch's history.
 
 Each delta documents:
 - **What** — the user-visible behavior change

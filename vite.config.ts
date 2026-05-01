@@ -14,13 +14,6 @@ export default defineConfig({
     hmr: {
       overlay: true,
     },
-    proxy: {
-      // Forward /api/schwab/* to the node proxy so the browser doesn't deal with CORS or secrets.
-      '/api/schwab': {
-        target: 'http://localhost:3001',
-        changeOrigin: true,
-      },
-    },
   },
   resolve: {
     alias: {

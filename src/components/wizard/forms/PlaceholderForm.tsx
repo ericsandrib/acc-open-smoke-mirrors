@@ -1,4 +1,5 @@
 import { useWorkflow, useTaskData } from '@/stores/workflowStore'
+import { getAllOpenAccountsTasks } from '@/utils/openAccountsTaskContext'
 import { Checkbox } from '@/components/ui/checkbox'
 import { Badge } from '@/components/ui/badge'
 import { Label } from '@/components/ui/label'
@@ -106,11 +107,13 @@ export function Placeholder2Form() {
     ),
   )
 
-  const kycParentTask = state.tasks.find((t) => t.formKey === 'kyc') ?? state.tasks.find((t) => t.formKey === 'open-accounts')
-  const kycChildren = kycParentTask?.children?.filter((c) => c.childType === 'kyc') ?? []
+  const kycStandalone = state.tasks.find((t) => t.formKey === 'kyc')
+  const kycParentTasks = kycStandalone ? [kycStandalone] : getAllOpenAccountsTasks(state)
+  const kycChildren = kycParentTasks.flatMap((t) => t.children?.filter((c) => c.childType === 'kyc') ?? [])
 
-  const openAccountsTask = state.tasks.find((t) => t.id === 'open-accounts')
-  const acctChildren = openAccountsTask?.children ?? []
+  const acctChildren = getAllOpenAccountsTasks(state).flatMap((t) =>
+    (t.children ?? []).filter((c) => c.childType === 'account-opening'),
+  )
 
   const totalValue = state.financialAccounts.reduce((sum, a) => {
     const num = parseFloat((a.estimatedValue ?? '').replace(/,/g, ''))
