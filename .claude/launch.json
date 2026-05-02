@@ -4,8 +4,8 @@
     {
       "name": "dev",
       "runtimeExecutable": "/Users/biancamoy/.nvm/versions/node/v24.11.1/bin/node",
-      "runtimeArgs": ["node_modules/vite/bin/vite.js", "--port", "5178"],
-      "port": 5178
+      "runtimeArgs": ["node_modules/vite/bin/vite.js", "--port", "5173"],
+      "port": 5173
     }
   ]
 }

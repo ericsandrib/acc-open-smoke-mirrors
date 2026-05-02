@@ -1,10 +1,8 @@
-import { useEffect, useMemo, useState } from 'react'
 import { useWorkflow } from '@/stores/workflowStore'
 import type { TaskStatus, Task, WorkflowState } from '@/types/workflow'
 import { cn } from '@/lib/utils'
 import { parseChildSubTaskId } from '@/utils/childTaskRegistry'
 import { isOpenAccountsFormKey } from '@/utils/openAccountsTaskContext'
-import { taskSections } from './formRegistry'
 import { Circle, Loader, CheckCircle2, Ban, Clock, XCircle, Check } from 'lucide-react'
 import {
   Tooltip,
@@ -12,8 +10,6 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from '@/components/ui/tooltip'
-
-const DEFAULT_TASK_SECTIONS = [{ id: '__top__', label: 'Overview' }] as const
 
 const statusColors: Record<TaskStatus, string> = {
   not_started: 'text-text-tertiary',
@@ -193,17 +189,6 @@ function TaskProgressIndicator({
 
 export function StepSidebar() {
   const { state, dispatch } = useWorkflow()
-  const [activeSectionId, setActiveSectionId] = useState<string | null>(null)
-
-  const activeTask = state.tasks.find((t) => t.id === state.activeTaskId)
-  const activeSections = useMemo(
-    () => (activeTask ? taskSections[activeTask.formKey] ?? DEFAULT_TASK_SECTIONS : DEFAULT_TASK_SECTIONS),
-    [activeTask],
-  )
-
-  useEffect(() => {
-    setActiveSectionId(activeSections[0]?.id ?? null)
-  }, [state.activeTaskId, activeSections])
 
   return (
     <TooltipProvider delayDuration={300}>
@@ -239,7 +224,6 @@ export function StepSidebar() {
                         const parsed = parseChildSubTaskId(state.activeTaskId)
                         return parsed ? c.id === parsed.childId : false
                       }) ?? false)
-                    const sections = taskSections[task.formKey] ?? DEFAULT_TASK_SECTIONS
                     return (
                       <li key={task.id}>
                         <button
@@ -264,33 +248,6 @@ export function StepSidebar() {
                             progress={pct}
                           />
                         </button>
-                        {isActiveTask && sections.length > 0 ? (
-                          <ul className="mt-1.5 ml-4 space-y-1.5 border-l border-border/80 pl-2.5">
-                            {sections.map((section) => (
-                              <li key={section.id}>
-                                <button
-                                  type="button"
-                                  onClick={() => {
-                                    if (state.activeTaskId !== task.id) {
-                                      dispatch({ type: 'SET_ACTIVE_TASK', taskId: task.id })
-                                    }
-                                    setActiveSectionId(section.id)
-                                    dispatch({ type: 'FOCUS_PARENT_TASK_SECTION', sectionId: section.id })
-                                  }}
-                                  aria-current={activeSectionId === section.id ? 'page' : undefined}
-                                  className={cn(
-                                    'w-full text-left px-2.5 py-1.5 text-[12px] rounded-md transition-colors',
-                                    activeSectionId === section.id
-                                      ? 'bg-muted text-foreground font-semibold'
-                                      : 'cursor-pointer text-foreground/85 hover:text-foreground hover:bg-muted/60',
-                                  )}
-                                >
-                                  {getTaskNavLabel(section.label)}
-                                </button>
-                              </li>
-                            ))}
-                          </ul>
-                        ) : null}
                       </li>
                     )
                   })}

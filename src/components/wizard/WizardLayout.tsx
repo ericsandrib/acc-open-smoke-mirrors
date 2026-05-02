@@ -1,6 +1,8 @@
 import { StepSidebar } from './StepSidebar'
 import { TaskContent } from './TaskContent'
 import { DetailSidebar } from './DetailSidebar'
+import { TaskSectionPanel } from './TaskSectionPanel'
+import { taskSections } from './formRegistry'
 import { WizardFooter } from './WizardFooter'
 import { HomeOfficeReviewFooter } from './HomeOfficeReviewFooter'
 import { AmlReviewFooter } from './AmlReviewFooter'
@@ -13,7 +15,7 @@ import { ChildHoDocumentViewContent } from './ChildHoDocumentViewContent'
 import { ChildHoPrincipalViewContent } from './ChildHoPrincipalViewContent'
 import { ChildHoKycViewContent } from './ChildHoKycViewContent'
 import { ChildAmlReviewContent } from './ChildAmlReviewContent'
-import { useState, type ReactNode } from 'react'
+import React, { useState, useRef, type ReactNode } from 'react'
 import { Eye, ShieldCheck, ShieldAlert, Building } from 'lucide-react'
 import { VerticalNav } from '@/components/navigation/vertical-nav'
 import { ComposeDialog } from '@/components/dashboard/ComposeDialog'
@@ -44,6 +46,62 @@ type HeaderBreadcrumb = {
 
 const HEADER_BREADCRUMB_MAX_VISIBLE = 4
 
+function HoverDropdownMenu({ trigger, children }: { trigger: React.ReactNode; children: React.ReactElement }) {
+  const [open, setOpen] = useState(false)
+  const closeTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const isHoveringRef = useRef(false)
+
+  function scheduleClose() {
+    closeTimer.current = setTimeout(() => {
+      isHoveringRef.current = false
+      setOpen(false)
+    }, 300)
+  }
+
+  function cancelClose() {
+    if (closeTimer.current) clearTimeout(closeTimer.current)
+  }
+
+  function handleTriggerMouseEnter() {
+    isHoveringRef.current = true
+    cancelClose()
+    setOpen(true)
+  }
+
+  function handleTriggerMouseLeave() {
+    scheduleClose()
+  }
+
+  function handleContentMouseEnter() {
+    isHoveringRef.current = true
+    cancelClose()
+  }
+
+  function handleContentMouseLeave() {
+    scheduleClose()
+  }
+
+  const contentWithHover = React.cloneElement(children as React.ReactElement<any>, {
+    onMouseEnter: handleContentMouseEnter,
+    onMouseLeave: handleContentMouseLeave,
+    sideOffset: 2,
+    className: cn((children.props as any).className, '!animate-none'),
+  } as any)
+
+  return (
+    <DropdownMenu open={open} onOpenChange={(newOpen) => {
+      if (!isHoveringRef.current) {
+        setOpen(newOpen)
+      }
+    }}>
+      <DropdownMenuTrigger asChild onMouseEnter={handleTriggerMouseEnter} onMouseLeave={handleTriggerMouseLeave}>
+        {trigger}
+      </DropdownMenuTrigger>
+      {contentWithHover}
+    </DropdownMenu>
+  )
+}
+
 function HeaderBreadcrumbTrail({ items, title }: { items: HeaderBreadcrumb[]; title: string }) {
   if (items.length === 0) return null
   const needsCollapse = items.length > HEADER_BREADCRUMB_MAX_VISIBLE
@@ -63,8 +121,8 @@ function HeaderBreadcrumbTrail({ items, title }: { items: HeaderBreadcrumb[]; ti
         return (
           <div key={item.id} className="inline-flex items-center gap-1.5">
             {isEllipsis ? (
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
+              <HoverDropdownMenu
+                trigger={
                   <button
                     type="button"
                     className="shrink-0 whitespace-nowrap text-left text-xs text-muted-foreground hover:text-foreground transition-colors bg-transparent border-0 p-0 cursor-pointer"
@@ -73,7 +131,8 @@ function HeaderBreadcrumbTrail({ items, title }: { items: HeaderBreadcrumb[]; ti
                   >
                     ...
                   </button>
-                </DropdownMenuTrigger>
+                }
+              >
                 <DropdownMenuContent align="start" sideOffset={6} className="min-w-[14rem]">
                   {hiddenItems.map((hidden, hiddenIdx) => (
                     <div key={hidden.id}>
@@ -99,11 +158,11 @@ function HeaderBreadcrumbTrail({ items, title }: { items: HeaderBreadcrumb[]; ti
                     </div>
                   ))}
                 </DropdownMenuContent>
-              </DropdownMenu>
+              </HoverDropdownMenu>
             ) : item.onClick ? (
               item.menuItems && item.menuItems.length > 1 ? (
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
+                <HoverDropdownMenu
+                  trigger={
                     <button
                       type="button"
                       className={cn(
@@ -115,7 +174,8 @@ function HeaderBreadcrumbTrail({ items, title }: { items: HeaderBreadcrumb[]; ti
                     >
                       {item.label}
                     </button>
-                  </DropdownMenuTrigger>
+                  }
+                >
                   <DropdownMenuContent align="start" sideOffset={6} className="min-w-[14rem]">
                     {item.menuItems.map((menuItem) => (
                       <DropdownMenuItem
@@ -128,7 +188,7 @@ function HeaderBreadcrumbTrail({ items, title }: { items: HeaderBreadcrumb[]; ti
                       </DropdownMenuItem>
                     ))}
                   </DropdownMenuContent>
-                </DropdownMenu>
+                </HoverDropdownMenu>
               ) : (
                 <button
                   type="button"
@@ -240,11 +300,13 @@ function WizardProgressHeaderRow({
   actions,
   activeActionId,
   onSelectAction,
+  hasSectionPanel = false,
 }: {
   left: ReactNode
   actions: WizardActionProgressItem[]
   activeActionId: string | undefined
   onSelectAction: (actionId: string) => void
+  hasSectionPanel?: boolean
 }) {
   return (
     <header className="border-b border-border py-2 shrink-0 overflow-visible">
@@ -254,6 +316,7 @@ function WizardProgressHeaderRow({
             {left}
           </div>
         </div>
+        {hasSectionPanel && <div className="w-48 shrink-0" />}
         <div className="flex-1 min-w-0 px-8 relative z-10">
           <div className="max-w-2xl w-full min-w-0 mx-auto hidden">
             <WizardActionProgressBar
@@ -631,51 +694,56 @@ export function WizardLayout() {
             </div>
           </header>
         )}
-        {!inChildAction && (
-          <WizardProgressHeaderRow
-            left={(() => {
-              const jn = state.journeyName ?? 'Client Onboarding'
-              const activeActionTitle = getActionTitle(activeTopLevelTask?.actionId)
-              const activeTaskTitle = activeTopLevelTask?.title
-              const actionMenuItems = state.actions
-                .filter((a) => a.id !== 'kyc')
-                .sort((a, b) => a.order - b.order)
-                .map((a) => ({
-                  id: `action-${a.id}`,
-                  label: a.title,
-                  onSelect: () => navigateToParentAction(a.id),
+        {!inChildAction && (() => {
+          const activeTask = state.tasks.find((t) => t.id === state.activeTaskId)
+          const sections = activeTask ? (taskSections[activeTask.formKey] ?? []) : []
+          return (
+            <WizardProgressHeaderRow
+              left={(() => {
+                const jn = state.journeyName ?? 'Client Onboarding'
+                const activeActionTitle = getActionTitle(activeTopLevelTask?.actionId)
+                const activeTaskTitle = activeTopLevelTask?.title
+                const actionMenuItems = state.actions
+                  .filter((a) => a.id !== 'kyc')
+                  .sort((a, b) => a.order - b.order)
+                  .map((a) => ({
+                    id: `action-${a.id}`,
+                    label: a.title,
+                    onSelect: () => navigateToParentAction(a.id),
+                  }))
+                const taskMenuItems = getTopLevelTasksForAction(activeTopLevelTask?.actionId).map((t) => ({
+                  id: `task-${t.id}`,
+                  label: t.title,
+                  onSelect: () => dispatch({ type: 'GO_TO_TASK', taskId: t.id }),
                 }))
-              const taskMenuItems = getTopLevelTasksForAction(activeTopLevelTask?.actionId).map((t) => ({
-                id: `task-${t.id}`,
-                label: t.title,
-                onSelect: () => dispatch({ type: 'GO_TO_TASK', taskId: t.id }),
-              }))
-              const items: HeaderBreadcrumb[] = [
-                { id: 'root', label: 'Onboarding', onClick: () => navigate('/onboarding') },
-                {
-                  id: 'journey',
-                  label: jn,
-                  onClick: goToJourneyStart,
-                  isCurrent: !activeActionTitle && !activeTaskTitle,
-                },
-              ]
-              if (activeActionTitle && activeTopLevelTask?.actionId) {
-                items.push({
-                  id: 'action',
-                  label: activeActionTitle,
-                  onClick: () => navigateToParentAction(activeTopLevelTask.actionId),
-                  isCurrent: !activeTaskTitle,
-                  menuItems: actionMenuItems,
-                })
-              }
-              if (activeTaskTitle) items.push({ id: 'task', label: activeTaskTitle, isCurrent: true, menuItems: taskMenuItems })
-              return <HeaderBreadcrumbTrail items={items} title={items.map((i) => i.label).join(' / ')} />
-            })()}
-            actions={actionProgress}
-            activeActionId={activeParentActionId}
-            onSelectAction={navigateToParentAction}
-          />
-        )}
+                const items: HeaderBreadcrumb[] = [
+                  { id: 'root', label: 'Onboarding', onClick: () => navigate('/onboarding') },
+                  {
+                    id: 'journey',
+                    label: jn,
+                    onClick: goToJourneyStart,
+                    isCurrent: !activeActionTitle && !activeTaskTitle,
+                  },
+                ]
+                if (activeActionTitle && activeTopLevelTask?.actionId) {
+                  items.push({
+                    id: 'action',
+                    label: activeActionTitle,
+                    onClick: () => navigateToParentAction(activeTopLevelTask.actionId),
+                    isCurrent: !activeTaskTitle,
+                    menuItems: actionMenuItems,
+                  })
+                }
+                if (activeTaskTitle) items.push({ id: 'task', label: activeTaskTitle, isCurrent: true, menuItems: taskMenuItems })
+                return <HeaderBreadcrumbTrail items={items} title={items.map((i) => i.label).join(' / ')} />
+              })()}
+              actions={actionProgress}
+              activeActionId={activeParentActionId}
+              onSelectAction={navigateToParentAction}
+              hasSectionPanel={sections.length > 0}
+            />
+          )
+        })()}
         {childBreadcrumbRow}
       <div className="flex flex-1 overflow-hidden">
           {inChildAction ? (
@@ -743,16 +811,28 @@ export function WizardLayout() {
                 <ChildActionRightSidebar />
               </>
             )
-          ) : (
-            <>
-              <StepSidebar />
-              <div className="flex-1 min-h-0 flex flex-col overflow-hidden">
-                <TaskContent />
-                <WizardFooter />
-              </div>
-              <DetailSidebar />
-            </>
-          )}
+          ) : (() => {
+            const activeTask = state.tasks.find((t) => t.id === state.activeTaskId)
+            const sections = activeTask ? (taskSections[activeTask.formKey] ?? []) : []
+            return (
+              <>
+                <StepSidebar />
+                {sections.length > 0 && (
+                  <TaskSectionPanel
+                    sections={sections}
+                    onSelectSection={(sectionId) => {
+                      dispatch({ type: 'FOCUS_PARENT_TASK_SECTION', sectionId })
+                    }}
+                  />
+                )}
+                <div className="flex-1 min-h-0 flex flex-col overflow-hidden">
+                  <TaskContent />
+                  <WizardFooter />
+                </div>
+                <DetailSidebar />
+              </>
+            )
+          })()}
       </div>
       </div>
       </WizardRightPanelProvider>
