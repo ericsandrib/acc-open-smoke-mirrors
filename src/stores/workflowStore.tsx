@@ -1280,11 +1280,7 @@ export function useChildActionContext() {
   )
   const subTasks =
     child.childType === 'account-opening' && parentTask?.formKey === OPEN_ACCOUNTS_WITH_ANNUITY_FORM_KEY
-      ? baseConfig.subTasks.filter((s) =>
-          s.suffix === 'account-owners' || s.suffix === 'netx360-next-steps',
-        )
-      : child.childType === 'account-opening'
-        ? baseConfig.subTasks.filter((s) => s.suffix !== 'netx360-next-steps')
+      ? baseConfig.subTasks.filter((s) => s.suffix === 'account-owners')
       : baseConfig.subTasks
   const config = {
     ...baseConfig,

@@ -1,7 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
-import { useWorkflow, useChildActionContext, useAdvisorResubmitEligible } from '@/stores/workflowStore'
+import { useWorkflow, useChildActionContext, getChildReviewState } from '@/stores/workflowStore'
 import { cn } from '@/lib/utils'
-import { Badge } from '@/components/ui/badge'
 import { taskSections } from './formRegistry'
 import {
   Tooltip,
@@ -11,9 +10,10 @@ import {
 } from '@/components/ui/tooltip'
 import { getSubTaskDisplayTitle } from '@/utils/childTaskRegistry'
 import { getAccountOpeningSubTaskProgress } from '@/utils/accountOpeningChildProgress'
-import { childStatusConfig, deriveChildDisplayStatus } from '@/utils/childStatusDisplay'
-import type { ChildDisplayStatus } from '@/utils/childStatusDisplay'
-import { Check } from 'lucide-react'
+import { Check, FileText, Clock } from 'lucide-react'
+import { useWizardRightPanel } from '@/components/wizard/wizardRightPanelContext'
+import { getActiveStageLabel } from '@/components/wizard/ChildActionTimelineSheet'
+import { useTheme } from '@/stores/themeStore'
 
 const DONUT_R = 7
 const DONUT_CIRCUMFERENCE = 2 * Math.PI * DONUT_R
@@ -111,24 +111,12 @@ function SubTaskStatusBadge({
   )
 }
 
-function useChildOverallStatus(childId: string): ChildDisplayStatus {
-  const { state } = useWorkflow()
-
-  const child = state.tasks
-    .flatMap((t) => t.children ?? [])
-    .find((c) => c.id === childId)
-
-  return deriveChildDisplayStatus(child?.status ?? 'not_started', state.childReviewsByChildId?.[childId])
-}
-
 export function ChildActionSidebar() {
   const { state, dispatch } = useWorkflow()
+  const { taskSectionNavStyle } = useTheme()
   const ctx = useChildActionContext()
   const [activeSectionId, setActiveSectionId] = useState<string | null>(null)
-
-  const overallStatus = useChildOverallStatus(ctx?.child.id ?? '')
-  const statusCfg = childStatusConfig[overallStatus]
-  const advisorResubmitEligible = useAdvisorResubmitEligible()
+  const { setCollapsed: setRightPanelCollapsed } = useWizardRightPanel()
 
   if (!ctx) return null
 
@@ -198,7 +186,7 @@ export function ChildActionSidebar() {
                     subTaskSuffix={child.childType === 'account-opening' ? subTask.suffix : undefined}
                   />
                 </button>
-                {idx === subTaskIndex && sections.length > 0 ? (
+                {taskSectionNavStyle === 'nested' && idx === subTaskIndex && sections.length > 0 ? (
                   <ul className="mt-1.5 ml-4 space-y-1.5 border-l border-border/80 pl-2.5">
                     {sections.map((section) => (
                       <li key={section.id}>
@@ -230,16 +218,41 @@ export function ChildActionSidebar() {
           })}
         </ul>
 
-        <div className="mt-auto min-h-14 border-t border-border px-3 py-3 flex items-center">
-          <div className="flex w-full items-center justify-between">
-            <span className="text-xs font-medium text-muted-foreground">Status:</span>
-            <Badge variant="outline" className={cn('text-xs', advisorResubmitEligible ? 'bg-amber-50 text-amber-700 border-amber-200' : statusCfg.className)}>
-              {advisorResubmitEligible
-                ? 'Action Required'
-                : statusCfg.label}
-            </Badge>
-          </div>
-        </div>
+        {(child.childType === 'account-opening' || child.childType === 'kyc') && (() => {
+          const reviewState = getChildReviewState(state, child.id)
+          const stageLabel = getActiveStageLabel(child.status, child.childType, reviewState ?? undefined)
+          const description = stageLabel === 'Draft'
+            ? 'Application is in progress. Complete all sections to submit.'
+            : `Application is in ${stageLabel}. Check the activity timeline for details.`
+          return (
+            <div className="mt-auto px-1 pt-3 pb-1.5 border-t border-border">
+              <div className="rounded-xl border border-border bg-card overflow-hidden">
+                <div className="p-3 flex items-center gap-3">
+                  <div className="h-10 w-10 rounded-xl bg-muted flex items-center justify-center shrink-0">
+                    <FileText className="h-5 w-5 text-foreground/60" />
+                  </div>
+                  <div className="min-w-0">
+                    <p className="text-xs text-muted-foreground leading-none mb-0.5">Application Status</p>
+                    <p className="text-base font-bold truncate">{stageLabel}</p>
+                  </div>
+                </div>
+                <div className="border-t border-border px-3 py-2.5">
+                  <p className="text-xs text-muted-foreground leading-snug">{description}</p>
+                </div>
+                <div className="border-t border-border bg-black/5 dark:bg-white/5 px-3 flex items-center" style={{ minHeight: '64px' }}>
+                  <button
+                    type="button"
+                    onClick={() => setRightPanelCollapsed(false)}
+                    className="flex items-center gap-2 text-xs font-medium text-foreground/80 hover:text-foreground bg-black/10 dark:bg-white/10 rounded-lg px-3 py-2 hover:bg-black/15 dark:hover:bg-white/15 transition-colors"
+                  >
+                    Activity
+                    <Clock className="h-3.5 w-3.5" />
+                  </button>
+                </div>
+              </div>
+            </div>
+          )
+        })()}
       </nav>
     </TooltipProvider>
   )

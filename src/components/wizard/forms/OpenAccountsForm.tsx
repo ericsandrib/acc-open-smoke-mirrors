@@ -40,6 +40,7 @@ import {
   CheckCircle2,
   XCircle,
   ShieldCheck,
+  ShieldAlert,
   UserPlus,
 } from 'lucide-react'
 import { AddHouseholdMemberSheet } from './AddPartySheet'
@@ -60,6 +61,7 @@ import { mergeFeatureRequests } from '@/types/featureRequests'
 import { getEsignEnvelopeStatus, ESIGN_ENVELOPE_STATUS_LABELS } from '@/utils/esignEnvelopeStatus'
 import type { EsignEnvelopeHistoryEvent, EsignEnvelopeStatus, EsignSignerStatus } from '@/types/esignEnvelope'
 import { CompleteAccountOpeningConfirmModal } from '@/components/wizard/WizardFooter'
+import { Netx360HandoffSection } from './Netx360HandoffSection'
 import { DocumentUploadInstancesTable } from './DocumentUploadInstancesTable'
 import {
   Dialog,
@@ -85,6 +87,50 @@ type ExecutedEsignForm = {
   label: string
   fileName: string
   executedAt: string
+}
+
+function SigningBlockedModal({
+  issues,
+  onAcknowledge,
+}: {
+  issues: string[]
+  onAcknowledge: () => void
+}) {
+  return (
+    <div className="fixed inset-0 z-[70] flex items-center justify-center p-4">
+      <div className="fixed inset-0 bg-black/50" aria-hidden />
+      <div
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="signing-blocked-title"
+        className="relative z-10 bg-background rounded-lg border border-border shadow-lg max-w-2xl w-full p-6 space-y-4 max-h-[80vh] overflow-y-auto"
+      >
+        <div className="flex items-start gap-3">
+          <div className="rounded-full bg-amber-50 dark:bg-amber-950/50 p-2 shrink-0">
+            <ShieldAlert className="h-5 w-5 text-amber-600" />
+          </div>
+          <div className="space-y-2 min-w-0">
+            <h3 id="signing-blocked-title" className="text-base font-semibold">
+              Cannot simulate signing yet
+            </h3>
+            <p className="text-sm text-muted-foreground">
+              Resolve the issue below before simulating envelope signing.
+            </p>
+          </div>
+        </div>
+        <ul className="list-disc pl-5 space-y-1.5 text-sm text-foreground">
+          {issues.map((issue, idx) => (
+            <li key={`${idx}-${issue}`}>{issue}</li>
+          ))}
+        </ul>
+        <div className="flex justify-end pt-1">
+          <Button type="button" onClick={onAcknowledge}>
+            I understand
+          </Button>
+        </div>
+      </div>
+    </div>
+  )
 }
 
 function EnvelopeKebabMenu({
@@ -178,6 +224,7 @@ export function OpenAccountsForm() {
   const [submitChildConfirmOpen, setSubmitChildConfirmOpen] = useState(false)
   const [submitChildWarnings, setSubmitChildWarnings] = useState<string[]>([])
   const [submitTargetChildId, setSubmitTargetChildId] = useState<string | null>(null)
+  const [signingBlockers, setSigningBlockers] = useState<string[] | null>(null)
   /** Bumps when the drawer opens so the sheet remounts with fresh local state from `envelopeDraft`. */
   const [envelopeDrawerMountKey, setEnvelopeDrawerMountKey] = useState(0)
 
@@ -427,9 +474,9 @@ export function OpenAccountsForm() {
       ),
     )
     if (ownersMissingKyc.length > 0) {
-      window.alert(
+      setSigningBlockers([
         `Cannot simulate envelope signing until KYC is complete for: ${ownersMissingKyc.join(', ')}.`,
-      )
+      ])
       return
     }
     const now = new Date().toISOString()
@@ -748,6 +795,19 @@ export function OpenAccountsForm() {
           child={timelineChild}
         />
       </section>
+
+      {externalAnnuityPlatform ? (
+        <section id="oa-netx360-next-steps" className="scroll-mt-16">
+          <div className="mb-4">
+            <h3 className="text-base font-semibold">Next Steps in NetX360</h3>
+            <p className="text-base text-muted-foreground mt-2">
+              After account and owners are set for each annuity account below, use NetX360 for servicing steps that run
+              outside this demo (funding, features, documents, KYC, and reviews).
+            </p>
+          </div>
+          <Netx360HandoffSection />
+        </section>
+      ) : null}
 
       {/* Section 4: Supporting Documents */}
       {!externalAnnuityPlatform ? (
@@ -1115,8 +1175,7 @@ export function OpenAccountsForm() {
           <h3 className="text-base font-semibold">Envelopes</h3>
           <p className="text-base text-muted-foreground mt-2">
             Create eSign envelopes for client signatures. Required firm and custodian forms are automatically grouped by
-            account. You can review generated forms when creating or editing an envelope. Wet-signed documents should
-            be uploaded in each account&apos;s Documents step.
+            account. If delivery is set to in person or mail, those forms become wet-signed and must be uploaded below.
           </p>
         </div>
         {esignEnvelopes.length > 0 ? (
@@ -1293,6 +1352,12 @@ export function OpenAccountsForm() {
             setSubmitChildWarnings([])
             setSubmitTargetChildId(null)
           }}
+        />
+      )}
+      {signingBlockers && (
+        <SigningBlockedModal
+          issues={signingBlockers}
+          onAcknowledge={() => setSigningBlockers(null)}
         />
       )}
     </div>

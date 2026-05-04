@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useRef, useState } from 'react'
 import { toast } from 'sonner'
 import {
   useWorkflow,
@@ -141,29 +141,12 @@ export function ChildActionFooter() {
       : 'individual'
   const annuityOwnersTaskId = `${child.id}-account-owners`
   const annuityOwnersTaskData = state.taskData[annuityOwnersTaskId] as Record<string, unknown> | undefined
-  const isAnnuityNetx360NextStepsSubTask =
-    child.childType === 'account-opening' &&
-    ctx.parentTask?.formKey === OPEN_ACCOUNTS_WITH_ANNUITY_FORM_KEY &&
-    ctx.currentSubTask.suffix === 'netx360-next-steps'
   const isAnnuityAccountOwnersSubTask =
     child.childType === 'account-opening' &&
     ctx.parentTask?.formKey === OPEN_ACCOUNTS_WITH_ANNUITY_FORM_KEY &&
     ctx.currentSubTask.suffix === 'account-owners'
-  const hideNavForCompletedNetx360Step =
-    isAnnuityNetx360NextStepsSubTask && child.status === 'complete'
   const hideNextForCompletedAnnuityOwners =
     isAnnuityAccountOwnersSubTask && child.status === 'complete'
-  useEffect(() => {
-    const node = footerRef.current
-    if (!node) return
-    const blockFooterWheelScroll = (e: WheelEvent) => {
-      e.preventDefault()
-    }
-    node.addEventListener('wheel', blockFooterWheelScroll, { passive: false })
-    return () => {
-      node.removeEventListener('wheel', blockFooterWheelScroll as EventListener)
-    }
-  }, [])
 
   if (isNestedAccountLineChild) {
     return (
@@ -323,7 +306,7 @@ export function ChildActionFooter() {
         >
           <div className="max-w-[52.5rem] mx-auto w-full flex items-center justify-between">
             <div>
-              {!isFirst && !hideNavForCompletedNetx360Step && (
+              {!isFirst && (
                 <Button variant="outline" onClick={() => dispatch({ type: 'CHILD_GO_BACK' })}>
                   <ChevronLeft className="h-4 w-4" />
                   Back
@@ -373,7 +356,7 @@ export function ChildActionFooter() {
                 </Button>
               )
             ) : null}
-            {!isLast && !hideNextInAdvisorAfterSubmit && !hideNavForCompletedNetx360Step && !hideNextForCompletedAnnuityOwners && (
+            {!isLast && !hideNextInAdvisorAfterSubmit && !hideNextForCompletedAnnuityOwners && (
               <Button onClick={() => dispatch({ type: 'CHILD_GO_NEXT' })}>
                 Next
                 <ChevronRight className="h-4 w-4" />

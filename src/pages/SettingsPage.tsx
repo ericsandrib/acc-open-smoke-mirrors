@@ -5,7 +5,7 @@ import { Label } from '@/components/ui/label'
 import { Separator } from '@/components/ui/separator'
 
 export function SettingsPage() {
-  const { colorScheme, setColorScheme } = useTheme()
+  const { colorScheme, setColorScheme, taskSectionNavStyle, setTaskSectionNavStyle } = useTheme()
 
   return (
     <AppShell>
@@ -38,6 +38,29 @@ export function SettingsPage() {
                 setColorScheme(checked === true ? 'dark' : 'light')
               }
               aria-label="Dark mode"
+            />
+          </div>
+        </section>
+
+        <section className="space-y-4">
+          <h2 className="text-sm font-medium text-[var(--text-primary)]">Wizard navigation</h2>
+          <Separator />
+          <div className="flex items-center justify-between gap-4 rounded-lg border border-border bg-[var(--bg-secondary)]/40 px-4 py-3">
+            <div className="space-y-0.5">
+              <Label htmlFor="show-task-sections" className="text-[var(--text-primary)]">
+                Show task sections in left navigation
+              </Label>
+              <p className="text-xs text-[var(--text-secondary)]">
+                When enabled, parent and child workflows both show section links under the active task.
+              </p>
+            </div>
+            <Checkbox
+              id="show-task-sections"
+              checked={taskSectionNavStyle === 'nested'}
+              onCheckedChange={(checked) =>
+                setTaskSectionNavStyle(checked === true ? 'nested' : 'compact')
+              }
+              aria-label="Show task sections in left navigation"
             />
           </div>
         </section>

@@ -1,8 +1,11 @@
+import { useEffect, useMemo, useState } from 'react'
 import { useWorkflow } from '@/stores/workflowStore'
 import type { TaskStatus, Task, WorkflowState } from '@/types/workflow'
 import { cn } from '@/lib/utils'
 import { parseChildSubTaskId } from '@/utils/childTaskRegistry'
 import { isOpenAccountsFormKey } from '@/utils/openAccountsTaskContext'
+import { taskSections } from '@/components/wizard/formRegistry'
+import { useTheme } from '@/stores/themeStore'
 import { Circle, Loader, CheckCircle2, Ban, Clock, XCircle, Check } from 'lucide-react'
 import {
   Tooltip,
@@ -124,6 +127,7 @@ function getTaskNavLabel(label: string): string {
 const PROGRESS_RING_RADIUS = 6
 const PROGRESS_RING_CIRCUMFERENCE = 2 * Math.PI * PROGRESS_RING_RADIUS
 const PROGRESS_STROKE_WIDTH = 5
+const DEFAULT_TASK_SECTIONS = [{ id: '__top__', label: 'Overview' }] as const
 
 function TaskProgressIndicator({
   progress,
@@ -189,6 +193,21 @@ function TaskProgressIndicator({
 
 export function StepSidebar() {
   const { state, dispatch } = useWorkflow()
+  const { taskSectionNavStyle } = useTheme()
+  const [activeSectionId, setActiveSectionId] = useState<string | null>(null)
+
+  const activeTopLevelTask = useMemo(
+    () => state.tasks.find((t) => t.id === state.activeTaskId),
+    [state.tasks, state.activeTaskId],
+  )
+  const activeSections = useMemo(
+    () => (activeTopLevelTask ? taskSections[activeTopLevelTask.formKey] ?? DEFAULT_TASK_SECTIONS : DEFAULT_TASK_SECTIONS),
+    [activeTopLevelTask],
+  )
+
+  useEffect(() => {
+    setActiveSectionId(activeSections[0]?.id ?? null)
+  }, [state.activeTaskId, activeSections])
 
   return (
     <TooltipProvider delayDuration={300}>
@@ -248,6 +267,30 @@ export function StepSidebar() {
                             progress={pct}
                           />
                         </button>
+                        {taskSectionNavStyle === 'nested' && isActiveTask && activeSections.length > 0 ? (
+                          <ul className="mt-1.5 ml-4 space-y-1.5 border-l border-border/80 pl-2.5">
+                            {activeSections.map((section) => (
+                              <li key={section.id}>
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    setActiveSectionId(section.id)
+                                    dispatch({ type: 'FOCUS_PARENT_TASK_SECTION', sectionId: section.id })
+                                  }}
+                                  aria-current={activeSectionId === section.id ? 'page' : undefined}
+                                  className={cn(
+                                    'w-full text-left px-2.5 py-1.5 text-[12px] rounded-md transition-colors',
+                                    activeSectionId === section.id
+                                      ? 'bg-muted text-foreground font-semibold'
+                                      : 'cursor-pointer text-foreground/85 hover:text-foreground hover:bg-muted/60',
+                                  )}
+                                >
+                                  {section.label}
+                                </button>
+                              </li>
+                            ))}
+                          </ul>
+                        ) : null}
                       </li>
                     )
                   })}

@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { cn } from '@/lib/utils'
 
 interface TaskSectionPanelProps {
@@ -7,38 +7,82 @@ interface TaskSectionPanelProps {
 }
 
 export function TaskSectionPanel({ sections, onSelectSection }: TaskSectionPanelProps) {
-  const [activeSectionId, setActiveSectionId] = useState<string | null>(null)
+  const [isHovering, setIsHovering] = useState(false)
+  const [activeId, setActiveId] = useState<string | null>(sections[0]?.id ?? null)
+  const closeTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
 
+  // Reset to first section only when the actual task sections change (not on every re-render).
+  // Using a stable key instead of the array reference avoids spurious resets.
+  const sectionsKey = sections.map((s) => s.id).join(',')
   useEffect(() => {
-    setActiveSectionId(sections[0]?.id ?? null)
-  }, [sections])
+    setActiveId(sections[0]?.id ?? null)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [sectionsKey])
 
-  const handleSectionClick = (sectionId: string) => {
-    setActiveSectionId(sectionId)
+  function handleSectionClick(sectionId: string) {
+    setActiveId(sectionId)
     onSelectSection(sectionId)
   }
 
+  function scheduleClose() {
+    closeTimer.current = setTimeout(() => setIsHovering(false), 150)
+  }
+  function cancelClose() {
+    if (closeTimer.current) clearTimeout(closeTimer.current)
+  }
+
+  const effectiveActiveId = activeId ?? sections[0]?.id
+
   return (
-    <nav className="w-48 border-r border-border bg-sidebar-background p-3 overflow-y-auto shrink-0">
-      <ul className="space-y-1">
-        {sections.map((section) => (
-          <li key={section.id}>
-            <button
-              type="button"
-              onClick={() => handleSectionClick(section.id)}
-              aria-current={activeSectionId === section.id ? 'page' : undefined}
-              className={cn(
-                'w-full text-left px-3 py-2 text-sm rounded-md transition-colors border border-transparent',
-                activeSectionId === section.id
-                  ? 'bg-accent/60 text-foreground border-border font-medium'
-                  : 'text-foreground/85 hover:text-foreground hover:bg-muted/50',
-              )}
-            >
-              {section.label}
-            </button>
-          </li>
-        ))}
-      </ul>
-    </nav>
+    <div
+      className="relative shrink-0 w-6 ml-4 flex flex-col items-center justify-center gap-2"
+      onMouseEnter={() => { cancelClose(); setIsHovering(true) }}
+      onMouseLeave={scheduleClose}
+    >
+      {sections.map((section) => {
+        const isActive = section.id === effectiveActiveId
+        return (
+          <button
+            key={section.id}
+            type="button"
+            aria-label={section.label}
+            onClick={() => handleSectionClick(section.id)}
+            className={cn(
+              'w-3 h-0.5 rounded-full transition-colors duration-150 cursor-pointer',
+              isActive
+                ? 'bg-foreground/80'
+                : 'bg-border hover:bg-muted-foreground/60',
+            )}
+          />
+        )
+      })}
+
+      {isHovering && sections.length > 0 && (
+        <div
+          className="absolute left-0 top-1/2 -translate-y-1/2 z-50 bg-popover border border-border rounded-lg shadow-md py-1 min-w-52"
+          onMouseEnter={() => { cancelClose(); setIsHovering(true) }}
+          onMouseLeave={scheduleClose}
+        >
+          {sections.map((section) => {
+            const isActive = section.id === effectiveActiveId
+            return (
+              <button
+                key={section.id}
+                type="button"
+                onClick={() => handleSectionClick(section.id)}
+                className={cn(
+                  'w-full text-left px-3 py-1.5 text-sm transition-colors',
+                  isActive
+                    ? 'text-foreground font-medium bg-accent/60'
+                    : 'text-foreground/80 hover:text-foreground hover:bg-muted/50',
+                )}
+              >
+                {section.label}
+              </button>
+            )
+          })}
+        </div>
+      )}
+    </div>
   )
 }

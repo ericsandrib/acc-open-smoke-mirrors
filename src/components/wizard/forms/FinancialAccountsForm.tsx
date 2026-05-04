@@ -191,9 +191,16 @@ function getAccountInitials(name: string) {
 
 function AccountCard({ account, onClick }: { account: FinancialAccount; onClick: () => void }) {
   return (
-    <button
-      type="button"
+    <div
+      role="button"
+      tabIndex={0}
       onClick={onClick}
+      onKeyDown={(e) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault()
+          onClick()
+        }
+      }}
       className="flex w-full cursor-pointer items-center justify-between rounded-lg p-3 hover:bg-muted/50 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
     >
       <div className="flex items-center gap-3 min-w-0">
@@ -209,7 +216,7 @@ function AccountCard({ account, onClick }: { account: FinancialAccount; onClick:
         )}
       </div>
       <DeleteAccountButton account={account} />
-    </button>
+    </div>
   )
 }
 

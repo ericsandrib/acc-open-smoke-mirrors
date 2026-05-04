@@ -16,7 +16,7 @@ const WizardRightPanelContext =
   createContext<WizardRightPanelContextValue | null>(null)
 
 export function WizardRightPanelProvider({ children }: { children: ReactNode }) {
-  const [collapsed, setCollapsed] = useState(false)
+  const [collapsed, setCollapsed] = useState(true)
   const toggle = useCallback(() => setCollapsed((c) => !c), [])
   return (
     <WizardRightPanelContext.Provider

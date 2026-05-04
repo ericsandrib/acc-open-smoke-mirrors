@@ -146,7 +146,7 @@ function NavigationContent({
 
   return (
     <>
-      <div className="flex-1 px-3 pt-1 pb-2 overflow-y-auto flex flex-col gap-4">
+      <div className="flex-1 px-1.5 pt-1 pb-2 overflow-y-auto flex flex-col gap-4">
         {navGroups.filter((g) => isExpanded || g.items.length > 0).map((group, groupIndex) => (
           <div key={groupIndex} className="flex flex-col gap-0.5">
             {group.label && isExpanded && (

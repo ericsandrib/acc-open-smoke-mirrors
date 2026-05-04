@@ -2,6 +2,7 @@ import { createContext, useContext, useState, useEffect, type ReactNode } from '
 
 type ColorScheme = 'light' | 'dark'
 type BrandTheme = 'mercer' | 'guardian' | 'vanguard'
+type TaskSectionNavStyle = 'nested' | 'compact'
 
 const ThemeContext = createContext<{
   colorScheme: ColorScheme
@@ -9,6 +10,8 @@ const ThemeContext = createContext<{
   toggleColorScheme: () => void
   brandTheme: BrandTheme
   setBrandTheme: (theme: BrandTheme) => void
+  taskSectionNavStyle: TaskSectionNavStyle
+  setTaskSectionNavStyle: (style: TaskSectionNavStyle) => void
   /** @deprecated Use colorScheme instead */
   theme: ColorScheme
   /** @deprecated Use toggleColorScheme instead */
@@ -27,9 +30,16 @@ function getInitialBrandTheme(): BrandTheme {
   return 'guardian'
 }
 
+function getInitialTaskSectionNavStyle(): TaskSectionNavStyle {
+  const stored = localStorage.getItem('task-section-nav-style')
+  if (stored === 'nested' || stored === 'compact') return stored
+  return 'nested'
+}
+
 export function ThemeProvider({ children }: { children: ReactNode }) {
   const [colorScheme, setColorScheme] = useState<ColorScheme>(getInitialColorScheme)
   const [brandTheme, setBrandThemeState] = useState<BrandTheme>(getInitialBrandTheme)
+  const [taskSectionNavStyle, setTaskSectionNavStyleState] = useState<TaskSectionNavStyle>(getInitialTaskSectionNavStyle)
 
   useEffect(() => {
     document.documentElement.classList.toggle('dark', colorScheme === 'dark')
@@ -41,9 +51,14 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
     localStorage.setItem('brand-theme', brandTheme)
   }, [brandTheme])
 
+  useEffect(() => {
+    localStorage.setItem('task-section-nav-style', taskSectionNavStyle)
+  }, [taskSectionNavStyle])
+
   const toggleColorScheme = () => setColorScheme((t) => (t === 'light' ? 'dark' : 'light'))
 
   const setBrandTheme = (theme: BrandTheme) => setBrandThemeState(theme)
+  const setTaskSectionNavStyle = (style: TaskSectionNavStyle) => setTaskSectionNavStyleState(style)
 
   return (
     <ThemeContext.Provider value={{
@@ -52,6 +67,8 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
       toggleColorScheme,
       brandTheme,
       setBrandTheme,
+      taskSectionNavStyle,
+      setTaskSectionNavStyle,
       // backwards compat aliases
       theme: colorScheme,
       toggleTheme: toggleColorScheme,

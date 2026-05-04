@@ -22,6 +22,7 @@ import { ComposeDialog } from '@/components/dashboard/ComposeDialog'
 import { useWorkflow } from '@/stores/workflowStore'
 import { cn } from '@/lib/utils'
 import { useNavigate } from 'react-router-dom'
+import { useTheme } from '@/stores/themeStore'
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -45,6 +46,7 @@ type HeaderBreadcrumb = {
 }
 
 const HEADER_BREADCRUMB_MAX_VISIBLE = 4
+const BENEFICIARY_ENABLED_REGISTRATIONS = new Set(['TOD_IND', 'TOD_JT', 'IRA', 'ROTH_IRA'])
 
 function HoverDropdownMenu({ trigger, children }: { trigger: React.ReactNode; children: React.ReactElement }) {
   const [open, setOpen] = useState(false)
@@ -316,7 +318,7 @@ function WizardProgressHeaderRow({
             {left}
           </div>
         </div>
-        {hasSectionPanel && <div className="w-48 shrink-0" />}
+        {hasSectionPanel && <div className="w-10 shrink-0" />}
         <div className="flex-1 min-w-0 px-8 relative z-10">
           <div className="max-w-2xl w-full min-w-0 mx-auto hidden">
             <WizardActionProgressBar
@@ -334,6 +336,7 @@ function WizardProgressHeaderRow({
 
 export function WizardLayout() {
   const { state, dispatch } = useWorkflow()
+  const { taskSectionNavStyle } = useTheme()
   const navigate = useNavigate()
   const [composeOpen, setComposeOpen] = useState(false)
   const inChildAction = !!state.activeChildActionId
@@ -350,6 +353,21 @@ export function WizardLayout() {
     ? getChildTypeConfig('kyc').subTasks[state.activeChildSubTaskIndex]
     : undefined
   const showKycDocumentsSubTask = activeKycSubTask?.formKey === 'kyc-child-documents'
+  const activeChildSubTask =
+    activeChild != null && state.activeChildSubTaskIndex != null
+      ? getChildTypeConfig(activeChild.childType).subTasks[state.activeChildSubTaskIndex]
+      : undefined
+  const childSections = (() => {
+    if (!activeChildSubTask || !activeChild) return []
+    const sections = taskSections[activeChildSubTask.formKey] ?? []
+    if (activeChildSubTask.formKey !== 'acct-child-account-owners') return sections
+    const childMeta = state.taskData[activeChild.id] as Record<string, unknown> | undefined
+    const childRegType = (childMeta?.registrationType as string | undefined) ?? null
+    return sections.filter((section) => {
+      if (section.id !== 'acct-beneficiaries') return true
+      return childRegType != null && BENEFICIARY_ENABLED_REGISTRATIONS.has(childRegType)
+    })
+  })()
 
   /** Reviewer demo tabs only for this child once it is submitted / in review / complete — not from global `submittedAt` (e.g. after KYC approval elsewhere). */
   const childInReviewerPipeline =
@@ -476,12 +494,8 @@ export function WizardLayout() {
   const currentTopLevelActionId = inChildAction ? activeParentTask?.actionId : activeParentActionId
   const accountOpeningBreadcrumbSubTasks =
     activeParentTask?.formKey === OPEN_ACCOUNTS_WITH_ANNUITY_FORM_KEY
-      ? getChildTypeConfig('account-opening').subTasks.filter(
-          (s) => s.suffix === 'account-owners' || s.suffix === 'netx360-next-steps',
-        )
-      : getChildTypeConfig('account-opening').subTasks.filter(
-          (s) => s.suffix !== 'netx360-next-steps',
-        )
+      ? getChildTypeConfig('account-opening').subTasks.filter((s) => s.suffix === 'account-owners')
+      : getChildTypeConfig('account-opening').subTasks
   const actionProgress = state.actions
     .filter((action) => action.id !== 'kyc')
     .sort((a, b) => a.order - b.order)
@@ -740,7 +754,7 @@ export function WizardLayout() {
               actions={actionProgress}
               activeActionId={activeParentActionId}
               onSelectAction={navigateToParentAction}
-              hasSectionPanel={sections.length > 0}
+              hasSectionPanel={taskSectionNavStyle === 'compact' && sections.length > 0}
             />
           )
         })()}
@@ -751,6 +765,12 @@ export function WizardLayout() {
               <div className="flex-1 flex flex-col min-h-0 min-w-0 overflow-hidden">
                 <div className="flex flex-1 min-h-0 overflow-hidden">
                   <ChildActionSidebar />
+                  {taskSectionNavStyle === 'compact' && childSections.length > 0 && showKycDocumentsSubTask && (
+                    <TaskSectionPanel
+                      sections={childSections}
+                      onSelectSection={(sectionId) => dispatch({ type: 'FOCUS_PARENT_TASK_SECTION', sectionId })}
+                    />
+                  )}
                   <div className="flex flex-1 min-h-0 overflow-hidden min-w-0">
                     <div className="flex-1 flex flex-col overflow-hidden min-w-0">
                       {showKycDocumentsSubTask ? <ChildActionContent /> : <ChildAmlReviewContent />}
@@ -764,6 +784,12 @@ export function WizardLayout() {
               <div className="flex-1 flex flex-col min-h-0 min-w-0 overflow-hidden">
                 <div className="flex flex-1 min-h-0 overflow-hidden">
                   <ChildActionSidebar />
+                  {taskSectionNavStyle === 'compact' && childSections.length > 0 && showKycDocumentsSubTask && (
+                    <TaskSectionPanel
+                      sections={childSections}
+                      onSelectSection={(sectionId) => dispatch({ type: 'FOCUS_PARENT_TASK_SECTION', sectionId })}
+                    />
+                  )}
                   <div className="flex flex-1 min-h-0 overflow-hidden min-w-0">
                     <div className="flex-1 flex flex-col overflow-hidden min-w-0">
                       {showKycDocumentsSubTask ? <ChildActionContent /> : <ChildHoKycViewContent />}
@@ -778,6 +804,12 @@ export function WizardLayout() {
                 <div className="flex-1 flex flex-col min-h-0 min-w-0 overflow-hidden">
                   <div className="flex flex-1 min-h-0 overflow-hidden">
                     <ChildActionSidebar />
+                    {taskSectionNavStyle === 'compact' && childSections.length > 0 && (
+                      <TaskSectionPanel
+                        sections={childSections}
+                        onSelectSection={(sectionId) => dispatch({ type: 'FOCUS_PARENT_TASK_SECTION', sectionId })}
+                      />
+                    )}
                     <div className="flex flex-1 min-h-0 overflow-hidden min-w-0">
                       <div className="flex-1 flex flex-col overflow-hidden min-w-0">
                         <ChildActionContent />
@@ -804,6 +836,12 @@ export function WizardLayout() {
             ) : (
               <>
                 <ChildActionSidebar />
+                {taskSectionNavStyle === 'compact' && childSections.length > 0 && (
+                  <TaskSectionPanel
+                    sections={childSections}
+                    onSelectSection={(sectionId) => dispatch({ type: 'FOCUS_PARENT_TASK_SECTION', sectionId })}
+                  />
+                )}
                 <div className="flex-1 min-h-0 flex flex-col overflow-hidden">
                   <ChildActionContent />
                   <ChildActionFooter />
@@ -817,7 +855,7 @@ export function WizardLayout() {
             return (
               <>
                 <StepSidebar />
-                {sections.length > 0 && (
+                {taskSectionNavStyle === 'compact' && sections.length > 0 && (
                   <TaskSectionPanel
                     sections={sections}
                     onSelectSection={(sectionId) => {
