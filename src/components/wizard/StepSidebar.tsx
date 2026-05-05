@@ -350,7 +350,7 @@ export function StepSidebar() {
     <TooltipProvider delayDuration={300}>
       <nav className="w-[330px] border-r border-border bg-white overflow-y-auto">
         <JourneyHeader />
-        <div className="px-1">
+        <div className="px-1 pt-2">
         {displayActions.map((action) => {
           const ActionIcon = getActionIcon(action.id)
           return (

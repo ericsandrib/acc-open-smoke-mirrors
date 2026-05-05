@@ -4,7 +4,9 @@ import { useChildActionContext, useWorkflow, getChildReviewState } from '@/store
 import { useWizardRightPanel } from '@/components/wizard/wizardRightPanelContext'
 import { ChildActionTimeline } from '@/components/wizard/ChildActionTimelineSheet'
 
-type Tab = 'activity' | 'details' | 'comments'
+type Tab = 'details' | 'activity' | 'comments'
+
+const TAB_ORDER: Tab[] = ['details', 'activity', 'comments']
 
 /**
  * Mirrors {@link CollapsibleRightPanel}'s collapse animation: width + border
@@ -16,7 +18,7 @@ export function ChildActionRightSidebar() {
   const ctx = useChildActionContext()
   const { state } = useWorkflow()
   const { collapsed } = useWizardRightPanel()
-  const [activeTab, setActiveTab] = useState<Tab>('activity')
+  const [activeTab, setActiveTab] = useState<Tab>('details')
 
   if (!ctx) return null
 
@@ -39,24 +41,22 @@ export function ChildActionRightSidebar() {
           collapsed ? 'opacity-0' : 'opacity-100 delay-200',
         )}
       >
-        <div className="flex items-center border-b border-border shrink-0">
-          <div className="flex flex-1">
-            {(['activity', 'details', 'comments'] as Tab[]).map((tab) => (
-              <button
-                key={tab}
-                type="button"
-                onClick={() => setActiveTab(tab)}
-                className={cn(
-                  'px-3 py-2.5 text-sm capitalize transition-colors',
-                  activeTab === tab
-                    ? 'font-semibold text-foreground border-b-2 border-foreground'
-                    : 'text-muted-foreground hover:text-foreground',
-                )}
-              >
-                {tab.charAt(0).toUpperCase() + tab.slice(1)}
-              </button>
-            ))}
-          </div>
+        <div className="flex h-14 items-center gap-1 border-b border-border px-3 shrink-0">
+          {TAB_ORDER.map((tab) => (
+            <button
+              key={tab}
+              type="button"
+              onClick={() => setActiveTab(tab)}
+              className={cn(
+                'px-3 py-1.5 rounded-md text-sm font-medium transition-colors',
+                activeTab === tab
+                  ? 'bg-muted text-foreground'
+                  : 'text-muted-foreground hover:bg-muted/50 hover:text-foreground',
+              )}
+            >
+              {tab.charAt(0).toUpperCase() + tab.slice(1)}
+            </button>
+          ))}
         </div>
 
         <div className="flex-1 min-h-0 overflow-y-auto p-4">

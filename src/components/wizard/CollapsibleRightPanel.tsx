@@ -44,8 +44,8 @@ export function CollapsibleRightPanel({
           collapsed ? 'opacity-0' : 'opacity-100 delay-200',
         )}
       >
-        <div className="flex items-center px-3 py-2 border-b border-border shrink-0">
-          <h3 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground truncate">
+        <div className="flex h-14 items-center px-3 border-b border-border shrink-0">
+          <h3 className="text-sm font-semibold text-foreground truncate">
             {title}
           </h3>
         </div>
