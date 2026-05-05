@@ -9,6 +9,8 @@ import { ServicingPage } from '@/pages/ServicingPage'
 import { OnboardingPage } from '@/pages/OnboardingPage'
 import { JourneyDetailPage } from '@/pages/JourneyDetailPage'
 import { SettingsPage } from '@/pages/SettingsPage'
+import { TestsIndexPage } from '@/pages/tests/TestsIndexPage'
+import { ProgressIndicatorTestPage } from '@/pages/tests/ProgressIndicatorTestPage'
 import { Toaster } from '@/components/ui/sonner'
 import { AppPasswordGate } from '@/components/AppPasswordGate'
 
@@ -28,6 +30,8 @@ export default function App() {
                 <Route path="/servicing/:journeyId/action/:actionId" element={<JourneyDetailPage />} />
                 <Route path="/onboarding" element={<OnboardingPage />} />
                 <Route path="/settings" element={<SettingsPage />} />
+                <Route path="/tests" element={<TestsIndexPage />} />
+                <Route path="/tests/progress-indicator" element={<ProgressIndicatorTestPage />} />
                 <Route path="*" element={<Navigate to="/" replace />} />
               </Routes>
             </BrowserRouter>

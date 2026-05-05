@@ -15,8 +15,9 @@ import {
   useOpenAccountsVariant,
 } from '@/components/wizard/openAccountsVariantContext'
 import { combinedOpenAccountsSections } from '@/components/wizard/combinedOpenAccountsSections'
+import { ProgressIcon, pickVariant } from '@/components/wizard/ProgressIcons'
 import { ChevronRight } from 'lucide-react'
-import { Circle, Loader, CheckCircle2, Ban, Clock, XCircle, Check } from 'lucide-react'
+import { Circle, Loader, CheckCircle2, Ban, Clock, XCircle } from 'lucide-react'
 import {
   Tooltip,
   TooltipContent,
@@ -134,68 +135,48 @@ function getTaskNavLabel(label: string): string {
   return label
 }
 
-const PROGRESS_RING_RADIUS = 6
-const PROGRESS_RING_CIRCUMFERENCE = 2 * Math.PI * PROGRESS_RING_RADIUS
-const PROGRESS_STROKE_WIDTH = 5
 const DEFAULT_TASK_SECTIONS = [{ id: '__top__', label: 'Overview' }] as const
 
 function TaskProgressIndicator({
-  progress,
+  pct,
+  total,
+  edited,
+  status,
 }: {
-  progress: number
+  pct: number
+  total: number
+  edited: boolean
+  status: TaskStatus
 }) {
-  const rawPct = Math.round(progress * 100)
-  const displayPct = Math.max(0, Math.min(100, rawPct))
-  const ringProgress = displayPct / 100
-  const filled = ringProgress * PROGRESS_RING_CIRCUMFERENCE
-  const isComplete = displayPct >= 100
-  const progressText = isComplete
-    ? 'Complete'
-    : displayPct === 0
-      ? 'Not started'
-      : `${displayPct}% complete`
+  const variant = pickVariant({ pct, total, edited, status })
+  const displayPct = Math.max(0, Math.min(100, Math.round(pct * 100)))
+  const tooltipText =
+    variant === 'canceled'
+      ? 'Canceled'
+      : variant === 'done'
+        ? edited ? 'Complete · Edited' : 'Complete'
+        : variant === 'ambiguous'
+          ? 'No progress to report'
+          : displayPct === 0
+            ? edited ? 'Not started · Edited' : 'Not started'
+            : edited
+              ? `${displayPct}% complete · Edited`
+              : `${displayPct}% complete`
 
   return (
     <Tooltip>
       <TooltipTrigger asChild>
-        <span className="shrink-0 inline-flex items-center justify-center h-4 w-4" role="img" aria-label={progressText}>
-          {isComplete ? (
-            <span
-              className="flex h-4 w-4 items-center justify-center rounded-full border border-blue-500/50 bg-background text-blue-500"
-              aria-hidden
-            >
-              <Check className="h-2.5 w-2.5" strokeWidth={1.8} />
-            </span>
-          ) : (
-            <svg className="h-4 w-4" viewBox="0 0 20 20" aria-hidden>
-              <circle
-                cx="10"
-                cy="10"
-                r={PROGRESS_RING_RADIUS}
-                fill="none"
-                strokeWidth={PROGRESS_STROKE_WIDTH}
-                stroke="var(--color-border-secondary)"
-              />
-              {ringProgress > 0 ? (
-                <circle
-                  cx="10"
-                  cy="10"
-                  r={PROGRESS_RING_RADIUS}
-                  fill="none"
-                  strokeWidth={PROGRESS_STROKE_WIDTH}
-                  stroke="var(--color-fill-category1-primary)"
-                  strokeDasharray={`${filled} ${PROGRESS_RING_CIRCUMFERENCE}`}
-                  strokeLinecap="round"
-                  transform="rotate(-90 10 10)"
-                />
-              ) : null}
-            </svg>
-          )}
-          <span className="sr-only">{progressText}</span>
+        <span
+          className="shrink-0 inline-flex items-center justify-center h-4 w-4"
+          role="img"
+          aria-label={tooltipText}
+        >
+          <ProgressIcon variant={variant} />
+          <span className="sr-only">{tooltipText}</span>
         </span>
       </TooltipTrigger>
       <TooltipContent side="right">
-        <p>{progressText}</p>
+        <p>{tooltipText}</p>
       </TooltipContent>
     </Tooltip>
   )
@@ -377,6 +358,12 @@ export function StepSidebar() {
                   )
                 const pct =
                   progressTotals.total > 0 ? progressTotals.filled / progressTotals.total : 0
+                const aggregatedEdited = underlyingTasks.some((t) => !!t.edited)
+                const aggregatedStatus: TaskStatus =
+                  underlyingTasks.length > 0 &&
+                  underlyingTasks.every((t) => t.status === 'canceled')
+                    ? 'canceled'
+                    : (underlyingTasks[0]?.status ?? 'not_started')
                 const isActiveTask =
                   underlyingTasks.some((t) => state.activeTaskId === t.id) ||
                   underlyingTasks.some((t) =>
@@ -411,7 +398,12 @@ export function StepSidebar() {
                       >
                         {getTaskNavLabel(displayTask.label)}
                       </span>
-                      <TaskProgressIndicator progress={pct} />
+                      <TaskProgressIndicator
+                        pct={pct}
+                        total={progressTotals.total}
+                        edited={aggregatedEdited}
+                        status={aggregatedStatus}
+                      />
                     </button>
                     {taskSectionNavStyle === 'nested' && isActiveTask && isV2CombinedActive ? (
                       <ul className="mt-1.5 ml-4 space-y-2 border-l border-border/80 pl-2.5">
