@@ -22,7 +22,7 @@ export function CollapsibleRightPanel({
     return (
       <div
         className={cn(
-          'flex flex-col shrink-0 w-9 border-l border-border bg-sidebar-background',
+          'flex flex-col shrink-0 w-9 border-l border-border bg-white',
           'items-center py-2 min-h-0 h-full',
         )}
       >
@@ -45,7 +45,7 @@ export function CollapsibleRightPanel({
     <aside
       id="wizard-right-panel"
       className={cn(
-        'w-64 shrink-0 border-l border-border bg-sidebar-background',
+        'w-64 shrink-0 border-l border-border bg-white',
         'flex flex-col min-h-0 h-full',
       )}
       aria-label={title}

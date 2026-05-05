@@ -351,7 +351,7 @@ export function StepSidebar() {
 
   return (
     <TooltipProvider delayDuration={300}>
-      <nav className="w-64 border-r border-border bg-sidebar-background p-2 overflow-y-auto">
+      <nav className="w-64 border-r border-border bg-white p-2 overflow-y-auto">
         <div className="px-3 pt-2 pb-4 mb-2 border-b border-border">
           <h2 className="text-sm font-semibold text-foreground">
             {state.journeyName ?? 'Client Onboarding'}
@@ -397,16 +397,16 @@ export function StepSidebar() {
                       onClick={() => dispatch({ type: 'SET_ACTIVE_TASK', taskId: displayTask.id })}
                       aria-current={isActiveTask ? 'page' : undefined}
                       className={cn(
-                        'w-full text-left px-3 py-2.5 rounded-lg text-[13px] font-medium flex items-center justify-between gap-2 transition-colors border border-transparent',
+                        'w-full text-left px-3 py-2.5 rounded-lg text-[13px] font-medium flex items-center justify-between gap-2 transition-colors',
                         isActiveTask
-                          ? 'bg-accent/60 text-foreground border-border'
+                          ? 'bg-accent/60 text-foreground'
                           : 'hover:bg-muted/50 text-foreground',
                       )}
                     >
                       <span
                         className={cn(
                           'truncate min-w-0',
-                          isActiveTask ? 'font-semibold border-l-2 border-foreground/50 pl-2 -ml-2' : '',
+                          isActiveTask ? 'font-semibold' : '',
                         )}
                       >
                         {getTaskNavLabel(displayTask.label)}

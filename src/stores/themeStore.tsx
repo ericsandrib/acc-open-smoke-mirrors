@@ -33,7 +33,7 @@ function getInitialBrandTheme(): BrandTheme {
 function getInitialTaskSectionNavStyle(): TaskSectionNavStyle {
   const stored = localStorage.getItem('task-section-nav-style')
   if (stored === 'nested' || stored === 'compact') return stored
-  return 'nested'
+  return 'compact'
 }
 
 export function ThemeProvider({ children }: { children: ReactNode }) {

@@ -33,8 +33,42 @@ import { ChildHoPrincipalViewContent } from './ChildHoPrincipalViewContent'
 import { ChildHoKycViewContent } from './ChildHoKycViewContent'
 import { ChildAmlReviewContent } from './ChildAmlReviewContent'
 import React, { useState, useRef, type ReactNode } from 'react'
-import { Eye, ShieldCheck, ShieldAlert, Building } from 'lucide-react'
+import { Eye, ShieldCheck, ShieldAlert, Building, PanelRight } from 'lucide-react'
 import { VerticalNav } from '@/components/navigation/vertical-nav'
+import { AccessoryBar } from '@/components/accessory-bar'
+import { useWizardRightPanel } from './wizardRightPanelContext'
+import { Button } from '@/components/ui/button'
+
+function RightSidebarToggle() {
+  const { collapsed, toggle } = useWizardRightPanel()
+  return (
+    <Button
+      type="button"
+      variant="ghost"
+      size="icon"
+      className="h-8 w-8"
+      onClick={toggle}
+      aria-expanded={!collapsed}
+      aria-controls="wizard-right-panel"
+      aria-label={collapsed ? 'Show details panel' : 'Hide details panel'}
+    >
+      <PanelRight className="h-4 w-4" aria-hidden />
+    </Button>
+  )
+}
+
+function WizardAccessoryBar() {
+  return (
+    <AccessoryBar
+      breadcrumbs={[]}
+      currentPage=""
+      showBackButton={false}
+      showBreadcrumb={false}
+      showBorder={false}
+      rightContent={<RightSidebarToggle />}
+    />
+  )
+}
 import { ComposeDialog } from '@/components/dashboard/ComposeDialog'
 import { useWorkflow } from '@/stores/workflowStore'
 import { cn } from '@/lib/utils'
@@ -633,133 +667,6 @@ function WizardLayoutInner() {
     if (!firstTask) return
     dispatch({ type: 'GO_TO_TASK', taskId: firstTask.id })
   }
-  const childBreadcrumbRow =
-    inChildAction && activeChild ? (
-      <WizardProgressHeaderRow
-        left={(() => {
-          const rootCrumb = 'Onboarding'
-          const journeyCrumb = state.journeyName ?? 'Client Onboarding'
-          const parentActionTitle = getActionTitle(activeParentTask?.actionId)
-          const parentCrumb = getTaskBreadcrumbLabel(activeParentTask) ?? 'Task'
-          const actionMenuItems = (() => {
-            const sourceActions = state.actions
-              .filter((a) => a.id !== 'kyc')
-              .sort((a, b) => a.order - b.order)
-            if (!isSplitJourney) {
-              return sourceActions.map((a) => ({
-                id: `action-${a.id}`,
-                label: a.title,
-                onSelect: () => navigateToParentAction(a.id),
-              }))
-            }
-            const items: Array<{ id: string; label: string; onSelect: () => void }> = []
-            let inserted = false
-            for (const a of sourceActions) {
-              if (isAccountOpeningActionId(a.id)) {
-                if (!inserted) {
-                  items.push({
-                    id: 'action-account-opening-merged',
-                    label: 'Account Opening',
-                    onSelect: () => navigateToParentAction('account-opening'),
-                  })
-                  inserted = true
-                }
-                continue
-              }
-              items.push({
-                id: `action-${a.id}`,
-                label: a.title,
-                onSelect: () => navigateToParentAction(a.id),
-              })
-            }
-            return items
-          })()
-          const parentTaskMenuItems = getTopLevelTasksForAction(activeParentTask?.actionId).map((t) => ({
-            id: `task-${t.id}`,
-            label: getTaskBreadcrumbLabel(t) ?? t.title,
-            onSelect: () => dispatch({ type: 'GO_TO_TASK', taskId: t.id }),
-          }))
-          const accountSubTaskMenuItems = state.childActionResume
-            ? accountOpeningBreadcrumbSubTasks.map((subTask, index) => ({
-                id: `account-subtask-${subTask.suffix}`,
-                label: getSubTaskDisplayTitle('account-opening', subTask, state.demoViewMode),
-                onSelect: () => {
-                  dispatch({ type: 'EXIT_CHILD_ACTION' })
-                  dispatch({ type: 'SET_CHILD_SUB_TASK', index })
-                },
-              }))
-            : []
-          const resumeAccountChild = state.childActionResume?.accountChildId
-            ? state.tasks
-                .flatMap((t) => t.children ?? [])
-                .find((c) => c.id === state.childActionResume?.accountChildId)
-            : undefined
-          const showActiveChildCrumb =
-            !resumeAccountChild &&
-            !!activeChild?.name &&
-            activeChild.name !== parentCrumb
-          const resumeSubTask =
-            state.childActionResume
-              ? accountOpeningBreadcrumbSubTasks[state.childActionResume.subTaskIndex]
-              : undefined
-          const pathItems: HeaderBreadcrumb[] = [
-            { id: 'root', label: rootCrumb, onClick: () => navigate('/onboarding') },
-            {
-              id: 'journey',
-              label: journeyCrumb,
-              onClick: goToJourneyStart,
-            },
-            ...(parentActionTitle && activeParentTask?.actionId
-              ? [{
-                  id: 'parent-action',
-                  label: parentActionTitle,
-                  onClick: () => navigateToParentAction(activeParentTask.actionId),
-                  menuItems: actionMenuItems,
-                }]
-              : []),
-            {
-              id: 'parent',
-              label: parentCrumb,
-              onClick: () => {
-                if (activeParentTask?.id) {
-                  dispatch({ type: 'GO_TO_TASK', taskId: activeParentTask.id })
-                  return
-                }
-                dispatch({ type: 'EXIT_CHILD_ACTION' })
-              },
-              menuItems: parentTaskMenuItems,
-            },
-          ]
-          if (resumeAccountChild) {
-            pathItems.push({
-              id: 'resume-account-child',
-              label: resumeAccountChild.name,
-              onClick: () => dispatch({ type: 'EXIT_CHILD_ACTION' }),
-              menuItems: accountSubTaskMenuItems,
-            })
-          }
-          if (showActiveChildCrumb) {
-            pathItems.push({
-              id: 'active-child',
-              label: activeChild.name,
-            })
-          }
-          if (resumeSubTask) {
-            pathItems.push({
-              id: 'resume-parent-subtask',
-              label: resumeSubTask.title,
-              onClick: () => dispatch({ type: 'EXIT_CHILD_ACTION' }),
-            })
-          }
-          pathItems[pathItems.length - 1].isCurrent = true
-          return <HeaderBreadcrumbTrail items={pathItems} title={pathItems.map((p) => p.label).join(' / ')} />
-        })()}
-        actions={actionProgress}
-        activeActionId={currentTopLevelActionId}
-        onSelectAction={navigateToParentAction}
-      />
-    ) : null
-
   return (
     <div className="flex h-screen overflow-hidden bg-background">
       <VerticalNav defaultCollapsed onCreateClick={() => setComposeOpen(true)} />
@@ -844,82 +751,6 @@ function WizardLayoutInner() {
             </div>
           </header>
         )}
-        {!inChildAction && (() => {
-          const activeTask = state.tasks.find((t) => t.id === state.activeTaskId)
-          const sections = activeTask ? (taskSections[activeTask.formKey] ?? []) : []
-          return (
-            <WizardProgressHeaderRow
-              left={(() => {
-                const jn = state.journeyName ?? 'Client Onboarding'
-                const activeActionTitle = getActionTitle(activeTopLevelTask?.actionId)
-                const activeTaskTitle = getTaskBreadcrumbLabel(activeTopLevelTask)
-                const actionMenuItems = (() => {
-                  const sourceActions = state.actions
-                    .filter((a) => a.id !== 'kyc')
-                    .sort((a, b) => a.order - b.order)
-                  if (!isSplitJourney) {
-                    return sourceActions.map((a) => ({
-                      id: `action-${a.id}`,
-                      label: a.title,
-                      onSelect: () => navigateToParentAction(a.id),
-                    }))
-                  }
-                  const items: Array<{ id: string; label: string; onSelect: () => void }> = []
-                  let inserted = false
-                  for (const a of sourceActions) {
-                    if (isAccountOpeningActionId(a.id)) {
-                      if (!inserted) {
-                        items.push({
-                          id: 'action-account-opening-merged',
-                          label: 'Account Opening',
-                          onSelect: () => navigateToParentAction('account-opening'),
-                        })
-                        inserted = true
-                      }
-                      continue
-                    }
-                    items.push({
-                      id: `action-${a.id}`,
-                      label: a.title,
-                      onSelect: () => navigateToParentAction(a.id),
-                    })
-                  }
-                  return items
-                })()
-                const taskMenuItems = getTopLevelTasksForAction(activeTopLevelTask?.actionId).map((t) => ({
-                  id: `task-${t.id}`,
-                  label: getTaskBreadcrumbLabel(t) ?? t.title,
-                  onSelect: () => dispatch({ type: 'GO_TO_TASK', taskId: t.id }),
-                }))
-                const items: HeaderBreadcrumb[] = [
-                  { id: 'root', label: 'Onboarding', onClick: () => navigate('/onboarding') },
-                  {
-                    id: 'journey',
-                    label: jn,
-                    onClick: goToJourneyStart,
-                    isCurrent: !activeActionTitle && !activeTaskTitle,
-                  },
-                ]
-                if (activeActionTitle && activeTopLevelTask?.actionId) {
-                  items.push({
-                    id: 'action',
-                    label: activeActionTitle,
-                    onClick: () => navigateToParentAction(activeTopLevelTask.actionId),
-                    isCurrent: !activeTaskTitle,
-                    menuItems: actionMenuItems,
-                  })
-                }
-                if (activeTaskTitle) items.push({ id: 'task', label: activeTaskTitle, isCurrent: true, menuItems: taskMenuItems })
-                return <HeaderBreadcrumbTrail items={items} title={items.map((i) => i.label).join(' / ')} />
-              })()}
-              actions={actionProgress}
-              activeActionId={activeParentActionId}
-              onSelectAction={navigateToParentAction}
-              hasSectionPanel={taskSectionNavStyle === 'compact' && sections.length > 0}
-            />
-          )
-        })()}
-        {childBreadcrumbRow}
       <div className="flex flex-1 overflow-hidden">
           {inChildAction ? (
             isAmlView && isKycChild ? (
@@ -1047,6 +878,7 @@ function WizardLayoutInner() {
                   })()
                 ) : null}
                 <div className="flex-1 min-h-0 flex flex-col overflow-hidden">
+                  <WizardAccessoryBar />
                   <TaskContent />
                   <WizardFooter />
                 </div>
