@@ -348,7 +348,7 @@ export function StepSidebar() {
 
   return (
     <TooltipProvider delayDuration={300}>
-      <nav className="w-64 border-r border-border bg-white overflow-y-auto">
+      <nav className="w-[330px] border-r border-border bg-white overflow-y-auto">
         <JourneyHeader />
         <div className="px-1">
         {displayActions.map((action) => {
@@ -402,7 +402,7 @@ export function StepSidebar() {
                       onClick={() => dispatch({ type: 'SET_ACTIVE_TASK', taskId: displayTask.id })}
                       aria-current={isActiveTask ? 'page' : undefined}
                       className={cn(
-                        'w-full text-left pl-12 pr-3 py-2.5 rounded-lg text-[13px] font-medium flex items-center justify-between gap-2 transition-colors',
+                        'w-full text-left pl-12 pr-3 py-2.5 rounded-lg text-sm font-medium flex items-center justify-between gap-2 transition-colors',
                         isActiveTask
                           ? 'bg-accent/60 text-foreground'
                           : 'hover:bg-muted/50 text-foreground',

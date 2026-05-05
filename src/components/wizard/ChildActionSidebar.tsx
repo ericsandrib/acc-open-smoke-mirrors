@@ -10,7 +10,8 @@ import {
 } from '@/components/ui/tooltip'
 import { getSubTaskDisplayTitle } from '@/utils/childTaskRegistry'
 import { getAccountOpeningSubTaskProgress } from '@/utils/accountOpeningChildProgress'
-import { ChevronLeft, FileText, Clock } from 'lucide-react'
+import type { LucideIcon } from 'lucide-react'
+import { ChevronLeft, FileText, Clock, ShieldCheck, Wallet, ArrowDownToLine, Cog, ListChecks } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { useWizardRightPanel } from '@/components/wizard/wizardRightPanelContext'
 import { getActiveStageLabel } from '@/components/wizard/ChildActionTimelineSheet'
@@ -21,6 +22,17 @@ import type { TaskStatus } from '@/types/workflow'
 
 const DEFAULT_TASK_SECTIONS = [{ id: '__top__', label: 'Overview' }] as const
 const BENEFICIARY_ENABLED_REGISTRATIONS = new Set(['TOD_IND', 'TOD_JT', 'IRA', 'ROTH_IRA'])
+
+const CHILD_TYPE_ICONS: Record<string, LucideIcon> = {
+  'account-opening': Wallet,
+  kyc: ShieldCheck,
+  'funding-line': ArrowDownToLine,
+  'feature-service-line': Cog,
+}
+
+function getChildIcon(childType: string): LucideIcon {
+  return CHILD_TYPE_ICONS[childType] ?? ListChecks
+}
 
 /**
  * Mirrors StepSidebar's TaskProgressIndicator so the sub-task pizza tracker
@@ -138,12 +150,13 @@ export function ChildActionSidebar() {
     ? state.actions.find((a) => a.id === parentTask.actionId)
     : undefined
   const breadcrumbLabel = parentAction?.title ?? parentTask?.title ?? 'Back'
+  const ChildIcon = getChildIcon(child.childType)
 
   return (
     <TooltipProvider delayDuration={300}>
-      <nav className="w-64 border-r border-border bg-white overflow-y-auto flex flex-col">
+      <nav className="w-[330px] border-r border-border bg-white overflow-y-auto flex flex-col">
         <JourneyHeader />
-        <div className="flex h-9 items-center gap-1 px-2">
+        <div className="flex h-9 items-center gap-1 px-2 border-b border-border">
           <Button
             type="button"
             variant="ghost"
@@ -158,8 +171,11 @@ export function ChildActionSidebar() {
             {breadcrumbLabel}
           </span>
         </div>
-        <div className="px-3 pt-2 pb-4 mb-2 border-b border-border">
-          <h2 className="text-sm font-semibold text-foreground">
+        <div className="mb-1.5 flex h-[26px] items-center gap-2 px-3">
+          <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-md bg-[var(--bg-tertiary)] text-muted-foreground">
+            <ChildIcon className="h-3 w-3" aria-hidden />
+          </span>
+          <h2 className="text-sm font-semibold text-foreground truncate">
             {child.name}
           </h2>
         </div>
@@ -180,7 +196,7 @@ export function ChildActionSidebar() {
                   onClick={() => dispatch({ type: 'SET_CHILD_SUB_TASK', index: idx })}
                   aria-current={idx === subTaskIndex ? 'page' : undefined}
                   className={cn(
-                    'w-full text-left pl-12 pr-3 py-2.5 rounded-lg text-[13px] font-medium flex items-center justify-between gap-2 transition-colors',
+                    'w-full text-left pl-12 pr-3 py-2.5 rounded-lg text-sm font-medium flex items-center justify-between gap-2 transition-colors',
                     idx === subTaskIndex
                       ? 'bg-accent/60 text-foreground'
                       : 'hover:bg-muted/50 text-foreground',
@@ -242,7 +258,7 @@ export function ChildActionSidebar() {
             ? 'Application is in progress. Complete all sections to submit.'
             : `Application is in ${stageLabel}. Check the activity timeline for details.`
           return (
-            <div className="mt-auto px-1 pt-3 pb-1.5 border-t border-border">
+            <div className="mt-auto p-2 border-t border-border">
               <div className="rounded-xl border border-border bg-card overflow-hidden">
                 <div className="p-3 flex items-center gap-3">
                   <div className="h-10 w-10 rounded-xl bg-muted flex items-center justify-center shrink-0">
@@ -253,8 +269,8 @@ export function ChildActionSidebar() {
                     <p className="text-base font-bold truncate">{stageLabel}</p>
                   </div>
                 </div>
-                <div className="border-t border-border px-3 py-2.5">
-                  <p className="text-xs text-muted-foreground leading-snug">{description}</p>
+                <div className="border-t border-border p-4">
+                  <p className="text-sm text-foreground leading-snug">{description}</p>
                 </div>
                 <div className="border-t border-border bg-black/5 dark:bg-white/5 px-3 flex items-center" style={{ minHeight: '64px' }}>
                   <button

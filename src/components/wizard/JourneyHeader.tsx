@@ -57,7 +57,7 @@ export function JourneyHeader() {
           <Briefcase className="h-4 w-4" />
         </span>
       </div>
-      <div className="flex h-14 items-center gap-2 px-3 mb-2 border-b border-border">
+      <div className="flex h-14 items-center gap-2 px-3 border-b border-border">
         <h2 className="flex-1 truncate text-sm font-semibold text-foreground">
           {state.journeyName ?? 'Client Onboarding'}
         </h2>

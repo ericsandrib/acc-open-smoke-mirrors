@@ -449,7 +449,6 @@ export function ChildActionContent() {
             </div>
           </div>
         )}
-        <p className="text-sm text-muted-foreground mb-1">{child.name}</p>
         {isHoTeamAccountOpening && amlFlagged && (
           <div className="flex items-center gap-3 mb-2">
             <Badge variant="outline" className="text-red-700 border-red-200 bg-red-50 dark:text-red-200 dark:border-red-800 dark:bg-red-950/40 text-[10px]">
@@ -457,7 +456,7 @@ export function ChildActionContent() {
             </Badge>
           </div>
         )}
-        <h2 className="text-3xl font-semibold text-foreground mb-2">
+        <h2 className="text-3xl font-semibold text-foreground pb-6 mb-6 border-b border-border">
           {getSubTaskDisplayTitle(child.childType, currentSubTask, state.demoViewMode)}
         </h2>
         {description && (
