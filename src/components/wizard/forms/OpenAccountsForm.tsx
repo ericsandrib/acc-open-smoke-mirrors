@@ -805,10 +805,9 @@ export function OpenAccountsForm() {
       {externalAnnuityPlatform ? (
         <section id={sectionId('oa-netx360-next-steps')} className="scroll-mt-16">
           <div className="mb-4">
-            <h3 className="text-base font-semibold">Next Steps for Annuities Accounts</h3>
+            <h3 className="text-base font-semibold">Continue the account opening</h3>
             <p className="text-base text-muted-foreground mt-2">
-              After account and owners are set for each annuity account below, use NetX360 for servicing steps that run
-              outside this demo (funding, features, documents, KYC, and reviews).
+              Set the account and owners for each annuity below.
             </p>
           </div>
           <Netx360HandoffSection />

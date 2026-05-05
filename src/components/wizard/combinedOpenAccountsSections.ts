@@ -20,7 +20,7 @@ export type CombinedAccordionSectionGroup = {
 export const combinedOpenAccountsSections: CombinedAccordionSectionGroup[] = [
   {
     key: 'no-annuity',
-    label: 'Account Opening (No Annuity)',
+    label: 'Standard Accounts',
     sections: [
       { id: 'oa-accounts', label: 'Accounts' },
       { id: 'oa-documents', label: 'Supporting Documents' },
@@ -30,10 +30,10 @@ export const combinedOpenAccountsSections: CombinedAccordionSectionGroup[] = [
   },
   {
     key: 'with-annuity',
-    label: 'Account Opening (With Annuity)',
+    label: 'Annuity Accounts',
     sections: [
       { id: 'oa-accounts', label: 'Accounts' },
-      { id: 'oa-netx360-next-steps', label: 'Next Steps for Annuities Accounts' },
+      { id: 'oa-netx360-next-steps', label: 'Continue the account opening' },
     ],
   },
 ]

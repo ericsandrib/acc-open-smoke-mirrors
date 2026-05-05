@@ -40,9 +40,9 @@ export const taskDescriptions: Partial<Record<string, string>> = {
   'kyc-child-documents':
     'Upload supporting KYC/KYB documents if step-up verification is required.',
   'open-accounts':
-    'Set up new accounts, complete KYC, and prepare documents for client signature.',
+    'Set up accounts without an annuity.',
   'open-accounts-with-annuity':
-    'Annuity path: add accounts by registration type. KYC and eSign run outside this app.',
+    'Set up accounts that include an annuity.',
   'acct-child-account-owners':
     'Set up the account, add owners and participants, request margin and options, answer remaining account questions, and collect required owner documents.',
   'acct-child-funding-transfers':
@@ -77,7 +77,7 @@ export const taskSections: Partial<Record<string, Array<{ id: string; label: str
   ],
   'open-accounts-with-annuity': [
     { id: 'oa-accounts', label: 'Accounts' },
-    { id: 'oa-netx360-next-steps', label: 'Next Steps for Annuities Accounts' },
+    { id: 'oa-netx360-next-steps', label: 'Continue the account opening' },
   ],
   'acct-child-account-owners': [
     { id: 'acct-owners', label: 'Owners & Participants' },

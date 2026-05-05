@@ -87,9 +87,19 @@ export function TaskContent() {
     (activeTask.formKey === OPEN_ACCOUNTS_FORM_KEY ||
       activeTask.formKey === OPEN_ACCOUNTS_WITH_ANNUITY_FORM_KEY)
 
+  const splitV1Title =
+    variant === 'v1' && isSplitJourney && activeTask
+      ? activeTask.formKey === OPEN_ACCOUNTS_FORM_KEY
+        ? 'Standard Accounts'
+        : activeTask.formKey === OPEN_ACCOUNTS_WITH_ANNUITY_FORM_KEY
+          ? 'Annuity Accounts'
+          : null
+      : null
+
   const title = showCombinedOpenAccounts
     ? 'Open Accounts'
-    : activeTask?.title
+    : splitV1Title
+      ?? activeTask?.title
       ?? (subTaskChild && subTaskDef && parsed
         ? `${subTaskChild.name} — ${getSubTaskDisplayTitle(parsed.config.childType, subTaskDef, state.demoViewMode)}`
         : null)
@@ -126,8 +136,7 @@ export function TaskContent() {
         <h2 className="text-3xl font-semibold text-foreground mb-2">{title}</h2>
         {showCombinedOpenAccounts ? (
           <p className="text-base text-muted-foreground mb-6">
-            Set up new accounts across both flows. The annuity path hands off to NetX360, while
-            the standard path stays in this app for KYC, supporting documents, and eSign.
+            Add the household's accounts. Submit annuity accounts to NetX360 when ready.
           </p>
         ) : formKey && taskDescriptions[formKey] ? (
           <p className="text-base text-muted-foreground mb-6">{taskDescriptions[formKey]}</p>

@@ -1,7 +1,7 @@
 import type { Action, Task, RelatedParty, FinancialAccount } from '@/types/workflow'
 
 export const actions: Action[] = [
-  { id: 'collect-client-data', title: 'Collect Client Data', order: 1 },
+  { id: 'collect-client-data', title: 'Client Setup', order: 1 },
   { id: 'account-opening', title: 'Account Opening', order: 2 },
 ]
 
