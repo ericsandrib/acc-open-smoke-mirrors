@@ -33,7 +33,18 @@ import {
   WizardRightPanelProvider,
 } from '@/components/wizard/wizardRightPanelContext'
 import { getChildTypeConfig, getSubTaskDisplayTitle } from '@/utils/childTaskRegistry'
-import { OPEN_ACCOUNTS_WITH_ANNUITY_FORM_KEY } from '@/utils/openAccountsTaskContext'
+import {
+  OPEN_ACCOUNTS_FORM_KEY,
+  OPEN_ACCOUNTS_WITH_ANNUITY_FORM_KEY,
+} from '@/utils/openAccountsTaskContext'
+import {
+  OpenAccountsVariantAndFocusProvider,
+  useCombinedSectionFocus,
+  useOpenAccountsVariant,
+  type CombinedAccordionKey,
+} from './openAccountsVariantContext'
+import { OpenAccountsVariantSwitcher } from './OpenAccountsVariantSwitcher'
+import { combinedOpenAccountsSections } from './combinedOpenAccountsSections'
 
 type WizardActionProgressItem = { id: string; title: string; pct: number }
 type HeaderBreadcrumb = {
@@ -335,9 +346,46 @@ function WizardProgressHeaderRow({
 }
 
 export function WizardLayout() {
+  return (
+    <OpenAccountsVariantAndFocusProvider>
+      <WizardLayoutInner />
+      <VariantSwitcherWhenSplit />
+    </OpenAccountsVariantAndFocusProvider>
+  )
+}
+
+function VariantSwitcherWhenSplit() {
+  const { state } = useWorkflow()
+  const isSplitJourney =
+    state.tasks.some((t) => t.formKey === OPEN_ACCOUNTS_FORM_KEY) &&
+    state.tasks.some((t) => t.formKey === OPEN_ACCOUNTS_WITH_ANNUITY_FORM_KEY)
+  if (!isSplitJourney) return null
+  return <OpenAccountsVariantSwitcher />
+}
+
+function CombinedSectionPanel() {
+  const { requestFocus } = useCombinedSectionFocus()
+  return (
+    <TaskSectionPanel
+      sections={[]}
+      onSelectSection={() => {}}
+      groups={combinedOpenAccountsSections.map((group) => ({
+        key: group.key,
+        label: group.label,
+        sections: group.sections.map((s) => ({ id: s.id, label: s.label })),
+      }))}
+      onSelectGroupSection={(groupKey, sectionId) => {
+        requestFocus(groupKey as CombinedAccordionKey, sectionId)
+      }}
+    />
+  )
+}
+
+function WizardLayoutInner() {
   const { state, dispatch } = useWorkflow()
   const { taskSectionNavStyle } = useTheme()
   const navigate = useNavigate()
+  const variant = useOpenAccountsVariant()
   const [composeOpen, setComposeOpen] = useState(false)
   const inChildAction = !!state.activeChildActionId
   const viewMode = state.demoViewMode
@@ -483,14 +531,60 @@ export function WizardLayout() {
   }
   const activeParentActionId = state.tasks.find((t) => t.id === state.activeTaskId)?.actionId
   const activeTopLevelTask = state.tasks.find((t) => t.id === state.activeTaskId)
-  const getActionTitle = (actionId: string | undefined) =>
-    actionId ? state.actions.find((a) => a.id === actionId)?.title : undefined
-  const getTopLevelTasksForAction = (actionId: string | undefined) =>
-    actionId
-      ? state.tasks
-          .filter((t) => t.actionId === actionId && t.formKey !== 'kyc' && t.id !== 'kyc-review')
-          .sort((a, b) => a.order - b.order)
-      : []
+
+  const isSplitJourney =
+    state.tasks.some((t) => t.formKey === OPEN_ACCOUNTS_FORM_KEY) &&
+    state.tasks.some((t) => t.formKey === OPEN_ACCOUNTS_WITH_ANNUITY_FORM_KEY)
+  const isAccountOpeningActionId = (actionId: string | undefined) =>
+    actionId === 'account-opening' || actionId === 'account-opening-annuity'
+
+  const getActionTitle = (actionId: string | undefined) => {
+    if (!actionId) return undefined
+    if (isSplitJourney && isAccountOpeningActionId(actionId)) return 'Account Opening'
+    return state.actions.find((a) => a.id === actionId)?.title
+  }
+  const getTaskBreadcrumbLabel = (task: Task | undefined) => {
+    if (!task) return undefined
+    if (isSplitJourney) {
+      if (variant === 'v1') {
+        if (task.formKey === OPEN_ACCOUNTS_FORM_KEY) return 'Open Accounts (No Annuity)'
+        if (task.formKey === OPEN_ACCOUNTS_WITH_ANNUITY_FORM_KEY) return 'Open Accounts (With Annuity)'
+      } else if (variant === 'v2') {
+        if (
+          task.formKey === OPEN_ACCOUNTS_FORM_KEY ||
+          task.formKey === OPEN_ACCOUNTS_WITH_ANNUITY_FORM_KEY
+        ) {
+          return 'Open Accounts'
+        }
+      }
+    }
+    return task.title
+  }
+  const getTopLevelTasksForAction = (actionId: string | undefined): Task[] => {
+    if (!actionId) return []
+    if (isSplitJourney && isAccountOpeningActionId(actionId)) {
+      const merged = state.tasks.filter(
+        (t) =>
+          (t.actionId === 'account-opening' || t.actionId === 'account-opening-annuity') &&
+          t.formKey !== 'kyc' &&
+          t.id !== 'kyc-review',
+      )
+      if (variant === 'v2') {
+        const noAnnuity = merged.find((t) => t.formKey === OPEN_ACCOUNTS_FORM_KEY)
+        const withAnnuity = merged.find((t) => t.formKey === OPEN_ACCOUNTS_WITH_ANNUITY_FORM_KEY)
+        const result: Task[] = []
+        const primary = noAnnuity ?? withAnnuity
+        if (primary) result.push(primary)
+        return result
+      }
+      return merged
+        .slice()
+        .sort((a, b) => a.order - b.order)
+    }
+    return state.tasks
+      .filter((t) => t.actionId === actionId && t.formKey !== 'kyc' && t.id !== 'kyc-review')
+      .sort((a, b) => a.order - b.order)
+  }
   const currentTopLevelActionId = inChildAction ? activeParentTask?.actionId : activeParentActionId
   const accountOpeningBreadcrumbSubTasks =
     activeParentTask?.formKey === OPEN_ACCOUNTS_WITH_ANNUITY_FORM_KEY
@@ -529,18 +623,43 @@ export function WizardLayout() {
           const rootCrumb = 'Onboarding'
           const journeyCrumb = state.journeyName ?? 'Client Onboarding'
           const parentActionTitle = getActionTitle(activeParentTask?.actionId)
-          const parentCrumb = activeParentTask?.title ?? 'Task'
-          const actionMenuItems = state.actions
-            .filter((a) => a.id !== 'kyc')
-            .sort((a, b) => a.order - b.order)
-            .map((a) => ({
-              id: `action-${a.id}`,
-              label: a.title,
-              onSelect: () => navigateToParentAction(a.id),
-            }))
+          const parentCrumb = getTaskBreadcrumbLabel(activeParentTask) ?? 'Task'
+          const actionMenuItems = (() => {
+            const sourceActions = state.actions
+              .filter((a) => a.id !== 'kyc')
+              .sort((a, b) => a.order - b.order)
+            if (!isSplitJourney) {
+              return sourceActions.map((a) => ({
+                id: `action-${a.id}`,
+                label: a.title,
+                onSelect: () => navigateToParentAction(a.id),
+              }))
+            }
+            const items: Array<{ id: string; label: string; onSelect: () => void }> = []
+            let inserted = false
+            for (const a of sourceActions) {
+              if (isAccountOpeningActionId(a.id)) {
+                if (!inserted) {
+                  items.push({
+                    id: 'action-account-opening-merged',
+                    label: 'Account Opening',
+                    onSelect: () => navigateToParentAction('account-opening'),
+                  })
+                  inserted = true
+                }
+                continue
+              }
+              items.push({
+                id: `action-${a.id}`,
+                label: a.title,
+                onSelect: () => navigateToParentAction(a.id),
+              })
+            }
+            return items
+          })()
           const parentTaskMenuItems = getTopLevelTasksForAction(activeParentTask?.actionId).map((t) => ({
             id: `task-${t.id}`,
-            label: t.title,
+            label: getTaskBreadcrumbLabel(t) ?? t.title,
             onSelect: () => dispatch({ type: 'GO_TO_TASK', taskId: t.id }),
           }))
           const accountSubTaskMenuItems = state.childActionResume
@@ -716,18 +835,43 @@ export function WizardLayout() {
               left={(() => {
                 const jn = state.journeyName ?? 'Client Onboarding'
                 const activeActionTitle = getActionTitle(activeTopLevelTask?.actionId)
-                const activeTaskTitle = activeTopLevelTask?.title
-                const actionMenuItems = state.actions
-                  .filter((a) => a.id !== 'kyc')
-                  .sort((a, b) => a.order - b.order)
-                  .map((a) => ({
-                    id: `action-${a.id}`,
-                    label: a.title,
-                    onSelect: () => navigateToParentAction(a.id),
-                  }))
+                const activeTaskTitle = getTaskBreadcrumbLabel(activeTopLevelTask)
+                const actionMenuItems = (() => {
+                  const sourceActions = state.actions
+                    .filter((a) => a.id !== 'kyc')
+                    .sort((a, b) => a.order - b.order)
+                  if (!isSplitJourney) {
+                    return sourceActions.map((a) => ({
+                      id: `action-${a.id}`,
+                      label: a.title,
+                      onSelect: () => navigateToParentAction(a.id),
+                    }))
+                  }
+                  const items: Array<{ id: string; label: string; onSelect: () => void }> = []
+                  let inserted = false
+                  for (const a of sourceActions) {
+                    if (isAccountOpeningActionId(a.id)) {
+                      if (!inserted) {
+                        items.push({
+                          id: 'action-account-opening-merged',
+                          label: 'Account Opening',
+                          onSelect: () => navigateToParentAction('account-opening'),
+                        })
+                        inserted = true
+                      }
+                      continue
+                    }
+                    items.push({
+                      id: `action-${a.id}`,
+                      label: a.title,
+                      onSelect: () => navigateToParentAction(a.id),
+                    })
+                  }
+                  return items
+                })()
                 const taskMenuItems = getTopLevelTasksForAction(activeTopLevelTask?.actionId).map((t) => ({
                   id: `task-${t.id}`,
-                  label: t.title,
+                  label: getTaskBreadcrumbLabel(t) ?? t.title,
                   onSelect: () => dispatch({ type: 'GO_TO_TASK', taskId: t.id }),
                 }))
                 const items: HeaderBreadcrumb[] = [
@@ -852,17 +996,25 @@ export function WizardLayout() {
           ) : (() => {
             const activeTask = state.tasks.find((t) => t.id === state.activeTaskId)
             const sections = activeTask ? (taskSections[activeTask.formKey] ?? []) : []
+            const showCombinedScrollspy =
+              variant === 'v2' &&
+              isSplitJourney &&
+              !!activeTask &&
+              (activeTask.formKey === OPEN_ACCOUNTS_FORM_KEY ||
+                activeTask.formKey === OPEN_ACCOUNTS_WITH_ANNUITY_FORM_KEY)
             return (
               <>
                 <StepSidebar />
-                {taskSectionNavStyle === 'compact' && sections.length > 0 && (
+                {taskSectionNavStyle === 'compact' && showCombinedScrollspy ? (
+                  <CombinedSectionPanel />
+                ) : taskSectionNavStyle === 'compact' && sections.length > 0 ? (
                   <TaskSectionPanel
                     sections={sections}
                     onSelectSection={(sectionId) => {
                       dispatch({ type: 'FOCUS_PARENT_TASK_SECTION', sectionId })
                     }}
                   />
-                )}
+                ) : null}
                 <div className="flex-1 min-h-0 flex flex-col overflow-hidden">
                   <TaskContent />
                   <WizardFooter />

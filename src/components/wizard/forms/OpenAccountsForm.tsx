@@ -57,6 +57,7 @@ import {
   getRelevantOpenAccountsTask,
   isAnnuityExternalPlatformOpenAccountsTask,
 } from '@/utils/openAccountsTaskContext'
+import { useOpenAccountsTaskOverride } from '@/components/wizard/openAccountsVariantContext'
 import { mergeFeatureRequests } from '@/types/featureRequests'
 import { getEsignEnvelopeStatus, ESIGN_ENVELOPE_STATUS_LABELS } from '@/utils/esignEnvelopeStatus'
 import type { EsignEnvelopeHistoryEvent, EsignEnvelopeStatus, EsignSignerStatus } from '@/types/esignEnvelope'
@@ -211,8 +212,13 @@ function EnvelopeKebabMenu({
 
 export function OpenAccountsForm() {
   const { state, dispatch } = useWorkflow()
-  const openAccountsTask = getRelevantOpenAccountsTask(state)
+  const taskOverride = useOpenAccountsTaskOverride()
+  const openAccountsTask =
+    (taskOverride
+      ? state.tasks.find((t) => t.id === taskOverride.taskId)
+      : undefined) ?? getRelevantOpenAccountsTask(state)
   const openAccountsTaskId = openAccountsTask?.id ?? 'open-accounts'
+  const sectionId = (id: string) => (taskOverride?.idPrefix ? `${taskOverride.idPrefix}${id}` : id)
   const externalAnnuityPlatform = isAnnuityExternalPlatformOpenAccountsTask(openAccountsTask)
   const { data, updateField } = useTaskData(openAccountsTaskId)
   const [pickerOpen, setPickerOpen] = useState(false)
@@ -669,7 +675,7 @@ export function OpenAccountsForm() {
 
   return (
     <div className="space-y-12">
-      <section id="oa-accounts" className="scroll-mt-16">
+      <section id={sectionId('oa-accounts')} className="scroll-mt-16">
         <div className="mb-4">
           <h3 className="text-base font-semibold">
             Accounts
@@ -797,9 +803,9 @@ export function OpenAccountsForm() {
       </section>
 
       {externalAnnuityPlatform ? (
-        <section id="oa-netx360-next-steps" className="scroll-mt-16">
+        <section id={sectionId('oa-netx360-next-steps')} className="scroll-mt-16">
           <div className="mb-4">
-            <h3 className="text-base font-semibold">Next Steps in NetX360</h3>
+            <h3 className="text-base font-semibold">Next Steps for Annuities Accounts</h3>
             <p className="text-base text-muted-foreground mt-2">
               After account and owners are set for each annuity account below, use NetX360 for servicing steps that run
               outside this demo (funding, features, documents, KYC, and reviews).
@@ -811,7 +817,7 @@ export function OpenAccountsForm() {
 
       {/* Section 4: Supporting Documents */}
       {!externalAnnuityPlatform ? (
-      <section id="oa-documents" className="scroll-mt-16">
+      <section id={sectionId('oa-documents')} className="scroll-mt-16">
         <div className="mb-4">
           <h3 className="text-base font-semibold">
             Supporting Documents
@@ -928,7 +934,7 @@ export function OpenAccountsForm() {
 
       {/* KYC Verification — hidden on annuity path (KYC in external platform) */}
       {!externalAnnuityPlatform ? (
-      <section id="oa-kyc" className="scroll-mt-16">
+      <section id={sectionId('oa-kyc')} className="scroll-mt-16">
         <div className="mb-4">
           <h3 className="text-base font-semibold">KYC Verification</h3>
           <p className="text-base text-muted-foreground">
@@ -1170,7 +1176,7 @@ export function OpenAccountsForm() {
       {!externalAnnuityPlatform ? (
       <>
       {/* Envelopes */}
-      <section id="oa-esign" className="scroll-mt-16">
+      <section id={sectionId('oa-esign')} className="scroll-mt-16">
         <div className="mb-4">
           <h3 className="text-base font-semibold">Envelopes</h3>
           <p className="text-base text-muted-foreground mt-2">

@@ -77,7 +77,7 @@ export const taskSections: Partial<Record<string, Array<{ id: string; label: str
   ],
   'open-accounts-with-annuity': [
     { id: 'oa-accounts', label: 'Accounts' },
-    { id: 'oa-netx360-next-steps', label: 'Next Steps in NetX360' },
+    { id: 'oa-netx360-next-steps', label: 'Next Steps for Annuities Accounts' },
   ],
   'acct-child-account-owners': [
     { id: 'acct-owners', label: 'Owners & Participants' },

@@ -3,6 +3,12 @@ import { useWorkflow } from '@/stores/workflowStore'
 import { formComponents, taskDescriptions, taskSections } from './formRegistry'
 import { parseChildSubTaskId, getSubTaskDisplayTitle } from '@/utils/childTaskRegistry'
 import { Clock, AlertTriangle } from 'lucide-react'
+import { useOpenAccountsVariant } from './openAccountsVariantContext'
+import {
+  OPEN_ACCOUNTS_FORM_KEY,
+  OPEN_ACCOUNTS_WITH_ANNUITY_FORM_KEY,
+} from '@/utils/openAccountsTaskContext'
+import { OpenAccountsCombinedForm } from './forms/OpenAccountsCombinedForm'
 
 function ReviewBanner() {
   const { state } = useWorkflow()
@@ -54,6 +60,7 @@ function ReviewBanner() {
 
 export function TaskContent() {
   const { state, dispatch } = useWorkflow()
+  const variant = useOpenAccountsVariant()
 
   const activeTask = state.tasks.find((t) => t.id === state.activeTaskId)
   const activeChild = state.tasks
@@ -69,12 +76,25 @@ export function TaskContent() {
     : null
 
   const formKey = activeTask?.formKey ?? activeChild?.formKey ?? subTaskDef?.formKey
-  const title = activeTask?.title
-    ?? (subTaskChild && subTaskDef && parsed
-      ? `${subTaskChild.name} — ${getSubTaskDisplayTitle(parsed.config.childType, subTaskDef, state.demoViewMode)}`
-      : null)
-    ?? activeChild?.name
-    ?? ''
+
+  const isSplitJourney =
+    state.tasks.some((t) => t.formKey === OPEN_ACCOUNTS_FORM_KEY) &&
+    state.tasks.some((t) => t.formKey === OPEN_ACCOUNTS_WITH_ANNUITY_FORM_KEY)
+  const showCombinedOpenAccounts =
+    variant === 'v2' &&
+    isSplitJourney &&
+    !!activeTask &&
+    (activeTask.formKey === OPEN_ACCOUNTS_FORM_KEY ||
+      activeTask.formKey === OPEN_ACCOUNTS_WITH_ANNUITY_FORM_KEY)
+
+  const title = showCombinedOpenAccounts
+    ? 'Open Accounts'
+    : activeTask?.title
+      ?? (subTaskChild && subTaskDef && parsed
+        ? `${subTaskChild.name} — ${getSubTaskDisplayTitle(parsed.config.childType, subTaskDef, state.demoViewMode)}`
+        : null)
+      ?? activeChild?.name
+      ?? ''
 
   const FormComponent = formKey ? formComponents[formKey] : null
   const hasExplicitSections = Boolean(formKey && taskSections[formKey]?.length)
@@ -104,15 +124,26 @@ export function TaskContent() {
       <div className="max-w-[52.5rem] mx-auto">
         <ReviewBanner />
         <h2 className="text-3xl font-semibold text-foreground mb-2">{title}</h2>
-        {formKey && taskDescriptions[formKey] && (
+        {showCombinedOpenAccounts ? (
+          <p className="text-base text-muted-foreground mb-6">
+            Set up new accounts across both flows. The annuity path hands off to NetX360, while
+            the standard path stays in this app for KYC, supporting documents, and eSign.
+          </p>
+        ) : formKey && taskDescriptions[formKey] ? (
           <p className="text-base text-muted-foreground mb-6">{taskDescriptions[formKey]}</p>
-        )}
-        {!hasExplicitSections ? (
+        ) : null}
+        {showCombinedOpenAccounts ? null : !hasExplicitSections ? (
           <section id="__top__" className="space-y-1.5 scroll-mt-16 mb-6">
             <h3 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">Overview</h3>
           </section>
         ) : null}
-        {FormComponent ? <FormComponent /> : <p className="text-muted-foreground">No form available.</p>}
+        {showCombinedOpenAccounts ? (
+          <OpenAccountsCombinedForm />
+        ) : FormComponent ? (
+          <FormComponent />
+        ) : (
+          <p className="text-muted-foreground">No form available.</p>
+        )}
       </div>
     </main>
   )

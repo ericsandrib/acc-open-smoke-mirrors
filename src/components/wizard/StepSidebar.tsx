@@ -1,11 +1,21 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useWorkflow } from '@/stores/workflowStore'
-import type { TaskStatus, Task, WorkflowState } from '@/types/workflow'
+import type { Action, TaskStatus, Task, WorkflowState } from '@/types/workflow'
 import { cn } from '@/lib/utils'
 import { parseChildSubTaskId } from '@/utils/childTaskRegistry'
-import { isOpenAccountsFormKey } from '@/utils/openAccountsTaskContext'
+import {
+  isOpenAccountsFormKey,
+  OPEN_ACCOUNTS_FORM_KEY,
+  OPEN_ACCOUNTS_WITH_ANNUITY_FORM_KEY,
+} from '@/utils/openAccountsTaskContext'
 import { taskSections } from '@/components/wizard/formRegistry'
 import { useTheme } from '@/stores/themeStore'
+import {
+  useCombinedSectionFocus,
+  useOpenAccountsVariant,
+} from '@/components/wizard/openAccountsVariantContext'
+import { combinedOpenAccountsSections } from '@/components/wizard/combinedOpenAccountsSections'
+import { ChevronRight } from 'lucide-react'
 import { Circle, Loader, CheckCircle2, Ban, Clock, XCircle, Check } from 'lucide-react'
 import {
   Tooltip,
@@ -191,15 +201,140 @@ function TaskProgressIndicator({
   )
 }
 
+type DisplayTaskNode = {
+  /** Task id used to look up state.activeTaskId / dispatch SET_ACTIVE_TASK. */
+  id: string
+  label: string
+  /** Underlying task ids that this display node represents (1:1 in default/v1, both in v2). */
+  underlyingTaskIds: string[]
+}
+
+type DisplayActionNode = {
+  id: string
+  title: string
+  tasks: DisplayTaskNode[]
+}
+
+/**
+ * Build the action/task display structure honoring the demo Account Opening variant.
+ *
+ * - In a non-split journey (no `account-opening-annuity` action) the structure is unchanged.
+ * - In v1 split: merge the two account-opening actions into a single "Account Opening" group,
+ *   and rename each open-accounts task to clarify the annuity vs. no-annuity flow.
+ * - In v2 split: collapse the two open-accounts tasks into a single virtual "Open Accounts"
+ *   task; clicks set the active task to the no-annuity underlying task (the combined-form
+ *   wrapper renders both flows in accordions).
+ */
+function buildDisplayActions(state: WorkflowState, variant: 'v1' | 'v2'): DisplayActionNode[] {
+  const visibleActions = state.actions
+    .filter((a) => a.id !== 'kyc')
+    .sort((a, b) => a.order - b.order)
+  const visibleTasks = (action: Action) =>
+    state.tasks
+      .filter((t) => t.actionId === action.id && t.formKey !== 'kyc' && t.id !== 'kyc-review')
+      .sort((a, b) => a.order - b.order)
+
+  const noAnnuityAction = visibleActions.find((a) => a.id === 'account-opening')
+  const withAnnuityAction = visibleActions.find((a) => a.id === 'account-opening-annuity')
+  const isSplit = !!(noAnnuityAction && withAnnuityAction)
+
+  if (!isSplit) {
+    return visibleActions.map((action) => ({
+      id: action.id,
+      title: action.title,
+      tasks: visibleTasks(action).map((t) => ({
+        id: t.id,
+        label: t.title,
+        underlyingTaskIds: [t.id],
+      })),
+    }))
+  }
+
+  const otherActions = visibleActions.filter(
+    (a) => a.id !== 'account-opening' && a.id !== 'account-opening-annuity',
+  )
+
+  const noAnnuityTasks = visibleTasks(noAnnuityAction)
+  const withAnnuityTasks = visibleTasks(withAnnuityAction)
+
+  const accountOpeningGroup: DisplayActionNode = {
+    id: 'account-opening',
+    title: 'Account Opening',
+    tasks: [],
+  }
+
+  if (variant === 'v1') {
+    for (const t of noAnnuityTasks) {
+      accountOpeningGroup.tasks.push({
+        id: t.id,
+        label: 'Open Accounts (No Annuity)',
+        underlyingTaskIds: [t.id],
+      })
+    }
+    for (const t of withAnnuityTasks) {
+      accountOpeningGroup.tasks.push({
+        id: t.id,
+        label: 'Open Accounts (With Annuity)',
+        underlyingTaskIds: [t.id],
+      })
+    }
+  } else {
+    const noAnnuity = noAnnuityTasks[0]
+    const withAnnuity = withAnnuityTasks[0]
+    if (noAnnuity || withAnnuity) {
+      const underlying: string[] = []
+      if (noAnnuity) underlying.push(noAnnuity.id)
+      if (withAnnuity) underlying.push(withAnnuity.id)
+      accountOpeningGroup.tasks.push({
+        id: noAnnuity?.id ?? withAnnuity!.id,
+        label: 'Open Accounts',
+        underlyingTaskIds: underlying,
+      })
+    }
+  }
+
+  const result: DisplayActionNode[] = []
+  let inserted = false
+  for (const action of otherActions) {
+    if (
+      !inserted &&
+      action.order > Math.min(noAnnuityAction.order, withAnnuityAction.order)
+    ) {
+      result.push(accountOpeningGroup)
+      inserted = true
+    }
+    result.push({
+      id: action.id,
+      title: action.title,
+      tasks: visibleTasks(action).map((t) => ({
+        id: t.id,
+        label: t.title,
+        underlyingTaskIds: [t.id],
+      })),
+    })
+  }
+  if (!inserted) result.push(accountOpeningGroup)
+  return result
+}
+
 export function StepSidebar() {
   const { state, dispatch } = useWorkflow()
   const { taskSectionNavStyle } = useTheme()
+  const variant = useOpenAccountsVariant()
+  const { requestFocus } = useCombinedSectionFocus()
   const [activeSectionId, setActiveSectionId] = useState<string | null>(null)
 
   const activeTopLevelTask = useMemo(
     () => state.tasks.find((t) => t.id === state.activeTaskId),
     [state.tasks, state.activeTaskId],
   )
+  const isV2CombinedActive =
+    variant === 'v2' &&
+    !!activeTopLevelTask &&
+    (activeTopLevelTask.formKey === OPEN_ACCOUNTS_FORM_KEY ||
+      activeTopLevelTask.formKey === OPEN_ACCOUNTS_WITH_ANNUITY_FORM_KEY) &&
+    state.tasks.some((t) => t.formKey === OPEN_ACCOUNTS_FORM_KEY) &&
+    state.tasks.some((t) => t.formKey === OPEN_ACCOUNTS_WITH_ANNUITY_FORM_KEY)
   const activeSections = useMemo(
     () => (activeTopLevelTask ? taskSections[activeTopLevelTask.formKey] ?? DEFAULT_TASK_SECTIONS : DEFAULT_TASK_SECTIONS),
     [activeTopLevelTask],
@@ -209,6 +344,11 @@ export function StepSidebar() {
     setActiveSectionId(activeSections[0]?.id ?? null)
   }, [state.activeTaskId, activeSections])
 
+  const displayActions = useMemo(
+    () => buildDisplayActions(state, variant),
+    [state, variant],
+  )
+
   return (
     <TooltipProvider delayDuration={300}>
       <nav className="w-64 border-r border-border bg-sidebar-background p-2 overflow-y-auto">
@@ -217,87 +357,128 @@ export function StepSidebar() {
             {state.journeyName ?? 'Client Onboarding'}
           </h2>
         </div>
-        {state.actions
-          .filter((action) => action.id !== 'kyc')
-          .sort((a, b) => a.order - b.order)
-          .map((action) => {
-            const actionTasks = state.tasks
-              .filter((t) => t.actionId === action.id && t.formKey !== 'kyc' && t.id !== 'kyc-review')
-              .sort((a, b) => a.order - b.order)
-
-            return (
-              <div key={action.id} className="mb-5">
-                <div className="mb-1.5 px-3">
-                  <h3 className="text-[12px] font-medium tracking-wide uppercase text-muted-foreground/70">
-                    {action.title}
-                  </h3>
-                </div>
-                <ul className="space-y-1">
-                  {actionTasks.map((task) => {
-                    const progress = getTaskFieldProgress(state, task)
-                    const pct = progress.total > 0 ? progress.filled / progress.total : 0
-                    const isActiveTask =
-                      state.activeTaskId === task.id ||
-                      (task.children?.some((c) => {
-                        if (c.id === state.activeTaskId) return true
-                        const parsed = parseChildSubTaskId(state.activeTaskId)
-                        return parsed ? c.id === parsed.childId : false
-                      }) ?? false)
-                    return (
-                      <li key={task.id}>
-                        <button
-                          onClick={() => dispatch({ type: 'SET_ACTIVE_TASK', taskId: task.id })}
-                          aria-current={isActiveTask ? 'page' : undefined}
-                          className={cn(
-                            'w-full text-left px-3 py-2.5 rounded-lg text-[13px] font-medium flex items-center justify-between gap-2 transition-colors border border-transparent',
-                            isActiveTask
-                              ? 'bg-accent/60 text-foreground border-border'
-                              : 'hover:bg-muted/50 text-foreground'
-                          )}
-                        >
-                          <span
-                            className={cn(
-                              'truncate min-w-0',
-                              isActiveTask ? 'font-semibold border-l-2 border-foreground/50 pl-2 -ml-2' : '',
-                            )}
-                          >
-                            {getTaskNavLabel(task.title)}
-                          </span>
-                          <TaskProgressIndicator
-                            progress={pct}
-                          />
-                        </button>
-                        {taskSectionNavStyle === 'nested' && isActiveTask && activeSections.length > 0 ? (
-                          <ul className="mt-1.5 ml-4 space-y-1.5 border-l border-border/80 pl-2.5">
-                            {activeSections.map((section) => (
-                              <li key={section.id}>
-                                <button
-                                  type="button"
-                                  onClick={() => {
-                                    setActiveSectionId(section.id)
-                                    dispatch({ type: 'FOCUS_PARENT_TASK_SECTION', sectionId: section.id })
-                                  }}
-                                  aria-current={activeSectionId === section.id ? 'page' : undefined}
-                                  className={cn(
-                                    'w-full text-left px-2.5 py-1.5 text-[12px] rounded-md transition-colors',
-                                    activeSectionId === section.id
-                                      ? 'bg-muted text-foreground font-semibold'
-                                      : 'cursor-pointer text-foreground/85 hover:text-foreground hover:bg-muted/60',
-                                  )}
-                                >
-                                  {section.label}
-                                </button>
-                              </li>
-                            ))}
-                          </ul>
-                        ) : null}
-                      </li>
-                    )
-                  })}
-                </ul>
-              </div>
-            )
-          })}
+        {displayActions.map((action) => (
+          <div key={action.id} className="mb-5">
+            <div className="mb-1.5 px-3">
+              <h3 className="text-[12px] font-medium tracking-wide uppercase text-muted-foreground/70">
+                {action.title}
+              </h3>
+            </div>
+            <ul className="space-y-1">
+              {action.tasks.map((displayTask) => {
+                const underlyingTasks = displayTask.underlyingTaskIds
+                  .map((id) => state.tasks.find((t) => t.id === id))
+                  .filter((t): t is Task => Boolean(t))
+                const progressTotals = underlyingTasks
+                  .map((t) => getTaskFieldProgress(state, t))
+                  .reduce(
+                    (acc, p) => ({ filled: acc.filled + p.filled, total: acc.total + p.total }),
+                    { filled: 0, total: 0 },
+                  )
+                const pct =
+                  progressTotals.total > 0 ? progressTotals.filled / progressTotals.total : 0
+                const isActiveTask =
+                  underlyingTasks.some((t) => state.activeTaskId === t.id) ||
+                  underlyingTasks.some((t) =>
+                    (t.children ?? []).some((c) => {
+                      if (c.id === state.activeTaskId) return true
+                      const parsed = parseChildSubTaskId(state.activeTaskId)
+                      return parsed ? c.id === parsed.childId : false
+                    }),
+                  )
+                const sections = (() => {
+                  const formKey = underlyingTasks[0]?.formKey
+                  if (!formKey) return DEFAULT_TASK_SECTIONS
+                  return taskSections[formKey] ?? DEFAULT_TASK_SECTIONS
+                })()
+                return (
+                  <li key={displayTask.id}>
+                    <button
+                      onClick={() => dispatch({ type: 'SET_ACTIVE_TASK', taskId: displayTask.id })}
+                      aria-current={isActiveTask ? 'page' : undefined}
+                      className={cn(
+                        'w-full text-left px-3 py-2.5 rounded-lg text-[13px] font-medium flex items-center justify-between gap-2 transition-colors border border-transparent',
+                        isActiveTask
+                          ? 'bg-accent/60 text-foreground border-border'
+                          : 'hover:bg-muted/50 text-foreground',
+                      )}
+                    >
+                      <span
+                        className={cn(
+                          'truncate min-w-0',
+                          isActiveTask ? 'font-semibold border-l-2 border-foreground/50 pl-2 -ml-2' : '',
+                        )}
+                      >
+                        {getTaskNavLabel(displayTask.label)}
+                      </span>
+                      <TaskProgressIndicator progress={pct} />
+                    </button>
+                    {taskSectionNavStyle === 'nested' && isActiveTask && isV2CombinedActive ? (
+                      <ul className="mt-1.5 ml-4 space-y-2 border-l border-border/80 pl-2.5">
+                        {combinedOpenAccountsSections.map((group) => (
+                          <li key={group.key} className="space-y-1">
+                            <div className="flex items-center gap-1.5 px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground/80">
+                              <ChevronRight className="h-3 w-3" />
+                              <span className="truncate">{group.label}</span>
+                            </div>
+                            <ul className="ml-3 space-y-1 border-l border-border/60 pl-2.5">
+                              {group.sections.map((section) => {
+                                const compositeId = `${group.key}::${section.id}`
+                                return (
+                                  <li key={compositeId}>
+                                    <button
+                                      type="button"
+                                      onClick={() => {
+                                        setActiveSectionId(compositeId)
+                                        requestFocus(group.key, section.id)
+                                      }}
+                                      aria-current={activeSectionId === compositeId ? 'page' : undefined}
+                                      className={cn(
+                                        'w-full text-left px-2.5 py-1.5 text-[12px] rounded-md transition-colors',
+                                        activeSectionId === compositeId
+                                          ? 'bg-muted text-foreground font-semibold'
+                                          : 'cursor-pointer text-foreground/85 hover:text-foreground hover:bg-muted/60',
+                                      )}
+                                    >
+                                      {section.label}
+                                    </button>
+                                  </li>
+                                )
+                              })}
+                            </ul>
+                          </li>
+                        ))}
+                      </ul>
+                    ) : taskSectionNavStyle === 'nested' && isActiveTask && sections.length > 0 ? (
+                      <ul className="mt-1.5 ml-4 space-y-1.5 border-l border-border/80 pl-2.5">
+                        {sections.map((section) => (
+                          <li key={section.id}>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setActiveSectionId(section.id)
+                                dispatch({ type: 'FOCUS_PARENT_TASK_SECTION', sectionId: section.id })
+                              }}
+                              aria-current={activeSectionId === section.id ? 'page' : undefined}
+                              className={cn(
+                                'w-full text-left px-2.5 py-1.5 text-[12px] rounded-md transition-colors',
+                                activeSectionId === section.id
+                                  ? 'bg-muted text-foreground font-semibold'
+                                  : 'cursor-pointer text-foreground/85 hover:text-foreground hover:bg-muted/60',
+                              )}
+                            >
+                              {section.label}
+                            </button>
+                          </li>
+                        ))}
+                      </ul>
+                    ) : null}
+                  </li>
+                )
+              })}
+            </ul>
+          </div>
+        ))}
       </nav>
     </TooltipProvider>
   )
