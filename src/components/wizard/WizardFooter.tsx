@@ -113,10 +113,13 @@ export function WizardFooter() {
     accountOpeningChildren.every((c) =>
       c.status === 'complete' || c.status === 'canceled',
     )
-  const showsOpenAccountsSubmit = isOnOpenAccountsTask && !allAccountChildrenTerminal
-  const openAccountsSubmitLabel = isAnnuityOpenAccountsTask
-    ? 'Submit to NetX360'
-    : 'Submit for Review'
+  // Annuity Open Accounts submission lives in-page (Netx360HandoffSection); the footer
+  // only handles Next/Complete for that task.
+  const showsOpenAccountsSubmit =
+    isOnOpenAccountsTask && !isAnnuityOpenAccountsTask && !allAccountChildrenTerminal
+  const showsAnnuityComplete =
+    isOnOpenAccountsTask && isAnnuityOpenAccountsTask && allAccountChildrenTerminal
+  const openAccountsSubmitLabel = 'Submit for Review'
 
   return (
     <>
@@ -157,7 +160,7 @@ export function WizardFooter() {
             <span className="text-sm text-muted-foreground">Assigned to compliance</span>
           )}
 
-          {isLast || showsOpenAccountsSubmit ? (
+          {isLast || showsOpenAccountsSubmit || showsAnnuityComplete ? (
             <Button
               onClick={() => {
                 setCompleteAccountOpeningWarnings([])

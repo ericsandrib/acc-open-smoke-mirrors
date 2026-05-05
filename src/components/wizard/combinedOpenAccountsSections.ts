@@ -33,7 +33,8 @@ export const combinedOpenAccountsSections: CombinedAccordionSectionGroup[] = [
     label: 'Annuity Accounts',
     sections: [
       { id: 'oa-accounts', label: 'Accounts' },
-      { id: 'oa-netx360-next-steps', label: 'Continue the account opening' },
+      { id: 'oa-netx360-next-steps', label: 'Continue the rest of the account opening' },
+      { id: 'oa-netx360-submit', label: 'Submit to NetX360' },
     ],
   },
 ]

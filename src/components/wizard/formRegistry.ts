@@ -57,7 +57,9 @@ export const taskDescriptions: Partial<Record<string, string>> = {
     'Finalize account documentation and collect required client documents',
 }
 
-export const taskSections: Partial<Record<string, Array<{ id: string; label: string }>>> = {
+export type TaskSection = { id: string; label: string; children?: Array<{ id: string; label: string }> }
+
+export const taskSections: Partial<Record<string, Array<TaskSection>>> = {
   'related-parties': [
     { id: 'rcd-household', label: 'Household' },
     { id: 'rcd-related-individuals', label: 'Related Individuals' },
@@ -70,14 +72,28 @@ export const taskSections: Partial<Record<string, Array<{ id: string; label: str
     { id: 'ea-additional-instructions', label: 'Additional Instructions' },
   ],
   'open-accounts': [
-    { id: 'oa-accounts', label: 'Accounts' },
-    { id: 'oa-documents', label: 'Supporting Documents' },
-    { id: 'oa-kyc', label: 'KYC Verification' },
+    {
+      id: 'oa-instructions-group',
+      label: 'Account instructions',
+      children: [
+        { id: 'oa-accounts', label: 'Accounts' },
+        { id: 'oa-documents', label: 'Supporting Documents' },
+      ],
+    },
+    {
+      id: 'oa-kyc',
+      label: 'KYC Verification',
+      children: [
+        { id: 'oa-kyc-owners', label: 'Account Owners' },
+        { id: 'oa-kyc-cases', label: 'KYC Cases' },
+      ],
+    },
     { id: 'oa-esign', label: 'Envelopes' },
   ],
   'open-accounts-with-annuity': [
     { id: 'oa-accounts', label: 'Accounts' },
-    { id: 'oa-netx360-next-steps', label: 'Continue the account opening' },
+    { id: 'oa-netx360-next-steps', label: 'Continue the rest of the account opening' },
+    { id: 'oa-netx360-submit', label: 'Submit to NetX360' },
   ],
   'acct-child-account-owners': [
     { id: 'acct-owners', label: 'Owners & Participants' },

@@ -2,7 +2,24 @@ import { StepSidebar } from './StepSidebar'
 import { TaskContent } from './TaskContent'
 import { DetailSidebar } from './DetailSidebar'
 import { TaskSectionPanel } from './TaskSectionPanel'
-import { taskSections } from './formRegistry'
+import { taskSections, type TaskSection } from './formRegistry'
+
+/**
+ * Convert nested TaskSection[] to TaskSectionPanel `groups` shape.
+ * - Sections with children → group with that label + child sections (popover renders label + indented children).
+ * - Sections without children → standalone "group" with empty label + a self-section
+ *   (popover skips the header, dot bar still gets one dot).
+ * Returns `null` if the sections are entirely flat — caller can use the legacy `sections` prop.
+ */
+function toSectionGroups(sections: TaskSection[]): Array<{ key: string; label: string; sections: { id: string; label: string }[] }> | null {
+  const hasNested = sections.some((s) => s.children?.length)
+  if (!hasNested) return null
+  return sections.map((s) =>
+    s.children?.length
+      ? { key: s.id, label: s.label, sections: s.children }
+      : { key: s.id, label: '', sections: [{ id: s.id, label: s.label }] },
+  )
+}
 import { WizardFooter } from './WizardFooter'
 import { HomeOfficeReviewFooter } from './HomeOfficeReviewFooter'
 import { AmlReviewFooter } from './AmlReviewFooter'
@@ -1008,12 +1025,26 @@ function WizardLayoutInner() {
                 {taskSectionNavStyle === 'compact' && showCombinedScrollspy ? (
                   <CombinedSectionPanel />
                 ) : taskSectionNavStyle === 'compact' && sections.length > 0 ? (
-                  <TaskSectionPanel
-                    sections={sections}
-                    onSelectSection={(sectionId) => {
-                      dispatch({ type: 'FOCUS_PARENT_TASK_SECTION', sectionId })
-                    }}
-                  />
+                  (() => {
+                    const groups = toSectionGroups(sections)
+                    return groups ? (
+                      <TaskSectionPanel
+                        sections={[]}
+                        onSelectSection={() => {}}
+                        groups={groups}
+                        onSelectGroupSection={(_groupKey, sectionId) => {
+                          dispatch({ type: 'FOCUS_PARENT_TASK_SECTION', sectionId })
+                        }}
+                      />
+                    ) : (
+                      <TaskSectionPanel
+                        sections={sections.map((s) => ({ id: s.id, label: s.label }))}
+                        onSelectSection={(sectionId) => {
+                          dispatch({ type: 'FOCUS_PARENT_TASK_SECTION', sectionId })
+                        }}
+                      />
+                    )
+                  })()
                 ) : null}
                 <div className="flex-1 min-h-0 flex flex-col overflow-hidden">
                   <TaskContent />

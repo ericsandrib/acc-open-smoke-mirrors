@@ -7,8 +7,6 @@ import {
   AccordionContent,
 } from '@/components/ui/accordion'
 import { Badge } from '@/components/ui/badge'
-import { Button } from '@/components/ui/button'
-import { Send } from 'lucide-react'
 import { OpenAccountsForm } from './OpenAccountsForm'
 import {
   OpenAccountsTaskOverrideProvider,
@@ -19,8 +17,6 @@ import {
   OPEN_ACCOUNTS_FORM_KEY,
   OPEN_ACCOUNTS_WITH_ANNUITY_FORM_KEY,
 } from '@/utils/openAccountsTaskContext'
-import { getAccountOpeningChildSubmissionIssues } from '@/utils/accountOpeningChildProgress'
-import { cn } from '@/lib/utils'
 
 export const COMBINED_ACCORDION_PREFIX: Record<CombinedAccordionKey, string> = {
   'no-annuity': 'noann-',
@@ -33,7 +29,7 @@ export const COMBINED_ACCORDION_PREFIX: Record<CombinedAccordionKey, string> = {
  * shared `OpenAccountsForm` binds to its own underlying task.
  */
 export function OpenAccountsCombinedForm() {
-  const { state, dispatch } = useWorkflow()
+  const { state } = useWorkflow()
   const { pendingFocus, consumeFocus } = useCombinedSectionFocus()
   const [openAccordions, setOpenAccordions] = useState<string[]>([])
 
@@ -45,11 +41,6 @@ export function OpenAccountsCombinedForm() {
     () => state.tasks.find((t) => t.formKey === OPEN_ACCOUNTS_WITH_ANNUITY_FORM_KEY),
     [state.tasks],
   )
-
-  const annuityChildren = useMemo(() => {
-    if (!withAnnuityTask) return []
-    return (withAnnuityTask.children ?? []).filter((c) => c.childType === 'account-opening')
-  }, [withAnnuityTask])
 
   // When the sidebar requests focus, expand the matching accordion and scroll to its inner
   // section after the next paint. Use a short delay so Radix Accordion has time to render
@@ -70,24 +61,6 @@ export function OpenAccountsCombinedForm() {
     }, 220)
     return () => window.clearTimeout(handle)
   }, [pendingFocus, consumeFocus])
-
-  const submitToNetX360 = () => {
-    if (!withAnnuityTask) return
-    for (const child of annuityChildren) {
-      if (child.status === 'awaiting_review' || child.status === 'complete') continue
-      const issues = getAccountOpeningChildSubmissionIssues(state, child.id)
-      if (issues.length > 0) continue
-      dispatch({ type: 'ENTER_CHILD_ACTION', childId: child.id })
-      dispatch({ type: 'SUBMIT_CHILD_FOR_REVIEW' })
-      dispatch({ type: 'EXIT_CHILD_ACTION' })
-    }
-  }
-
-  const annuityCount = annuityChildren.length
-  const annuityReadyCount = annuityChildren.filter(
-    (c) => getAccountOpeningChildSubmissionIssues(state, c.id).length === 0,
-  ).length
-  const submitDisabled = annuityCount === 0 || annuityReadyCount === 0
 
   return (
     <Accordion
@@ -145,27 +118,6 @@ export function OpenAccountsCombinedForm() {
             >
               <OpenAccountsForm />
             </OpenAccountsTaskOverrideProvider>
-            <div className="mt-8 flex flex-col gap-3 rounded-lg border border-border bg-muted/30 p-4 sm:flex-row sm:items-center sm:justify-between">
-              <div className="space-y-0.5">
-                <p className="text-sm font-semibold text-foreground">Submit to NetX360</p>
-                <p className="text-xs text-muted-foreground">
-                  {annuityCount === 0
-                    ? 'Add at least one annuity account above before submitting to NetX360.'
-                    : `${annuityReadyCount} of ${annuityCount} annuity ${
-                        annuityCount === 1 ? 'account' : 'accounts'
-                      } ready to submit.`}
-                </p>
-              </div>
-              <Button
-                type="button"
-                onClick={submitToNetX360}
-                disabled={submitDisabled}
-                className={cn('gap-1.5 self-start sm:self-auto')}
-              >
-                <Send className="h-4 w-4" />
-                Submit to NetX360
-              </Button>
-            </div>
           </AccordionContent>
         </AccordionItem>
       ) : null}

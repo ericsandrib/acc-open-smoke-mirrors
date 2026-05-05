@@ -62,7 +62,7 @@ import { mergeFeatureRequests } from '@/types/featureRequests'
 import { getEsignEnvelopeStatus, ESIGN_ENVELOPE_STATUS_LABELS } from '@/utils/esignEnvelopeStatus'
 import type { EsignEnvelopeHistoryEvent, EsignEnvelopeStatus, EsignSignerStatus } from '@/types/esignEnvelope'
 import { CompleteAccountOpeningConfirmModal } from '@/components/wizard/WizardFooter'
-import { Netx360HandoffSection } from './Netx360HandoffSection'
+import { Netx360HandoffSection, Netx360SubmitSection } from './Netx360HandoffSection'
 import { DocumentUploadInstancesTable } from './DocumentUploadInstancesTable'
 import {
   Dialog,
@@ -675,6 +675,11 @@ export function OpenAccountsForm() {
 
   return (
     <div className="space-y-12">
+      {!externalAnnuityPlatform ? (
+        <h2 id={sectionId('oa-instructions-group')} className="text-xl font-semibold scroll-mt-16">
+          Account instructions
+        </h2>
+      ) : null}
       <section id={sectionId('oa-accounts')} className="scroll-mt-16">
         <div className="mb-4">
           <h3 className="text-base font-semibold">
@@ -803,15 +808,23 @@ export function OpenAccountsForm() {
       </section>
 
       {externalAnnuityPlatform ? (
-        <section id={sectionId('oa-netx360-next-steps')} className="scroll-mt-16">
-          <div className="mb-4">
-            <h3 className="text-base font-semibold">Continue the account opening</h3>
-            <p className="text-base text-muted-foreground mt-2">
-              Set the account and owners for each annuity below.
-            </p>
-          </div>
-          <Netx360HandoffSection />
-        </section>
+        <>
+          <section id={sectionId('oa-netx360-next-steps')} className="scroll-mt-16">
+            <div className="mb-4">
+              <h3 className="text-base font-semibold">Continue the rest of the account opening</h3>
+              <p className="text-base text-muted-foreground mt-2">
+                Set the account and owners here. NetX360 picks up funding, signatures, KYC, and reviews.
+              </p>
+            </div>
+            <Netx360HandoffSection />
+          </section>
+          <section id={sectionId('oa-netx360-submit')} className="scroll-mt-16">
+            <div className="mb-4">
+              <h3 className="text-base font-semibold">Submit to NetX360</h3>
+            </div>
+            <Netx360SubmitSection taskId={openAccountsTaskId} />
+          </section>
+        </>
       ) : null}
 
       {/* Section 4: Supporting Documents */}
@@ -931,20 +944,25 @@ export function OpenAccountsForm() {
       </section>
       ) : null}
 
-      {/* KYC Verification — hidden on annuity path (KYC in external platform) */}
       {!externalAnnuityPlatform ? (
-      <section id={sectionId('oa-kyc')} className="scroll-mt-16">
-        <div className="mb-4">
-          <h3 className="text-base font-semibold">KYC Verification</h3>
-          <p className="text-base text-muted-foreground">
+        <hr className="border-t border-border" />
+      ) : null}
+
+      {/* KYC Verification H2 group — KYC sections hidden on annuity path */}
+      {!externalAnnuityPlatform ? (
+        <div id={sectionId('oa-kyc')} className="scroll-mt-16">
+          <h2 className="text-xl font-semibold">KYC Verification</h2>
+          <p className="text-base text-muted-foreground mt-2">
             Complete identity verification (KYC/KYB) before accounts can be opened. For trust accounts, include trustees
             and beneficial owners.
           </p>
         </div>
-
-        <div className="mb-3">
-          <h4 className="text-sm font-semibold text-foreground">Account Owners</h4>
-          <p className="text-sm text-muted-foreground mt-1">
+      ) : null}
+      {!externalAnnuityPlatform ? (
+      <section id={sectionId('oa-kyc-owners')} className="scroll-mt-16">
+        <div className="mb-4">
+          <h3 className="text-base font-semibold">Account Owners</h3>
+          <p className="text-base text-muted-foreground mt-2">
             Add all individuals who require identity verification.
           </p>
         </div>
@@ -1058,13 +1076,19 @@ export function OpenAccountsForm() {
           </div>
         )}
 
-        <div className="mt-6">
-          <div className="mb-3">
-            <h4 className="text-sm font-semibold text-foreground">KYC Cases</h4>
-            <p className="text-sm text-muted-foreground mt-1">
-              Each row represents a KYC case. Open a case to complete and submit it for review.
-            </p>
-          </div>
+      </section>
+      ) : null}
+
+      {/* KYC Cases — promoted from H4 sub-section under KYC Verification to its own H3 section */}
+      {!externalAnnuityPlatform ? (
+      <section id={sectionId('oa-kyc-cases')} className="scroll-mt-16">
+        <div className="mb-4">
+          <h3 className="text-base font-semibold">KYC Cases</h3>
+          <p className="text-base text-muted-foreground mt-2">
+            Each row represents a KYC case. Open a case to complete and submit it for review.
+          </p>
+        </div>
+        <div>
           <div className="rounded-lg border border-border p-1">
           {kycChildren.map((child) => (
             <div
@@ -1174,10 +1198,11 @@ export function OpenAccountsForm() {
 
       {!externalAnnuityPlatform ? (
       <>
-      {/* Envelopes */}
+      <hr className="border-t border-border" />
+      {/* Envelopes — H2 (no inner H3 child) */}
       <section id={sectionId('oa-esign')} className="scroll-mt-16">
         <div className="mb-4">
-          <h3 className="text-base font-semibold">Envelopes</h3>
+          <h2 className="text-xl font-semibold">Envelopes</h2>
           <p className="text-base text-muted-foreground mt-2">
             Create eSign envelopes for client signatures. Required firm and custodian forms are automatically grouped by
             account. If delivery is set to in person or mail, those forms become wet-signed and must be uploaded below.
@@ -1194,10 +1219,7 @@ export function OpenAccountsForm() {
         {esignEnvelopes.length === 0 ? (
           <div className="rounded-lg border border-dashed border-border p-6 text-center">
             <FileSignature className="mx-auto mb-2 h-8 w-8 text-muted-foreground/50" />
-            <p className="text-sm font-medium text-muted-foreground mb-1">No envelopes created yet.</p>
-            <p className="text-sm text-muted-foreground mb-4 max-w-md mx-auto">
-              Select delivery method, template, and forms to include.
-            </p>
+            <p className="text-sm font-medium text-muted-foreground mb-4">No envelopes created yet.</p>
             <Button type="button" onClick={openNewEnvelopeDrawer}>
               <Plus className="h-4 w-4 mr-2" />
               New envelope

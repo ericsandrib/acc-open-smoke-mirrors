@@ -255,6 +255,76 @@ Substantive findings against the rubric — none data-loss or task-blocking, but
 - **Principle:** Jenga — keep removing until functionality breaks. The button alone says everything the section subtitle hasn't already said.
 - **Reference:** Shopify — Jenga; Intuit — write small.
 
+### F21 — [MEDIUM] H2 grouping for the standard Open Accounts form + indented scrollspy
+- **Status:** ✅ Applied — structural change. Visual H2 groups land in the page; scrollspy renders the H3 children indented under each H2.
+- **Location:**
+  - `src/components/wizard/formRegistry.ts` — `TaskSection` type now allows optional `children`; `'open-accounts'` data restructured.
+  - `src/components/wizard/forms/OpenAccountsForm.tsx` — H2 anchors inserted; `Account Owners` promoted from H4 to H3 in its own section; `KYC Cases` moved out of `KYC Verification` section into its own H3 section; `Envelopes` H3 → H2 (no inner H3 child).
+  - `src/components/wizard/TaskSectionPanel.tsx` — `groups` rendering supports empty-label groups (popover skips the header, button gets reduced left padding).
+  - `src/components/wizard/WizardLayout.tsx` — `toSectionGroups()` helper transforms nested `TaskSection[]` into the `groups` shape; parent-task scrollspy call site dispatches via `FOCUS_PARENT_TASK_SECTION` regardless of whether the group is real or synthesized.
+  - `src/components/wizard/StepSidebar.tsx` — nested mode (`taskSectionNavStyle === 'nested'`) renders nested children with chevron + uppercase group label and indented child buttons (mirrors the existing v2 combined-form pattern).
+- **Flow:** Standard Open Accounts task — both v1 (the dedicated task) and v2 (the no-annuity accordion's nested form). Annuity stays flat per Nick's directive.
+- **Component Type:** Page heading hierarchy + scrollspy nav.
+- **Issue:** Standard form was a flat list of H3 sections (`Accounts`, `Supporting Documents`, `KYC Verification` with embedded H4 Account Owners + KYC Cases, `Envelopes`). No visual grouping; scrollspy was flat. Per Nick: needs major H2 sections (`Account instructions`, `KYC Verification`, `Envelopes`) with the existing H3s nested underneath, and the scrollspy should indent based on h2/h3.
+- **Applied structure:**
+  - **Account instructions** (H2 anchor `#oa-instructions-group`)
+    - **Accounts** (H3, existing)
+    - **Supporting Documents** (H3, existing)
+  - **KYC Verification** (H2 anchor `#oa-kyc`, was H3) — group label inherits the existing `oa-kyc` ID; intro paragraph sits under the H2.
+    - **Account Owners** (H3 anchor `#oa-kyc-owners`, was H4 inside `KYC Verification`)
+    - **KYC Cases** (H3 anchor `#oa-kyc-cases`, was H4 inside `KYC Verification`)
+  - **Envelopes** (H2 inside `#oa-esign`, was H3) — no H3 child; standalone H2.
+- **Wording call:** Initial proposal had a separate "Know Your Customer" H2 above an unchanged "KYC Verification" H3. Nick caught it: "KYC Verification was already a group, grouping Account owners and KYC cases. We just needed to elevate 'KYC Verification'." Applied that correction (single H2 "KYC Verification" with the two H3 children) before logging.
+- **Principle:** Information architecture follows the user's mental model; scrollspy indentation reflects semantic hierarchy.
+- **Reference:** Apple — Purpose; NNG — info hierarchy; Mailchimp — consistency.
+
+### F22 — [LOW] Dividing lines between H2 groups
+- **Status:** ✅ Applied.
+- **Location:** `src/components/wizard/forms/OpenAccountsForm.tsx` — `<hr className="border-t border-border" />` inserted before the `KYC Verification` H2 block and before the `Envelopes` section, conditional on `!externalAnnuityPlatform`.
+- **Flow:** Standard Open Accounts form only.
+- **Component Type:** Visual separator between major H2 groups.
+- **Issue:** Without separators, the three H2 groups (`Account instructions`, `KYC Verification`, `Envelopes`) flowed visually with only `space-y-12` rhythm. Hard to scan as distinct sections.
+- **Applied:** A subtle `<hr>` between each pair of H2 groups (so first H2 has no rule above it).
+- **Principle:** Hierarchy made visible.
+- **Reference:** NNG — visual grouping.
+
+### F20 — [MEDIUM] Move "Submit to NetX360" CTA from the wizard footer into the page body
+- **Status:** ✅ Applied — structural change. Footer label for annuity tasks becomes Next/Complete (per Nick's option B).
+- **Location:** `src/components/wizard/forms/Netx360HandoffSection.tsx` (now owns the Submit CTA + modal); `src/components/wizard/forms/OpenAccountsForm.tsx:813` (passes `taskId`); `src/components/wizard/forms/OpenAccountsCombinedForm.tsx` (duplicate panel removed); `src/components/wizard/WizardFooter.tsx:117–123, 162` (label routing).
+- **Flow:** v1 with-annuity Open Accounts task and v2 annuity accordion — submission action.
+- **Component Type:** Footer CTA → in-page CTA + footer Next/Complete fallback.
+- **Issue:** The advisor's submission action sat in the wizard footer (`Submit to NetX360`), which is otherwise reserved for "advance / finish the wizard step". v2 had compounding noise: the same action lived both in the body (custom panel inside `OpenAccountsCombinedForm`) and the footer. Two doors for one action, with two different submit code paths (v2 used a per-child loop; footer used `SUBMIT_ALL_ACCOUNT_OPENING_CHILDREN_FOR_REVIEW`).
+- **Applied:**
+  - `Netx360HandoffSection` now renders the `Submit to NetX360` button (primary, opens the existing `CompleteAccountOpeningConfirmModal` in `submit-children` mode → dispatches `SUBMIT_ALL_ACCOUNT_OPENING_CHILDREN_FOR_REVIEW`) plus the existing `Continue in NetX360` deeplink (outline). No card wrapper — buttons inline (per F19 directive).
+  - `OpenAccountsForm` passes the active `openAccountsTaskId` to `Netx360HandoffSection`.
+  - `OpenAccountsCombinedForm` no longer renders its own submit panel; the v2 annuity accordion picks up the in-page button via the nested `OpenAccountsForm`. Single source of truth for the submit path.
+  - `WizardFooter` excludes annuity Open Accounts tasks from `showsOpenAccountsSubmit` and adds `showsAnnuityComplete` for the post-terminal `Complete` button. Pre-terminal: shows `Next` (advance to next task while reviews are pending). Post-terminal: shows `Complete` (regardless of `isLast`).
+- **Principle:** Page actions live in the page; wizard footer is for wizard navigation. Single mechanism for a single action.
+- **Reference:** Apple — Purpose; NNG — affordance placement; Mailchimp — consistency.
+
+### F24 — [LOW] Envelopes empty state oversells upfront — drop the "Select delivery method..." line
+- **Status:** ✅ Applied.
+- **Location:** `src/components/wizard/forms/OpenAccountsForm.tsx:1219–1225` (Envelopes empty state in standard Open Accounts form).
+- **Flow:** Standard Open Accounts → Envelopes section → empty state shown before any envelope is added.
+- **Component Type:** Empty state body copy.
+- **Issue:** The empty state preempted the advisor with a process description (`Select delivery method, template, and forms to include.`) before they'd even clicked the CTA. Per Nick: too much up-front information; the form/drawer that opens on click already explains the choices in context.
+- **Applied:** Removed the descriptive `<p>`. Empty state now shows just the headline "No envelopes created yet." and the "New envelope" button. Kept the icon + headline as the empty-state grammar.
+- **Principle:** Don't preview the form. Empty state encourages the next action; the form itself does the explaining.
+- **Reference:** Bobbie Wood — empty-state scorecard (concise, focused on the next action).
+
+### F23 — [LOW] "Continue the rest of the account opening" — extend title + subtitle to imply scope
+- **Status:** ✅ Applied — supersedes the F14/F18 title and subtitle copy.
+- **Location:** `src/components/wizard/forms/OpenAccountsForm.tsx:814–817` (H3 + body); `src/components/wizard/formRegistry.ts` and `combinedOpenAccountsSections.ts` (matching scrollspy nav labels).
+- **Flow:** v1 with-annuity Open Accounts task and v2 annuity accordion — the section that hands off to NetX360.
+- **Component Type:** Section H3 + section subtitle.
+- **Issue:** After F14/F17/F18/F19, the section read `Continue the account opening` / `Set the account and owners for each annuity below.` That left the advisor with no signal about *what's still outstanding*. The deleted checklist had spelled it out (Annuity, Funding & asset movement, Account features & services, Documents & eSign, KYC, Home Office and Principal Reviews); we needed to imply that scope without re-introducing the list.
+- **Applied Copy:**
+  - H3: `Continue the rest of the account opening` (was `Continue the account opening`) — "rest" implies a defined remainder.
+  - Subtitle: `Set the account and owners here. NetX360 picks up funding, signatures, KYC, and reviews.` (was `Set the account and owners for each annuity below.`) — collapses the six bullets into four categories spoken inline; sentence rather than enumeration.
+  - Scrollspy nav labels in `formRegistry.ts:80` and `combinedOpenAccountsSections.ts` updated to match the new H3 text.
+- **Principle:** Imply scope without enumerating; the H3 promises the arc, the subtitle clarifies the handoff in one sentence.
+- **Reference:** Apple — Purpose; Mailchimp — voice & tone; NNG — F-pattern scanning.
+
 ## String-Level Summary
 
 - Passive voice: 0 instances in scope (post-revision: 0).
@@ -313,9 +383,9 @@ Current copy reads like 2018 platform-team microcopy: descriptive, system-named,
 
 ## Summary
 
-- Critical: 0 | High: 3 | Medium: 11 | Low: 5
-- **Applied:** 16 (F2, F3, F4, F5, F6, F7, F8, F9→F16, F12→F16, F13, F14→F17/F18/F19, F15, F16, F17→F19, F18, F19)
+- Critical: 0 | High: 3 | Medium: 13 | Low: 8
+- **Applied:** 21 (F2, F3, F4, F5, F6, F7, F8, F9→F16, F12→F16, F13, F14→F17/F18/F19/F23, F15, F16, F17→F19, F18→F23, F19, F20, F21, F22, F23, F24)
 - **Parked:** 1 (F1)
 - **No-op:** 1 (F11)
 - **Resolved by other:** 1 (F10 ← F8)
-- **Remaining manual passes:** ✏️ pending Bianca / Nick — broader sentence-case audit, advisor-instructions in `seed.ts:270–274`, any internal `openAccountsTaskContext.ts` JSDoc comments referencing "this app" (cosmetic, internal).
+- **Remaining manual passes:** ✏️ pending Bianca / Nick — broader sentence-case audit, advisor-instructions in `seed.ts:270–274`, any internal `openAccountsTaskContext.ts` JSDoc comments referencing "this app" (cosmetic, internal). The `CompleteAccountOpeningConfirmModal` body still references "Accounts to Be Opened" (`WizardFooter.tsx:67`) — old terminology vs. the renamed "Accounts" section heading; flag for follow-up.

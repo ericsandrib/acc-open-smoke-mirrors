@@ -451,26 +451,61 @@ export function StepSidebar() {
                       </ul>
                     ) : taskSectionNavStyle === 'nested' && isActiveTask && sections.length > 0 ? (
                       <ul className="mt-1.5 ml-4 space-y-1.5 border-l border-border/80 pl-2.5">
-                        {sections.map((section) => (
-                          <li key={section.id}>
-                            <button
-                              type="button"
-                              onClick={() => {
-                                setActiveSectionId(section.id)
-                                dispatch({ type: 'FOCUS_PARENT_TASK_SECTION', sectionId: section.id })
-                              }}
-                              aria-current={activeSectionId === section.id ? 'page' : undefined}
-                              className={cn(
-                                'w-full text-left px-2.5 py-1.5 text-[12px] rounded-md transition-colors',
-                                activeSectionId === section.id
-                                  ? 'bg-muted text-foreground font-semibold'
-                                  : 'cursor-pointer text-foreground/85 hover:text-foreground hover:bg-muted/60',
-                              )}
-                            >
-                              {section.label}
-                            </button>
-                          </li>
-                        ))}
+                        {sections.map((section) => {
+                          const hasChildren = !!section.children?.length
+                          if (hasChildren) {
+                            return (
+                              <li key={section.id} className="space-y-1">
+                                <div className="flex items-center gap-1.5 px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground/80">
+                                  <ChevronRight className="h-3 w-3" />
+                                  <span className="truncate">{section.label}</span>
+                                </div>
+                                <ul className="ml-3 space-y-1 border-l border-border/60 pl-2.5">
+                                  {section.children!.map((child) => (
+                                    <li key={child.id}>
+                                      <button
+                                        type="button"
+                                        onClick={() => {
+                                          setActiveSectionId(child.id)
+                                          dispatch({ type: 'FOCUS_PARENT_TASK_SECTION', sectionId: child.id })
+                                        }}
+                                        aria-current={activeSectionId === child.id ? 'page' : undefined}
+                                        className={cn(
+                                          'w-full text-left px-2.5 py-1.5 text-[12px] rounded-md transition-colors',
+                                          activeSectionId === child.id
+                                            ? 'bg-muted text-foreground font-semibold'
+                                            : 'cursor-pointer text-foreground/85 hover:text-foreground hover:bg-muted/60',
+                                        )}
+                                      >
+                                        {child.label}
+                                      </button>
+                                    </li>
+                                  ))}
+                                </ul>
+                              </li>
+                            )
+                          }
+                          return (
+                            <li key={section.id}>
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setActiveSectionId(section.id)
+                                  dispatch({ type: 'FOCUS_PARENT_TASK_SECTION', sectionId: section.id })
+                                }}
+                                aria-current={activeSectionId === section.id ? 'page' : undefined}
+                                className={cn(
+                                  'w-full text-left px-2.5 py-1.5 text-[12px] rounded-md transition-colors',
+                                  activeSectionId === section.id
+                                    ? 'bg-muted text-foreground font-semibold'
+                                    : 'cursor-pointer text-foreground/85 hover:text-foreground hover:bg-muted/60',
+                                )}
+                              >
+                                {section.label}
+                              </button>
+                            </li>
+                          )
+                        })}
                       </ul>
                     ) : null}
                   </li>

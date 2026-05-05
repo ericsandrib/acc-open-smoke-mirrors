@@ -5,6 +5,7 @@ type FlatSection = { id: string; label: string }
 
 type SectionGroup = {
   key: string
+  /** Empty/falsy label = standalone item (popover renders the section directly with no header). */
   label: string
   sections: FlatSection[]
 }
@@ -128,9 +129,11 @@ export function TaskSectionPanel({
           {groups
             ? groups.map((group, groupIndex) => (
                 <div key={group.key} className={cn(groupIndex > 0 && 'border-t border-border mt-1 pt-1')}>
-                  <div className="px-3 py-1 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
-                    {group.label}
-                  </div>
+                  {group.label ? (
+                    <div className="px-3 py-1 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+                      {group.label}
+                    </div>
+                  ) : null}
                   {group.sections.map((section) => {
                     const compositeId = `${group.key}::${section.id}`
                     const isActive = compositeId === effectiveActiveId
@@ -140,7 +143,8 @@ export function TaskSectionPanel({
                         type="button"
                         onClick={() => selectGroupSection(group, section)}
                         className={cn(
-                          'w-full text-left pl-5 pr-3 py-1.5 text-sm transition-colors',
+                          'w-full text-left pr-3 py-1.5 text-sm transition-colors',
+                          group.label ? 'pl-5' : 'pl-3',
                           isActive
                             ? 'text-foreground font-medium bg-accent/60'
                             : 'text-foreground/80 hover:text-foreground hover:bg-muted/50',
