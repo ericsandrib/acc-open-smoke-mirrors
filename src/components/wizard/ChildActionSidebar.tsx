@@ -10,20 +10,23 @@ import {
 } from '@/components/ui/tooltip'
 import { getSubTaskDisplayTitle } from '@/utils/childTaskRegistry'
 import { getAccountOpeningSubTaskProgress } from '@/utils/accountOpeningChildProgress'
-import { Check, ChevronLeft, FileText, Clock } from 'lucide-react'
+import { ChevronLeft, FileText, Clock } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { useWizardRightPanel } from '@/components/wizard/wizardRightPanelContext'
 import { getActiveStageLabel } from '@/components/wizard/ChildActionTimelineSheet'
 import { useTheme } from '@/stores/themeStore'
 import { JourneyHeader } from '@/components/wizard/JourneyHeader'
+import { ProgressIcon, pickVariant } from '@/components/wizard/ProgressIcons'
+import type { TaskStatus } from '@/types/workflow'
 
-const DONUT_R = 7
-const DONUT_CIRCUMFERENCE = 2 * Math.PI * DONUT_R
-const DONUT_STROKE_WIDTH = 5
 const DEFAULT_TASK_SECTIONS = [{ id: '__top__', label: 'Overview' }] as const
 const BENEFICIARY_ENABLED_REGISTRATIONS = new Set(['TOD_IND', 'TOD_JT', 'IRA', 'ROTH_IRA'])
 
-function SubTaskStatusBadge({
+/**
+ * Mirrors StepSidebar's TaskProgressIndicator so the sub-task pizza tracker
+ * uses the same Figma icon set + tooltip copy as the parent journey.
+ */
+function SubTaskProgressIndicator({
   subTaskId,
   accountOpeningChildId,
   subTaskSuffix,
@@ -42,6 +45,7 @@ function SubTaskStatusBadge({
   const lockedComplete =
     accountChild &&
     (accountChild.status === 'awaiting_review' || accountChild.status === 'complete')
+  const isCanceled = accountChild?.status === 'canceled'
 
   let filled = 0
   let total = 1
@@ -54,60 +58,47 @@ function SubTaskStatusBadge({
   } else {
     filled = isSubmitted || hasData ? 1 : 0
   }
-  const progress = Math.min(1, Math.max(0, filled / total))
+  const pct = Math.min(1, Math.max(0, filled / total))
   const edited = hasData
-  const rawPct = Math.round(progress * 100)
-  const displayProgress = edited && rawPct === 0 ? 0.05 : progress
-  const displayPct = Math.round(displayProgress * 100)
-  const stroke = displayProgress * DONUT_CIRCUMFERENCE
-  const isComplete = progress >= 1
-  const tooltip = isComplete
-    ? 'Complete'
-    : displayPct === 0
-    ? 'Not started'
-    : `${displayPct}% complete`
+  const status: TaskStatus = isCanceled
+    ? 'canceled'
+    : pct >= 1
+    ? 'complete'
+    : 'in_progress'
+
+  const variant = pickVariant({ pct, total, edited, status })
+  const displayPct = Math.max(0, Math.min(100, Math.round(pct * 100)))
+  const tooltipText =
+    variant === 'canceled'
+      ? 'Canceled'
+      : variant === 'done'
+      ? edited
+        ? 'Complete · Edited'
+        : 'Complete'
+      : variant === 'ambiguous'
+      ? 'No progress to report'
+      : displayPct === 0
+      ? edited
+        ? 'Not started · Edited'
+        : 'Not started'
+      : edited
+      ? `${displayPct}% complete · Edited`
+      : `${displayPct}% complete`
 
   return (
     <Tooltip>
       <TooltipTrigger asChild>
-        <span className="shrink-0 flex items-center justify-center h-4 w-4" role="img" aria-label={tooltip}>
-          {isComplete ? (
-            <span
-              className="flex h-4 w-4 items-center justify-center rounded-full border border-blue-500/50 bg-background text-blue-500"
-              aria-hidden
-            >
-              <Check className="h-2.5 w-2.5" strokeWidth={1.8} />
-            </span>
-          ) : (
-            <svg className="h-4 w-4" viewBox="0 0 20 20" aria-hidden>
-              <circle
-                cx="10"
-                cy="10"
-                r={DONUT_R}
-                fill="none"
-                strokeWidth={DONUT_STROKE_WIDTH}
-                stroke="var(--color-border-secondary)"
-              />
-              {displayProgress > 0 && (
-                <circle
-                  cx="10"
-                  cy="10"
-                  r={DONUT_R}
-                  fill="none"
-                  strokeWidth={DONUT_STROKE_WIDTH}
-                  stroke="var(--color-fill-category1-primary)"
-                  strokeDasharray={`${stroke} ${DONUT_CIRCUMFERENCE}`}
-                  strokeLinecap="round"
-                  transform="rotate(-90 10 10)"
-                />
-              )}
-            </svg>
-          )}
-          <span className="sr-only">{tooltip}</span>
+        <span
+          className="shrink-0 inline-flex items-center justify-center h-4 w-4"
+          role="img"
+          aria-label={tooltipText}
+        >
+          <ProgressIcon variant={variant} />
+          <span className="sr-only">{tooltipText}</span>
         </span>
       </TooltipTrigger>
       <TooltipContent side="right">
-        <p>{tooltip}</p>
+        <p>{tooltipText}</p>
       </TooltipContent>
     </Tooltip>
   )
@@ -189,16 +180,16 @@ export function ChildActionSidebar() {
                   onClick={() => dispatch({ type: 'SET_CHILD_SUB_TASK', index: idx })}
                   aria-current={idx === subTaskIndex ? 'page' : undefined}
                   className={cn(
-                    'w-full text-left px-3 py-2.5 rounded-lg text-[13px] font-medium flex items-center justify-between gap-2 transition-colors border border-transparent',
+                    'w-full text-left pl-12 pr-3 py-2.5 rounded-lg text-[13px] font-medium flex items-center justify-between gap-2 transition-colors',
                     idx === subTaskIndex
-                      ? 'bg-accent/60 text-foreground border-border'
-                      : 'hover:bg-muted/50 text-foreground'
+                      ? 'bg-accent/60 text-foreground'
+                      : 'hover:bg-muted/50 text-foreground',
                   )}
                 >
                   <span
                     className={cn(
-                      'flex items-center gap-2 truncate',
-                      idx === subTaskIndex ? 'font-semibold border-l-2 border-foreground/50 pl-2 -ml-2' : '',
+                      'flex items-center gap-2 truncate min-w-0',
+                      idx === subTaskIndex ? 'font-semibold' : '',
                     )}
                   >
                     {showSubTaskNumbers && (
@@ -206,7 +197,7 @@ export function ChildActionSidebar() {
                     )}
                     {getSubTaskDisplayTitle(child.childType, subTask, viewMode)}
                   </span>
-                  <SubTaskStatusBadge
+                  <SubTaskProgressIndicator
                     subTaskId={subTaskId}
                     accountOpeningChildId={child.childType === 'account-opening' ? child.id : undefined}
                     subTaskSuffix={child.childType === 'account-opening' ? subTask.suffix : undefined}
