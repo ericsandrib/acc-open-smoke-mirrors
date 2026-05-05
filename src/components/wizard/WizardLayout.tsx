@@ -94,7 +94,6 @@ import {
   useOpenAccountsVariant,
   type CombinedAccordionKey,
 } from './openAccountsVariantContext'
-import { OpenAccountsVariantSwitcher } from './OpenAccountsVariantSwitcher'
 import { combinedOpenAccountsSections } from './combinedOpenAccountsSections'
 
 type WizardActionProgressItem = { id: string; title: string; pct: number }
@@ -400,18 +399,8 @@ export function WizardLayout() {
   return (
     <OpenAccountsVariantAndFocusProvider>
       <WizardLayoutInner />
-      <VariantSwitcherWhenSplit />
     </OpenAccountsVariantAndFocusProvider>
   )
-}
-
-function VariantSwitcherWhenSplit() {
-  const { state } = useWorkflow()
-  const isSplitJourney =
-    state.tasks.some((t) => t.formKey === OPEN_ACCOUNTS_FORM_KEY) &&
-    state.tasks.some((t) => t.formKey === OPEN_ACCOUNTS_WITH_ANNUITY_FORM_KEY)
-  if (!isSplitJourney) return null
-  return <OpenAccountsVariantSwitcher />
 }
 
 function CombinedSectionPanel() {

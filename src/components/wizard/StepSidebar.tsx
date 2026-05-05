@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { useWorkflow } from '@/stores/workflowStore'
 import type { Action, TaskStatus, Task, WorkflowState } from '@/types/workflow'
 import { cn } from '@/lib/utils'
@@ -16,8 +17,26 @@ import {
 } from '@/components/wizard/openAccountsVariantContext'
 import { combinedOpenAccountsSections } from '@/components/wizard/combinedOpenAccountsSections'
 import { ProgressIcon, pickVariant } from '@/components/wizard/ProgressIcons'
-import { ChevronRight } from 'lucide-react'
+import { Button } from '@/components/ui/button'
+import type { LucideIcon } from 'lucide-react'
+import {
+  Briefcase,
+  ChevronLeft,
+  ChevronRight,
+  Users,
+  Wallet,
+  ListChecks,
+} from 'lucide-react'
 import { Circle, Loader, CheckCircle2, Ban, Clock, XCircle } from 'lucide-react'
+
+const ACTION_ICONS: Record<string, LucideIcon> = {
+  'collect-client-data': Users,
+  'account-opening': Wallet,
+}
+
+function getActionIcon(actionId: string): LucideIcon {
+  return ACTION_ICONS[actionId] ?? ListChecks
+}
 import {
   Tooltip,
   TooltipContent,
@@ -303,6 +322,7 @@ export function StepSidebar() {
   const { taskSectionNavStyle } = useTheme()
   const variant = useOpenAccountsVariant()
   const { requestFocus } = useCombinedSectionFocus()
+  const navigate = useNavigate()
   const [activeSectionId, setActiveSectionId] = useState<string | null>(null)
 
   const activeTopLevelTask = useMemo(
@@ -332,16 +352,44 @@ export function StepSidebar() {
 
   return (
     <TooltipProvider delayDuration={300}>
-      <nav className="w-64 border-r border-border bg-white p-2 overflow-y-auto">
-        <div className="px-3 pt-2 pb-4 mb-2 border-b border-border">
-          <h2 className="text-sm font-semibold text-foreground">
-            {state.journeyName ?? 'Client Onboarding'}
-          </h2>
+      <nav className="w-64 border-r border-border bg-white overflow-y-auto">
+        <div className="p-0">
+          <div className="flex h-14 items-center px-2">
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon"
+              className="h-10 w-10 text-muted-foreground"
+              onClick={() => navigate(-1)}
+              aria-label="Back"
+            >
+              <ChevronLeft className="h-4 w-4" aria-hidden />
+            </Button>
+          </div>
+          <div className="flex h-14 items-center px-3">
+            <span
+              className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md bg-[var(--bg-tertiary)] text-muted-foreground"
+              aria-hidden
+            >
+              <Briefcase className="h-4 w-4" />
+            </span>
+          </div>
+          <div className="px-3 pt-2 pb-4 mb-2 border-b border-border">
+            <h2 className="text-sm font-semibold text-foreground">
+              {state.journeyName ?? 'Client Onboarding'}
+            </h2>
+          </div>
         </div>
-        {displayActions.map((action) => (
+        <div className="px-1">
+        {displayActions.map((action) => {
+          const ActionIcon = getActionIcon(action.id)
+          return (
           <div key={action.id} className="mb-5">
-            <div className="mb-1.5 px-3">
-              <h3 className="text-[12px] font-medium tracking-wide uppercase text-muted-foreground/70">
+            <div className="mb-1.5 flex h-9 items-center gap-2 px-3">
+              <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-[var(--bg-tertiary)] text-muted-foreground">
+                <ActionIcon className="h-3.5 w-3.5" aria-hidden />
+              </span>
+              <h3 className="text-sm font-medium text-foreground">
                 {action.title}
               </h3>
             </div>
@@ -384,7 +432,7 @@ export function StepSidebar() {
                       onClick={() => dispatch({ type: 'SET_ACTIVE_TASK', taskId: displayTask.id })}
                       aria-current={isActiveTask ? 'page' : undefined}
                       className={cn(
-                        'w-full text-left px-3 py-2.5 rounded-lg text-[13px] font-medium flex items-center justify-between gap-2 transition-colors',
+                        'w-full text-left pl-12 pr-3 py-2.5 rounded-lg text-[13px] font-medium flex items-center justify-between gap-2 transition-colors',
                         isActiveTask
                           ? 'bg-accent/60 text-foreground'
                           : 'hover:bg-muted/50 text-foreground',
@@ -505,7 +553,9 @@ export function StepSidebar() {
               })}
             </ul>
           </div>
-        ))}
+          )
+        })}
+        </div>
       </nav>
     </TooltipProvider>
   )
