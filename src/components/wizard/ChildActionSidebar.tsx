@@ -150,7 +150,7 @@ export function ChildActionSidebar() {
 
   return (
     <TooltipProvider delayDuration={300}>
-      <nav className="w-64 border-r border-border bg-sidebar-background overflow-y-auto flex flex-col">
+      <nav className="w-64 border-r border-border bg-white overflow-y-auto flex flex-col">
         <JourneyHeader />
         <div className="flex h-9 items-center gap-1 px-2">
           <Button

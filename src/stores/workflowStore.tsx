@@ -120,6 +120,7 @@ const initialState: WorkflowState = {
     },
   },
   submittedTaskIds: [],
+  assignedTo: 'Sarah Chen',
 }
 
 function markTaskEdited(allTasks: Task[], formKey: string): Task[] {
