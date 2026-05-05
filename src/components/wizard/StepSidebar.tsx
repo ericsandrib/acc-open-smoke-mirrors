@@ -1,5 +1,4 @@
 import { useEffect, useMemo, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
 import { useWorkflow } from '@/stores/workflowStore'
 import type { Action, TaskStatus, Task, WorkflowState } from '@/types/workflow'
 import { cn } from '@/lib/utils'
@@ -17,17 +16,15 @@ import {
 } from '@/components/wizard/openAccountsVariantContext'
 import { combinedOpenAccountsSections } from '@/components/wizard/combinedOpenAccountsSections'
 import { ProgressIcon, pickVariant } from '@/components/wizard/ProgressIcons'
-import { Button } from '@/components/ui/button'
 import type { LucideIcon } from 'lucide-react'
 import {
-  Briefcase,
-  ChevronLeft,
   ChevronRight,
   Users,
   Wallet,
   ListChecks,
 } from 'lucide-react'
 import { Circle, Loader, CheckCircle2, Ban, Clock, XCircle } from 'lucide-react'
+import { JourneyHeader } from '@/components/wizard/JourneyHeader'
 
 const ACTION_ICONS: Record<string, LucideIcon> = {
   'collect-client-data': Users,
@@ -322,7 +319,6 @@ export function StepSidebar() {
   const { taskSectionNavStyle } = useTheme()
   const variant = useOpenAccountsVariant()
   const { requestFocus } = useCombinedSectionFocus()
-  const navigate = useNavigate()
   const [activeSectionId, setActiveSectionId] = useState<string | null>(null)
 
   const activeTopLevelTask = useMemo(
@@ -353,33 +349,7 @@ export function StepSidebar() {
   return (
     <TooltipProvider delayDuration={300}>
       <nav className="w-64 border-r border-border bg-white overflow-y-auto">
-        <div className="p-0">
-          <div className="flex h-14 items-center px-2">
-            <Button
-              type="button"
-              variant="ghost"
-              size="icon"
-              className="h-10 w-10 text-muted-foreground"
-              onClick={() => navigate(-1)}
-              aria-label="Back"
-            >
-              <ChevronLeft className="h-4 w-4" aria-hidden />
-            </Button>
-          </div>
-          <div className="flex h-14 items-center px-3">
-            <span
-              className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md bg-[var(--bg-tertiary)] text-muted-foreground"
-              aria-hidden
-            >
-              <Briefcase className="h-4 w-4" />
-            </span>
-          </div>
-          <div className="px-3 pt-2 pb-4 mb-2 border-b border-border">
-            <h2 className="text-sm font-semibold text-foreground">
-              {state.journeyName ?? 'Client Onboarding'}
-            </h2>
-          </div>
-        </div>
+        <JourneyHeader />
         <div className="px-1">
         {displayActions.map((action) => {
           const ActionIcon = getActionIcon(action.id)

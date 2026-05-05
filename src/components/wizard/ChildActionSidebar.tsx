@@ -10,10 +10,12 @@ import {
 } from '@/components/ui/tooltip'
 import { getSubTaskDisplayTitle } from '@/utils/childTaskRegistry'
 import { getAccountOpeningSubTaskProgress } from '@/utils/accountOpeningChildProgress'
-import { Check, FileText, Clock } from 'lucide-react'
+import { Check, ChevronLeft, FileText, Clock } from 'lucide-react'
+import { Button } from '@/components/ui/button'
 import { useWizardRightPanel } from '@/components/wizard/wizardRightPanelContext'
 import { getActiveStageLabel } from '@/components/wizard/ChildActionTimelineSheet'
 import { useTheme } from '@/stores/themeStore'
+import { JourneyHeader } from '@/components/wizard/JourneyHeader'
 
 const DONUT_R = 7
 const DONUT_CIRCUMFERENCE = 2 * Math.PI * DONUT_R
@@ -138,16 +140,40 @@ export function ChildActionSidebar() {
     setActiveSectionId(activeSections[0]?.id ?? null)
   }, [subTaskIndex, activeSections])
 
+  const parentTask = state.tasks.find((t) =>
+    (t.children ?? []).some((c) => c.id === child.id),
+  )
+  const parentAction = parentTask
+    ? state.actions.find((a) => a.id === parentTask.actionId)
+    : undefined
+  const breadcrumbLabel = parentAction?.title ?? parentTask?.title ?? 'Back'
+
   return (
     <TooltipProvider delayDuration={300}>
-      <nav className="w-64 border-r border-border bg-sidebar-background p-2 overflow-y-auto flex flex-col">
+      <nav className="w-64 border-r border-border bg-sidebar-background overflow-y-auto flex flex-col">
+        <JourneyHeader />
+        <div className="flex h-9 items-center gap-1 px-2">
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon"
+            className="h-8 w-8 text-muted-foreground"
+            onClick={() => dispatch({ type: 'EXIT_CHILD_ACTION' })}
+            aria-label={`Back to ${breadcrumbLabel}`}
+          >
+            <ChevronLeft className="h-4 w-4" aria-hidden />
+          </Button>
+          <span className="text-xs text-muted-foreground truncate">
+            {breadcrumbLabel}
+          </span>
+        </div>
         <div className="px-3 pt-2 pb-4 mb-2 border-b border-border">
           <h2 className="text-sm font-semibold text-foreground">
             {child.name}
           </h2>
         </div>
 
-        <ul className="space-y-1">
+        <ul className="space-y-1 px-1">
           {config.subTasks.map((subTask, idx) => {
             const subTaskId = `${child.id}-${subTask.suffix}`
             const childMeta = state.taskData[child.id] as Record<string, unknown> | undefined
