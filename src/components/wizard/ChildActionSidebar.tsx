@@ -171,9 +171,9 @@ export function ChildActionSidebar() {
             {breadcrumbLabel}
           </span>
         </div>
-        <div className="mb-1.5 flex h-[26px] items-center gap-2 px-3">
-          <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-md bg-[var(--bg-tertiary)] text-muted-foreground">
-            <ChildIcon className="h-3 w-3" aria-hidden />
+        <div className="mb-1.5 flex h-9 items-center gap-2 px-3">
+          <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-[var(--bg-tertiary)] text-muted-foreground">
+            <ChildIcon className="h-3.5 w-3.5" aria-hidden />
           </span>
           <h2 className="text-sm font-semibold text-foreground truncate">
             {child.name}
