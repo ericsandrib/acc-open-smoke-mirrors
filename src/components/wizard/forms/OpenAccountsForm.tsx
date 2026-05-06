@@ -948,7 +948,7 @@ export function OpenAccountsForm() {
       ) : null}
 
       {!externalAnnuityPlatform ? (
-        <div className="h-5 flex items-center">
+        <div className="h-5 mt-14 flex items-center">
         <hr className="border-t border-border w-full" />
       </div>
       ) : null}
@@ -1208,7 +1208,7 @@ export function OpenAccountsForm() {
 
       {!externalAnnuityPlatform ? (
       <>
-      <div className="h-5 flex items-center">
+      <div className="h-5 mt-14 flex items-center">
         <hr className="border-t border-border w-full" />
       </div>
       {/* Envelopes — H2 (no inner H3 child) */}

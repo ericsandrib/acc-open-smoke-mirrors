@@ -807,7 +807,9 @@ export function KycChildInfoForm() {
           </div>
         </section>
 
-        <hr className="border-border" />
+        <div className="h-5 mt-14 flex items-center">
+          <hr className="border-t border-border w-full" />
+        </div>
 
         <section className="space-y-3">
           <h4 className={sectionCls}>Business Profile</h4>
@@ -851,7 +853,9 @@ export function KycChildInfoForm() {
           </div>
         </section>
 
-        <hr className="border-border" />
+        <div className="h-5 mt-14 flex items-center">
+          <hr className="border-t border-border w-full" />
+        </div>
 
         <section className="space-y-3">
           <h4 className={sectionCls}>Control Person</h4>
@@ -922,7 +926,9 @@ export function KycChildInfoForm() {
           </div>
         </section>
 
-        <hr className="border-border" />
+        <div className="h-5 mt-14 flex items-center">
+          <hr className="border-t border-border w-full" />
+        </div>
 
         <section className="space-y-3">
           <h4 className={sectionCls}>Beneficial Owners</h4>
@@ -1311,7 +1317,9 @@ export function KycChildInfoForm() {
         </div>
       </section>
 
-      <hr className="border-border" />
+      <div className="h-5 mt-14 flex items-center">
+        <hr className="border-t border-border w-full" />
+      </div>
 
       {/* Address */}
       <section className="space-y-3">
@@ -1355,7 +1363,9 @@ export function KycChildInfoForm() {
 
       </section>
 
-      <hr className="border-border" />
+      <div className="h-5 mt-14 flex items-center">
+        <hr className="border-t border-border w-full" />
+      </div>
 
       <section className="space-y-3">
         <h4 className={sectionCls}>Identity Verification</h4>
@@ -1378,7 +1388,9 @@ export function KycChildInfoForm() {
         </div>
       </section>
 
-      <hr className="border-border" />
+      <div className="h-5 mt-14 flex items-center">
+        <hr className="border-t border-border w-full" />
+      </div>
 
       <section className="space-y-3">
         <h4 className={sectionCls}>Financial Profile</h4>

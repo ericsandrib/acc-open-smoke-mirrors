@@ -201,8 +201,9 @@ export function TaskSectionPanel({
                 )}
               >
                 {group.label ? (
-                  <div className="pl-5 pr-3 pb-1 text-sm font-medium text-muted-foreground">
-                    {group.label}
+                  <div className="flex items-center gap-2 pr-3 pb-1 text-sm font-medium text-foreground">
+                    <span className="shrink-0">{groupIndex + 1}.</span>
+                    <span className="truncate">{group.label}</span>
                   </div>
                 ) : null}
                 {group.sections.map((section) => {
