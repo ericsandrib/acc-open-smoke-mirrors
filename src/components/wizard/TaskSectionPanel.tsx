@@ -201,7 +201,7 @@ export function TaskSectionPanel({
                 )}
               >
                 {group.label ? (
-                  <div className="px-3 pb-1 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+                  <div className="pl-5 pr-3 pb-1 text-sm font-medium text-muted-foreground">
                     {group.label}
                   </div>
                 ) : null}
