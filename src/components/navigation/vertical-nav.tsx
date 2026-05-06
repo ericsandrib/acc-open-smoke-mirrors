@@ -157,11 +157,11 @@ function NavigationContent({
             {group.label && !isExpanded && group.items.length > 0 && (
               <div className="mx-auto w-5 border-t border-border my-1" />
             )}
-            {group.items.map((item) => {
+            {group.items.map((item, itemIndex) => {
               const isActive =
-                pathname === item.href ||
-                (item.href === "/onboarding" && pathname.startsWith("/wizard")) ||
-                (item.href === "/servicing" && pathname.startsWith("/servicing"));
+                item.href === "/servicing"
+                  ? pathname === "/servicing" || pathname.startsWith("/servicing/")
+                  : pathname === item.href;
               const showTooltip = !isExpanded;
 
               const button = (
@@ -199,7 +199,7 @@ function NavigationContent({
               if (!showTooltip) {
                 return (
                   <div
-                    key={item.href}
+                    key={`${groupIndex}-${itemIndex}`}
                     className="h-10 min-h-10 flex leading-none"
                   >
                     {button}
@@ -209,7 +209,7 @@ function NavigationContent({
 
               return (
                 <div
-                  key={item.href}
+                  key={`${groupIndex}-${itemIndex}`}
                   className="h-10 min-h-10 flex leading-none"
                 >
                   <Tooltip>
@@ -282,7 +282,7 @@ export function VerticalNav({
   const [isCollapsedHovered, setIsCollapsedHovered] = useState(false);
 
   useEffect(() => {
-    if (location.pathname !== "/wizard") return;
+    if (!location.pathname.startsWith("/servicing")) return;
     const st = location.state as { collapseMainNav?: boolean } | null;
     if (!st?.collapseMainNav) return;
     setIsExpanded(false);

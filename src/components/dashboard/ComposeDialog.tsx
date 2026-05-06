@@ -206,11 +206,7 @@ export function ComposeDialog({ onClose }: ComposeDialogProps) {
       return
     }
 
-    const inServicingView = location.pathname.startsWith('/servicing')
-    navigate(
-      inServicingView ? `/servicing/${newJourneyId}` : '/wizard',
-      inServicingView ? undefined : { state: { collapseMainNav: true } },
-    )
+    navigate(`/servicing/${newJourneyId}`, { state: { collapseMainNav: true } })
   }
 
   return (

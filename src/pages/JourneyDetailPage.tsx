@@ -163,7 +163,7 @@ export function JourneyDetailPage() {
       <AppShell>
         <div className="flex flex-col items-center justify-center gap-4 py-20">
           <p className="text-muted-foreground">Journey not found.</p>
-          <Button variant="ghost" onClick={() => navigate('/servicing')}>
+          <Button variant="ghost" onClick={() => navigate('/onboarding')}>
             <ArrowLeft className="mr-2 h-4 w-4" />
             Back to Servicing
           </Button>
@@ -193,8 +193,8 @@ export function JourneyDetailPage() {
               <div className="flex items-center gap-2">
                 <ServicingStatusBadge status={focusedAction?.status ?? journey.status} />
                 {journey.id === workflowState.journeyId && (
-                  <Button variant="ghost" size="sm" onClick={() => navigate('/wizard')}>
-                    Continue in Wizard
+                  <Button variant="ghost" size="sm" onClick={() => navigate('/onboarding')}>
+                    Continue
                   </Button>
                 )}
               </div>

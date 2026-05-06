@@ -63,17 +63,17 @@ export function JourneysTable({ rows, visibleColumns }: JourneysTableProps) {
 
   return (
     <DataTable>
-      <thead>
+      <thead className="bg-muted/60 border-b border-border [&_th_svg]:hidden">
         <tr>
-          {vis('name') && <DataTableHeader sortable sorted={sorted('name')} onSort={() => onSort('name')} style={{ width: 200 }}>Journey</DataTableHeader>}
-          {vis('relationshipName') && <DataTableHeader sortable sorted={sorted('relationshipName')} onSort={() => onSort('relationshipName')}>Relationship</DataTableHeader>}
-          {vis('status') && <DataTableHeader sortable sorted={sorted('status')} onSort={() => onSort('status')}>Status</DataTableHeader>}
-          {vis('assignedTo') && <DataTableHeader sortable sorted={sorted('assignedTo')} onSort={() => onSort('assignedTo')}>Assigned To</DataTableHeader>}
-          {vis('createdAt') && <DataTableHeader sortable sorted={sorted('createdAt')} onSort={() => onSort('createdAt')}>Created</DataTableHeader>}
-          {vis('progress') && <DataTableHeader sortable sorted={sorted('progress')} onSort={() => onSort('progress')} align="end">Progress</DataTableHeader>}
+          {vis('name') && <DataTableHeader size="comfortable" sortable sorted={sorted('name')} onSort={() => onSort('name')} style={{ width: 200 }}>Journey</DataTableHeader>}
+          {vis('relationshipName') && <DataTableHeader size="comfortable" sortable sorted={sorted('relationshipName')} onSort={() => onSort('relationshipName')}>Relationship</DataTableHeader>}
+          {vis('status') && <DataTableHeader size="comfortable" sortable sorted={sorted('status')} onSort={() => onSort('status')}>Status</DataTableHeader>}
+          {vis('assignedTo') && <DataTableHeader size="comfortable" sortable sorted={sorted('assignedTo')} onSort={() => onSort('assignedTo')}>Assigned To</DataTableHeader>}
+          {vis('createdAt') && <DataTableHeader size="comfortable" sortable sorted={sorted('createdAt')} onSort={() => onSort('createdAt')}>Created</DataTableHeader>}
+          {vis('progress') && <DataTableHeader size="comfortable" sortable sorted={sorted('progress')} onSort={() => onSort('progress')}>Progress</DataTableHeader>}
         </tr>
       </thead>
-      <tbody>
+      <tbody className="[&>tr:nth-child(even)]:bg-muted/30">
         {sortedRows.map((row) => (
           <DataTableRow key={row.id} className="cursor-pointer" onClick={() => navigate(`/servicing/${row.id}`)}>
             {vis('name') && (

@@ -30,8 +30,8 @@ export function TableViewWrapper<T>({
   const vm = useViewManager<T>(tableId, presets, columns)
   const [filterOpen, setFilterOpen] = useState(false)
   const [relationshipScope, setRelationshipScope] = useState<RelationshipScope>(defaultRelationshipScope)
-  const [quickSortKey, setQuickSortKey] = useState<QuickSortKey>('ready_to_begin')
-  const [quickSortDirection, setQuickSortDirection] = useState<QuickSortDirection>('asc')
+  const [quickSortKey, setQuickSortKey] = useState<QuickSortKey>('created_at')
+  const [quickSortDirection, setQuickSortDirection] = useState<QuickSortDirection>('desc')
 
   const scopedRows = allRows.filter((row) => {
     if (relationshipScope === 'all') return true

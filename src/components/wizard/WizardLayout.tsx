@@ -32,7 +32,7 @@ import { ChildHoDocumentViewContent } from './ChildHoDocumentViewContent'
 import { ChildHoPrincipalViewContent } from './ChildHoPrincipalViewContent'
 import { ChildHoKycViewContent } from './ChildHoKycViewContent'
 import { ChildAmlReviewContent } from './ChildAmlReviewContent'
-import React, { useState, useRef, type ReactNode } from 'react'
+import React, { useState, useRef, useEffect, type ReactNode } from 'react'
 import { Eye, ShieldCheck, ShieldAlert, Building, PanelRight } from 'lucide-react'
 import { VerticalNav } from '@/components/navigation/vertical-nav'
 import { AccessoryBar } from '@/components/accessory-bar'
@@ -74,7 +74,7 @@ function WizardAccessoryBar() {
 import { ComposeDialog } from '@/components/dashboard/ComposeDialog'
 import { useWorkflow } from '@/stores/workflowStore'
 import { cn } from '@/lib/utils'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useSearchParams } from 'react-router-dom'
 import { useTheme } from '@/stores/themeStore'
 import {
   DropdownMenu,
@@ -432,9 +432,36 @@ function WizardLayoutInner() {
   const { taskSectionNavStyle } = useTheme()
   const navigate = useNavigate()
   const variant = useOpenAccountsVariant()
+  const [searchParams] = useSearchParams()
   const [composeOpen, setComposeOpen] = useState(false)
   const inChildAction = !!state.activeChildActionId
   const viewMode = state.demoViewMode
+
+  // Handle taskId and sectionId from query parameters
+  const queryTaskId = searchParams.get('taskId')
+  const querySectionId = searchParams.get('sectionId')
+  const queryChildId = searchParams.get('childId')
+
+  useEffect(() => {
+    if (!queryTaskId && !querySectionId && !queryChildId) return
+    if (queryTaskId) {
+      const task = state.tasks.find((t) => t.id === queryTaskId)
+      if (task && state.activeTaskId !== queryTaskId) {
+        dispatch({ type: 'SET_ACTIVE_TASK', taskId: task.id })
+      }
+    }
+    if (querySectionId) {
+      dispatch({ type: 'FOCUS_PARENT_TASK_SECTION', sectionId: querySectionId })
+    }
+    if (queryChildId && state.activeChildActionId !== queryChildId) {
+      const childExists = state.tasks.some((t) =>
+        (t.children ?? []).some((c) => c.id === queryChildId),
+      )
+      if (childExists) {
+        dispatch({ type: 'ENTER_CHILD_ACTION', childId: queryChildId })
+      }
+    }
+  }, [queryTaskId, querySectionId, queryChildId, state.tasks, state.activeTaskId, state.activeChildActionId, dispatch])
 
   const activeChild = inChildAction
     ? state.tasks.flatMap((t) => t.children ?? []).find((c) => c.id === state.activeChildActionId)
@@ -636,7 +663,7 @@ function WizardLayoutInner() {
     const firstTaskId = state.flatTaskOrder[0]
     if (!firstTaskId) return
     dispatch({ type: 'GO_TO_TASK', taskId: firstTaskId })
-    navigate('/wizard')
+    navigate('/onboarding')
   }
   const navigateToParentAction = (actionId: string) => {
     const firstTask = state.tasks

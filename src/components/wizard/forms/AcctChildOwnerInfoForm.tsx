@@ -382,6 +382,7 @@ export function AcctChildOwnerInfoForm() {
                   : 'Adds a person to this household for use as account owner.'
             }
             showKycStatus={!kycExternalForThisAccount}
+            showKycAmlSchedule={!kycExternalForThisAccount}
             onGoToKyc={handleGoToKyc}
           />
         ))}

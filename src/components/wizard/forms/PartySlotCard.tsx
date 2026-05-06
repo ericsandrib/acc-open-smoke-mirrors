@@ -15,6 +15,7 @@ import {
   SelectSeparator,
 } from '@/components/ui/select'
 import { buildAccountOwnerPreview, buildDesignationPartyPreview } from '@/utils/accountOwnerPreview'
+import { AML_KYC_VALIDITY_DAYS, getAmlRenewalSummary } from '@/utils/amlKycRenewal'
 import { isOpenAccountsTask } from '@/utils/openAccountsTaskContext'
 import { Plus, Trash2, Pencil, AlertTriangle, Info } from 'lucide-react'
 
@@ -48,6 +49,8 @@ export type PartySlotCardProps = {
   onStartKyc?: (partyId: string) => void
   onGoToKyc?: (partyId: string) => void
   showKycStatus?: boolean
+  /** When true (e.g. account-opening child workflow), show last AML run and days remaining in the AML portion of KYC. */
+  showKycAmlSchedule?: boolean
 }
 
 export function PartySlotCard({
@@ -71,6 +74,7 @@ export function PartySlotCard({
   onStartKyc,
   onGoToKyc,
   showKycStatus = true,
+  showKycAmlSchedule = false,
 }: PartySlotCardProps) {
   const { state } = useWorkflow()
   const matchedParty = partyId ? parties.find((p) => p.id === partyId) ?? null : null
@@ -157,6 +161,10 @@ export function PartySlotCard({
     if (!matchedParty) return null
     return getPartyKycDisplayStatus(matchedParty)
   }, [getPartyKycDisplayStatus, matchedParty])
+  const amlRenewal = useMemo(() => {
+    if (!matchedParty?.lastAmlRunAt) return null
+    return getAmlRenewalSummary(matchedParty.lastAmlRunAt)
+  }, [matchedParty?.lastAmlRunAt])
   const ownerPreview = matchedParty
     ? previewVariant === 'designation'
       ? buildDesignationPartyPreview(matchedParty)
@@ -436,40 +444,84 @@ export function PartySlotCard({
             )}
 
           {showKycStatus && !hideDefaultDetails && !isDesignationPreview && (kycDisplayStatus || matchedParty.kycStatus) && matchedParty.type !== 'related_organization' && (
-            <div className="flex flex-wrap items-center gap-2 text-sm pt-1 border-t border-border/60">
-              <span className="text-muted-foreground">
-                KYC status:
-              </span>
-              {kycDisplayStatus && (
-                <Badge
-                  variant="outline"
-                  className={cn('text-xs', kycDisplayStatus.className)}
-                >
-                  {kycDisplayStatus.label}
-                </Badge>
-              )}
-              {matchedParty.kycStatus === 'needs_kyc' && onStartKyc && getPartyKycAction(matchedParty) === 'start' && (
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="h-6 text-xs"
-                  type="button"
-                  onClick={() => onStartKyc(matchedParty.id)}
-                >
-                  Start KYC initiation
-                </Button>
-              )}
-              {matchedParty.kycStatus === 'pending' && onGoToKyc && getPartyKycAction(matchedParty) === 'go' && (
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="h-6 text-xs"
-                  type="button"
-                  onClick={() => onGoToKyc(matchedParty.id)}
-                >
-                  Go to KYC
-                </Button>
-              )}
+            <div className="pt-1 border-t border-border/60">
+              <div className="flex flex-wrap items-center gap-2 text-sm">
+                <span className="text-muted-foreground">
+                  KYC status:
+                </span>
+                {kycDisplayStatus && (
+                  <Badge
+                    variant="outline"
+                    className={cn('text-xs', kycDisplayStatus.className)}
+                  >
+                    {kycDisplayStatus.label}
+                  </Badge>
+                )}
+                {matchedParty.kycStatus === 'needs_kyc' && onStartKyc && getPartyKycAction(matchedParty) === 'start' && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="h-6 text-xs"
+                    type="button"
+                    onClick={() => onStartKyc(matchedParty.id)}
+                  >
+                    Start KYC initiation
+                  </Button>
+                )}
+                {matchedParty.kycStatus === 'pending' && onGoToKyc && getPartyKycAction(matchedParty) === 'go' && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="h-6 text-xs"
+                    type="button"
+                    onClick={() => onGoToKyc(matchedParty.id)}
+                  >
+                    Go to KYC
+                  </Button>
+                )}
+              </div>
+              {showKycAmlSchedule ? (
+                <div className="mt-4 space-y-1.5 border-t border-border/30 pt-3 text-xs">
+                  <p className="text-xs font-semibold text-foreground">
+                    AML Screening (valid for {AML_KYC_VALIDITY_DAYS} days)
+                  </p>
+                  {amlRenewal ? (
+                    <>
+                      <p className="text-foreground">
+                        <span className="font-medium text-muted-foreground">Last checked:</span>{' '}
+                        <span className="font-normal">{amlRenewal.lastRunFormatted}</span>
+                      </p>
+                      {amlRenewal.isExpired ? (
+                        <p className="text-destructive text-xs font-normal leading-snug">
+                          AML renewal overdue — the {AML_KYC_VALIDITY_DAYS}-day window ended on {amlRenewal.expiryFormatted}. Re-run KYC before opening additional accounts.
+                        </p>
+                      ) : amlRenewal.isDueToday ? (
+                        <p className="text-amber-700 dark:text-amber-500 text-xs font-normal leading-snug">
+                          AML renewal due today — last checked {amlRenewal.lastRunFormatted}.
+                        </p>
+                      ) : (
+                        <p className="text-foreground">
+                          <span className="font-medium text-muted-foreground">KYC (AML) expires in:</span>{' '}
+                          <span className="font-normal">
+                            {amlRenewal.daysRemaining} {amlRenewal.daysRemaining === 1 ? 'day' : 'days'} (on{' '}
+                            {amlRenewal.expiryFormatted})
+                          </span>
+                        </p>
+                      )}
+                    </>
+                  ) : (
+                    <>
+                      <p className="text-foreground">
+                        <span className="font-medium text-muted-foreground">Last checked:</span>{' '}
+                        <span className="font-normal">—</span>
+                      </p>
+                      <p className="text-xs text-muted-foreground font-normal leading-snug">
+                        Recorded when screening is completed. Applies once per new client.
+                      </p>
+                    </>
+                  )}
+                </div>
+              ) : null}
             </div>
           )}
 

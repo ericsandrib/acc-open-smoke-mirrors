@@ -5,7 +5,7 @@ import { Label } from '@/components/ui/label'
 import { Separator } from '@/components/ui/separator'
 
 export function SettingsPage() {
-  const { colorScheme, setColorScheme, taskSectionNavStyle, setTaskSectionNavStyle } = useTheme()
+  const { colorScheme, setColorScheme, taskSectionNavStyle, setTaskSectionNavStyle, showNestedGroups, setShowNestedGroups } = useTheme()
 
   return (
     <AppShell>
@@ -61,6 +61,27 @@ export function SettingsPage() {
                 setTaskSectionNavStyle(checked === true ? 'nested' : 'compact')
               }
               aria-label="Show task sections in left navigation"
+            />
+          </div>
+        </section>
+
+        <section className="space-y-4">
+          <h2 className="text-sm font-medium text-[var(--text-primary)]">Onboarding table</h2>
+          <Separator />
+          <div className="flex items-center justify-between gap-4 rounded-lg border border-border bg-[var(--bg-secondary)]/40 px-4 py-3">
+            <div className="space-y-0.5">
+              <Label htmlFor="show-nested-groups" className="text-[var(--text-primary)]">
+                Show nested workflow groups
+              </Label>
+              <p className="text-xs text-[var(--text-secondary)]">
+                Display Funding &amp; Asset Movement and Features &amp; Services groups under each account in the onboarding table.
+              </p>
+            </div>
+            <Checkbox
+              id="show-nested-groups"
+              checked={showNestedGroups}
+              onCheckedChange={(checked) => setShowNestedGroups(checked === true)}
+              aria-label="Show nested workflow groups"
             />
           </div>
         </section>

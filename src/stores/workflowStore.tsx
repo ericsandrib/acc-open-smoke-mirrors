@@ -57,6 +57,18 @@ function buildAccountOpeningPreReviewTimeline(): NonNullable<ChildReviewState['a
   }
 }
 
+/** Sets `lastAmlRunAt` on the KYC subject when AML screening is cleared (local calendar date, YYYY-MM-DD). */
+function stampLastAmlRunForKycChild(state: WorkflowState, childId: string): WorkflowState['relatedParties'] | null {
+  const child = state.tasks.flatMap((t) => t.children ?? []).find((c) => c.id === childId)
+  if (!child || child.childType !== 'kyc') return null
+  const meta = state.taskData[childId] as Record<string, unknown> | undefined
+  const partyId = meta?.kycSubjectPartyId as string | undefined
+  if (!partyId) return null
+  const n = new Date()
+  const isoDate = `${n.getFullYear()}-${String(n.getMonth() + 1).padStart(2, '0')}-${String(n.getDate()).padStart(2, '0')}`
+  return state.relatedParties.map((p) => (p.id === partyId ? { ...p, lastAmlRunAt: isoDate } : p))
+}
+
 /** KYC-only demo views — invalid when drilling into account opening (or similar) children. */
 const KYC_DEMO_VIEW_MODES = new Set(['aml', 'ho-kyc'])
 /** Account HO demo views — invalid when drilling into a KYC child. */
@@ -343,6 +355,7 @@ function workflowReducer(state: WorkflowState, action: WorkflowAction): Workflow
         return t
       })
       const spawnOrder = computeFlatTaskOrder(spawnTasks, state.actions)
+      const spawnHwm = { ...(state.childHighWaterMark ?? {}), [newChildId]: 0 }
       return {
         ...state,
         tasks: spawnTasks,
@@ -350,6 +363,7 @@ function workflowReducer(state: WorkflowState, action: WorkflowAction): Workflow
         activeChildActionId: newChildId,
         activeChildSubTaskIndex: 0,
         demoViewMode: sanitizeDemoViewModeForChild('advisor', action.childType),
+        childHighWaterMark: spawnHwm,
       }
     }
 
@@ -519,15 +533,8 @@ function workflowReducer(state: WorkflowState, action: WorkflowAction): Workflow
 
       const collectDataAction = baseActions.find((a) => a.id === 'collect-client-data')!
 
-      const splitAnnuity = action.journeyOnboardingConfig?.openAnnuityAccount === true
-
-      const actionsForState: Action[] = splitAnnuity
-        ? [
-            collectDataAction,
-            { id: 'account-opening', title: 'Account opening (no annuity)', order: 2 },
-            { id: 'account-opening-annuity', title: 'Account opening (with annuity)', order: 3 },
-          ]
-        : [...baseActions]
+      const multipleAccounts = action.journeyOnboardingConfig?.openMultipleAccounts === true
+      const hasAnnuity = action.journeyOnboardingConfig?.openAnnuityAccount === true
 
       const mkFresh = (t: Task): Task => ({
         ...t,
@@ -538,34 +545,52 @@ function workflowReducer(state: WorkflowState, action: WorkflowAction): Workflow
         edited: false,
       })
 
+      let actionsForState: Action[]
       let tasksForState: Task[]
+      let extraTaskData: Record<string, Record<string, unknown>> = {}
 
-      if (splitAnnuity) {
-        const collect = baseTasks.filter((t) => t.actionId === 'collect-client-data').map(mkFresh)
-        const oaSeed = baseTasks.find((t) => t.id === 'open-accounts')!
-        const open1: Task = {
-          ...mkFresh(oaSeed),
-          actionId: 'account-opening',
-        }
+      const collect = baseTasks.filter((t) => t.actionId === 'collect-client-data').map(mkFresh)
+      const oaSeed = baseTasks.find((t) => t.id === 'open-accounts')!
+
+      if (multipleAccounts && hasAnnuity) {
+        // Both paths: no-annuity + with-annuity
+        actionsForState = [
+          collectDataAction,
+          { id: 'account-opening', title: 'Account opening (no annuity)', order: 2 },
+          { id: 'account-opening-annuity', title: 'Account opening (with annuity)', order: 3 },
+        ]
+        const open1: Task = { ...mkFresh(oaSeed), actionId: 'account-opening' }
         const open2: Task = {
-          id: 'open-accounts-annuity',
-          title: 'Open Accounts',
-          actionId: 'account-opening-annuity',
-          status: 'in_progress' as const,
-          assignedTo: assignee,
-          formKey: 'open-accounts-with-annuity',
-          order: 1,
-          unread: true,
-          edited: false,
-          children: [],
+          id: 'open-accounts-annuity', title: 'Open Accounts',
+          actionId: 'account-opening-annuity', status: 'in_progress' as const,
+          assignedTo: assignee, formKey: 'open-accounts-with-annuity', order: 1,
+          unread: true, edited: false, children: [],
         }
         tasksForState = [...collect, open1, open2]
+        extraTaskData = { 'open-accounts-annuity': { additionalInstructions: seedOpenAccountsAdditionalInstructions } }
+      } else if (!multipleAccounts && hasAnnuity) {
+        // Single account with annuity: only the annuity path
+        actionsForState = [
+          collectDataAction,
+          { id: 'account-opening-annuity', title: 'Account Opening', order: 2 },
+        ]
+        const openAnnuity: Task = {
+          id: 'open-accounts-annuity', title: 'Open Accounts',
+          actionId: 'account-opening-annuity', status: 'in_progress' as const,
+          assignedTo: assignee, formKey: 'open-accounts-with-annuity', order: 1,
+          unread: true, edited: false, children: [],
+        }
+        tasksForState = [...collect, openAnnuity]
+        extraTaskData = { 'open-accounts-annuity': { additionalInstructions: seedOpenAccountsAdditionalInstructions } }
       } else {
+        // Multiple accounts, no annuity: standard flow
+        actionsForState = [...baseActions]
         tasksForState = baseTasks.map(mkFresh)
       }
 
       const newOrder = computeFlatTaskOrder(tasksForState, actionsForState)
       const openAccountsDataShell = { additionalInstructions: seedOpenAccountsAdditionalInstructions }
+      const hasStandardOpenAccounts = tasksForState.some((t) => t.id === 'open-accounts')
       return {
         actions: actionsForState,
         tasks: tasksForState,
@@ -575,10 +600,8 @@ function workflowReducer(state: WorkflowState, action: WorkflowAction): Workflow
         flatTaskOrder: newOrder,
         taskData: {
           'client-info': structuredClone(action.clientInfo),
-          'open-accounts': openAccountsDataShell,
-          ...(splitAnnuity
-            ? { 'open-accounts-annuity': { additionalInstructions: seedOpenAccountsAdditionalInstructions } }
-            : {}),
+          ...(hasStandardOpenAccounts ? { 'open-accounts': openAccountsDataShell } : {}),
+          ...extraTaskData,
         },
         journeyName: action.journeyName,
         journeyId: action.journeyId ?? `journey-${Date.now()}`,
@@ -635,12 +658,17 @@ function workflowReducer(state: WorkflowState, action: WorkflowAction): Workflow
             ? (state.demoViewMode ?? 'ho-documents')
             : (state.demoViewMode ?? 'advisor')
           : (state.demoViewMode ?? 'advisor')
+      const enterIdx = action.subTaskIndex ?? 0
+      const enterHwm = state.childHighWaterMark ?? {}
+      const enterCurHwm = enterHwm[action.childId] ?? -1
+      const enterNewHwm = enterIdx > enterCurHwm ? { ...enterHwm, [action.childId]: enterIdx } : enterHwm
       return {
         ...state,
         activeChildActionId: action.childId,
-        activeChildSubTaskIndex: action.subTaskIndex ?? 0,
+        activeChildSubTaskIndex: enterIdx,
         childActionResume: action.resumeAfterExit,
         demoViewMode: sanitizeDemoViewModeForChild(nextDemoRaw, enteredChild?.childType),
+        childHighWaterMark: enterNewHwm,
         submittedAt:
           childInReviewerPipeline
             ? (state.submittedAt ?? seedTime)
@@ -679,7 +707,11 @@ function workflowReducer(state: WorkflowState, action: WorkflowAction): Workflow
       const config = getChildTypeConfig(child.childType)
       const maxIndex = config.subTasks.length - 1
       if (state.activeChildSubTaskIndex >= maxIndex) return state
-      return { ...state, activeChildSubTaskIndex: state.activeChildSubTaskIndex + 1 }
+      const nextIdx = state.activeChildSubTaskIndex + 1
+      const prevHwm = state.childHighWaterMark ?? {}
+      const curHwm = prevHwm[state.activeChildActionId] ?? 0
+      const newHwm = nextIdx > curHwm ? { ...prevHwm, [state.activeChildActionId]: nextIdx } : prevHwm
+      return { ...state, activeChildSubTaskIndex: nextIdx, childHighWaterMark: newHwm }
     }
 
     case 'CHILD_GO_BACK': {
@@ -1076,8 +1108,10 @@ function workflowReducer(state: WorkflowState, action: WorkflowAction): Workflow
       const amlClearTs = new Date().toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })
       const cid = state.activeChildActionId
       const prev = state.childReviewsByChildId?.[cid] ?? {}
+      const nextParties = stampLastAmlRunForKycChild(state, cid)
       return {
         ...state,
+        ...(nextParties ? { relatedParties: nextParties } : {}),
         childReviewsByChildId: {
           ...state.childReviewsByChildId,
           [cid]: { ...prev, amlReview: { status: 'cleared', decidedAt: amlClearTs } },
