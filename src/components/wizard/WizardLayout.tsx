@@ -823,7 +823,7 @@ function WizardLayoutInner() {
                 <ChildActionSidebar />
                 <div className="flex-1 min-h-0 flex flex-col overflow-hidden">
                   <WizardAccessoryBar />
-                  <div className="flex flex-1 min-h-0 overflow-hidden">
+                  <div className="relative flex flex-1 min-h-0 overflow-hidden">
                     <div className="flex-1 min-h-0 flex flex-col overflow-hidden min-w-0">
                       <ChildActionContent />
                       <ChildActionFooter />
@@ -853,7 +853,7 @@ function WizardLayoutInner() {
                 <StepSidebar />
                 <div className="flex-1 min-h-0 flex flex-col overflow-hidden">
                   <WizardAccessoryBar />
-                  <div className="flex flex-1 min-h-0 overflow-hidden">
+                  <div className="relative flex flex-1 min-h-0 overflow-hidden">
                     <div className="flex-1 min-h-0 flex flex-col overflow-hidden min-w-0">
                       <TaskContent />
                       <WizardFooter />

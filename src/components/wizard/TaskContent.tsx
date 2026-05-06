@@ -130,7 +130,7 @@ export function TaskContent() {
   }, [state.parentSectionFocusId, dispatch])
 
   return (
-    <main className="flex-1 overflow-y-auto p-8">
+    <main className="flex-1 overflow-y-auto p-8 2xl:pr-[20rem]">
       <div className="max-w-[52.5rem] mx-auto">
         <ReviewBanner />
         <h2 className="text-3xl font-semibold text-foreground pb-6 mb-6 border-b border-border">{title}</h2>
