@@ -385,8 +385,9 @@ export function ChildActionContent() {
   const amlFlagged = reviewState?.amlFlagged
   const amlNotes = reviewState?.amlNotes
   const formReadOnly = advisorDisabled || isHoTeamAccountOpening
-  const hideHeaderDividerInV2 = variant === 'v2'
-  const useIncreasedHeaderSpacing = variant === 'v2' || variant === 'v3' || variant === 'v4'
+  const hideHeaderDividerInV2 = variant === 'v2' || variant === 'v5'
+  const useIncreasedHeaderSpacing =
+    variant === 'v2' || variant === 'v3' || variant === 'v4' || variant === 'v5'
 
   useEffect(() => {
     const targetSectionId = state.parentSectionFocusId

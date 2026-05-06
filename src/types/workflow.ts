@@ -228,6 +228,11 @@ export interface WorkflowState {
    * parent form section id (e.g. oa-kyc). Cleared when applied or invalid.
    */
   parentSectionFocusId?: string
+  /**
+   * v5 + split journey: which “page” of the no-annuity Open Accounts task is shown
+   * (Account Instructions / KYC Verification / Envelopes). Null when not in that mode.
+   */
+  v5NoAnnuityOpenAccountsPage?: 'instructions' | 'kyc' | 'envelopes' | null
   /** Tracks the furthest sub-task index each child has reached (for progress display). */
   childHighWaterMark?: Record<string, number>
 }
@@ -237,6 +242,7 @@ export type WorkflowAction =
   /** Highlight this section in {@link StepSidebar} for the current task; consumed by the sidebar. */
   | { type: 'FOCUS_PARENT_TASK_SECTION'; sectionId: string }
   | { type: 'CLEAR_PARENT_SECTION_FOCUS' }
+  | { type: 'SET_V5_NO_ANNUITY_OPEN_ACCOUNTS_PAGE'; page: 'instructions' | 'kyc' | 'envelopes' }
   /** Leave any child / drill-in flow and open a top-level task from {@link WorkflowState.flatTaskOrder}. */
   | { type: 'GO_TO_TASK'; taskId: string }
   | { type: 'SET_TASK_STATUS'; taskId: string; status: TaskStatus }

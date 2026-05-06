@@ -10,8 +10,10 @@ import { createContext, useContext, useEffect, useState, type ReactNode } from '
  *         accordion only.
  * - `v3`: Same structure as `v2`, but with subtle colored header accents on cards.
  * - `v4`: Clone of `v3` for alternate demo naming.
+ * - `v5`: Clone of `v2` presentation (“tasks in sections”); same bordered cards and journey chrome as v2,
+ *         with Account Opening tasks grouped under sidebar sections (without / with annuity).
  */
-export type OpenAccountsVariant = 'v1' | 'v2' | 'v3' | 'v4'
+export type OpenAccountsVariant = 'v1' | 'v2' | 'v3' | 'v4' | 'v5'
 
 const STORAGE_KEY = 'demo-open-accounts-variant'
 
@@ -24,7 +26,13 @@ export function OpenAccountsVariantProvider({ children }: { children: ReactNode 
   const [variant, setVariantState] = useState<OpenAccountsVariant>(() => {
     if (typeof window === 'undefined') return 'v1'
     const persisted = window.localStorage.getItem(STORAGE_KEY)
-    if (persisted === 'v1' || persisted === 'v2' || persisted === 'v3' || persisted === 'v4') {
+    if (
+      persisted === 'v1' ||
+      persisted === 'v2' ||
+      persisted === 'v3' ||
+      persisted === 'v4' ||
+      persisted === 'v5'
+    ) {
       return persisted
     }
     return 'v1'

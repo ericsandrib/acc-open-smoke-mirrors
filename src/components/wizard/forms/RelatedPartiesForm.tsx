@@ -613,13 +613,13 @@ function EmptyState({ message }: { message: string }) {
 export function RelatedPartiesForm() {
   const { state } = useWorkflow()
   const variant = useOpenAccountsVariant()
-  const isVersion2 = variant === 'v2'
+  const isVersion2 = variant === 'v2' || variant === 'v5'
   const isColoredBackgroundVariant = variant === 'v3' || variant === 'v4'
-  const isCardVariant = variant === 'v2' || isColoredBackgroundVariant
-  const isBorderedCardVariant = variant === 'v2' || variant === 'v4'
+  const isCardVariant = isVersion2 || isColoredBackgroundVariant
+  const isBorderedCardVariant = variant === 'v2' || variant === 'v5' || variant === 'v4'
   const cardContainerClass = isCardVariant
     ? cn(
-        'space-y-4 rounded-xl p-6 overflow-hidden',
+        'space-y-6 rounded-xl p-6 overflow-hidden',
         isVersion2 && 'border border-foreground/30',
         variant === 'v4' && 'border border-foreground/30',
         variant === 'v3'
@@ -633,11 +633,11 @@ export function RelatedPartiesForm() {
     : 'space-y-4'
   const cardHeaderClass = isCardVariant
     ? cn(
-        '-mx-6 -mt-6 mb-4 px-6 py-4',
+        '-mx-6 -mt-6 mb-8 px-6 py-4',
         isVersion2 && 'border-b border-border/60',
         variant === 'v4' && 'border-b border-border/60',
                   variant === 'v3' && 'mx-0 mt-0 px-0 pt-0 pb-4 border-b border-border/60',
-        (variant === 'v2' || variant === 'v4') && 'bg-[#F5F5F4]',
+        (variant === 'v2' || variant === 'v5' || variant === 'v4') && 'bg-[#F5F5F4]',
       )
     : ''
   const [showAddHouseholdSheet, setShowAddHouseholdSheet] = useState(false)

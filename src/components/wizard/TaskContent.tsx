@@ -1,6 +1,6 @@
 import { useEffect } from 'react'
 import { useWorkflow } from '@/stores/workflowStore'
-import { formComponents, taskDescriptions, taskSections } from './formRegistry'
+import { formComponents, taskSections } from './formRegistry'
 import { parseChildSubTaskId, getSubTaskDisplayTitle } from '@/utils/childTaskRegistry'
 import { Clock, AlertTriangle } from 'lucide-react'
 import { cn } from '@/lib/utils'
@@ -100,12 +100,22 @@ export function TaskContent() {
         : null)
       ?? activeChild?.name
       ?? ''
-  const hideHeaderDividerInCardVariants = variant === 'v2' || variant === 'v3' || variant === 'v4'
+  const hideHeaderDividerInCardVariants =
+    variant === 'v2' || variant === 'v3' || variant === 'v4' || variant === 'v5'
 
   const FormComponent = formKey ? formComponents[formKey] : null
   const hasExplicitSections = Boolean(formKey && taskSections[formKey]?.length)
+  const isV5NoAnnuityPagedMain =
+    variant === 'v5' &&
+    isSplitJourney &&
+    activeTask?.formKey === OPEN_ACCOUNTS_FORM_KEY &&
+    state.v5NoAnnuityOpenAccountsPage != null
 
   useEffect(() => {
+    if (isV5NoAnnuityPagedMain && state.parentSectionFocusId) {
+      dispatch({ type: 'CLEAR_PARENT_SECTION_FOCUS' })
+      return
+    }
     const targetSectionId = state.parentSectionFocusId
     if (!targetSectionId) return
     if (targetSectionId === '__top__') {
@@ -123,7 +133,7 @@ export function TaskContent() {
       el.scrollIntoView({ behavior: 'smooth', block: 'start' })
     }
     dispatch({ type: 'CLEAR_PARENT_SECTION_FOCUS' })
-  }, [state.parentSectionFocusId, dispatch])
+  }, [state.parentSectionFocusId, dispatch, isV5NoAnnuityPagedMain])
 
   return (
     <main className={cn('flex-1 overflow-y-auto p-8 2xl:pr-[20rem]', variant === 'v4' && 'bg-[#fafafa]')}>
@@ -138,7 +148,7 @@ export function TaskContent() {
         >
           {title}
         </h1>
-        {showCombinedOpenAccounts ? null : !hasExplicitSections ? (
+        {showCombinedOpenAccounts ? null : isV5NoAnnuityPagedMain ? null : !hasExplicitSections ? (
           <section id="__top__" className="space-y-1.5 scroll-mt-16 mb-6">
             <h3 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">Overview</h3>
           </section>

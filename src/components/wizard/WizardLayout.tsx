@@ -767,7 +767,10 @@ function WizardLayoutInner() {
                       <WizardAccessoryBar />
                       {showKycDocumentsSubTask ? <ChildActionContent /> : <ChildAmlReviewContent />}
                     </div>
-                    {taskSectionNavStyle === 'compact' && childSections.length > 0 && showKycDocumentsSubTask && (
+                    {taskSectionNavStyle === 'compact' &&
+                      variant !== 'v5' &&
+                      childSections.length > 0 &&
+                      showKycDocumentsSubTask && (
                       <TaskSectionPanel
                         sections={childSections}
                         onSelectSection={(sectionId) => dispatch({ type: 'FOCUS_PARENT_TASK_SECTION', sectionId })}
@@ -787,7 +790,10 @@ function WizardLayoutInner() {
                       <WizardAccessoryBar />
                       {showKycDocumentsSubTask ? <ChildActionContent /> : <ChildHoKycViewContent />}
                     </div>
-                    {taskSectionNavStyle === 'compact' && childSections.length > 0 && showKycDocumentsSubTask && (
+                    {taskSectionNavStyle === 'compact' &&
+                      variant !== 'v5' &&
+                      childSections.length > 0 &&
+                      showKycDocumentsSubTask && (
                       <TaskSectionPanel
                         sections={childSections}
                         onSelectSection={(sectionId) => dispatch({ type: 'FOCUS_PARENT_TASK_SECTION', sectionId })}
@@ -808,7 +814,9 @@ function WizardLayoutInner() {
                         <WizardAccessoryBar />
                         <ChildActionContent />
                       </div>
-                      {taskSectionNavStyle === 'compact' && childSections.length > 0 && (
+                      {taskSectionNavStyle === 'compact' &&
+                        variant !== 'v5' &&
+                        childSections.length > 0 && (
                         <TaskSectionPanel
                           sections={childSections}
                           onSelectSection={(sectionId) => dispatch({ type: 'FOCUS_PARENT_TASK_SECTION', sectionId })}
@@ -844,7 +852,9 @@ function WizardLayoutInner() {
                       <ChildActionContent />
                       <ChildActionFooter />
                     </div>
-                    {taskSectionNavStyle === 'compact' && childSections.length > 0 && (
+                    {taskSectionNavStyle === 'compact' &&
+                      variant !== 'v5' &&
+                      childSections.length > 0 && (
                       <TaskSectionPanel
                         sections={childSections}
                         onSelectSection={(sectionId) => dispatch({ type: 'FOCUS_PARENT_TASK_SECTION', sectionId })}
@@ -860,7 +870,7 @@ function WizardLayoutInner() {
             const sections = activeTask ? (taskSections[activeTask.formKey] ?? []) : []
             const showCombinedScrollspy = false
             const useV2StyledScrollspy =
-              (variant === 'v2' || variant === 'v3' || variant === 'v4') &&
+              (variant === 'v2' || variant === 'v3' || variant === 'v4' || variant === 'v5') &&
               !!activeTask &&
               (
                 activeTask.formKey === OPEN_ACCOUNTS_FORM_KEY ||
@@ -880,7 +890,9 @@ function WizardLayoutInner() {
                     </div>
                     {taskSectionNavStyle === 'compact' && showCombinedScrollspy ? (
                       <CombinedSectionPanel />
-                    ) : taskSectionNavStyle === 'compact' && sections.length > 0 ? (
+                    ) : taskSectionNavStyle === 'compact' &&
+                      variant !== 'v5' &&
+                      sections.length > 0 ? (
                       (() => {
                         const groups = toSectionGroups(sections)
                         return groups ? (

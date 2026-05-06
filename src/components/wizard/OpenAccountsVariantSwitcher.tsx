@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { GripVertical, Layers, Palette, Rows3 } from 'lucide-react'
+import { GripVertical, LayoutList, Layers, Palette, Rows3 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import {
   DropdownMenu,
@@ -62,6 +62,13 @@ const VARIANT_OPTIONS: Array<{
     label: 'Version 4 — colored background',
     description: 'Same as Version 3.',
     icon: Palette,
+  },
+  {
+    id: 'v5',
+    label: 'Version 5 — tasks in sections',
+    description:
+      'Version 2 visuals, with pizza-tracker task sections for Accounts without / with Annuities.',
+    icon: LayoutList,
   },
 ]
 

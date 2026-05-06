@@ -20,7 +20,7 @@ import { useOpenAccountsVariant } from '@/components/wizard/openAccountsVariantC
 export function FundChildFeaturesForm() {
   const { state, dispatch } = useWorkflow()
   const variant = useOpenAccountsVariant()
-  const isVersion2 = variant === 'v2'
+  const isVersion2 = variant === 'v2' || variant === 'v5'
   const isVersion3 = variant === 'v3'
   const isVersion4 = variant === 'v4'
   const isCardVariant = isVersion2 || isVersion3 || isVersion4
@@ -71,7 +71,7 @@ export function FundChildFeaturesForm() {
           className={cn(
             isCardVariant &&
               cn(
-                'rounded-xl p-6 space-y-4 overflow-hidden',
+                'rounded-xl p-6 space-y-6 overflow-hidden',
                 isVersion2 && 'border border-foreground/30 bg-background',
                 isVersion3 && 'v3-card-inner-strokes border border-foreground/20 bg-[#fafafa]',
                 isVersion4 && 'border border-foreground/30 bg-white',
@@ -83,7 +83,7 @@ export function FundChildFeaturesForm() {
             'flex items-center justify-between mb-3',
             isCardVariant &&
               cn(
-                '-mx-6 -mt-6 mb-4 px-6 py-4',
+                '-mx-6 -mt-6 mb-8 px-6 py-4',
                 isVersion2 && 'border-b border-border/60 bg-[#F5F5F4]',
                 isVersion4 && 'border-b border-border/60',
                     isVersion3 && 'mx-0 mt-0 px-0 pt-0 pb-4 border-b border-border/60',

@@ -8,7 +8,10 @@ import { getOpenAccountsSubmitForReviewBlockers } from '@/utils/openAccountsDocu
 import {
   isAnnuityExternalPlatformOpenAccountsTask,
   isOpenAccountsTask,
+  OPEN_ACCOUNTS_FORM_KEY,
+  OPEN_ACCOUNTS_WITH_ANNUITY_FORM_KEY,
 } from '@/utils/openAccountsTaskContext'
+import { useOpenAccountsVariant } from '@/components/wizard/openAccountsVariantContext'
 
 function getActiveTaskStatus(state: ReturnType<typeof useWorkflow>['state']): TaskStatus {
   // Check parent tasks
@@ -96,6 +99,7 @@ export function CompleteAccountOpeningConfirmModal({
 
 export function WizardFooter() {
   const { state, dispatch } = useWorkflow()
+  const openAccountsVariant = useOpenAccountsVariant()
   const [completeAccountOpeningOpen, setCompleteAccountOpeningOpen] = useState(false)
   const [completeAccountOpeningWarnings, setCompleteAccountOpeningWarnings] = useState<string[]>([])
   const idx = state.flatTaskOrder.indexOf(state.activeTaskId)
@@ -104,6 +108,15 @@ export function WizardFooter() {
   const activeStatus = getActiveTaskStatus(state)
   const isSubmitted = state.submittedTaskIds.includes(state.activeTaskId)
   const active = state.tasks.find((t) => t.id === state.activeTaskId)
+  const isSplitOpenAccountsJourney =
+    state.tasks.some((t) => t.formKey === OPEN_ACCOUNTS_FORM_KEY) &&
+    state.tasks.some((t) => t.formKey === OPEN_ACCOUNTS_WITH_ANNUITY_FORM_KEY)
+  const v5OpenAccountsMoreSubPages =
+    openAccountsVariant === 'v5' &&
+    isSplitOpenAccountsJourney &&
+    active?.formKey === OPEN_ACCOUNTS_FORM_KEY &&
+    state.v5NoAnnuityOpenAccountsPage != null &&
+    state.v5NoAnnuityOpenAccountsPage !== 'envelopes'
   const isOnOpenAccountsTask = isOpenAccountsTask(active)
   const isAnnuityOpenAccountsTask = isAnnuityExternalPlatformOpenAccountsTask(active)
   const openAccountsChildren = active?.children ?? []
@@ -160,7 +173,12 @@ export function WizardFooter() {
             <span className="text-sm text-muted-foreground">Assigned to compliance</span>
           )}
 
-          {isLast || showsOpenAccountsSubmit || showsAnnuityComplete ? (
+          {v5OpenAccountsMoreSubPages ? (
+            <Button onClick={() => dispatch({ type: 'GO_NEXT' })}>
+              Next
+              <ChevronRight className="h-4 w-4" />
+            </Button>
+          ) : isLast || showsOpenAccountsSubmit || showsAnnuityComplete ? (
             <Button
               onClick={() => {
                 setCompleteAccountOpeningWarnings([])
