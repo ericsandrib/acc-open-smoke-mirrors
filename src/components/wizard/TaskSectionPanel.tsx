@@ -131,7 +131,7 @@ export function TaskSectionPanel({
       {/* Hover popover for the compact column */}
       {isHovering && flatList.length > 0 && (
         <div
-          className="absolute right-full top-1/2 -translate-y-1/2 mr-2 z-50 bg-popover border border-border rounded-lg shadow-md py-1 min-w-56 2xl:hidden"
+          className="absolute right-full top-8 mr-2 z-50 bg-popover border border-border rounded-lg shadow-md py-1 min-w-56 2xl:hidden"
           onMouseEnter={() => { cancelClose(); setIsHovering(true) }}
           onMouseLeave={scheduleClose}
         >

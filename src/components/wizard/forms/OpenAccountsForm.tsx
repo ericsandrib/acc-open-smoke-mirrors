@@ -676,9 +676,12 @@ export function OpenAccountsForm() {
   return (
     <div className="space-y-7">
       {!externalAnnuityPlatform ? (
-        <h2 id={sectionId('oa-instructions-group')} className="text-2xl font-semibold scroll-mt-16">
-          Account instructions
-        </h2>
+        <div className="flex items-center gap-4 scroll-mt-16" id={sectionId('oa-instructions-group')}>
+          <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-[8px] bg-foreground/80 text-background text-base font-semibold">
+            1
+          </div>
+          <h2 className="text-2xl font-semibold">Account instructions</h2>
+        </div>
       ) : null}
       <section id={sectionId('oa-accounts')} className="scroll-mt-16">
         <div className="mb-4">
@@ -953,7 +956,12 @@ export function OpenAccountsForm() {
       {/* KYC Verification H2 group — KYC sections hidden on annuity path */}
       {!externalAnnuityPlatform ? (
         <div id={sectionId('oa-kyc')} className="scroll-mt-16">
-          <h2 className="text-2xl font-semibold">KYC Verification</h2>
+          <div className="flex items-center gap-4">
+            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-[8px] bg-foreground/80 text-background text-base font-semibold">
+              2
+            </div>
+            <h2 className="text-2xl font-semibold">KYC Verification</h2>
+          </div>
           <p className="text-base text-muted-foreground mt-2">
             Complete identity verification (KYC/KYB) before accounts can be opened. For trust accounts, include trustees
             and beneficial owners.
@@ -1206,7 +1214,12 @@ export function OpenAccountsForm() {
       {/* Envelopes — H2 (no inner H3 child) */}
       <section id={sectionId('oa-esign')} className="scroll-mt-16">
         <div className="mb-4">
-          <h2 className="text-2xl font-semibold">Envelopes</h2>
+          <div className="flex items-center gap-4">
+            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-[8px] bg-foreground/80 text-background text-base font-semibold">
+              3
+            </div>
+            <h2 className="text-2xl font-semibold">Envelopes</h2>
+          </div>
           <p className="text-base text-muted-foreground mt-2">
             Create eSign envelopes for client signatures. Required firm and custodian forms are automatically grouped by
             account. If delivery is set to in person or mail, those forms become wet-signed and must be uploaded below.
