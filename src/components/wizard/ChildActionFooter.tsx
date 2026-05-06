@@ -152,7 +152,7 @@ export function ChildActionFooter() {
     return (
       <footer
         ref={footerRef}
-        className="border-t border-border bg-background px-6 py-3 min-h-14 flex justify-between items-center shrink-0 box-border"
+        className="border-t border-border bg-background px-8 2xl:pr-[20rem] py-3 min-h-14 flex justify-between items-center shrink-0 box-border"
       >
         <div className="max-w-[52.5rem] mx-auto w-full flex items-center justify-between">
           <div>
@@ -302,7 +302,7 @@ export function ChildActionFooter() {
       <>
         <footer
           ref={footerRef}
-          className="border-t border-border bg-background px-6 py-3 min-h-14 flex justify-between items-center shrink-0 box-border"
+          className="border-t border-border bg-background px-8 2xl:pr-[20rem] py-3 min-h-14 flex justify-between items-center shrink-0 box-border"
         >
           <div className="max-w-[52.5rem] mx-auto w-full flex items-center justify-between">
             <div>
@@ -404,7 +404,7 @@ export function ChildActionFooter() {
     <>
       <footer
         ref={footerRef}
-        className="border-t border-border bg-background px-6 py-3 min-h-14 flex justify-between items-center shrink-0 box-border"
+        className="border-t border-border bg-background px-8 2xl:pr-[20rem] py-3 min-h-14 flex justify-between items-center shrink-0 box-border"
       >
         <div className="max-w-[52.5rem] mx-auto w-full flex items-center justify-between">
           <div>

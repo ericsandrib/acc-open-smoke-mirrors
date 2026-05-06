@@ -132,7 +132,7 @@ export function TaskContent() {
         <h1
           className={
             hideHeaderDividerInCardVariants
-              ? 'text-4xl font-semibold text-foreground mb-6'
+              ? 'text-4xl font-semibold text-foreground mb-8'
               : 'text-4xl font-semibold text-foreground pb-6 mb-6 border-b border-border'
           }
         >

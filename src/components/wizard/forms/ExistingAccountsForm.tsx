@@ -11,14 +11,13 @@ export function ExistingAccountsForm() {
   const isVersion2 = variant === 'v2'
   const isColoredBackgroundVariant = variant === 'v3' || variant === 'v4'
   const isCardVariant = variant === 'v2' || isColoredBackgroundVariant
-  const isBorderedCardVariant = variant === 'v2' || variant === 'v4'
   const cardContainerClass = isCardVariant
     ? cn(
         'rounded-xl p-6 overflow-hidden',
-        isVersion2 && 'border border-border',
-        variant === 'v4' && 'border border-border',
+        isVersion2 && 'border border-foreground/30',
+        variant === 'v4' && 'border border-foreground/30',
         variant === 'v3'
-          ? 'bg-[#fafafa]'
+          ? 'v3-card-inner-strokes border border-foreground/20 bg-[#fafafa]'
           : variant === 'v4'
             ? 'bg-white'
             : isColoredBackgroundVariant
@@ -45,8 +44,10 @@ export function ExistingAccountsForm() {
               isCardVariant &&
                 cn(
                   '-mx-6 -mt-6 px-6 py-4',
-                  isBorderedCardVariant && 'border-b border-border/60',
-                  variant === 'v2' && 'bg-[#F5F5F4]',
+                  isVersion2 && 'border-b border-border/60',
+                  variant === 'v4' && 'border-b border-border/60',
+                  variant === 'v3' && 'mx-0 mt-0 px-0 pt-0 pb-4 border-b border-border/60',
+                  (variant === 'v2' || variant === 'v4') && 'bg-[#F5F5F4]',
                 ),
             )}
           >
@@ -75,8 +76,10 @@ export function ExistingAccountsForm() {
               isCardVariant &&
                 cn(
                   '-mx-6 -mt-6 px-6 py-4',
-                  isBorderedCardVariant && 'border-b border-border/60',
-                  variant === 'v2' && 'bg-[#F5F5F4]',
+                  isVersion2 && 'border-b border-border/60',
+                  variant === 'v4' && 'border-b border-border/60',
+                  variant === 'v3' && 'mx-0 mt-0 px-0 pt-0 pb-4 border-b border-border/60',
+                  (variant === 'v2' || variant === 'v4') && 'bg-[#F5F5F4]',
                 ),
             )}
           >

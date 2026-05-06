@@ -7,6 +7,7 @@ import { useOpenAccountsVariant } from './openAccountsVariantContext'
 import { formComponents, taskDescriptions, taskSections } from './formRegistry'
 import { Badge } from '@/components/ui/badge'
 import { ShieldCheck, Lock, AlertTriangle, CheckCircle2, FileText, FileSearch } from 'lucide-react'
+import { cn } from '@/lib/utils'
 
 function HoDocumentAccountOpeningBanners({
   docReview,
@@ -385,6 +386,7 @@ export function ChildActionContent() {
   const amlNotes = reviewState?.amlNotes
   const formReadOnly = advisorDisabled || isHoTeamAccountOpening
   const hideHeaderDividerInV2 = variant === 'v2'
+  const useIncreasedHeaderSpacing = variant === 'v2' || variant === 'v3' || variant === 'v4'
 
   useEffect(() => {
     const targetSectionId = state.parentSectionFocusId
@@ -468,8 +470,11 @@ export function ChildActionContent() {
         <h1
           className={
             hideHeaderDividerInV2
-              ? 'text-4xl font-semibold text-foreground mb-6'
-              : 'text-4xl font-semibold text-foreground pb-6 mb-6 border-b border-border'
+              ? cn('text-4xl font-semibold text-foreground', useIncreasedHeaderSpacing ? 'mb-8' : 'mb-6')
+              : cn(
+                  'text-4xl font-semibold text-foreground pb-6 border-b border-border',
+                  useIncreasedHeaderSpacing ? 'mb-8' : 'mb-6',
+                )
           }
         >
           {getSubTaskDisplayTitle(child.childType, currentSubTask, state.demoViewMode)}

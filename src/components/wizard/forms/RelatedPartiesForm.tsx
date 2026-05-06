@@ -620,10 +620,10 @@ export function RelatedPartiesForm() {
   const cardContainerClass = isCardVariant
     ? cn(
         'space-y-4 rounded-xl p-6 overflow-hidden',
-        isVersion2 && 'border border-border',
-        variant === 'v4' && 'border border-border',
+        isVersion2 && 'border border-foreground/30',
+        variant === 'v4' && 'border border-foreground/30',
         variant === 'v3'
-          ? 'bg-[#fafafa]'
+          ? 'v3-card-inner-strokes border border-foreground/20 bg-[#fafafa]'
           : variant === 'v4'
             ? 'bg-white'
             : isColoredBackgroundVariant
@@ -634,8 +634,10 @@ export function RelatedPartiesForm() {
   const cardHeaderClass = isCardVariant
     ? cn(
         '-mx-6 -mt-6 mb-4 px-6 py-4',
-        isBorderedCardVariant && 'border-b border-border/60',
-        variant === 'v2' && 'bg-[#F5F5F4]',
+        isVersion2 && 'border-b border-border/60',
+        variant === 'v4' && 'border-b border-border/60',
+                  variant === 'v3' && 'mx-0 mt-0 px-0 pt-0 pb-4 border-b border-border/60',
+        (variant === 'v2' || variant === 'v4') && 'bg-[#F5F5F4]',
       )
     : ''
   const [showAddHouseholdSheet, setShowAddHouseholdSheet] = useState(false)

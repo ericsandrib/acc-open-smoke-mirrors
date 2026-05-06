@@ -69,9 +69,9 @@ export function FeatureServiceLineSetupForm() {
             isCardVariant &&
               cn(
                 'rounded-xl p-6 space-y-4 overflow-hidden',
-                isVersion2 && 'border border-border bg-background',
-                isVersion3 && 'bg-[#fafafa]',
-                isVersion4 && 'border border-border bg-white',
+                isVersion2 && 'border border-foreground/30 bg-background',
+                isVersion3 && 'v3-card-inner-strokes border border-foreground/20 bg-[#fafafa]',
+                isVersion4 && 'border border-foreground/30 bg-white',
               ),
           )}
         >
@@ -82,6 +82,8 @@ export function FeatureServiceLineSetupForm() {
                 '-mx-6 -mt-6 mb-4 px-6 py-4',
                 isVersion2 && 'border-b border-border/60 bg-[#F5F5F4]',
                 isVersion4 && 'border-b border-border/60',
+                    isVersion3 && 'mx-0 mt-0 px-0 pt-0 pb-4 border-b border-border/60',
+                isVersion4 && 'bg-[#F5F5F4]',
               ),
           )}
         >

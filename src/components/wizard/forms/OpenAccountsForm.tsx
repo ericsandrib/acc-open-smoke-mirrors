@@ -214,12 +214,13 @@ export function OpenAccountsForm() {
   const { state, dispatch } = useWorkflow()
   const openAccountsVariant = useOpenAccountsVariant()
   const isVersion2 = openAccountsVariant === 'v2'
+  const isVersion3 = openAccountsVariant === 'v3'
   const isVersion4 = openAccountsVariant === 'v4'
   const isColoredBackgroundVariant = openAccountsVariant === 'v3' || openAccountsVariant === 'v4'
   const isCardVariant = isVersion2 || isColoredBackgroundVariant
   const isBorderedCardVariant = isVersion2 || isVersion4
-  const subsectionTitleClass = isVersion4 ? 'text-sm font-semibold' : 'text-base font-semibold'
-  const subsectionBodyClass = isVersion4 ? 'text-sm text-muted-foreground mt-2' : 'text-base text-muted-foreground mt-2'
+  const subsectionTitleClass = isVersion4 ? 'text-base font-semibold' : 'text-base font-semibold'
+  const subsectionBodyClass = isVersion4 ? 'text-base text-muted-foreground mt-2' : 'text-base text-muted-foreground mt-2'
   const taskOverride = useOpenAccountsTaskOverride()
   const openAccountsTask =
     (taskOverride
@@ -688,10 +689,10 @@ export function OpenAccountsForm() {
           isCardVariant &&
             cn(
               'rounded-xl p-6 space-y-7 overflow-hidden',
-              isVersion2 && 'border border-border',
-              isVersion4 && 'border border-border',
+              isVersion2 && 'border border-foreground/30',
+              isVersion4 && 'border border-foreground/30',
               openAccountsVariant === 'v3'
-                ? 'bg-[#fafafa]'
+                ? 'v3-card-inner-strokes border border-foreground/20 bg-[#fafafa]'
                 : openAccountsVariant === 'v4'
                   ? 'bg-white'
                 : isColoredBackgroundVariant
@@ -705,8 +706,10 @@ export function OpenAccountsForm() {
           <div
             className={cn(
               '-mx-6 -mt-6 mb-4 px-6 py-4 scroll-mt-16',
-              isBorderedCardVariant && 'border-b border-border/60',
-              isVersion2 && 'bg-[#F5F5F4]',
+              isVersion2 && 'border-b border-border/60',
+              isVersion4 && 'border-b border-border/60',
+                    isVersion3 && 'mx-0 mt-0 px-0 pt-0 pb-4 border-b border-border/60',
+              (isVersion2 || isVersion4) && 'bg-[#F5F5F4]',
             )}
             id={sectionId('oa-instructions-group')}
           >
@@ -877,7 +880,7 @@ export function OpenAccountsForm() {
           <h3 className={subsectionTitleClass}>
             Supporting Documents
           </h3>
-          <p className={isVersion4 ? 'text-sm text-muted-foreground' : 'text-base text-muted-foreground'}>
+          <p className={subsectionBodyClass}>
             {externalAnnuityPlatform ? (
               <>
                 Client file uploads (for example ID or trust documents) go here. Firm and custodian forms for this path
@@ -1001,10 +1004,10 @@ export function OpenAccountsForm() {
             isCardVariant &&
               cn(
                 'rounded-xl p-6 space-y-7 overflow-hidden',
-                isVersion2 && 'border border-border',
-                isVersion4 && 'border border-border',
+                isVersion2 && 'border border-foreground/30',
+                isVersion4 && 'border border-foreground/30',
                 openAccountsVariant === 'v3'
-                  ? 'bg-[#fafafa]'
+                  ? 'v3-card-inner-strokes border border-foreground/20 bg-[#fafafa]'
                   : openAccountsVariant === 'v4'
                     ? 'bg-white'
                   : isColoredBackgroundVariant
@@ -1020,8 +1023,10 @@ export function OpenAccountsForm() {
             isCardVariant &&
               cn(
                 '-mx-6 -mt-6 mb-4 px-6 py-4',
-                isBorderedCardVariant && 'border-b border-border/60',
-                isVersion2 && 'bg-[#F5F5F4]',
+                isVersion2 && 'border-b border-border/60',
+                isVersion4 && 'border-b border-border/60',
+                    isVersion3 && 'mx-0 mt-0 px-0 pt-0 pb-4 border-b border-border/60',
+                (isVersion2 || isVersion4) && 'bg-[#F5F5F4]',
               ),
           )}
         >
@@ -1299,10 +1304,10 @@ export function OpenAccountsForm() {
           isCardVariant &&
             cn(
               'rounded-xl p-6 overflow-hidden',
-              isVersion2 && 'border border-border',
-              isVersion4 && 'border border-border',
+              isVersion2 && 'border border-foreground/30',
+              isVersion4 && 'border border-foreground/30',
               openAccountsVariant === 'v3'
-                ? 'bg-[#fafafa]'
+                ? 'v3-card-inner-strokes border border-foreground/20 bg-[#fafafa]'
                 : openAccountsVariant === 'v4'
                   ? 'bg-white'
                 : isColoredBackgroundVariant
@@ -1318,8 +1323,10 @@ export function OpenAccountsForm() {
             isCardVariant &&
               cn(
                 '-mx-6 -mt-6 mb-4 px-6 py-4',
-                isBorderedCardVariant && 'border-b border-border/60',
-                isVersion2 && 'bg-[#F5F5F4]',
+                isVersion2 && 'border-b border-border/60',
+                isVersion4 && 'border-b border-border/60',
+                    isVersion3 && 'mx-0 mt-0 px-0 pt-0 pb-4 border-b border-border/60',
+                (isVersion2 || isVersion4) && 'bg-[#F5F5F4]',
               ),
           )}
         >

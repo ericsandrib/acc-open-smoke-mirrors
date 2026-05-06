@@ -496,6 +496,15 @@ body {
   background-color: var(--color-background);
 }
 
+/* v3 section cards: darken nested default strokes (lists, tables, fields) inside the card */
+.v3-card-inner-strokes :where([class*='border-border']) {
+  border-color: color-mix(in oklch, var(--color-foreground) 26%, var(--color-border));
+}
+
+.v3-card-inner-strokes :where([class*='border-input']) {
+  border-color: color-mix(in oklch, var(--color-foreground) 22%, var(--color-input));
+}
+
 /* Use hand cursor consistently for interactive UI controls app-wide. */
 button:not(:disabled),
 a[href],
