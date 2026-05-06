@@ -18,19 +18,21 @@ const OpenAccountsVariantContext = createContext<{
   setVariant: (next: OpenAccountsVariant) => void
 } | null>(null)
 
-function readInitialVariant(): OpenAccountsVariant {
-  if (typeof window === 'undefined') return 'v1'
-  const stored = window.localStorage.getItem(STORAGE_KEY)
-  return stored === 'v2' ? 'v2' : 'v1'
-}
-
 export function OpenAccountsVariantProvider({ children }: { children: ReactNode }) {
-  const [variant, setVariantState] = useState<OpenAccountsVariant>(readInitialVariant)
-
+  /**
+   * Two-task design is the chosen direction; the v2 accordion variant is
+   * retained in code only for legacy support but is no longer reachable from
+   * the UI. Clear any stale `v2` localStorage value left over from the
+   * removed demo switcher so existing sessions snap back to v1.
+   */
   useEffect(() => {
     if (typeof window === 'undefined') return
-    window.localStorage.setItem(STORAGE_KEY, variant)
-  }, [variant])
+    if (window.localStorage.getItem(STORAGE_KEY) === 'v2') {
+      window.localStorage.removeItem(STORAGE_KEY)
+    }
+  }, [])
+
+  const [variant, setVariantState] = useState<OpenAccountsVariant>('v1')
 
   return (
     <OpenAccountsVariantContext.Provider value={{ variant, setVariant: setVariantState }}>
