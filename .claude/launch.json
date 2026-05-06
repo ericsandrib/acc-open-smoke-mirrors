@@ -3,8 +3,9 @@
   "configurations": [
     {
       "name": "dev",
-      "runtimeExecutable": "/Users/biancamoy/.nvm/versions/node/v24.11.1/bin/node",
+      "runtimeExecutable": "/Users/kevintsai/.nvm/versions/node/v20.18.3/bin/node",
       "runtimeArgs": ["node_modules/vite/bin/vite.js", "--port", "5173"],
+      "cwd": "/Users/kevintsai/Development/acc-open-smoke-mirrors",
       "port": 5173
     }
   ]

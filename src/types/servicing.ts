@@ -18,8 +18,13 @@ export interface JourneyAction {
   journeyId: string
   title: string
   status: JourneyStatus
+  displayStatus?: string
   nickname?: string
   parentActionId?: string
+  /** When set, this action is a group header (e.g. 'funding' or 'feature-service') */
+  groupType?: 'funding' | 'feature-service'
+  /** Original workflow child ID (before journey/action prefix) */
+  childId?: string
   tasks: JourneyTask[]
 }
 

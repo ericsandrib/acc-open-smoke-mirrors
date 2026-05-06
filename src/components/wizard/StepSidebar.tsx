@@ -206,8 +206,12 @@ export function StepSidebar() {
   )
 
   useEffect(() => {
-    setActiveSectionId(activeSections[0]?.id ?? null)
-  }, [state.activeTaskId, activeSections])
+    if (state.parentSectionFocusId) {
+      setActiveSectionId(state.parentSectionFocusId)
+    } else {
+      setActiveSectionId(activeSections[0]?.id ?? null)
+    }
+  }, [state.activeTaskId, activeSections, state.parentSectionFocusId])
 
   return (
     <TooltipProvider delayDuration={300}>
@@ -224,6 +228,8 @@ export function StepSidebar() {
             const actionTasks = state.tasks
               .filter((t) => t.actionId === action.id && t.formKey !== 'kyc' && t.id !== 'kyc-review')
               .sort((a, b) => a.order - b.order)
+
+            if (actionTasks.length === 0) return null
 
             return (
               <div key={action.id} className="mb-5">

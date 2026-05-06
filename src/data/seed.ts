@@ -2,7 +2,9 @@ import type { Action, Task, RelatedParty, FinancialAccount } from '@/types/workf
 
 export const actions: Action[] = [
   { id: 'collect-client-data', title: 'Collect Client Data', order: 1 },
+  { id: 'kyc-child-actions', title: 'KYC Cases', order: 1.5 },
   { id: 'account-opening', title: 'Account Opening', order: 2 },
+  { id: 'account-opening-child', title: 'Accounts', order: 2.5 },
 ]
 
 export const tasks: Task[] = [
@@ -25,13 +27,22 @@ export const tasks: Task[] = [
     order: 2,
   },
   {
+    id: 'kyc-review',
+    title: 'KYC Review',
+    actionId: 'account-opening',
+    status: 'not_started',
+    assignedTo: 'Unassigned',
+    formKey: 'kyc-review',
+    order: 1,
+  },
+  {
     id: 'open-accounts',
     title: 'Open Accounts',
     actionId: 'account-opening',
     status: 'not_started',
     assignedTo: 'Unassigned',
     formKey: 'open-accounts',
-    order: 1,
+    order: 2,
     children: [],
   },
 ]

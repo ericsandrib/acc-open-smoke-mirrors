@@ -31,6 +31,15 @@ function buildJourney(
       (t) => t.status === 'in_progress' || t.status === 'complete',
     )
 
+    // Set parent action for certain actions to create nesting
+    // Both KYC Cases and Accounts are nested under "Account Opening"
+    let parentActionId: string | undefined
+    if (action.id === 'kyc-child-actions') {
+      parentActionId = `${id}-account-opening`
+    } else if (action.id === 'account-opening-child') {
+      parentActionId = `${id}-account-opening`
+    }
+
     return {
       id: `${id}-${action.id}`,
       journeyId: id,
@@ -44,6 +53,7 @@ function buildJourney(
             ? 'in_progress' as const
             : 'not_started' as const,
       tasks: actionTasks,
+      parentActionId,
     }
   })
 

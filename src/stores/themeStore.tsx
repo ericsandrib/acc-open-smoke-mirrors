@@ -12,6 +12,8 @@ const ThemeContext = createContext<{
   setBrandTheme: (theme: BrandTheme) => void
   taskSectionNavStyle: TaskSectionNavStyle
   setTaskSectionNavStyle: (style: TaskSectionNavStyle) => void
+  showNestedGroups: boolean
+  setShowNestedGroups: (show: boolean) => void
   /** @deprecated Use colorScheme instead */
   theme: ColorScheme
   /** @deprecated Use toggleColorScheme instead */
@@ -36,10 +38,15 @@ function getInitialTaskSectionNavStyle(): TaskSectionNavStyle {
   return 'nested'
 }
 
+function getInitialShowNestedGroups(): boolean {
+  return localStorage.getItem('show-nested-groups') === 'true'
+}
+
 export function ThemeProvider({ children }: { children: ReactNode }) {
   const [colorScheme, setColorScheme] = useState<ColorScheme>(getInitialColorScheme)
   const [brandTheme, setBrandThemeState] = useState<BrandTheme>(getInitialBrandTheme)
   const [taskSectionNavStyle, setTaskSectionNavStyleState] = useState<TaskSectionNavStyle>(getInitialTaskSectionNavStyle)
+  const [showNestedGroups, setShowNestedGroupsState] = useState<boolean>(getInitialShowNestedGroups)
 
   useEffect(() => {
     document.documentElement.classList.toggle('dark', colorScheme === 'dark')
@@ -55,10 +62,15 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
     localStorage.setItem('task-section-nav-style', taskSectionNavStyle)
   }, [taskSectionNavStyle])
 
+  useEffect(() => {
+    localStorage.setItem('show-nested-groups', String(showNestedGroups))
+  }, [showNestedGroups])
+
   const toggleColorScheme = () => setColorScheme((t) => (t === 'light' ? 'dark' : 'light'))
 
   const setBrandTheme = (theme: BrandTheme) => setBrandThemeState(theme)
   const setTaskSectionNavStyle = (style: TaskSectionNavStyle) => setTaskSectionNavStyleState(style)
+  const setShowNestedGroups = (show: boolean) => setShowNestedGroupsState(show)
 
   return (
     <ThemeContext.Provider value={{
@@ -69,6 +81,8 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
       setBrandTheme,
       taskSectionNavStyle,
       setTaskSectionNavStyle,
+      showNestedGroups,
+      setShowNestedGroups,
       // backwards compat aliases
       theme: colorScheme,
       toggleTheme: toggleColorScheme,

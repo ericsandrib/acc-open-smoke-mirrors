@@ -7,7 +7,7 @@ import { WizardPage } from '@/pages/WizardPage'
 import { WorkflowPage } from '@/pages/WorkflowPage'
 import { ServicingPage } from '@/pages/ServicingPage'
 import { OnboardingPage } from '@/pages/OnboardingPage'
-import { JourneyDetailPage } from '@/pages/JourneyDetailPage'
+import { OnboardingJourneyDetailPage } from '@/pages/OnboardingJourneyDetailPage'
 import { SettingsPage } from '@/pages/SettingsPage'
 import { Toaster } from '@/components/ui/sonner'
 import { AppPasswordGate } from '@/components/AppPasswordGate'
@@ -21,12 +21,12 @@ export default function App() {
             <BrowserRouter>
               <Routes>
                 <Route path="/" element={<DashboardPage />} />
-                <Route path="/wizard" element={<WizardPage />} />
-                <Route path="/workflow" element={<WorkflowPage />} />
                 <Route path="/servicing" element={<ServicingPage />} />
-                <Route path="/servicing/:journeyId" element={<JourneyDetailPage />} />
-                <Route path="/servicing/:journeyId/action/:actionId" element={<JourneyDetailPage />} />
+                <Route path="/servicing/:journeyId" element={<WizardPage />} />
+                <Route path="/wizard" element={<Navigate to="/onboarding" replace />} />
+                <Route path="/workflow" element={<WorkflowPage />} />
                 <Route path="/onboarding" element={<OnboardingPage />} />
+                <Route path="/onboarding/:journeyId" element={<OnboardingJourneyDetailPage />} />
                 <Route path="/settings" element={<SettingsPage />} />
                 <Route path="*" element={<Navigate to="/" replace />} />
               </Routes>

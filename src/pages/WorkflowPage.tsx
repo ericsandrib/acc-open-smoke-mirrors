@@ -31,9 +31,9 @@ export function WorkflowPage() {
     <div className="h-screen flex flex-col bg-background">
       <header className="border-b border-border px-4 py-2 flex items-center justify-between shrink-0">
         <div className="flex items-center gap-3">
-          <Button variant="ghost" size="sm" onClick={() => navigate('/wizard')}>
+          <Button variant="ghost" size="sm" onClick={() => navigate(-1)}>
             <ArrowLeft className="h-4 w-4 mr-1" />
-            Back to Wizard
+            Back
           </Button>
           <h1 className="text-sm font-semibold">Workflow Viewer</h1>
         </div>

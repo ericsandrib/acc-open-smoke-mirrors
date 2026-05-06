@@ -77,6 +77,8 @@ export interface RelatedParty {
   phone?: string
   dob?: string
   kycStatus?: 'verified' | 'needs_kyc' | 'pending'
+  /** ISO date (YYYY-MM-DD) of the last completed AML screening; drives the 90-day AML renewal window. */
+  lastAmlRunAt?: string
   isHidden?: boolean
   accountNumber?: string
   ssn?: string
@@ -226,6 +228,8 @@ export interface WorkflowState {
    * parent form section id (e.g. oa-kyc). Cleared when applied or invalid.
    */
   parentSectionFocusId?: string
+  /** Tracks the furthest sub-task index each child has reached (for progress display). */
+  childHighWaterMark?: Record<string, number>
 }
 
 export type WorkflowAction =

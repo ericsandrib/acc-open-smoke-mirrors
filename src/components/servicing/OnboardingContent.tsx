@@ -2,6 +2,7 @@ import { useMemo } from 'react'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { PageTitle } from '@/components/page-title'
 import { useServicing } from '@/stores/servicingStore'
+import { useTheme } from '@/stores/themeStore'
 import { OnboardingJourneysTable, deriveOnboardingJourneyRows } from './OnboardingJourneysTable'
 import { ActionsTable, deriveActionRows } from './ActionsTable'
 import { TasksTable, deriveTaskRows } from './TasksTable'
@@ -18,6 +19,7 @@ import {
 export function OnboardingContent() {
   const { onboardingJourneys, currentLiveJourney } = useServicing()
 
+  const { showNestedGroups } = useTheme()
   const journeyRows = useMemo(() => deriveOnboardingJourneyRows(onboardingJourneys), [onboardingJourneys])
   const actionRows = useMemo(() => deriveActionRows(onboardingJourneys), [onboardingJourneys])
   const taskRows = useMemo(() => deriveTaskRows(onboardingJourneys), [onboardingJourneys])
@@ -47,7 +49,7 @@ export function OnboardingContent() {
             pinRowId={currentLiveJourney?.id}
           >
             {({ rows, visibleColumns }) => (
-              <OnboardingJourneysTable rows={rows} visibleColumns={visibleColumns} />
+              <OnboardingJourneysTable rows={rows} visibleColumns={visibleColumns} showNestedGroups={showNestedGroups} />
             )}
           </TableViewWrapper>
         </TabsContent>

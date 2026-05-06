@@ -126,6 +126,7 @@ export function ChildHoPrincipalViewContent() {
             phone: '(555) 010-0199',
             ssn: '123456789',
             kycStatus: 'verified',
+            lastAmlRunAt: '2026-03-01',
           },
         ]
 

@@ -203,7 +203,7 @@ export const relationships: Relationship[] = [
       clientType: 'individual',
     },
     relatedParties: [
-      { id: 'johnson-1', name: 'Michael Johnson', firstName: 'Michael', lastName: 'Johnson', type: 'household_member', role: 'Client', isPrimary: true, email: 'michael.johnson@example.com', phone: '+1 (555) 234-5678', dob: '1968-07-22', kycStatus: 'verified' },
+      { id: 'johnson-1', name: 'Michael Johnson', firstName: 'Michael', lastName: 'Johnson', type: 'household_member', role: 'Client', isPrimary: true, email: 'michael.johnson@example.com', phone: '+1 (555) 234-5678', dob: '1968-07-22', kycStatus: 'verified', lastAmlRunAt: '2026-02-10' },
       { id: 'johnson-contact-1', name: 'Patricia Wells', firstName: 'Patricia', lastName: 'Wells', type: 'related_contact', relationship: 'Accountant', relationshipCategory: 'Professional', email: 'pwells@accounting.com', phone: '+1 (555) 345-0001' },
     ],
     financialAccounts: [
@@ -223,7 +223,7 @@ export const relationships: Relationship[] = [
       clientType: 'individual',
     },
     relatedParties: [
-      { id: 'johnson-2', name: 'Sarah Johnson', firstName: 'Sarah', lastName: 'Johnson', type: 'household_member', role: 'Client', isPrimary: true, email: 'sarah.johnson@example.com', phone: '+1 (555) 234-5679', dob: '1970-03-14', kycStatus: 'verified' },
+      { id: 'johnson-2', name: 'Sarah Johnson', firstName: 'Sarah', lastName: 'Johnson', type: 'household_member', role: 'Client', isPrimary: true, email: 'sarah.johnson@example.com', phone: '+1 (555) 234-5679', dob: '1970-03-14', kycStatus: 'verified', lastAmlRunAt: '2025-11-01' },
     ],
     financialAccounts: [],
   },
