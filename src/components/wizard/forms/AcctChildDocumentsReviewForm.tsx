@@ -251,7 +251,7 @@ export function AcctChildDocumentsReviewForm() {
   }
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-7">
       <section id="acct-docs-forms" className="space-y-4 scroll-mt-16">
         <div>
           <h3 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground mb-1">

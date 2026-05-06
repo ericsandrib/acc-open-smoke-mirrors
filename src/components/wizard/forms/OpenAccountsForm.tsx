@@ -674,9 +674,9 @@ export function OpenAccountsForm() {
   }
 
   return (
-    <div className="space-y-12">
+    <div className="space-y-7">
       {!externalAnnuityPlatform ? (
-        <h2 id={sectionId('oa-instructions-group')} className="text-xl font-semibold scroll-mt-16">
+        <h2 id={sectionId('oa-instructions-group')} className="text-2xl font-semibold scroll-mt-16">
           Account instructions
         </h2>
       ) : null}
@@ -951,7 +951,7 @@ export function OpenAccountsForm() {
       {/* KYC Verification H2 group — KYC sections hidden on annuity path */}
       {!externalAnnuityPlatform ? (
         <div id={sectionId('oa-kyc')} className="scroll-mt-16">
-          <h2 className="text-xl font-semibold">KYC Verification</h2>
+          <h2 className="text-2xl font-semibold">KYC Verification</h2>
           <p className="text-base text-muted-foreground mt-2">
             Complete identity verification (KYC/KYB) before accounts can be opened. For trust accounts, include trustees
             and beneficial owners.
@@ -1202,7 +1202,7 @@ export function OpenAccountsForm() {
       {/* Envelopes — H2 (no inner H3 child) */}
       <section id={sectionId('oa-esign')} className="scroll-mt-16">
         <div className="mb-4">
-          <h2 className="text-xl font-semibold">Envelopes</h2>
+          <h2 className="text-2xl font-semibold">Envelopes</h2>
           <p className="text-base text-muted-foreground mt-2">
             Create eSign envelopes for client signatures. Required firm and custodian forms are automatically grouped by
             account. If delivery is set to in person or mail, those forms become wet-signed and must be uploaded below.

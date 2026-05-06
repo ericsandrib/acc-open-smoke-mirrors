@@ -197,7 +197,7 @@ export function TaskSectionPanel({
                 key={group.key}
                 className={cn(
                   'flex flex-col gap-0.5',
-                  groupIndex > 0 && 'border-t border-border mt-2 pt-2',
+                  groupIndex > 0 && 'mt-2',
                 )}
               >
                 {group.label ? (
@@ -218,7 +218,7 @@ export function TaskSectionPanel({
                         group.label ? 'pl-5 pr-3' : 'px-3',
                         isActive
                           ? 'bg-accent/60 text-foreground font-medium'
-                          : 'text-muted-foreground hover:bg-muted/50 hover:text-foreground',
+                          : 'text-foreground hover:bg-muted/50',
                       )}
                     >
                       {section.label}
@@ -238,7 +238,7 @@ export function TaskSectionPanel({
                     'w-full text-left text-sm py-1.5 px-3 rounded-md transition-colors truncate',
                     isActive
                       ? 'bg-accent/60 text-foreground font-medium'
-                      : 'text-muted-foreground hover:bg-muted/50 hover:text-foreground',
+                      : 'text-foreground hover:bg-muted/50',
                   )}
                 >
                   {section.label}

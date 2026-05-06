@@ -59,7 +59,7 @@ export function FundChildFundingForm() {
   }
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-7">
       <section>
         <div className="flex items-center justify-between mb-3">
           <div className="flex items-center gap-2">

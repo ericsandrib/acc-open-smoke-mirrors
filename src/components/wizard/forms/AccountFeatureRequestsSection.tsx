@@ -397,7 +397,7 @@ export function AccountFeatureRequestsSection({ accountChildId }: { accountChild
         </div>
 
         {alt?.requested ? (
-          <div className="space-y-8 pt-2">
+          <div className="space-y-7 pt-2">
             {altWarnings.length > 0 ? (
               <div
                 className="rounded-md border border-amber-200 bg-amber-50 dark:bg-amber-950/30 dark:border-amber-800/50 px-3 py-2 text-xs text-amber-900 dark:text-amber-100 space-y-1"

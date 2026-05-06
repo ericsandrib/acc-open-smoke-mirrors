@@ -83,7 +83,7 @@ export function AccountProfileSection({
   const accountTypeLabel = accountProductLabels[resolvedProduct]
 
   return (
-    <div className="space-y-10">
+    <div className="space-y-7">
       <section className="space-y-6">
         {!hideHeader ? (
           <div>
@@ -146,7 +146,7 @@ export function AccountAdditionalInformationSection({
   hideHeader = false,
 }: AccountAdditionalInformationSectionProps) {
   return (
-    <div className="space-y-10">
+    <div className="space-y-7">
       <section className="space-y-4">
         {!hideHeader ? (
           <div>

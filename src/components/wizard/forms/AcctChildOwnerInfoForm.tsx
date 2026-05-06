@@ -289,7 +289,7 @@ export function AcctChildOwnerInfoForm() {
   }
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-7">
       {lockForExternalSubmission ? (
         <div className="rounded-md border border-blue-200 bg-blue-50 dark:border-blue-900/60 dark:bg-blue-950/40 px-3 py-2.5">
           <p className="text-xs font-medium text-blue-900 dark:text-blue-100">
@@ -297,7 +297,7 @@ export function AcctChildOwnerInfoForm() {
           </p>
         </div>
       ) : null}
-      <div className={lockForExternalSubmission ? 'space-y-8 pointer-events-none opacity-75 select-none' : 'space-y-8'}>
+      <div className={lockForExternalSubmission ? 'space-y-7 pointer-events-none opacity-75 select-none' : 'space-y-7'}>
       <section id="acct-owners" className="space-y-6 scroll-mt-16">
         <div>
           <h3 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground mb-1">

@@ -456,9 +456,9 @@ export function ChildActionContent() {
             </Badge>
           </div>
         )}
-        <h2 className="text-3xl font-semibold text-foreground pb-6 mb-6 border-b border-border">
+        <h1 className="text-4xl font-semibold text-foreground pb-6 mb-6 border-b border-border">
           {getSubTaskDisplayTitle(child.childType, currentSubTask, state.demoViewMode)}
-        </h2>
+        </h1>
         {description && (
           <p className="text-base text-muted-foreground mb-6">{description}</p>
         )}

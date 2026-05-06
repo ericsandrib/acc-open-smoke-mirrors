@@ -55,7 +55,7 @@ export function FeatureServiceLineSetupForm() {
   }
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-7">
       <section className="space-y-4">
         <div>
           <h3 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">

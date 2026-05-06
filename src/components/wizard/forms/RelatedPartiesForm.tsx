@@ -631,7 +631,7 @@ export function RelatedPartiesForm() {
   const editingParty = editingPartyId ? state.relatedParties.find((p) => p.id === editingPartyId) ?? null : null
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-7">
       <section id="rcd-household" className="space-y-4 scroll-mt-16">
         <div>
           <h3 className="text-base font-semibold">Household</h3>

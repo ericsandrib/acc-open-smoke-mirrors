@@ -133,14 +133,7 @@ export function TaskContent() {
     <main className="flex-1 overflow-y-auto p-8 2xl:pr-[20rem]">
       <div className="max-w-[52.5rem] mx-auto">
         <ReviewBanner />
-        <h2 className="text-3xl font-semibold text-foreground pb-6 mb-6 border-b border-border">{title}</h2>
-        {showCombinedOpenAccounts ? (
-          <p className="text-base text-muted-foreground mb-6">
-            Add the household's accounts. Submit annuity accounts to NetX360 when ready.
-          </p>
-        ) : formKey && taskDescriptions[formKey] ? (
-          <p className="text-base text-muted-foreground mb-6">{taskDescriptions[formKey]}</p>
-        ) : null}
+        <h1 className="text-4xl font-semibold text-foreground pb-6 mb-6 border-b border-border">{title}</h1>
         {showCombinedOpenAccounts ? null : !hasExplicitSections ? (
           <section id="__top__" className="space-y-1.5 scroll-mt-16 mb-6">
             <h3 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">Overview</h3>
