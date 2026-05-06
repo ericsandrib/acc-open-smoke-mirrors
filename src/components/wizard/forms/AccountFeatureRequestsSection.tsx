@@ -74,7 +74,13 @@ const PRIMARY_OBJECTIVE_OPTIONS = [
 ] as const
 
 /** Margin/options + alternative strategy election on the account child root (embedded under Account & owners). */
-export function AccountFeatureRequestsSection({ accountChildId }: { accountChildId: string }) {
+export function AccountFeatureRequestsSection({
+  accountChildId,
+  hideSectionHeader = false,
+}: {
+  accountChildId: string
+  hideSectionHeader?: boolean
+}) {
   const { state, dispatch } = useWorkflow()
   const uid = useId()
   const ownersTaskId = `${accountChildId}-account-owners`
@@ -177,13 +183,15 @@ export function AccountFeatureRequestsSection({ accountChildId }: { accountChild
 
   return (
     <div className="space-y-6">
-      <div>
-        <SectionTitle>Investment Elections</SectionTitle>
-        <p className="text-sm text-muted-foreground mt-1">
-          Request margin, options, and related investment elections on this account. Identity and suitability stay on
-          the owners above.
-        </p>
-      </div>
+      {!hideSectionHeader ? (
+        <div>
+          <SectionTitle>Investment Elections</SectionTitle>
+          <p className="text-sm text-muted-foreground mt-1">
+            Request margin, options, and related investment elections on this account. Identity and suitability stay on
+            the owners above.
+          </p>
+        </div>
+      ) : null}
 
       <section className="rounded-lg border border-border p-4 space-y-4">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between sm:gap-4">

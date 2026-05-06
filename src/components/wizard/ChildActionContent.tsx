@@ -3,6 +3,7 @@ import type { ChildReviewState } from '@/types/workflow'
 import { useWorkflow, useChildActionContext, useAdvisorFormsEditable, getChildReviewState, getChildReviewDecision } from '@/stores/workflowStore'
 import { getSubTaskDisplayTitle } from '@/utils/childTaskRegistry'
 import { OPEN_ACCOUNTS_WITH_ANNUITY_FORM_KEY } from '@/utils/openAccountsTaskContext'
+import { useOpenAccountsVariant } from './openAccountsVariantContext'
 import { formComponents, taskDescriptions, taskSections } from './formRegistry'
 import { Badge } from '@/components/ui/badge'
 import { ShieldCheck, Lock, AlertTriangle, CheckCircle2, FileText, FileSearch } from 'lucide-react'
@@ -354,6 +355,7 @@ function AdvisorViewBanner() {
 export function ChildActionContent() {
   const { state, dispatch } = useWorkflow()
   const ctx = useChildActionContext()
+  const variant = useOpenAccountsVariant()
   const isAdvisorView = state.demoViewMode === 'advisor'
   const advisorFormsEditable = useAdvisorFormsEditable()
 
@@ -382,6 +384,7 @@ export function ChildActionContent() {
   const amlFlagged = reviewState?.amlFlagged
   const amlNotes = reviewState?.amlNotes
   const formReadOnly = advisorDisabled || isHoTeamAccountOpening
+  const hideHeaderDividerInV2 = variant === 'v2'
 
   useEffect(() => {
     const targetSectionId = state.parentSectionFocusId
@@ -456,7 +459,13 @@ export function ChildActionContent() {
             </Badge>
           </div>
         )}
-        <h1 className="text-4xl font-semibold text-foreground pb-6 mb-6 border-b border-border">
+        <h1
+          className={
+            hideHeaderDividerInV2
+              ? 'text-4xl font-semibold text-foreground mb-6'
+              : 'text-4xl font-semibold text-foreground pb-6 mb-6 border-b border-border'
+          }
+        >
           {getSubTaskDisplayTitle(child.childType, currentSubTask, state.demoViewMode)}
         </h1>
         {description && (

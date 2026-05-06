@@ -26,6 +26,8 @@ import {
   type WetSignedFirmUpload,
 } from '@/utils/wetSignedFirmUploads'
 import { findParentTaskForChild } from '@/utils/openAccountsTaskContext'
+import { useOpenAccountsVariant } from '@/components/wizard/openAccountsVariantContext'
+import { cn } from '@/lib/utils'
 
 interface DocInstance {
   id: string
@@ -49,6 +51,8 @@ type OwnerRow = { id: string; type: 'existing'; partyId?: string }
 
 export function AcctChildDocumentsReviewForm() {
   const { state } = useWorkflow()
+  const variant = useOpenAccountsVariant()
+  const isVersion2 = variant === 'v2'
   const ctx = useChildActionContext()
   const taskId = ctx?.subTaskId ?? ''
   const { data, updateField } = useTaskData(taskId || '__no_child__')
@@ -253,11 +257,16 @@ export function AcctChildDocumentsReviewForm() {
   return (
     <div className="space-y-7">
       <section id="acct-docs-forms" className="space-y-4 scroll-mt-16">
-        <div>
-          <h3 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground mb-1">
+        <div className={cn(isVersion2 && 'rounded-xl border border-border/60 bg-background p-6 space-y-4 overflow-hidden')}>
+        <div
+          className={cn(
+            isVersion2 && '-mx-6 -mt-6 mb-4 border-b border-border/60 bg-[#F5F5F4] px-6 py-4',
+          )}
+        >
+          <h3 className={cn(isVersion2 ? 'text-sm font-semibold uppercase tracking-wide' : 'text-sm font-semibold uppercase tracking-wide text-muted-foreground mb-1')}>
             Forms for This Account
           </h3>
-          <p className="text-sm text-muted-foreground">
+          <p className="text-sm text-muted-foreground mt-2">
             These required forms are generated automatically from this account&apos;s registration type using the same rules
             as the Documents panel and eSign envelope builder.
           </p>
@@ -348,11 +357,15 @@ export function AcctChildDocumentsReviewForm() {
         </div>
 
         <section id="acct-docs-client-upload" className="space-y-4 scroll-mt-16">
-          <div>
-            <h3 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground mb-1">
+          <div
+            className={cn(
+              isVersion2 && '-mx-6 mb-4 border-y border-border/60 bg-[#F5F5F4] px-6 py-4',
+            )}
+          >
+            <h3 className={cn(isVersion2 ? 'text-sm font-semibold uppercase tracking-wide' : 'text-sm font-semibold uppercase tracking-wide text-muted-foreground mb-1')}>
               Supporting Client Documents
             </h3>
-            <p className="text-sm text-muted-foreground">
+            <p className="text-sm text-muted-foreground mt-2">
               End-client uploads such as government-issued ID, trust documents, and other supporting files.
             </p>
           </div>
@@ -538,6 +551,7 @@ export function AcctChildDocumentsReviewForm() {
             value={(data.exceptionsNotes as string) ?? ''}
             onChange={(e) => updateField('exceptionsNotes', e.target.value)}
           />
+        </div>
         </div>
       </section>
     </div>

@@ -12,12 +12,15 @@ import { ChildActionTimelineSheet } from '@/components/wizard/ChildActionTimelin
 import { childStatusConfig, deriveChildDisplayStatus } from '@/utils/childStatusDisplay'
 import { cn } from '@/lib/utils'
 import { findParentTaskForChild } from '@/utils/openAccountsTaskContext'
+import { useOpenAccountsVariant } from '@/components/wizard/openAccountsVariantContext'
 
 /**
  * Hub step (per account child): list funding / account transfer workflows—mirrors "Accounts to Be Opened" on Open Accounts.
  */
 export function FundChildFundingForm() {
   const { state, dispatch } = useWorkflow()
+  const variant = useOpenAccountsVariant()
+  const isVersion2 = variant === 'v2'
   const ctx = useChildActionContext()
   const [pickerOpen, setPickerOpen] = useState(false)
   const [timelineChild, setTimelineChild] = useState<ChildTask | null>(null)
@@ -61,10 +64,16 @@ export function FundChildFundingForm() {
   return (
     <div className="space-y-7">
       <section>
-        <div className="flex items-center justify-between mb-3">
+        <div className={cn(isVersion2 && 'rounded-xl border border-border/60 bg-background p-6 space-y-4 overflow-hidden')}>
+        <div
+          className={cn(
+            'flex items-center justify-between mb-3',
+            isVersion2 && '-mx-6 -mt-6 mb-4 border-b border-border/60 bg-[#F5F5F4] px-6 py-4',
+          )}
+        >
           <div className="flex items-center gap-2">
             <Plus className="h-4 w-4 text-muted-foreground" aria-hidden />
-            <h3 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
+            <h3 className={cn(isVersion2 ? 'text-sm font-semibold uppercase tracking-wide' : 'text-sm font-semibold uppercase tracking-wide text-muted-foreground')}>
               Funding & asset movement
             </h3>
           </div>
@@ -137,6 +146,7 @@ export function FundChildFundingForm() {
         )}
 
         <FundingLinePickerDialog open={pickerOpen} onOpenChange={setPickerOpen} onConfirm={handleConfirm} />
+        </div>
       </section>
 
       <ChildActionTimelineSheet

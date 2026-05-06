@@ -29,6 +29,8 @@ import { toast } from 'sonner'
 import { isTrustEntityParty } from '@/utils/trustEntityParty'
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from '@/components/ui/sheet'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import { useOpenAccountsVariant } from '@/components/wizard/openAccountsVariantContext'
+import { cn } from '@/lib/utils'
 
 type OwnerRow = { id: string; type: 'existing'; partyId?: string }
 type BeneficiaryDesignationType = 'primary' | 'contingent'
@@ -75,6 +77,8 @@ function parsePercent(raw?: string): number {
 
 export function AcctChildOwnerInfoForm() {
   const { state, dispatch } = useWorkflow()
+  const variant = useOpenAccountsVariant()
+  const isVersion2 = variant === 'v2'
   const ctx = useChildActionContext()
   const taskId = ctx?.subTaskId ?? ''
   const { data, updateField } = useTaskData(taskId || '__no_child__')
@@ -299,11 +303,16 @@ export function AcctChildOwnerInfoForm() {
       ) : null}
       <div className={lockForExternalSubmission ? 'space-y-7 pointer-events-none opacity-75 select-none' : 'space-y-7'}>
       <section id="acct-owners" className="space-y-6 scroll-mt-16">
-        <div>
-          <h3 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground mb-1">
+        <div className={cn(isVersion2 && 'rounded-xl border border-border/60 bg-background p-6 space-y-6 overflow-hidden')}>
+        <div
+          className={cn(
+            isVersion2 && '-mx-6 -mt-6 mb-4 border-b border-border/60 bg-[#F5F5F4] px-6 py-4',
+          )}
+        >
+          <h3 className={cn(isVersion2 ? 'text-sm font-semibold uppercase tracking-wide' : 'text-sm font-semibold uppercase tracking-wide text-muted-foreground mb-1')}>
             Owners & Participants
           </h3>
-          <p className="text-sm text-muted-foreground">
+          <p className="text-sm text-muted-foreground mt-2">
             {trustEntityOwnersOnly ? (
               <>
                 Add the trust legal entity for this registration. Search for an existing trust or create one if needed.
@@ -414,15 +423,21 @@ export function AcctChildOwnerInfoForm() {
             }}
           />
         )}
+        </div>
       </section>
 
       {showBeneficiariesSection ? (
       <section id="acct-beneficiaries" className="space-y-6 scroll-mt-16">
-        <div>
-          <h3 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground mb-1">
+        <div className={cn(isVersion2 && 'rounded-xl border border-border/60 bg-background p-6 space-y-6 overflow-hidden')}>
+        <div
+          className={cn(
+            isVersion2 && '-mx-6 -mt-6 mb-4 border-b border-border/60 bg-[#F5F5F4] px-6 py-4',
+          )}
+        >
+          <h3 className={cn(isVersion2 ? 'text-sm font-semibold uppercase tracking-wide' : 'text-sm font-semibold uppercase tracking-wide text-muted-foreground mb-1')}>
             Beneficiaries
           </h3>
-          <p className="text-sm text-muted-foreground">
+          <p className="text-sm text-muted-foreground mt-2">
             Add beneficiaries from this client record, the directory, or a manual entry. Open a row to complete
             designation details.
           </p>
@@ -700,15 +715,21 @@ export function AcctChildOwnerInfoForm() {
             )}
           </SheetContent>
         </Sheet>
+        </div>
       </section>
       ) : null}
 
       <section id="acct-info" className="space-y-6 scroll-mt-16">
-        <div>
-          <h3 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground mb-1">
+        <div className={cn(isVersion2 && 'rounded-xl border border-border/60 bg-background p-6 space-y-6 overflow-hidden')}>
+        <div
+          className={cn(
+            isVersion2 && '-mx-6 -mt-6 mb-4 border-b border-border/60 bg-[#F5F5F4] px-6 py-4',
+          )}
+        >
+          <h3 className={cn(isVersion2 ? 'text-sm font-semibold uppercase tracking-wide' : 'text-sm font-semibold uppercase tracking-wide text-muted-foreground mb-1')}>
             Account Information
           </h3>
-          <p className="text-sm text-muted-foreground">
+          <p className="text-sm text-muted-foreground mt-2">
             Define account setup details, servicing metadata, suitability profile, and additional account-level fields.
           </p>
         </div>
@@ -721,11 +742,27 @@ export function AcctChildOwnerInfoForm() {
           hideHeader
         />
         <AccountAdditionalInformationSection data={data} updateField={updateField} hideHeader />
+        </div>
       </section>
 
       {childId ? (
         <section id="acct-features" className="space-y-6 scroll-mt-16">
-          <AccountFeatureRequestsSection accountChildId={childId} />
+          <div className={cn(isVersion2 && 'rounded-xl border border-border/60 bg-background p-6 space-y-6 overflow-hidden')}>
+            <div
+              className={cn(
+                isVersion2 && '-mx-6 -mt-6 mb-4 border-b border-border/60 bg-[#F5F5F4] px-6 py-4',
+              )}
+            >
+              <h3 className={cn(isVersion2 ? 'text-sm font-semibold uppercase tracking-wide' : 'text-sm font-semibold uppercase tracking-wide text-muted-foreground mb-1')}>
+                Investment Elections
+              </h3>
+              <p className="text-sm text-muted-foreground mt-2">
+                Request margin, options, and related investment elections on this account. Identity and suitability stay
+                on the owners above.
+              </p>
+            </div>
+            <AccountFeatureRequestsSection accountChildId={childId} hideSectionHeader />
+          </div>
         </section>
       ) : null}
       </div>
