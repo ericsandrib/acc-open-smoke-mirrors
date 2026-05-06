@@ -21,6 +21,9 @@ export function FundChildFeaturesForm() {
   const { state, dispatch } = useWorkflow()
   const variant = useOpenAccountsVariant()
   const isVersion2 = variant === 'v2'
+  const isVersion3 = variant === 'v3'
+  const isVersion4 = variant === 'v4'
+  const isCardVariant = isVersion2 || isVersion3 || isVersion4
   const ctx = useChildActionContext()
   const [pickerOpen, setPickerOpen] = useState(false)
   const [timelineChild, setTimelineChild] = useState<ChildTask | null>(null)
@@ -64,16 +67,31 @@ export function FundChildFeaturesForm() {
   return (
     <div className="space-y-7">
       <section>
-        <div className={cn(isVersion2 && 'rounded-xl border border-border/60 bg-background p-6 space-y-4 overflow-hidden')}>
+        <div
+          className={cn(
+            isCardVariant &&
+              cn(
+                'rounded-xl p-6 space-y-4 overflow-hidden',
+                isVersion2 && 'border border-border/60 bg-background',
+                isVersion3 && 'bg-[#fafafa]',
+                isVersion4 && 'border border-border/60 bg-white',
+              ),
+          )}
+        >
         <div
           className={cn(
             'flex items-center justify-between mb-3',
-            isVersion2 && '-mx-6 -mt-6 mb-4 border-b border-border/60 bg-[#F5F5F4] px-6 py-4',
+            isCardVariant &&
+              cn(
+                '-mx-6 -mt-6 mb-4 px-6 py-4',
+                isVersion2 && 'border-b border-border/60 bg-[#F5F5F4]',
+                isVersion4 && 'border-b border-border/60',
+              ),
           )}
         >
           <div className="flex items-center gap-2">
             <Plus className="h-4 w-4 text-muted-foreground" aria-hidden />
-            <h3 className={cn(isVersion2 ? 'text-sm font-semibold uppercase tracking-wide' : 'text-sm font-semibold uppercase tracking-wide text-muted-foreground')}>
+            <h3 className={cn(isCardVariant ? 'text-sm font-semibold uppercase tracking-wide' : 'text-sm font-semibold uppercase tracking-wide text-muted-foreground')}>
               Account features & services
             </h3>
           </div>

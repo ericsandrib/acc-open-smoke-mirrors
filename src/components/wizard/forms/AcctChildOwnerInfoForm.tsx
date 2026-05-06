@@ -79,6 +79,9 @@ export function AcctChildOwnerInfoForm() {
   const { state, dispatch } = useWorkflow()
   const variant = useOpenAccountsVariant()
   const isVersion2 = variant === 'v2'
+  const isVersion3 = variant === 'v3'
+  const isVersion4 = variant === 'v4'
+  const isCardVariant = isVersion2 || isVersion3 || isVersion4
   const ctx = useChildActionContext()
   const taskId = ctx?.subTaskId ?? ''
   const { data, updateField } = useTaskData(taskId || '__no_child__')
@@ -303,13 +306,28 @@ export function AcctChildOwnerInfoForm() {
       ) : null}
       <div className={lockForExternalSubmission ? 'space-y-7 pointer-events-none opacity-75 select-none' : 'space-y-7'}>
       <section id="acct-owners" className="space-y-6 scroll-mt-16">
-        <div className={cn(isVersion2 && 'rounded-xl border border-border/60 bg-background p-6 space-y-6 overflow-hidden')}>
         <div
           className={cn(
-            isVersion2 && '-mx-6 -mt-6 mb-4 border-b border-border/60 bg-[#F5F5F4] px-6 py-4',
+            isCardVariant &&
+              cn(
+                'rounded-xl p-6 space-y-6 overflow-hidden',
+                isVersion2 && 'border border-border/60 bg-background',
+                isVersion3 && 'bg-[#fafafa]',
+                isVersion4 && 'border border-border/60 bg-white',
+              ),
           )}
         >
-          <h3 className={cn(isVersion2 ? 'text-sm font-semibold uppercase tracking-wide' : 'text-sm font-semibold uppercase tracking-wide text-muted-foreground mb-1')}>
+        <div
+          className={cn(
+            isCardVariant &&
+              cn(
+                '-mx-6 -mt-6 mb-4 px-6 py-4',
+                isVersion2 && 'border-b border-border/60 bg-[#F5F5F4]',
+                isVersion4 && 'border-b border-border/60',
+              ),
+          )}
+        >
+          <h3 className={cn(isCardVariant ? 'text-sm font-semibold uppercase tracking-wide' : 'text-sm font-semibold uppercase tracking-wide text-muted-foreground mb-1')}>
             Owners & Participants
           </h3>
           <p className="text-sm text-muted-foreground mt-2">
@@ -428,13 +446,28 @@ export function AcctChildOwnerInfoForm() {
 
       {showBeneficiariesSection ? (
       <section id="acct-beneficiaries" className="space-y-6 scroll-mt-16">
-        <div className={cn(isVersion2 && 'rounded-xl border border-border/60 bg-background p-6 space-y-6 overflow-hidden')}>
         <div
           className={cn(
-            isVersion2 && '-mx-6 -mt-6 mb-4 border-b border-border/60 bg-[#F5F5F4] px-6 py-4',
+            isCardVariant &&
+              cn(
+                'rounded-xl p-6 space-y-6 overflow-hidden',
+                isVersion2 && 'border border-border/60 bg-background',
+                isVersion3 && 'bg-[#fafafa]',
+                isVersion4 && 'border border-border/60 bg-white',
+              ),
           )}
         >
-          <h3 className={cn(isVersion2 ? 'text-sm font-semibold uppercase tracking-wide' : 'text-sm font-semibold uppercase tracking-wide text-muted-foreground mb-1')}>
+        <div
+          className={cn(
+            isCardVariant &&
+              cn(
+                '-mx-6 -mt-6 mb-4 px-6 py-4',
+                isVersion2 && 'border-b border-border/60 bg-[#F5F5F4]',
+                isVersion4 && 'border-b border-border/60',
+              ),
+          )}
+        >
+          <h3 className={cn(isCardVariant ? 'text-sm font-semibold uppercase tracking-wide' : 'text-sm font-semibold uppercase tracking-wide text-muted-foreground mb-1')}>
             Beneficiaries
           </h3>
           <p className="text-sm text-muted-foreground mt-2">
@@ -720,13 +753,28 @@ export function AcctChildOwnerInfoForm() {
       ) : null}
 
       <section id="acct-info" className="space-y-6 scroll-mt-16">
-        <div className={cn(isVersion2 && 'rounded-xl border border-border/60 bg-background p-6 space-y-6 overflow-hidden')}>
         <div
           className={cn(
-            isVersion2 && '-mx-6 -mt-6 mb-4 border-b border-border/60 bg-[#F5F5F4] px-6 py-4',
+            isCardVariant &&
+              cn(
+                'rounded-xl p-6 space-y-6 overflow-hidden',
+                isVersion2 && 'border border-border/60 bg-background',
+                isVersion3 && 'bg-[#fafafa]',
+                isVersion4 && 'border border-border/60 bg-white',
+              ),
           )}
         >
-          <h3 className={cn(isVersion2 ? 'text-sm font-semibold uppercase tracking-wide' : 'text-sm font-semibold uppercase tracking-wide text-muted-foreground mb-1')}>
+        <div
+          className={cn(
+            isCardVariant &&
+              cn(
+                '-mx-6 -mt-6 mb-4 px-6 py-4',
+                isVersion2 && 'border-b border-border/60 bg-[#F5F5F4]',
+                isVersion4 && 'border-b border-border/60',
+              ),
+          )}
+        >
+          <h3 className={cn(isCardVariant ? 'text-sm font-semibold uppercase tracking-wide' : 'text-sm font-semibold uppercase tracking-wide text-muted-foreground mb-1')}>
             Account Information
           </h3>
           <p className="text-sm text-muted-foreground mt-2">
@@ -747,13 +795,28 @@ export function AcctChildOwnerInfoForm() {
 
       {childId ? (
         <section id="acct-features" className="space-y-6 scroll-mt-16">
-          <div className={cn(isVersion2 && 'rounded-xl border border-border/60 bg-background p-6 space-y-6 overflow-hidden')}>
+          <div
+            className={cn(
+              isCardVariant &&
+                cn(
+                  'rounded-xl p-6 space-y-6 overflow-hidden',
+                  isVersion2 && 'border border-border/60 bg-background',
+                  isVersion3 && 'bg-[#fafafa]',
+                  isVersion4 && 'border border-border/60 bg-white',
+                ),
+            )}
+          >
             <div
               className={cn(
-                isVersion2 && '-mx-6 -mt-6 mb-4 border-b border-border/60 bg-[#F5F5F4] px-6 py-4',
+                isCardVariant &&
+                  cn(
+                    '-mx-6 -mt-6 mb-4 px-6 py-4',
+                    isVersion2 && 'border-b border-border/60 bg-[#F5F5F4]',
+                    isVersion4 && 'border-b border-border/60',
+                  ),
               )}
             >
-              <h3 className={cn(isVersion2 ? 'text-sm font-semibold uppercase tracking-wide' : 'text-sm font-semibold uppercase tracking-wide text-muted-foreground mb-1')}>
+              <h3 className={cn(isCardVariant ? 'text-sm font-semibold uppercase tracking-wide' : 'text-sm font-semibold uppercase tracking-wide text-muted-foreground mb-1')}>
                 Investment Elections
               </h3>
               <p className="text-sm text-muted-foreground mt-2">

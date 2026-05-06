@@ -417,7 +417,13 @@ export function ChildActionContent() {
   }, [state.parentSectionFocusId, dispatch])
 
   return (
-    <main className="flex-1 overflow-y-auto overscroll-contain p-8 2xl:pr-[20rem]">
+    <main
+      className={
+        variant === 'v4'
+          ? 'flex-1 overflow-y-auto overscroll-contain p-8 2xl:pr-[20rem] bg-[#fafafa]'
+          : 'flex-1 overflow-y-auto overscroll-contain p-8 2xl:pr-[20rem]'
+      }
+    >
       <div className="max-w-[52.5rem] mx-auto">
         {inReview && !isAdvisorView && !isHoTeamAccountOpening && child.childType === 'account-opening' && (
           <div className="rounded-lg border border-violet-200 bg-violet-50 dark:border-violet-900/60 dark:bg-violet-950/40 px-4 py-3 mb-6">

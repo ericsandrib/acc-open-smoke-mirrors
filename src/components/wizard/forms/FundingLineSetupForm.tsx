@@ -12,6 +12,8 @@ import {
 import { FUNDING_OPTIONS } from '@/data/fundingOptions'
 import { FinancialAccountSlotCard } from '@/components/wizard/forms/FinancialAccountSlotCard'
 import { ExternalLink } from 'lucide-react'
+import { useOpenAccountsVariant } from '@/components/wizard/openAccountsVariantContext'
+import { cn } from '@/lib/utils'
 
 const servicingModels = [
   { value: 'advisory', label: 'Advisory (Fee-based)' },
@@ -30,6 +32,11 @@ const dividendOptions = [
 export function FundingLineSetupForm() {
   const NETX360_ANNUITIES_DEEPLINK = 'https://xat-www2.netx360.inautix.com/plus/servicing/account-service/client-onboarding'
   const { state } = useWorkflow()
+  const variant = useOpenAccountsVariant()
+  const isVersion2 = variant === 'v2'
+  const isVersion3 = variant === 'v3'
+  const isVersion4 = variant === 'v4'
+  const isCardVariant = isVersion2 || isVersion3 || isVersion4
   const ctx = useChildActionContext()
   const taskId = ctx?.subTaskId ?? ''
   const { data, updateField, updateFields } = useTaskData(taskId || '__no_child__')
@@ -143,8 +150,28 @@ export function FundingLineSetupForm() {
   return (
     <div className="space-y-7">
       <section className="space-y-4">
-        <div>
-          <h3 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
+        <div
+          className={cn(
+            isCardVariant &&
+              cn(
+                'rounded-xl p-6 space-y-4 overflow-hidden',
+                isVersion2 && 'border border-border/60 bg-background',
+                isVersion3 && 'bg-[#fafafa]',
+                isVersion4 && 'border border-border/60 bg-white',
+              ),
+          )}
+        >
+        <div
+          className={cn(
+            isCardVariant &&
+              cn(
+                '-mx-6 -mt-6 mb-4 px-6 py-4',
+                isVersion2 && 'border-b border-border/60 bg-[#F5F5F4]',
+                isVersion4 && 'border-b border-border/60',
+              ),
+          )}
+        >
+          <h3 className={cn(isCardVariant ? 'text-sm font-semibold uppercase tracking-wide' : 'text-sm font-semibold uppercase tracking-wide text-muted-foreground')}>
             Funding & asset movement
           </h3>
           <p className="text-sm text-muted-foreground mt-1">
@@ -245,6 +272,7 @@ export function FundingLineSetupForm() {
             </div>
           </>
         )}
+        </div>
       </section>
 
       {!isAnnuitiesServicing && fundingSource === 'account_transfers' && (
