@@ -271,7 +271,7 @@ function buildDisplayActions(state: WorkflowState, variant: 'v1' | 'v2'): Displa
     for (const t of withAnnuityTasks) {
       accountOpeningGroup.tasks.push({
         id: t.id,
-        label: 'Annuity Accounts',
+        label: 'Accounts with Annuities',
         underlyingTaskIds: [t.id],
       })
     }

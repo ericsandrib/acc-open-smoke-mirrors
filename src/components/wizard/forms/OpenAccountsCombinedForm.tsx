@@ -98,7 +98,7 @@ export function OpenAccountsCombinedForm() {
           <AccordionTrigger className="px-5 py-4 hover:bg-muted/30">
             <div className="flex w-full flex-col items-start gap-1 text-left">
               <div className="flex w-full items-center justify-between gap-3">
-                <span className="text-base font-semibold">Annuity Accounts</span>
+                <span className="text-base font-semibold">Accounts with Annuities</span>
                 <Badge
                   variant="outline"
                   className="text-[11px] font-medium bg-violet-50 text-violet-700 border-violet-200"

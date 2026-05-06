@@ -92,7 +92,7 @@ export function TaskContent() {
       ? activeTask.formKey === OPEN_ACCOUNTS_FORM_KEY
         ? 'Accounts without Annuities'
         : activeTask.formKey === OPEN_ACCOUNTS_WITH_ANNUITY_FORM_KEY
-          ? 'Annuity Accounts'
+          ? 'Accounts with Annuities'
           : null
       : null
 
