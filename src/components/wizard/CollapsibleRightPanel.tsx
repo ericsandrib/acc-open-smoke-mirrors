@@ -33,14 +33,14 @@ export function CollapsibleRightPanel({
       className={cn(
         'shrink-0 overflow-hidden bg-white border-l border-l-transparent flex flex-col min-h-0 h-full',
         'transition-[width,border-color] duration-200 ease-out motion-reduce:transition-none',
-        collapsed ? 'w-0' : 'w-64 border-l-border',
+        collapsed ? 'w-0' : 'w-[330px] border-l-border',
       )}
       aria-label={title}
       aria-hidden={collapsed}
     >
       <div
         className={cn(
-          'flex flex-col w-64 min-h-0 h-full transition-opacity duration-150 ease-out motion-reduce:transition-none',
+          'flex flex-col w-[330px] min-h-0 h-full transition-opacity duration-150 ease-out motion-reduce:transition-none',
           collapsed ? 'opacity-0' : 'opacity-100 delay-200',
         )}
       >

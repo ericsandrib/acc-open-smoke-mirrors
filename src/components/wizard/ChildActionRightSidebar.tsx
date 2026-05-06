@@ -1,12 +1,12 @@
-import { useState } from 'react'
 import { cn } from '@/lib/utils'
 import { useChildActionContext, useWorkflow, getChildReviewState } from '@/stores/workflowStore'
-import { useWizardRightPanel } from '@/components/wizard/wizardRightPanelContext'
+import {
+  useWizardRightPanel,
+  type WizardRightPanelTab,
+} from '@/components/wizard/wizardRightPanelContext'
 import { ChildActionTimeline } from '@/components/wizard/ChildActionTimelineSheet'
 
-type Tab = 'details' | 'activity' | 'comments'
-
-const TAB_ORDER: Tab[] = ['details', 'activity', 'comments']
+const TAB_ORDER: WizardRightPanelTab[] = ['details', 'activity', 'comments']
 
 /**
  * Mirrors {@link CollapsibleRightPanel}'s collapse animation: width + border
@@ -17,8 +17,7 @@ const TAB_ORDER: Tab[] = ['details', 'activity', 'comments']
 export function ChildActionRightSidebar() {
   const ctx = useChildActionContext()
   const { state } = useWorkflow()
-  const { collapsed } = useWizardRightPanel()
-  const [activeTab, setActiveTab] = useState<Tab>('details')
+  const { collapsed, activeTab, setActiveTab } = useWizardRightPanel()
 
   if (!ctx) return null
 
@@ -30,14 +29,14 @@ export function ChildActionRightSidebar() {
       className={cn(
         'shrink-0 overflow-hidden bg-white border-l border-l-transparent flex flex-col min-h-0 h-full',
         'transition-[width,border-color] duration-200 ease-out motion-reduce:transition-none',
-        collapsed ? 'w-0' : 'w-72 border-l-border',
+        collapsed ? 'w-0' : 'w-[330px] border-l-border',
       )}
       aria-label="Application details"
       aria-hidden={collapsed}
     >
       <div
         className={cn(
-          'flex flex-col w-72 min-h-0 h-full transition-opacity duration-150 ease-out motion-reduce:transition-none',
+          'flex flex-col w-[330px] min-h-0 h-full transition-opacity duration-150 ease-out motion-reduce:transition-none',
           collapsed ? 'opacity-0' : 'opacity-100 delay-200',
         )}
       >
@@ -62,7 +61,7 @@ export function ChildActionRightSidebar() {
         <div className="flex-1 min-h-0 overflow-y-auto p-4">
           {activeTab === 'activity' && (
             <>
-              <h3 className="text-sm font-semibold mb-4">Application timeline</h3>
+              <h3 className="text-sm font-semibold mb-4">Application activity</h3>
               <ChildActionTimeline
                 childType={ctx.child.childType}
                 status={ctx.child.status}

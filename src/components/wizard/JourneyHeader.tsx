@@ -58,9 +58,12 @@ export function JourneyHeader() {
         </span>
       </div>
       <div className="flex h-14 items-center gap-2 px-3 border-b border-border">
-        <h2 className="flex-1 truncate text-sm font-semibold text-foreground">
-          {state.journeyName ?? 'Client Onboarding'}
-        </h2>
+        <div className="flex-1 min-w-0">
+          <h2 className="truncate text-sm font-semibold text-foreground">
+            {state.journeyName ?? 'Client Onboarding'}
+          </h2>
+          <p className="truncate text-xs text-muted-foreground">Onboarding</p>
+        </div>
         <OwnerAvatar name={state.assignedTo} />
       </div>
     </div>

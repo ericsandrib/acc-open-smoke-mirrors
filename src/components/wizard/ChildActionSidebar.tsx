@@ -121,7 +121,7 @@ export function ChildActionSidebar() {
   const { taskSectionNavStyle } = useTheme()
   const ctx = useChildActionContext()
   const [activeSectionId, setActiveSectionId] = useState<string | null>(null)
-  const { setCollapsed: setRightPanelCollapsed } = useWizardRightPanel()
+  const { setCollapsed: setRightPanelCollapsed, setActiveTab: setRightPanelTab } = useWizardRightPanel()
 
   if (!ctx) return null
 
@@ -171,16 +171,17 @@ export function ChildActionSidebar() {
             {breadcrumbLabel}
           </span>
         </div>
-        <div className="mb-1.5 flex h-9 items-center gap-2 px-3">
-          <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-[var(--bg-tertiary)] text-muted-foreground">
-            <ChildIcon className="h-3.5 w-3.5" aria-hidden />
-          </span>
-          <h2 className="text-sm font-semibold text-foreground truncate">
-            {child.name}
-          </h2>
-        </div>
+        <div className="pt-2">
+          <div className="mb-1.5 flex h-9 items-center gap-2 px-3">
+            <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-[var(--bg-tertiary)] text-muted-foreground">
+              <ChildIcon className="h-3.5 w-3.5" aria-hidden />
+            </span>
+            <h2 className="text-sm font-semibold text-foreground truncate">
+              {child.name}
+            </h2>
+          </div>
 
-        <ul className="space-y-1 px-1">
+          <ul className="space-y-1 px-1">
           {config.subTasks.map((subTask, idx) => {
             const subTaskId = `${child.id}-${subTask.suffix}`
             const childMeta = state.taskData[child.id] as Record<string, unknown> | undefined
@@ -249,7 +250,8 @@ export function ChildActionSidebar() {
               </li>
             )
           })}
-        </ul>
+          </ul>
+        </div>
 
         {(child.childType === 'account-opening' || child.childType === 'kyc') && (() => {
           const reviewState = getChildReviewState(state, child.id)
@@ -269,13 +271,16 @@ export function ChildActionSidebar() {
                     <p className="text-base font-bold truncate">{stageLabel}</p>
                   </div>
                 </div>
-                <div className="border-t border-border p-4">
+                <div className="border-t border-border px-4 py-2">
                   <p className="text-sm text-foreground leading-snug">{description}</p>
                 </div>
                 <div className="border-t border-border bg-black/5 dark:bg-white/5 px-3 flex items-center" style={{ minHeight: '64px' }}>
                   <button
                     type="button"
-                    onClick={() => setRightPanelCollapsed(false)}
+                    onClick={() => {
+                      setRightPanelTab('activity')
+                      setRightPanelCollapsed(false)
+                    }}
                     className="flex items-center gap-2 text-xs font-medium text-foreground/80 hover:text-foreground bg-black/10 dark:bg-white/10 rounded-lg px-3 py-2 hover:bg-black/15 dark:hover:bg-white/15 transition-colors"
                   >
                     Activity
