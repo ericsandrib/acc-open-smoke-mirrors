@@ -214,6 +214,12 @@ export function OpenAccountsForm() {
   const { state, dispatch } = useWorkflow()
   const openAccountsVariant = useOpenAccountsVariant()
   const isVersion2 = openAccountsVariant === 'v2'
+  const isVersion4 = openAccountsVariant === 'v4'
+  const isColoredBackgroundVariant = openAccountsVariant === 'v3' || openAccountsVariant === 'v4'
+  const isCardVariant = isVersion2 || isColoredBackgroundVariant
+  const isBorderedCardVariant = isVersion2 || isVersion4
+  const subsectionTitleClass = isVersion4 ? 'text-sm font-semibold' : 'text-base font-semibold'
+  const subsectionBodyClass = isVersion4 ? 'text-sm text-muted-foreground mt-2' : 'text-base text-muted-foreground mt-2'
   const taskOverride = useOpenAccountsTaskOverride()
   const openAccountsTask =
     (taskOverride
@@ -677,14 +683,35 @@ export function OpenAccountsForm() {
 
   return (
     <div className="space-y-7">
-      <div className={cn(isVersion2 && 'rounded-xl border border-border/60 bg-background p-6 space-y-7 overflow-hidden')}>
-      {!externalAnnuityPlatform ? (
-        isVersion2 ? (
+      <div
+        className={cn(
+          isCardVariant &&
+            cn(
+              'rounded-xl p-6 space-y-7 overflow-hidden',
+              isBorderedCardVariant && 'border border-border/60',
+              openAccountsVariant === 'v3'
+                ? 'bg-[#fafafa]'
+                : openAccountsVariant === 'v4'
+                  ? 'bg-white'
+                : isColoredBackgroundVariant
+                  ? 'bg-[#fcfcfc]'
+                  : 'bg-background',
+            ),
+        )}
+      >
+      {isCardVariant || !externalAnnuityPlatform ? (
+        isCardVariant ? (
           <div
-            className="-mx-6 -mt-6 mb-4 border-b border-border/60 bg-[#F5F5F4] px-6 py-4 scroll-mt-16"
+            className={cn(
+              '-mx-6 -mt-6 mb-4 px-6 py-4 scroll-mt-16',
+              isBorderedCardVariant && 'border-b border-border/60',
+              isVersion2 && 'bg-[#F5F5F4]',
+            )}
             id={sectionId('oa-instructions-group')}
           >
-            <h4 className="text-sm font-semibold uppercase tracking-wide">Account instructions</h4>
+            <h4 className="text-sm font-semibold uppercase tracking-wide">
+              Account instructions
+            </h4>
           </div>
         ) : (
           <div className="flex items-center gap-4 scroll-mt-16" id={sectionId('oa-instructions-group')}>
@@ -696,11 +723,11 @@ export function OpenAccountsForm() {
         )
       ) : null}
       <section id={sectionId('oa-accounts')} className="scroll-mt-16">
-        <div className={cn('mb-4', !isVersion2 && 'pt-4')}>
-          <h3 className="text-base font-semibold">
+        <div className={cn('mb-4', !isCardVariant && 'pt-4')}>
+          <h3 className={subsectionTitleClass}>
             Accounts
           </h3>
-          <p className="text-base text-muted-foreground mt-2">
+          <p className={subsectionBodyClass}>
             Add the accounts you plan to open at the custodian, including funding details for each.
           </p>
         </div>
@@ -824,20 +851,20 @@ export function OpenAccountsForm() {
 
       {externalAnnuityPlatform ? (
         <>
+          <section id={sectionId('oa-netx360-submit')} className="scroll-mt-16">
+            <div className="mb-4">
+              <h3 className={subsectionTitleClass}>Submit to NetX360</h3>
+            </div>
+            <Netx360SubmitSection taskId={openAccountsTaskId} />
+          </section>
           <section id={sectionId('oa-netx360-next-steps')} className="scroll-mt-16">
             <div className="mb-4">
-              <h3 className="text-base font-semibold">Continue the rest of the account opening</h3>
-              <p className="text-base text-muted-foreground mt-2">
+              <h3 className={subsectionTitleClass}>Continue the rest of the account opening</h3>
+              <p className={subsectionBodyClass}>
                 Set the account and owners here. NetX360 picks up funding, signatures, KYC, and reviews.
               </p>
             </div>
             <Netx360HandoffSection />
-          </section>
-          <section id={sectionId('oa-netx360-submit')} className="scroll-mt-16">
-            <div className="mb-4">
-              <h3 className="text-base font-semibold">Submit to NetX360</h3>
-            </div>
-            <Netx360SubmitSection taskId={openAccountsTaskId} />
           </section>
         </>
       ) : null}
@@ -845,11 +872,11 @@ export function OpenAccountsForm() {
       {/* Section 4: Supporting Documents */}
       {!externalAnnuityPlatform ? (
       <section id={sectionId('oa-documents')} className="scroll-mt-16">
-        <div className={cn('mb-4', !isVersion2 && 'pt-4')}>
-          <h3 className="text-base font-semibold">
+        <div className={cn('mb-4', !isCardVariant && 'pt-4')}>
+          <h3 className={subsectionTitleClass}>
             Supporting Documents
           </h3>
-          <p className="text-base text-muted-foreground">
+          <p className={isVersion4 ? 'text-sm text-muted-foreground' : 'text-base text-muted-foreground'}>
             {externalAnnuityPlatform ? (
               <>
                 Client file uploads (for example ID or trust documents) go here. Firm and custodian forms for this path
@@ -960,7 +987,7 @@ export function OpenAccountsForm() {
       ) : null}
       </div>
 
-      {!externalAnnuityPlatform && !isVersion2 ? (
+      {!externalAnnuityPlatform && !isCardVariant ? (
         <div className="h-5 mt-14 flex items-center">
           <hr className="border-t border-border w-full" />
         </div>
@@ -968,17 +995,39 @@ export function OpenAccountsForm() {
 
       {/* KYC Verification H2 group — KYC sections hidden on annuity path */}
       {!externalAnnuityPlatform ? (
-        <div className={cn(isVersion2 && 'rounded-xl border border-border/60 bg-background p-6 space-y-7 overflow-hidden')}>
+        <div
+          className={cn(
+            isCardVariant &&
+              cn(
+                'rounded-xl p-6 space-y-7 overflow-hidden',
+                isBorderedCardVariant && 'border border-border/60',
+                openAccountsVariant === 'v3'
+                  ? 'bg-[#fafafa]'
+                  : openAccountsVariant === 'v4'
+                    ? 'bg-white'
+                  : isColoredBackgroundVariant
+                    ? 'bg-[#fcfcfc]'
+                    : 'bg-background',
+              ),
+          )}
+        >
         <div
           id={sectionId('oa-kyc')}
           className={cn(
             'scroll-mt-16',
-            isVersion2 && '-mx-6 -mt-6 mb-4 border-b border-border/60 bg-[#F5F5F4] px-6 py-4',
+            isCardVariant &&
+              cn(
+                '-mx-6 -mt-6 mb-4 px-6 py-4',
+                isBorderedCardVariant && 'border-b border-border/60',
+                isVersion2 && 'bg-[#F5F5F4]',
+              ),
           )}
         >
-          {isVersion2 ? (
+          {isCardVariant ? (
             <>
-              <h4 className="text-sm font-semibold uppercase tracking-wide">KYC Verification</h4>
+              <h4 className="text-sm font-semibold uppercase tracking-wide">
+                KYC Verification
+              </h4>
               <p className="text-sm text-muted-foreground mt-2">
                 Complete identity verification (KYC/KYB) before accounts can be opened. For trust accounts, include trustees
                 and beneficial owners.
@@ -1000,9 +1049,9 @@ export function OpenAccountsForm() {
           )}
         </div>
       <section id={sectionId('oa-kyc-owners')} className="scroll-mt-16">
-        <div className={cn('mb-4', !isVersion2 && 'pt-4')}>
-          <h3 className="text-base font-semibold">Account Owners</h3>
-          <p className="text-base text-muted-foreground mt-2">
+        <div className={cn('mb-4', !isCardVariant && 'pt-4')}>
+          <h3 className={subsectionTitleClass}>Account Owners</h3>
+          <p className={subsectionBodyClass}>
             Add all individuals who require identity verification.
           </p>
         </div>
@@ -1121,8 +1170,8 @@ export function OpenAccountsForm() {
       {/* KYC Cases — promoted from H4 sub-section under KYC Verification to its own H3 section */}
       <section id={sectionId('oa-kyc-cases')} className="scroll-mt-16">
         <div className="mb-4">
-          <h3 className="text-base font-semibold">KYC Cases</h3>
-          <p className="text-base text-muted-foreground mt-2">
+          <h3 className={subsectionTitleClass}>KYC Cases</h3>
+          <p className={subsectionBodyClass}>
             Each row represents a KYC case. Open a case to complete and submit it for review.
           </p>
         </div>
@@ -1237,23 +1286,45 @@ export function OpenAccountsForm() {
 
       {!externalAnnuityPlatform ? (
       <>
-      {!isVersion2 ? (
+      {!isCardVariant ? (
         <div className="h-5 mt-14 flex items-center">
           <hr className="border-t border-border w-full" />
         </div>
       ) : null}
       {/* Envelopes — H2 (no inner H3 child) */}
-      <div className={cn(isVersion2 && 'rounded-xl border border-border/60 bg-background p-6 overflow-hidden')}>
+      <div
+        className={cn(
+          isCardVariant &&
+            cn(
+              'rounded-xl p-6 overflow-hidden',
+              isBorderedCardVariant && 'border border-border/60',
+              openAccountsVariant === 'v3'
+                ? 'bg-[#fafafa]'
+                : openAccountsVariant === 'v4'
+                  ? 'bg-white'
+                : isColoredBackgroundVariant
+                  ? 'bg-[#fcfcfc]'
+                  : 'bg-background',
+            ),
+        )}
+      >
       <section id={sectionId('oa-esign')} className="scroll-mt-16">
         <div
           className={cn(
             'mb-4',
-            isVersion2 && '-mx-6 -mt-6 mb-4 border-b border-border/60 bg-[#F5F5F4] px-6 py-4',
+            isCardVariant &&
+              cn(
+                '-mx-6 -mt-6 mb-4 px-6 py-4',
+                isBorderedCardVariant && 'border-b border-border/60',
+                isVersion2 && 'bg-[#F5F5F4]',
+              ),
           )}
         >
-          {isVersion2 ? (
+          {isCardVariant ? (
             <>
-              <h4 className="text-sm font-semibold uppercase tracking-wide">Envelopes</h4>
+              <h4 className="text-sm font-semibold uppercase tracking-wide">
+                Envelopes
+              </h4>
               <p className="text-sm text-muted-foreground mt-2">
                 Create eSign envelopes for client signatures. Required firm and custodian forms are automatically grouped by
                 account. If delivery is set to in person or mail, those forms become wet-signed and must be uploaded below.

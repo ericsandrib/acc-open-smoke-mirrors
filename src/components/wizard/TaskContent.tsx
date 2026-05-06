@@ -3,6 +3,7 @@ import { useWorkflow } from '@/stores/workflowStore'
 import { formComponents, taskDescriptions, taskSections } from './formRegistry'
 import { parseChildSubTaskId, getSubTaskDisplayTitle } from '@/utils/childTaskRegistry'
 import { Clock, AlertTriangle } from 'lucide-react'
+import { cn } from '@/lib/utils'
 import { useOpenAccountsVariant } from './openAccountsVariantContext'
 import {
   OPEN_ACCOUNTS_FORM_KEY,
@@ -99,7 +100,7 @@ export function TaskContent() {
         : null)
       ?? activeChild?.name
       ?? ''
-  const hideHeaderDividerInV2 = variant === 'v2' && title === 'Open Accounts'
+  const hideHeaderDividerInCardVariants = variant === 'v2' || variant === 'v3' || variant === 'v4'
 
   const FormComponent = formKey ? formComponents[formKey] : null
   const hasExplicitSections = Boolean(formKey && taskSections[formKey]?.length)
@@ -125,12 +126,12 @@ export function TaskContent() {
   }, [state.parentSectionFocusId, dispatch])
 
   return (
-    <main className="flex-1 overflow-y-auto p-8 2xl:pr-[20rem]">
+    <main className={cn('flex-1 overflow-y-auto p-8 2xl:pr-[20rem]', variant === 'v4' && 'bg-[#fafafa]')}>
       <div className="max-w-[52.5rem] mx-auto">
         <ReviewBanner />
         <h1
           className={
-            hideHeaderDividerInV2
+            hideHeaderDividerInCardVariants
               ? 'text-4xl font-semibold text-foreground mb-6'
               : 'text-4xl font-semibold text-foreground pb-6 mb-6 border-b border-border'
           }

@@ -218,10 +218,10 @@ type DisplayActionNode = {
  * - In a non-split journey (no `account-opening-annuity` action) the structure is unchanged.
  * - In v1 split: merge the two account-opening actions into a single "Account Opening" group,
  *   and rename each open-accounts task to clarify the annuity vs. no-annuity flow.
- * - In v2 split: keep both open-accounts tasks visible (same as v1 labels) while allowing
- *   the v2 visual treatment to apply inside each task form.
+ * - In v2/v3/v4 split: keep both open-accounts tasks visible (same as v1 labels) while allowing
+ *   card visual treatment to apply inside each task form.
  */
-function buildDisplayActions(state: WorkflowState, variant: 'v1' | 'v2'): DisplayActionNode[] {
+function buildDisplayActions(state: WorkflowState, variant: 'v1' | 'v2' | 'v3' | 'v4'): DisplayActionNode[] {
   const visibleActions = state.actions
     .filter((a) => a.id !== 'kyc')
     .sort((a, b) => a.order - b.order)
@@ -310,7 +310,7 @@ export function StepSidebar() {
     [state.tasks, state.activeTaskId],
   )
   const isV2CombinedActive =
-    variant === 'v2' &&
+    (variant === 'v2' || variant === 'v3' || variant === 'v4') &&
     !!activeTopLevelTask &&
     (activeTopLevelTask.formKey === OPEN_ACCOUNTS_FORM_KEY ||
       activeTopLevelTask.formKey === OPEN_ACCOUNTS_WITH_ANNUITY_FORM_KEY) &&
@@ -332,7 +332,7 @@ export function StepSidebar() {
 
   return (
     <TooltipProvider delayDuration={300}>
-      <nav className="w-[330px] border-r border-border bg-white overflow-y-auto">
+      <nav className={cn('w-[330px] border-r border-border overflow-y-auto bg-white')}>
         <JourneyHeader />
         <div className="px-1 pt-2">
         {displayActions.map((action) => {

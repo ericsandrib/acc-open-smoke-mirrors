@@ -58,6 +58,7 @@ function RightSidebarToggle() {
 }
 
 function WizardAccessoryBar() {
+  const variant = useOpenAccountsVariant()
   return (
     <AccessoryBar
       breadcrumbs={[]}
@@ -65,6 +66,7 @@ function WizardAccessoryBar() {
       showBackButton={false}
       showBreadcrumb={false}
       showBorder={false}
+      className={variant === 'v4' ? 'bg-[#fafafa]' : undefined}
       rightContent={<RightSidebarToggle />}
     />
   )
@@ -830,11 +832,15 @@ function WizardLayoutInner() {
             const activeTask = state.tasks.find((t) => t.id === state.activeTaskId)
             const sections = activeTask ? (taskSections[activeTask.formKey] ?? []) : []
             const showCombinedScrollspy = false
-            const useV2OpenAccountsScrollspy =
-              variant === 'v2' &&
+            const useV2StyledScrollspy =
+              (variant === 'v2' || variant === 'v3' || variant === 'v4') &&
               !!activeTask &&
-              (activeTask.formKey === OPEN_ACCOUNTS_FORM_KEY ||
-                activeTask.formKey === OPEN_ACCOUNTS_WITH_ANNUITY_FORM_KEY)
+              (
+                activeTask.formKey === OPEN_ACCOUNTS_FORM_KEY ||
+                activeTask.formKey === OPEN_ACCOUNTS_WITH_ANNUITY_FORM_KEY ||
+                activeTask.formKey === 'related-parties' ||
+                activeTask.formKey === 'existing-accounts'
+              )
             return (
               <>
                 <StepSidebar />
@@ -854,8 +860,8 @@ function WizardLayoutInner() {
                           <TaskSectionPanel
                             sections={[]}
                             onSelectSection={() => {}}
-                            panelTitle={useV2OpenAccountsScrollspy ? 'On this page' : undefined}
-                            visualStyle={useV2OpenAccountsScrollspy ? 'v2-bare' : 'default'}
+                            panelTitle={useV2StyledScrollspy ? 'On this page' : undefined}
+                            visualStyle={useV2StyledScrollspy ? 'v2-bare' : 'default'}
                             groups={groups}
                             onSelectGroupSection={(_groupKey, sectionId) => {
                               dispatch({ type: 'FOCUS_PARENT_TASK_SECTION', sectionId })
@@ -867,8 +873,8 @@ function WizardLayoutInner() {
                             onSelectSection={(sectionId) => {
                               dispatch({ type: 'FOCUS_PARENT_TASK_SECTION', sectionId })
                             }}
-                            panelTitle={useV2OpenAccountsScrollspy ? 'On this page' : undefined}
-                            visualStyle={useV2OpenAccountsScrollspy ? 'v2-bare' : 'default'}
+                            panelTitle={useV2StyledScrollspy ? 'On this page' : undefined}
+                            visualStyle={useV2StyledScrollspy ? 'v2-bare' : 'default'}
                           />
                         )
                       })()

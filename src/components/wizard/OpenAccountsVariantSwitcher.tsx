@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { GripVertical, Layers, Rows3 } from 'lucide-react'
+import { GripVertical, Layers, Palette, Rows3 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import {
   DropdownMenu,
@@ -50,6 +50,18 @@ const VARIANT_OPTIONS: Array<{
     label: 'Version 2 — Bordered cards',
     description: 'One task with two accordions in a single Open Accounts step.',
     icon: Layers,
+  },
+  {
+    id: 'v3',
+    label: 'Version 3 — Colored cards',
+    description: 'Version 2 layout with subtle color accents on section cards.',
+    icon: Palette,
+  },
+  {
+    id: 'v4',
+    label: 'Version 4 — colored background',
+    description: 'Same as Version 3.',
+    icon: Palette,
   },
 ]
 

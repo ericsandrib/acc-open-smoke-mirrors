@@ -8,8 +8,10 @@ import { createContext, useContext, useEffect, useState, type ReactNode } from '
  * - `v2`: One action ("Account Opening") with one task ("Open Accounts") that renders both
  *         flows inside accordions. Submit-to-NetX360 controls live in the with-annuity
  *         accordion only.
+ * - `v3`: Same structure as `v2`, but with subtle colored header accents on cards.
+ * - `v4`: Clone of `v3` for alternate demo naming.
  */
-export type OpenAccountsVariant = 'v1' | 'v2'
+export type OpenAccountsVariant = 'v1' | 'v2' | 'v3' | 'v4'
 
 const STORAGE_KEY = 'demo-open-accounts-variant'
 
@@ -19,20 +21,19 @@ const OpenAccountsVariantContext = createContext<{
 } | null>(null)
 
 export function OpenAccountsVariantProvider({ children }: { children: ReactNode }) {
-  /**
-   * Two-task design is the chosen direction; the v2 accordion variant is
-   * retained in code only for legacy support but is no longer reachable from
-   * the UI. Clear any stale `v2` localStorage value left over from the
-   * removed demo switcher so existing sessions snap back to v1.
-   */
+  const [variant, setVariantState] = useState<OpenAccountsVariant>(() => {
+    if (typeof window === 'undefined') return 'v1'
+    const persisted = window.localStorage.getItem(STORAGE_KEY)
+    if (persisted === 'v1' || persisted === 'v2' || persisted === 'v3' || persisted === 'v4') {
+      return persisted
+    }
+    return 'v1'
+  })
+
   useEffect(() => {
     if (typeof window === 'undefined') return
-    if (window.localStorage.getItem(STORAGE_KEY) === 'v2') {
-      window.localStorage.removeItem(STORAGE_KEY)
-    }
-  }, [])
-
-  const [variant, setVariantState] = useState<OpenAccountsVariant>('v1')
+    window.localStorage.setItem(STORAGE_KEY, variant)
+  }, [variant])
 
   return (
     <OpenAccountsVariantContext.Provider value={{ variant, setVariant: setVariantState }}>

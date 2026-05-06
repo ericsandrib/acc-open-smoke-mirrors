@@ -7,7 +7,23 @@ import { useOpenAccountsVariant } from '@/components/wizard/openAccountsVariantC
 export function ExistingAccountsForm() {
   const { state, dispatch } = useWorkflow()
   const { data, updateField } = useTaskData('open-accounts')
-  const isVersion2 = useOpenAccountsVariant() === 'v2'
+  const variant = useOpenAccountsVariant()
+  const isColoredBackgroundVariant = variant === 'v3' || variant === 'v4'
+  const isCardVariant = variant === 'v2' || isColoredBackgroundVariant
+  const isBorderedCardVariant = variant === 'v2' || variant === 'v4'
+  const cardContainerClass = isCardVariant
+    ? cn(
+        'rounded-xl p-6 overflow-hidden',
+        isBorderedCardVariant && 'border border-border/60',
+        variant === 'v3'
+          ? 'bg-[#fafafa]'
+          : variant === 'v4'
+            ? 'bg-white'
+            : isColoredBackgroundVariant
+              ? 'bg-[#fcfcfc]'
+              : 'bg-background',
+      )
+    : ''
 
   const setAdditionalOnAll = (v: string) => {
     updateField('additionalInstructions', v)
@@ -20,17 +36,28 @@ export function ExistingAccountsForm() {
   return (
     <div className="space-y-7">
       <section id="ea-existing-accounts" className="scroll-mt-16">
-        <div className={cn(isVersion2 && 'rounded-xl border border-border/60 bg-background p-6 overflow-hidden')}>
+        <div className={cardContainerClass}>
           <div
             className={cn(
               'mb-4',
-              isVersion2 && '-mx-6 -mt-6 border-b border-border/60 bg-[#F5F5F4] px-6 py-4',
+              isCardVariant &&
+                cn(
+                  '-mx-6 -mt-6 px-6 py-4',
+                  isBorderedCardVariant && 'border-b border-border/60',
+                  variant === 'v2' && 'bg-[#F5F5F4]',
+                ),
             )}
           >
-            <h3 className={cn(isVersion2 ? 'text-sm font-semibold uppercase tracking-wide' : 'text-base font-semibold')}>
+            <h3
+              className={cn(
+                isCardVariant
+                  ? 'text-sm font-semibold uppercase tracking-wide'
+                  : 'text-base font-semibold',
+              )}
+            >
               Accounts
             </h3>
-            <p className={cn(isVersion2 ? 'text-sm text-muted-foreground mt-2' : 'text-base text-muted-foreground')}>
+            <p className={cn(isCardVariant ? 'text-sm text-muted-foreground mt-2' : 'text-base text-muted-foreground')}>
               Add or update the client&apos;s existing accounts to provide a complete financial picture.
             </p>
           </div>
@@ -39,17 +66,28 @@ export function ExistingAccountsForm() {
       </section>
 
       <section id="ea-additional-instructions" className="scroll-mt-16">
-        <div className={cn(isVersion2 && 'rounded-xl border border-border/60 bg-background p-6 overflow-hidden')}>
+        <div className={cardContainerClass}>
           <div
             className={cn(
               'mb-4',
-              isVersion2 && '-mx-6 -mt-6 border-b border-border/60 bg-[#F5F5F4] px-6 py-4',
+              isCardVariant &&
+                cn(
+                  '-mx-6 -mt-6 px-6 py-4',
+                  isBorderedCardVariant && 'border-b border-border/60',
+                  variant === 'v2' && 'bg-[#F5F5F4]',
+                ),
             )}
           >
-            <h3 className={cn(isVersion2 ? 'text-sm font-semibold uppercase tracking-wide' : 'text-base font-semibold')}>
+            <h3
+              className={cn(
+                isCardVariant
+                  ? 'text-sm font-semibold uppercase tracking-wide'
+                  : 'text-base font-semibold',
+              )}
+            >
               Additional Instructions
             </h3>
-            <p className={cn(isVersion2 ? 'text-sm text-muted-foreground mt-2' : 'text-base text-muted-foreground mt-2')}>
+            <p className={cn(isCardVariant ? 'text-sm text-muted-foreground mt-2' : 'text-base text-muted-foreground mt-2')}>
               Provide any special instructions related to opening or funding new accounts (e.g., transfers, rollovers, or funding sources).
             </p>
           </div>

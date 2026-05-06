@@ -265,10 +265,17 @@ export function TaskSectionPanel({
                   type="button"
                   onClick={() => selectFlatSection(section)}
                   className={cn(
-                    'w-full text-left text-sm py-1.5 px-3 rounded-md transition-colors truncate',
-                    isActive
-                      ? 'bg-accent/60 text-foreground font-medium'
-                      : 'text-foreground hover:bg-muted/50',
+                    'w-full text-left transition-colors truncate',
+                    visualStyle === 'v2-bare'
+                      ? 'text-sm leading-6 py-0.5 px-4 rounded-none'
+                      : 'text-sm py-1.5 px-3 rounded-md',
+                    visualStyle === 'v2-bare'
+                      ? isActive
+                        ? 'text-foreground font-medium'
+                        : 'text-muted-foreground hover:text-foreground'
+                      : isActive
+                        ? 'bg-accent/60 text-foreground font-medium'
+                        : 'text-foreground hover:bg-muted/50',
                   )}
                 >
                   {section.label}

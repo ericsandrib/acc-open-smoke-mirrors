@@ -612,7 +612,30 @@ function EmptyState({ message }: { message: string }) {
 
 export function RelatedPartiesForm() {
   const { state } = useWorkflow()
-  const isVersion2 = useOpenAccountsVariant() === 'v2'
+  const variant = useOpenAccountsVariant()
+  const isColoredBackgroundVariant = variant === 'v3' || variant === 'v4'
+  const isCardVariant = variant === 'v2' || isColoredBackgroundVariant
+  const isBorderedCardVariant = variant === 'v2' || variant === 'v4'
+  const cardContainerClass = isCardVariant
+    ? cn(
+        'space-y-4 rounded-xl p-6 overflow-hidden',
+        isBorderedCardVariant && 'border border-border/60',
+        variant === 'v3'
+          ? 'bg-[#fafafa]'
+          : variant === 'v4'
+            ? 'bg-white'
+            : isColoredBackgroundVariant
+              ? 'bg-[#fcfcfc]'
+              : 'bg-background',
+      )
+    : 'space-y-4'
+  const cardHeaderClass = isCardVariant
+    ? cn(
+        '-mx-6 -mt-6 mb-4 px-6 py-4',
+        isBorderedCardVariant && 'border-b border-border/60',
+        variant === 'v2' && 'bg-[#F5F5F4]',
+      )
+    : ''
   const [showAddHouseholdSheet, setShowAddHouseholdSheet] = useState(false)
   const [showAddRelatedIndividualSheet, setShowAddRelatedIndividualSheet] = useState(false)
   const [showAddTrustSheet, setShowAddTrustSheet] = useState(false)
@@ -636,18 +659,20 @@ export function RelatedPartiesForm() {
   return (
     <div className="space-y-7">
       <section id="rcd-household" className="scroll-mt-16">
-        <div className={cn('space-y-4', isVersion2 && 'rounded-xl border border-border/60 bg-background p-6 overflow-hidden')}>
+        <div className={cardContainerClass}>
           <div
-            className={cn(
-              isVersion2
-                ? '-mx-6 -mt-6 mb-4 border-b border-border/60 bg-[#F5F5F4] px-6 py-4'
-                : '',
-            )}
+            className={cardHeaderClass}
           >
-            <h3 className={cn(isVersion2 ? 'text-sm font-semibold uppercase tracking-wide' : 'text-base font-semibold')}>
+            <h3
+              className={cn(
+                isCardVariant
+                  ? 'text-sm font-semibold uppercase tracking-wide'
+                  : 'text-base font-semibold',
+              )}
+            >
               Household
             </h3>
-            <p className={cn(isVersion2 ? 'text-sm text-muted-foreground mt-2' : 'text-base text-muted-foreground')}>
+            <p className={cn(isCardVariant ? 'text-sm text-muted-foreground mt-2' : 'text-base text-muted-foreground')}>
               Add the primary client and their household members (e.g., spouse, dependents).
             </p>
           </div>
@@ -677,18 +702,20 @@ export function RelatedPartiesForm() {
       </section>
 
       <section id="rcd-related-individuals" className="scroll-mt-16">
-        <div className={cn('space-y-4', isVersion2 && 'rounded-xl border border-border/60 bg-background p-6 overflow-hidden')}>
+        <div className={cardContainerClass}>
           <div
-            className={cn(
-              isVersion2
-                ? '-mx-6 -mt-6 mb-4 border-b border-border/60 bg-[#F5F5F4] px-6 py-4'
-                : '',
-            )}
+            className={cardHeaderClass}
           >
-            <h3 className={cn(isVersion2 ? 'text-sm font-semibold uppercase tracking-wide' : 'text-base font-semibold')}>
+            <h3
+              className={cn(
+                isCardVariant
+                  ? 'text-sm font-semibold uppercase tracking-wide'
+                  : 'text-base font-semibold',
+              )}
+            >
               Related Individuals
             </h3>
-            <p className={cn(isVersion2 ? 'text-sm text-muted-foreground mt-2' : 'text-base text-muted-foreground')}>
+            <p className={cn(isCardVariant ? 'text-sm text-muted-foreground mt-2' : 'text-base text-muted-foreground')}>
               Add other individuals connected to the client (e.g., family members not in the household, beneficiaries, or trusted contacts).
             </p>
           </div>
@@ -720,18 +747,20 @@ export function RelatedPartiesForm() {
       </section>
 
       <section id="rcd-trusts" className="scroll-mt-16">
-        <div className={cn('space-y-4', isVersion2 && 'rounded-xl border border-border/60 bg-background p-6 overflow-hidden')}>
+        <div className={cardContainerClass}>
           <div
-            className={cn(
-              isVersion2
-                ? '-mx-6 -mt-6 mb-4 border-b border-border/60 bg-[#F5F5F4] px-6 py-4'
-                : '',
-            )}
+            className={cardHeaderClass}
           >
-            <h3 className={cn(isVersion2 ? 'text-sm font-semibold uppercase tracking-wide' : 'text-base font-semibold')}>
+            <h3
+              className={cn(
+                isCardVariant
+                  ? 'text-sm font-semibold uppercase tracking-wide'
+                  : 'text-base font-semibold',
+              )}
+            >
               Trusts
             </h3>
-            <p className={cn(isVersion2 ? 'text-sm text-muted-foreground mt-2' : 'text-base text-muted-foreground')}>
+            <p className={cn(isCardVariant ? 'text-sm text-muted-foreground mt-2' : 'text-base text-muted-foreground')}>
               Add any trusts associated with this client.
             </p>
           </div>
@@ -763,18 +792,20 @@ export function RelatedPartiesForm() {
       </section>
 
       <section id="rcd-other-entities" className="scroll-mt-16">
-        <div className={cn('space-y-4', isVersion2 && 'rounded-xl border border-border/60 bg-background p-6 overflow-hidden')}>
+        <div className={cardContainerClass}>
           <div
-            className={cn(
-              isVersion2
-                ? '-mx-6 -mt-6 mb-4 border-b border-border/60 bg-[#F5F5F4] px-6 py-4'
-                : '',
-            )}
+            className={cardHeaderClass}
           >
-            <h3 className={cn(isVersion2 ? 'text-sm font-semibold uppercase tracking-wide' : 'text-base font-semibold')}>
+            <h3
+              className={cn(
+                isCardVariant
+                  ? 'text-sm font-semibold uppercase tracking-wide'
+                  : 'text-base font-semibold',
+              )}
+            >
               Other Entities
             </h3>
-            <p className={cn(isVersion2 ? 'text-sm text-muted-foreground mt-2' : 'text-base text-muted-foreground')}>
+            <p className={cn(isCardVariant ? 'text-sm text-muted-foreground mt-2' : 'text-base text-muted-foreground')}>
               Add other legal entities related to the client (e.g., LLCs, corporations, partnerships).
             </p>
           </div>
@@ -806,18 +837,20 @@ export function RelatedPartiesForm() {
       </section>
 
       <section id="rcd-professional-contacts" className="scroll-mt-16">
-        <div className={cn('space-y-4', isVersion2 && 'rounded-xl border border-border/60 bg-background p-6 overflow-hidden')}>
+        <div className={cardContainerClass}>
           <div
-            className={cn(
-              isVersion2
-                ? '-mx-6 -mt-6 mb-4 border-b border-border/60 bg-[#F5F5F4] px-6 py-4'
-                : '',
-            )}
+            className={cardHeaderClass}
           >
-            <h3 className={cn(isVersion2 ? 'text-sm font-semibold uppercase tracking-wide' : 'text-base font-semibold')}>
+            <h3
+              className={cn(
+                isCardVariant
+                  ? 'text-sm font-semibold uppercase tracking-wide'
+                  : 'text-base font-semibold',
+              )}
+            >
               Professional Contacts
             </h3>
-            <p className={cn(isVersion2 ? 'text-sm text-muted-foreground mt-2' : 'text-base text-muted-foreground')}>
+            <p className={cn(isCardVariant ? 'text-sm text-muted-foreground mt-2' : 'text-base text-muted-foreground')}>
               Add the client&apos;s professional contacts (e.g., attorney, accountant, other advisors).
             </p>
           </div>

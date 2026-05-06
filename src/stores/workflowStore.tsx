@@ -1,4 +1,4 @@
-import { createContext, useContext, useReducer, useCallback, type ReactNode } from 'react'
+import { createContext, useContext, useReducer, useCallback, useEffect, type ReactNode } from 'react'
 import type {
   Action,
   WorkflowState,
@@ -121,6 +121,28 @@ const initialState: WorkflowState = {
   },
   submittedTaskIds: [],
   assignedTo: 'Sarah Chen',
+}
+
+const WORKFLOW_STORAGE_KEY = 'demo-workflow-state'
+
+function getInitialWorkflowState(): WorkflowState {
+  if (typeof window === 'undefined') return initialState
+  try {
+    const raw = window.localStorage.getItem(WORKFLOW_STORAGE_KEY)
+    if (!raw) return initialState
+    const parsed = JSON.parse(raw) as WorkflowState
+    if (
+      !parsed ||
+      !Array.isArray(parsed.actions) ||
+      !Array.isArray(parsed.tasks) ||
+      typeof parsed.activeTaskId !== 'string'
+    ) {
+      return initialState
+    }
+    return parsed
+  } catch {
+    return initialState
+  }
 }
 
 function markTaskEdited(allTasks: Task[], formKey: string): Task[] {
@@ -1231,7 +1253,13 @@ const WorkflowContext = createContext<{
 } | null>(null)
 
 export function WorkflowProvider({ children }: { children: ReactNode }) {
-  const [state, dispatch] = useReducer(workflowReducer, initialState)
+  const [state, dispatch] = useReducer(workflowReducer, undefined, getInitialWorkflowState)
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+    window.localStorage.setItem(WORKFLOW_STORAGE_KEY, JSON.stringify(state))
+  }, [state])
+
   return (
     <WorkflowContext.Provider value={{ state, dispatch }}>
       {children}
