@@ -8,7 +8,6 @@ import {
   OPEN_ACCOUNTS_FORM_KEY,
   OPEN_ACCOUNTS_WITH_ANNUITY_FORM_KEY,
 } from '@/utils/openAccountsTaskContext'
-import { OpenAccountsCombinedForm } from './forms/OpenAccountsCombinedForm'
 
 function ReviewBanner() {
   const { state } = useWorkflow()
@@ -80,15 +79,10 @@ export function TaskContent() {
   const isSplitJourney =
     state.tasks.some((t) => t.formKey === OPEN_ACCOUNTS_FORM_KEY) &&
     state.tasks.some((t) => t.formKey === OPEN_ACCOUNTS_WITH_ANNUITY_FORM_KEY)
-  const showCombinedOpenAccounts =
-    variant === 'v2' &&
-    isSplitJourney &&
-    !!activeTask &&
-    (activeTask.formKey === OPEN_ACCOUNTS_FORM_KEY ||
-      activeTask.formKey === OPEN_ACCOUNTS_WITH_ANNUITY_FORM_KEY)
+  const showCombinedOpenAccounts = false
 
   const splitV1Title =
-    variant === 'v1' && isSplitJourney && activeTask
+    isSplitJourney && activeTask
       ? activeTask.formKey === OPEN_ACCOUNTS_FORM_KEY
         ? 'Accounts without Annuities'
         : activeTask.formKey === OPEN_ACCOUNTS_WITH_ANNUITY_FORM_KEY
@@ -148,9 +142,7 @@ export function TaskContent() {
             <h3 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">Overview</h3>
           </section>
         ) : null}
-        {showCombinedOpenAccounts ? (
-          <OpenAccountsCombinedForm />
-        ) : FormComponent ? (
+        {FormComponent ? (
           <FormComponent />
         ) : (
           <p className="text-muted-foreground">No form available.</p>

@@ -218,9 +218,8 @@ type DisplayActionNode = {
  * - In a non-split journey (no `account-opening-annuity` action) the structure is unchanged.
  * - In v1 split: merge the two account-opening actions into a single "Account Opening" group,
  *   and rename each open-accounts task to clarify the annuity vs. no-annuity flow.
- * - In v2 split: collapse the two open-accounts tasks into a single virtual "Open Accounts"
- *   task; clicks set the active task to the no-annuity underlying task (the combined-form
- *   wrapper renders both flows in accordions).
+ * - In v2 split: keep both open-accounts tasks visible (same as v1 labels) while allowing
+ *   the v2 visual treatment to apply inside each task form.
  */
 function buildDisplayActions(state: WorkflowState, variant: 'v1' | 'v2'): DisplayActionNode[] {
   const visibleActions = state.actions
@@ -260,34 +259,19 @@ function buildDisplayActions(state: WorkflowState, variant: 'v1' | 'v2'): Displa
     tasks: [],
   }
 
-  if (variant === 'v1') {
-    for (const t of noAnnuityTasks) {
-      accountOpeningGroup.tasks.push({
-        id: t.id,
-        label: 'Accounts without Annuities',
-        underlyingTaskIds: [t.id],
-      })
-    }
-    for (const t of withAnnuityTasks) {
-      accountOpeningGroup.tasks.push({
-        id: t.id,
-        label: 'Accounts with Annuities',
-        underlyingTaskIds: [t.id],
-      })
-    }
-  } else {
-    const noAnnuity = noAnnuityTasks[0]
-    const withAnnuity = withAnnuityTasks[0]
-    if (noAnnuity || withAnnuity) {
-      const underlying: string[] = []
-      if (noAnnuity) underlying.push(noAnnuity.id)
-      if (withAnnuity) underlying.push(withAnnuity.id)
-      accountOpeningGroup.tasks.push({
-        id: noAnnuity?.id ?? withAnnuity!.id,
-        label: 'Open Accounts',
-        underlyingTaskIds: underlying,
-      })
-    }
+  for (const t of noAnnuityTasks) {
+    accountOpeningGroup.tasks.push({
+      id: t.id,
+      label: 'Accounts without Annuities',
+      underlyingTaskIds: [t.id],
+    })
+  }
+  for (const t of withAnnuityTasks) {
+    accountOpeningGroup.tasks.push({
+      id: t.id,
+      label: 'Accounts with Annuities',
+      underlyingTaskIds: [t.id],
+    })
   }
 
   const result: DisplayActionNode[] = []

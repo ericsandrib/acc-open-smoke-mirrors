@@ -590,17 +590,8 @@ function WizardLayoutInner() {
   const getTaskBreadcrumbLabel = (task: Task | undefined) => {
     if (!task) return undefined
     if (isSplitJourney) {
-      if (variant === 'v1') {
-        if (task.formKey === OPEN_ACCOUNTS_FORM_KEY) return 'Accounts without Annuities'
-        if (task.formKey === OPEN_ACCOUNTS_WITH_ANNUITY_FORM_KEY) return 'Accounts with Annuities'
-      } else if (variant === 'v2') {
-        if (
-          task.formKey === OPEN_ACCOUNTS_FORM_KEY ||
-          task.formKey === OPEN_ACCOUNTS_WITH_ANNUITY_FORM_KEY
-        ) {
-          return 'Open Accounts'
-        }
-      }
+      if (task.formKey === OPEN_ACCOUNTS_FORM_KEY) return 'Accounts without Annuities'
+      if (task.formKey === OPEN_ACCOUNTS_WITH_ANNUITY_FORM_KEY) return 'Accounts with Annuities'
     }
     return task.title
   }
@@ -613,14 +604,6 @@ function WizardLayoutInner() {
           t.formKey !== 'kyc' &&
           t.id !== 'kyc-review',
       )
-      if (variant === 'v2') {
-        const noAnnuity = merged.find((t) => t.formKey === OPEN_ACCOUNTS_FORM_KEY)
-        const withAnnuity = merged.find((t) => t.formKey === OPEN_ACCOUNTS_WITH_ANNUITY_FORM_KEY)
-        const result: Task[] = []
-        const primary = noAnnuity ?? withAnnuity
-        if (primary) result.push(primary)
-        return result
-      }
       return merged
         .slice()
         .sort((a, b) => a.order - b.order)
@@ -846,12 +829,7 @@ function WizardLayoutInner() {
           ) : (() => {
             const activeTask = state.tasks.find((t) => t.id === state.activeTaskId)
             const sections = activeTask ? (taskSections[activeTask.formKey] ?? []) : []
-            const showCombinedScrollspy =
-              variant === 'v2' &&
-              isSplitJourney &&
-              !!activeTask &&
-              (activeTask.formKey === OPEN_ACCOUNTS_FORM_KEY ||
-                activeTask.formKey === OPEN_ACCOUNTS_WITH_ANNUITY_FORM_KEY)
+            const showCombinedScrollspy = false
             const useV2OpenAccountsScrollspy =
               variant === 'v2' &&
               !!activeTask &&

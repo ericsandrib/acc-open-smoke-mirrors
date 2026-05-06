@@ -677,8 +677,7 @@ export function OpenAccountsForm() {
 
   return (
     <div className="space-y-7">
-      {!externalAnnuityPlatform ? (
-        <div className={cn(isVersion2 && 'rounded-xl border border-border/60 bg-background p-6 space-y-7 overflow-hidden')}>
+      <div className={cn(isVersion2 && 'rounded-xl border border-border/60 bg-background p-6 space-y-7 overflow-hidden')}>
       {!externalAnnuityPlatform ? (
         isVersion2 ? (
           <div
@@ -960,7 +959,6 @@ export function OpenAccountsForm() {
       </section>
       ) : null}
       </div>
-      ) : null}
 
       {!externalAnnuityPlatform && !isVersion2 ? (
         <div className="h-5 mt-14 flex items-center">
