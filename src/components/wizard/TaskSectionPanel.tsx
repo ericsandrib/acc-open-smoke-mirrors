@@ -77,12 +77,12 @@ export function TaskSectionPanel({
 
   return (
     <div
-      className="relative shrink-0 w-6 ml-4 flex flex-col items-center justify-center gap-2 2xl:absolute 2xl:top-0 2xl:right-14 2xl:bottom-0 2xl:w-52 2xl:ml-0 2xl:items-stretch 2xl:justify-start 2xl:py-8 2xl:gap-1 2xl:overflow-y-auto 2xl:pointer-events-auto"
+      className="relative shrink-0 w-6 ml-4 mr-4 pt-8 flex flex-col items-center justify-start gap-2 2xl:absolute 2xl:top-0 2xl:right-14 2xl:bottom-0 2xl:w-52 2xl:m-0 2xl:pt-0 2xl:py-8 2xl:items-stretch 2xl:gap-1 2xl:overflow-y-auto 2xl:pointer-events-auto"
       onMouseEnter={() => { cancelClose(); setIsHovering(true) }}
       onMouseLeave={scheduleClose}
     >
       {/* Compact tick column: visible below 2xl */}
-      <div className="flex flex-col items-center gap-2 2xl:hidden">
+      <div className="flex flex-col items-center gap-2 p-2 rounded-[8px] border border-[var(--border-secondary)] 2xl:hidden">
         {groups && flatFromGroups
           ? groups.map((group, groupIndex) => (
               <div key={group.key} className="flex flex-col items-center gap-2">
@@ -131,7 +131,7 @@ export function TaskSectionPanel({
       {/* Hover popover for the compact column */}
       {isHovering && flatList.length > 0 && (
         <div
-          className="absolute left-0 top-1/2 -translate-y-1/2 z-50 bg-popover border border-border rounded-lg shadow-md py-1 min-w-56 2xl:hidden"
+          className="absolute right-full top-1/2 -translate-y-1/2 mr-2 z-50 bg-popover border border-border rounded-lg shadow-md py-1 min-w-56 2xl:hidden"
           onMouseEnter={() => { cancelClose(); setIsHovering(true) }}
           onMouseLeave={scheduleClose}
         >

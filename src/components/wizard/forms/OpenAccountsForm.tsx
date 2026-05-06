@@ -945,7 +945,9 @@ export function OpenAccountsForm() {
       ) : null}
 
       {!externalAnnuityPlatform ? (
-        <hr className="border-t border-border" />
+        <div className="h-5 flex items-center">
+        <hr className="border-t border-border w-full" />
+      </div>
       ) : null}
 
       {/* KYC Verification H2 group — KYC sections hidden on annuity path */}
@@ -1198,7 +1200,9 @@ export function OpenAccountsForm() {
 
       {!externalAnnuityPlatform ? (
       <>
-      <hr className="border-t border-border" />
+      <div className="h-5 flex items-center">
+        <hr className="border-t border-border w-full" />
+      </div>
       {/* Envelopes — H2 (no inner H3 child) */}
       <section id={sectionId('oa-esign')} className="scroll-mt-16">
         <div className="mb-4">
