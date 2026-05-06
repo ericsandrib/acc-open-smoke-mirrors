@@ -14,6 +14,8 @@ import {
 import type { RegistrationType } from '@/utils/registrationDocuments'
 import { getMaxAccountOwnersForRegistration } from '@/utils/registrationOwnerLimits'
 import { getAccountOwnersMissingKyc } from '@/utils/accountOpeningOwnerKyc'
+import { instanceSpecificationComplete } from '@/utils/supportingDocuments'
+import type { SupportingDocumentStatus } from '@/utils/supportingDocuments'
 
 type DocInstance = {
   id: string
@@ -21,6 +23,8 @@ type DocInstance = {
   assignedTo: string
   fileName?: string
   subType?: string
+  customSubTypeLabel?: string
+  status?: SupportingDocumentStatus
 }
 
 function countStr(v: unknown): number {
@@ -105,16 +109,16 @@ function featureLineSetupProgress(data: Record<string, unknown>): { filled: numb
 function slotSatisfied(
   docId: string,
   ownerId: string,
-  needsSub: boolean,
   openAccountsData: Record<string, unknown>,
   localDocs: DocInstance[],
 ): boolean {
+  const subTypesCount = getDocSubTypes(docId).length
   const parentInstances = (openAccountsData[`doc-instances-${docId}`] as DocInstance[] | undefined) ?? []
   const fromParent = parentInstances.find((i) => i.assignedTo === ownerId)
   const fromLocal = localDocs.find((i) => i.docTypeId === docId && i.assignedTo === ownerId)
   const inst = fromParent ?? fromLocal
   if (!inst?.fileName?.trim()) return false
-  if (needsSub && !String(inst.subType ?? '').trim()) return false
+  if (!instanceSpecificationComplete(inst.subType, inst.customSubTypeLabel, subTypesCount)) return false
   return true
 }
 
@@ -249,12 +253,18 @@ function progressDocuments(state: WorkflowState, accountChildId: string): { fill
   let total = 0
   let filled = 0
   for (const doc of upload) {
-    const needsSub = getDocSubTypes(doc.id).length > 0
     const assignees = getAssigneePartyIdsForClientUploadDoc(doc.id, state.relatedParties, ownerIds)
     for (const ownerId of assignees) {
+      const parentInstances = (openAccountsData[`doc-instances-${doc.id}`] as DocInstance[] | undefined) ?? []
+      const inst = parentInstances.find((i) => i.assignedTo === ownerId)
+      if (inst?.status !== 'requested_by_review') continue
       total += 1
-      if (slotSatisfied(doc.id, ownerId, needsSub, openAccountsData, localDocs)) filled++
+      if (slotSatisfied(doc.id, ownerId, openAccountsData, localDocs)) filled++
     }
+  }
+
+  if (total === 0) {
+    return applySubmittedCap(state, taskId, { filled: 1, total: 1 })
   }
 
   return applySubmittedCap(state, taskId, { filled, total })
@@ -346,7 +356,7 @@ export function getAccountOpeningChildSubmissionIssues(
   if (!kycEsignExternal) {
     const { names } = getAccountOwnersMissingKyc(state, accountChildId)
     if (names.length > 0) {
-      issues.push(`KYC required: complete identity verification for ${names.join(', ')}.`)
+      issues.push(`KYC: complete identity verification for ${names.join(', ')}.`)
     }
   }
 

@@ -40,11 +40,11 @@ export const taskDescriptions: Partial<Record<string, string>> = {
   'kyc-child-documents':
     'Upload supporting KYC/KYB documents if step-up verification is required.',
   'open-accounts':
-    'Set up new accounts, complete KYC, and prepare documents for client signature.',
+    'Set up accounts, complete identity verification, and prepare documents for client signature.',
   'open-accounts-with-annuity':
     'Annuity path: add accounts by registration type. KYC and eSign run outside this app.',
   'acct-child-account-owners':
-    'Set up the account, add owners and participants, request margin and options, answer remaining account questions, and collect required owner documents.',
+    'Set up the account, add owners and participants, request margin and options, answer remaining account questions, and attach supporting owner documents as needed.',
   'acct-child-funding-transfers':
     'Kick off one or more funding and account transfer workflows for this account—each line opens its own detail flow, similar to Accounts to Be Opened on the parent task.',
   'funding-line-child-setup':
@@ -54,7 +54,7 @@ export const taskDescriptions: Partial<Record<string, string>> = {
   'feature-service-line-child-setup':
     'Capture status, routing, dates, and notes for this feature or service workflow line.',
   'acct-child-documents-review':
-    'Finalize account documentation and collect required client documents',
+    'Finalize account documentation and collect client documents when needed for review.',
 }
 
 export const taskSections: Partial<Record<string, Array<{ id: string; label: string }>>> = {
@@ -71,8 +71,8 @@ export const taskSections: Partial<Record<string, Array<{ id: string; label: str
   ],
   'open-accounts': [
     { id: 'oa-accounts', label: 'Accounts' },
-    { id: 'oa-documents', label: 'Supporting Documents' },
     { id: 'oa-kyc', label: 'KYC Verification' },
+    { id: 'oa-documents', label: 'Supporting Documents' },
     { id: 'oa-esign', label: 'Envelopes' },
   ],
   'open-accounts-with-annuity': [

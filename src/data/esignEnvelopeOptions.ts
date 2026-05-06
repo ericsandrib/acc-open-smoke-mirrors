@@ -9,14 +9,6 @@ export const PAPERWORK_DELIVERY_OPTIONS: { value: PaperworkDeliveryMethod; label
   { value: 'mail', label: 'Mail' },
 ]
 
-export const TEMPLATE_OPTIONS = [
-  { id: '_none', label: 'None' },
-  { id: 'tmpl-ao-standard-2025', label: 'Account opening — Standard 2025' },
-  { id: 'tmpl-ira-package', label: 'IRA / retirement package' },
-  { id: 'tmpl-trust-estate', label: 'Trust & estate' },
-  { id: 'tmpl-business-entity', label: 'Business / entity' },
-] as const
-
 /** Optional forms that can be added beyond registration-required firm/custodian forms. */
 export const OPTIONAL_ESIGN_FORM_CATALOG = [
   { id: 'opt-loa', label: 'Letter of Authorization (LOA)' },

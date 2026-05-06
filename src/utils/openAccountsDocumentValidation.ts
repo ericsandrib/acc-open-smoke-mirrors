@@ -3,23 +3,31 @@ import type { EsignEnvelope } from '@/types/esignEnvelope'
 import { getAccountOwnersMissingKyc } from '@/utils/accountOpeningOwnerKyc'
 import { getAccountOpeningChildSubmissionIssues } from '@/utils/accountOpeningChildProgress'
 import { getEnvelopeDisplayName } from '@/utils/deriveEnvelopeDisplayName'
-import {
-  getRegistrationDocuments,
-  getDocSubTypes,
-  partitionRegistrationDocumentsByFulfillment,
-  sortUploadDocumentsForOpenAccounts,
-} from '@/utils/registrationDocuments'
+import { getOpenAccountsCoreSupportingDocumentSections, getDocSubTypes } from '@/utils/registrationDocuments'
 import type { RegistrationType } from '@/utils/registrationDocuments'
 import { getEsignEnvelopeStatus } from '@/utils/esignEnvelopeStatus'
 import { getAlternativeStrategyEsignSubmitBlockers } from '@/utils/alternativeStrategyValidation'
 import { isAnnuityExternalPlatformOpenAccountsTask } from '@/utils/openAccountsTaskContext'
+import {
+  instanceSpecificationComplete,
+  type SupportingDocumentStatus,
+} from '@/utils/supportingDocuments'
 
 type OwnerSlot = { partyId?: string; type: string }
 
+interface DocInstance {
+  id: string
+  docTypeId: string
+  assignedTo: string
+  fileName?: string
+  subType?: string
+  customSubTypeLabel?: string
+  status?: SupportingDocumentStatus
+}
+
 /**
- * Registration types that drive Required Documents / validation. Only includes an account once it has at least
- * one owner slot assigned to a party—so a newly added trust (registration type set) does not show uploads until
- * the advisor picks account owner(s).
+ * Registration types for accounts that have at least one owner slot assigned to a party (used by other flows such
+ * as eSign envelope defaults). Open Accounts supporting uploads are not gated on this list.
  */
 export function getRegistrationTypesForOpenAccountsUploadSection(
   accountOpeningChildren: ChildTask[],
@@ -40,17 +48,9 @@ export function getRegistrationTypesForOpenAccountsUploadSection(
   return types
 }
 
-interface DocInstance {
-  id: string
-  docTypeId: string
-  assignedTo: string
-  fileName?: string
-  subType?: string
-}
-
 /**
- * Upload rows whose document type has a specification dropdown (subtype) but none is selected.
- * Returns human-readable issue strings (one per document category with gaps).
+ * Upload rows where review explicitly requested a document but specification or file is still missing.
+ * Suggested optional rows never block submission.
  */
 export function getOpenAccountsMissingDocumentSpecificationIssues(
   state: WorkflowState,
@@ -59,31 +59,30 @@ export function getOpenAccountsMissingDocumentSpecificationIssues(
   const openAccountsTask = state.tasks.find((t) => t.id === openAccountsTaskId)
   if (!openAccountsTask) return []
 
-  const accountOpeningChildren = (openAccountsTask.children ?? []).filter(
-    (c) => c.childType === 'account-opening',
-  )
-
-  const childRegistrationTypes = getRegistrationTypesForOpenAccountsUploadSection(
-    accountOpeningChildren,
-    state.taskData,
-  )
-
-  const { upload } = partitionRegistrationDocumentsByFulfillment(
-    getRegistrationDocuments(childRegistrationTypes, state.relatedParties),
-  )
-  const uploadDocs = sortUploadDocumentsForOpenAccounts(upload)
+  const uploadDocs = getOpenAccountsCoreSupportingDocumentSections()
 
   const taskData = (state.taskData[openAccountsTaskId] as Record<string, unknown> | undefined) ?? {}
   const issues: string[] = []
 
   for (const doc of uploadDocs) {
-    if (getDocSubTypes(doc.id).length === 0) continue
-
+    const subTypes = getDocSubTypes(doc.id)
     const instances = (taskData[`doc-instances-${doc.id}`] as DocInstance[] | undefined) ?? []
-    const missing = instances.filter((i) => !i.subType?.trim()).length
-    if (missing > 0) {
+    const requested = instances.filter((i) => i.status === 'requested_by_review')
+    if (requested.length === 0) continue
+
+    const missingSpec = requested.filter(
+      (i) => !instanceSpecificationComplete(i.subType, i.customSubTypeLabel, subTypes.length),
+    ).length
+    if (missingSpec > 0) {
       issues.push(
-        `${doc.label}: ${missing} upload row${missing === 1 ? '' : 's'} still need a document type (specification).`,
+        `${doc.label}: ${missingSpec} row${missingSpec === 1 ? '' : 's'} requested during review still need a document type (or custom type name).`,
+      )
+    }
+
+    const missingFile = requested.filter((i) => !i.fileName?.trim()).length
+    if (missingFile > 0) {
+      issues.push(
+        `${doc.label}: ${missingFile} upload${missingFile === 1 ? '' : 's'} requested during review still need a file.`,
       )
     }
   }
@@ -129,7 +128,7 @@ export function getOpenAccountsCompletionBlockers(
       if (!hasCompletedEnvelope) {
         const names = envelopes.map((env) => getEnvelopeDisplayName(env)).join(', ')
         blockers.push(
-          `eSign required: at least one envelope must be Completed. Current envelope(s): ${names}.`,
+          `eSign needed to complete this task: at least one envelope must be Completed. Current envelope(s): ${names}.`,
         )
       }
     }

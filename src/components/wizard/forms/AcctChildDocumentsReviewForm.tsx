@@ -33,6 +33,14 @@ interface DocInstance {
   assignedTo: string
   fileName?: string
   subType?: string
+  customSubTypeLabel?: string
+  status?:
+    | 'draft'
+    | 'suggested'
+    | 'uploaded'
+    | 'requested_by_review'
+    | 'accepted'
+    | 'rejected_needs_replacement'
   source?: 'upstream' | 'local'
 }
 
@@ -280,8 +288,8 @@ export function AcctChildDocumentsReviewForm() {
           <p className="text-[11px] text-muted-foreground leading-snug">
             After the client completes eSign, use View / Download for each form, or open the bundle viewer to review the
             full signed package in one place. Demo PDFs are placeholders; drafts are edited in the eSign envelope step—this
-            list shows executed copies for this registration type. Wet-signed scans are added in the group below with
-            document type, account, and notes; data is stored once on{' '}
+            list shows executed copies for this registration type. Paper or manually signed documents are added in the
+            group below with document type, account, and notes; data is stored once on{' '}
             <span className="font-medium text-foreground">Open accounts</span> for the whole application.
           </p>
           {ruleDrivenDocs.firmCustodianEsign.length > 0 ? (
@@ -331,7 +339,7 @@ export function AcctChildDocumentsReviewForm() {
               )}
               <div className="border-t border-border pt-4 mt-4 space-y-2">
                 <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                  Wet-signed document uploads
+                  Manual document uploads
                 </p>
                 <WetSignedFirmUploadsGroup
                   documentTypes={ruleDrivenDocs.firmCustodianEsign.map((d) => ({ id: d.id, label: d.label }))}
@@ -343,7 +351,9 @@ export function AcctChildDocumentsReviewForm() {
               </div>
             </>
           ) : (
-            <p className="text-xs text-muted-foreground">No eSign firm/custodian forms required for this registration type.</p>
+            <p className="text-xs text-muted-foreground">
+              No firm or custodian eSignature forms apply to this registration type.
+            </p>
           )}
         </div>
 

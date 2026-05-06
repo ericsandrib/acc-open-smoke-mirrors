@@ -90,15 +90,15 @@ export function SmartDocumentsPanel({
             ? 'Requirements driven by this funding or asset movement workflow. Refresh as you save movement type and bank details.'
             : isFeatureLine
               ? 'Requirements driven by this account feature or service workflow line.'
-              : 'Rule-driven requirements for the account you are editing—updates on every step. Consolidated eSign for all accounts is prepared on the Open Accounts task, not here.'}
+              : 'Rule-driven document suggestions for the account you are editing—updates on every step. Consolidated eSign for all accounts is prepared on the Open Accounts task, not here.'}
         </p>
         <div className="mt-3 flex flex-wrap gap-2">
           <Badge variant="secondary" className="text-[10px] gap-1">
             <AlertCircle className="h-3 w-3" />
-            Required now: {sd.counts.requiredNow}
+            {isFundingLine || isFeatureLine ? 'Required now' : 'Suggested now'}: {sd.counts.requiredNow}
           </Badge>
           <Badge variant="outline" className="text-[10px] gap-1">
-            Missing: {sd.counts.missing}
+            Open: {sd.counts.missing}
           </Badge>
           <Badge variant="outline" className="text-[10px] gap-1">
             <CheckCircle2 className="h-3 w-3 text-green-600" />
@@ -114,7 +114,7 @@ export function SmartDocumentsPanel({
       <div className="flex-1 min-h-0 overflow-y-auto">
         <div className="space-y-5 p-3 pb-6">
           <SmartDocumentsSection
-            title="Required now"
+            title={isFundingLine || isFeatureLine ? 'Required now' : 'Commonly requested / suggested now'}
             icon={AlertCircle}
             items={sd.requiredNow}
             emptyHint={
@@ -122,11 +122,11 @@ export function SmartDocumentsPanel({
                 ? 'Nothing required yet—pick a movement type to trigger rules.'
                 : isFeatureLine
                   ? 'Nothing required yet—pick a feature or service type to trigger rules.'
-                  : 'Nothing required yet—add registration, owners, funding lines, or feature workflows.'
+                  : 'Nothing suggested yet—add registration, owners, funding lines, or feature workflows.'
             }
           />
           <SmartDocumentsSection
-            title="May be required later"
+            title={isFundingLine || isFeatureLine ? 'May be required later' : 'May be needed later'}
             icon={Clock}
             items={sd.mayBeRequiredLater}
             emptyHint="No contingent items—rules are fully determined for current selections."

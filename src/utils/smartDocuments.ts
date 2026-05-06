@@ -89,7 +89,12 @@ export function computeSmartDocuments(state: WorkflowState, childId: string): Sm
       const { upload: uploadRegDocs, esign: esignRegDocs } = partitionRegistrationDocumentsByFulfillment(regDocs)
       for (const d of uploadRegDocs.slice(0, 4)) {
         requiredNow.push(
-          doc(`reg-${d.id}`, d.label, 'account', `Account-level: registration type is ${regType}.`),
+          doc(
+            `reg-${d.id}`,
+            d.label,
+            'account',
+            `Commonly requested for registration type ${regType} (optional at intake unless review requests them).`,
+          ),
         )
       }
       if (esignRegDocs.length > 0) {

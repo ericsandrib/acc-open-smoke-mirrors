@@ -1,6 +1,7 @@
 import type { DocumentRequirement } from './accountDocuments'
 import type { RelatedParty } from '@/types/workflow'
 import pasData from '../data/pasRequiredDocuments.json'
+import { CUSTOM_DOCUMENT_SUBTYPE_VALUE } from '@/utils/supportingDocuments'
 
 type PasRegistrationEntry =
   | (typeof pasData.registration_types.personal_accounts)[number]
@@ -52,19 +53,52 @@ export const TRUSTEE_GOVERNMENT_ID_DOC_ID_PREFIX = 'cip-gov-id-trustee-'
 /** Single trust CIP upload card: choose document type per row (replaces separate PAS lines). */
 export const TRUST_VERIFICATION_DOC_ID = 'cip-trust-verification-bundle'
 
+/** Non-trust legal entity owners: KYB-style client uploads (optional unless review requests). */
+export const ENTITY_VERIFICATION_DOC_ID = 'supporting-entity-verification'
+
+/** Catch-all optional client uploads (optional unless review requests). */
+export const ADDITIONAL_SUPPORTING_DOC_ID = 'supporting-additional-documents'
+
 export const TRUST_VERIFICATION_SUBTYPES: DocumentSubType[] = [
-  {
-    value: 'cert-or-trust-agreement',
-    label: 'Certificate of Trust or Trust Agreement (excerpts or full)',
-  },
-  {
-    value: 'testamentary-probate',
-    label: 'Testamentary trust: will and probate evidence',
-  },
-  {
-    value: 'trust-ein-tax-id',
-    label: 'Trust EIN / tax ID documentation',
-  },
+  { value: 'certificate-of-trust', label: 'Certificate of Trust' },
+  { value: 'trust-agreement', label: 'Trust Agreement' },
+  { value: 'trust-instrument-title-signature', label: 'Trust Instrument: title/signature pages' },
+  { value: 'testamentary-trust-certification', label: 'Testamentary trust certification' },
+  { value: 'letters-testamentary', label: 'Letters testamentary' },
+  { value: 'letters-of-administration', label: 'Letters of administration' },
+  { value: 'trust-ein-tax-id', label: 'Trust EIN / tax ID document' },
+  { value: 'death-certificate', label: 'Death certificate' },
+  { value: 'other-trust-probate', label: 'Other trust/probate document' },
+]
+
+export const ENTITY_VERIFICATION_SUBTYPES: DocumentSubType[] = [
+  { value: 'articles-of-incorporation', label: 'Articles of Incorporation' },
+  { value: 'articles-of-organization', label: 'Articles of Organization' },
+  { value: 'certificate-of-formation', label: 'Certificate of Formation' },
+  { value: 'certificate-of-good-standing', label: 'Certificate of Good Standing' },
+  { value: 'commercial-register-extract', label: 'Commercial Register Extract' },
+  { value: 'extract-from-government-website', label: 'Extract from Government Website' },
+  { value: 'partnership-agreement', label: 'Partnership Agreement' },
+  { value: 'business-license-registration', label: 'Business License / Registration' },
+  { value: 'corporate-resolution', label: 'Corporate Resolution' },
+  { value: 'llc-resolution', label: 'LLC Resolution' },
+  { value: 'non-corporate-resolution', label: 'Non-Corporate Resolution' },
+  { value: 'certificate-of-sole-proprietorship', label: 'Certificate of Sole Proprietorship' },
+  { value: 'ein-tax-id-document', label: 'EIN / tax ID document' },
+  { value: 'beneficial-ownership-document', label: 'Beneficial ownership document' },
+  { value: 'other-entity-document', label: 'Other entity document' },
+]
+
+export const ADDITIONAL_SUPPORTING_SUBTYPES: DocumentSubType[] = [
+  { value: 'proof-of-address', label: 'Proof of address' },
+  { value: 'proof-of-name-change', label: 'Proof of name change' },
+  { value: 'court-appointment', label: 'Court appointment' },
+  { value: 'guardianship-document', label: 'Guardianship document' },
+  { value: 'affidavit', label: 'Affidavit' },
+  { value: 'client-statement', label: 'Client statement' },
+  { value: 'source-of-funds-document', label: 'Source of funds document' },
+  { value: 'power-of-attorney-document', label: 'Power of attorney document' },
+  { value: 'other-supporting-document', label: 'Other supporting document' },
 ]
 
 export type RegistrationDocumentsOptions = {
@@ -74,22 +108,21 @@ export type RegistrationDocumentsOptions = {
 export const GOVERNMENT_ID_SUBTYPES: DocumentSubType[] = [
   { value: 'drivers-license', label: "Driver's license" },
   { value: 'passport', label: 'Passport' },
-  { value: 'state-id', label: 'State ID card' },
-  { value: 'military-id', label: 'Military ID' },
-  { value: 'global-entry', label: 'Global Entry card' },
-  { value: 'other', label: 'Other government-issued photo ID' },
+  { value: 'state-id', label: 'State ID' },
+  { value: 'permanent-resident-card', label: 'Permanent resident card' },
+  { value: 'other-government-id', label: 'Other government-issued ID' },
 ]
 
 function isGovernmentIssuedIdCipLine(text: string): boolean {
   return /government\s*issued\s*id/i.test(text)
 }
 
-function governmentIssuedIdRequirement(): DocumentRequirementWithSubTypes {
+export function getSupportingGovernmentIssuedIdRequirement(): DocumentRequirementWithSubTypes {
   return {
     id: GOVERNMENT_ISSUED_ID_DOC_ID,
     label: 'Government-issued ID',
     description:
-      'Upload a legible copy of one ID. Choose the document type you are providing (passport, driver\'s license, etc.).',
+      'Upload a legible government-issued ID if available or requested during review.',
     subTypes: GOVERNMENT_ID_SUBTYPES,
     fulfillment: 'upload',
   }
@@ -170,6 +203,25 @@ export function getTrustOrganizationIdsForAccountOwners(
   return out
 }
 
+/** Legal-entity account owners that are not trust organizations (KYB uploads). */
+export function getNonTrustEntityOwnerIds(
+  relatedParties: RelatedParty[] | undefined,
+  accountOwnerPartyIds: Iterable<string>,
+): string[] {
+  if (!relatedParties?.length) return []
+  const seen = new Set<string>()
+  const out: string[] = []
+  for (const id of accountOwnerPartyIds) {
+    if (seen.has(id)) continue
+    seen.add(id)
+    const party = relatedParties.find((p) => p.id === id)
+    if (!party || party.type !== 'related_organization') continue
+    if (isTrustEntityForTrusteeDocs(party)) continue
+    out.push(id)
+  }
+  return out
+}
+
 /**
  * Party IDs that should have client-upload rows for this document on an account—the same rules as Open Accounts
  * seeding: government ID → natural-person owners and trust trustees (not the trust entity); trust verification →
@@ -187,6 +239,12 @@ export function getAssigneePartyIdsForClientUploadDoc(
   if (docId === TRUST_VERIFICATION_DOC_ID) {
     return getTrustOrganizationIdsForAccountOwners(relatedParties, accountOwnerPartyIds)
   }
+  if (docId === ENTITY_VERIFICATION_DOC_ID) {
+    return getNonTrustEntityOwnerIds(relatedParties, accountOwnerPartyIds)
+  }
+  if (docId === ADDITIONAL_SUPPORTING_DOC_ID) {
+    return []
+  }
   return owners
 }
 
@@ -195,17 +253,61 @@ function trustVerificationBundleRequirement(): DocumentRequirementWithSubTypes {
     id: TRUST_VERIFICATION_DOC_ID,
     label: 'Trust verification documents',
     description:
-      'Trust-related client uploads in one place. Add a row per file and pick the document type (Certificate of Trust or Trust Agreement; testamentary / probate; or trust EIN / tax ID).',
+      'Upload trust-related documents such as trust agreements, certificates of trust, probate documents, or trust tax ID documentation.',
     subTypes: TRUST_VERIFICATION_SUBTYPES,
     fulfillment: 'upload',
   }
 }
 
-/** Puts Government-issued ID first (most common accounts), then trust verification, then other uploads. */
+function entityVerificationBundleRequirement(): DocumentRequirementWithSubTypes {
+  return {
+    id: ENTITY_VERIFICATION_DOC_ID,
+    label: 'Entity verification documents',
+    description:
+      'Upload entity formation or authorization documents such as articles of incorporation, certificate of formation, partnership agreements, business licenses, or EIN/tax ID documentation.',
+    subTypes: ENTITY_VERIFICATION_SUBTYPES,
+    fulfillment: 'upload',
+  }
+}
+
+function additionalSupportingBundleRequirement(): DocumentRequirementWithSubTypes {
+  return {
+    id: ADDITIONAL_SUPPORTING_DOC_ID,
+    label: 'Additional supporting documents',
+    description:
+      'Upload any additional client-provided documents requested during review.',
+    subTypes: ADDITIONAL_SUPPORTING_SUBTYPES,
+    fulfillment: 'upload',
+  }
+}
+
+/** Fixed four sections on the Open Accounts parent task (always shown; not gated on registration type). */
+export function getOpenAccountsCoreSupportingDocumentSections(): DocumentRequirementWithSubTypes[] {
+  return [
+    {
+      id: GOVERNMENT_ISSUED_ID_DOC_ID,
+      label: 'Government-issued ID',
+      description:
+        'Upload a legible government-issued ID if available or requested during review.',
+      subTypes: GOVERNMENT_ID_SUBTYPES,
+      fulfillment: 'upload',
+    },
+    trustVerificationBundleRequirement(),
+    entityVerificationBundleRequirement(),
+    additionalSupportingBundleRequirement(),
+  ]
+}
+
+/** Puts core supporting sections first, then other registration-specific uploads. */
 export function sortUploadDocumentsForOpenAccounts(
   docs: DocumentRequirementWithSubTypes[],
 ): DocumentRequirementWithSubTypes[] {
-  const order: string[] = [GOVERNMENT_ISSUED_ID_DOC_ID, TRUST_VERIFICATION_DOC_ID]
+  const order: string[] = [
+    GOVERNMENT_ISSUED_ID_DOC_ID,
+    TRUST_VERIFICATION_DOC_ID,
+    ENTITY_VERIFICATION_DOC_ID,
+    ADDITIONAL_SUPPORTING_DOC_ID,
+  ]
   const rank = (id: string) => {
     const i = order.indexOf(id)
     return i === -1 ? order.length + 1 : i
@@ -297,10 +399,14 @@ function mergeDocs(list: DocumentRequirementWithSubTypes[]): DocumentRequirement
 }
 
 export function getDocSubTypes(docId: string): DocumentSubType[] {
-  if (docId === GOVERNMENT_ISSUED_ID_DOC_ID) return GOVERNMENT_ID_SUBTYPES
-  if (docId === TRUST_VERIFICATION_DOC_ID) return TRUST_VERIFICATION_SUBTYPES
-  if (docId.startsWith(TRUSTEE_GOVERNMENT_ID_DOC_ID_PREFIX)) return GOVERNMENT_ID_SUBTYPES
-  return []
+  let base: DocumentSubType[] = []
+  if (docId === GOVERNMENT_ISSUED_ID_DOC_ID) base = GOVERNMENT_ID_SUBTYPES
+  else if (docId === TRUST_VERIFICATION_DOC_ID) base = TRUST_VERIFICATION_SUBTYPES
+  else if (docId === ENTITY_VERIFICATION_DOC_ID) base = ENTITY_VERIFICATION_SUBTYPES
+  else if (docId === ADDITIONAL_SUPPORTING_DOC_ID) base = ADDITIONAL_SUPPORTING_SUBTYPES
+  else if (docId.startsWith(TRUSTEE_GOVERNMENT_ID_DOC_ID_PREFIX)) base = GOVERNMENT_ID_SUBTYPES
+  if (base.length === 0) return []
+  return [...base, { value: CUSTOM_DOCUMENT_SUBTYPE_VALUE, label: 'Other / Custom' }]
 }
 
 export function getRegistrationDocumentsForType(
@@ -327,7 +433,7 @@ export function getRegistrationDocumentsForType(
   for (const cip of entry.cip_requirements) {
     if (isGovernmentIssuedIdCipLine(cip)) {
       if (!govIdAdded) {
-        list.push(governmentIssuedIdRequirement())
+        list.push(getSupportingGovernmentIssuedIdRequirement())
         govIdAdded = true
       }
       continue
@@ -340,7 +446,7 @@ export function getRegistrationDocumentsForType(
     // PAS lists no CIP upload lines for TRUST (trust verification is a separate bundle below), but trustee /
     // owner government ID is still required—Open Accounts merges assignees with trustees from selected trust owners.
     if (!govIdAdded) {
-      list.push(governmentIssuedIdRequirement())
+      list.push(getSupportingGovernmentIssuedIdRequirement())
     }
     list.push(trustVerificationBundleRequirement())
   }

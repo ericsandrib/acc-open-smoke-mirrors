@@ -92,16 +92,16 @@ export function WetSignedFirmUploadsGroup({
   return (
     <div className="space-y-3">
       <p className="text-[11px] text-muted-foreground leading-snug">
-        Add one row per wet-signed scan. Choose the form type and account (if applicable), then upload the file. Notes are
-        optional—for example envelope ID or custodian reference.
+        Add one row per signed document (for example in-person or mail delivery). Choose the form type and account (if
+        applicable), then upload the file. Notes are optional—for example envelope ID or custodian reference.
       </p>
 
       {uploads.length === 0 ? (
         <div className="rounded-lg border border-dashed border-border px-4 py-6 text-center">
-          <p className="text-sm text-muted-foreground mb-3">No wet-signed uploads yet.</p>
+          <p className="text-sm text-muted-foreground mb-3">No manual uploads yet.</p>
           <Button type="button" variant="outline" size="sm" className="gap-1.5" onClick={addRow}>
             <Plus className="h-3.5 w-3.5" />
-            Add wet-signed upload
+            Add upload
           </Button>
         </div>
       ) : (
@@ -237,7 +237,7 @@ export function WetSignedFirmUploadsGroup({
           <div className="border-t border-border bg-muted/20 px-3 py-2">
             <Button type="button" variant="ghost" size="sm" className="h-8 text-xs gap-1.5" onClick={addRow}>
               <Plus className="h-3.5 w-3.5" />
-              Add wet-signed upload
+              Add upload
             </Button>
           </div>
         </div>

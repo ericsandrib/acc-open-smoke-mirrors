@@ -4,7 +4,6 @@ import { registrationTypeLabels } from '@/utils/registrationDocuments'
 import { Button } from '@/components/ui/button'
 import { Label } from '@/components/ui/label'
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from '@/components/ui/sheet'
-import { Combobox } from '@/components/ui/combobox'
 import {
   Select,
   SelectContent,
@@ -141,27 +140,38 @@ export function AccountTypePickerDialog({ open, onOpenChange, onConfirm }: Accou
                 <Label>
                   Product <span className="text-destructive">*</span>
                 </Label>
-                <Combobox
-                  options={officeOptions}
-                  value={officeCode}
-                  onValueChange={setOfficeCode}
-                  placeholder="Search product..."
-                  emptyMessage="No products found."
-                  dropdownClassName="max-h-40"
-                />
+                <Select value={officeCode || undefined} onValueChange={setOfficeCode}>
+                  <SelectTrigger className="h-9 w-full text-left [&>span]:text-left">
+                    <SelectValue placeholder="Select product…" />
+                  </SelectTrigger>
+                  <SelectContent className="max-h-[min(24rem,70vh)]">
+                    {officeOptions.map((opt) => (
+                      <SelectItem key={opt.value} value={opt.value}>
+                        {opt.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
               <div className="space-y-1.5">
                 <Label>
                   Advisor <span className="text-destructive">*</span>
                 </Label>
-                <Combobox
-                  options={advisorOptions}
-                  value={investmentProfessionalId}
+                <Select
+                  value={investmentProfessionalId || undefined}
                   onValueChange={setInvestmentProfessionalId}
-                  placeholder="Search advisor..."
-                  emptyMessage="No advisors found."
-                  dropdownClassName="max-h-40"
-                />
+                >
+                  <SelectTrigger className="h-9 w-full text-left [&>span]:text-left">
+                    <SelectValue placeholder="Select advisor…" />
+                  </SelectTrigger>
+                  <SelectContent className="max-h-[min(24rem,70vh)]">
+                    {advisorOptions.map((opt) => (
+                      <SelectItem key={opt.value} value={opt.value}>
+                        {opt.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
             </div>
           </div>
@@ -202,16 +212,24 @@ export function AccountTypePickerDialog({ open, onOpenChange, onConfirm }: Accou
                     </SelectContent>
                   </Select>
                 </div>
-                <Combobox
-                  options={QUANTITY_OPTIONS}
+                <Select
                   value={String(row.quantity)}
                   onValueChange={(val) => {
                     const num = parseInt(val, 10)
                     if (!isNaN(num)) updateRow(row.id, { quantity: num })
                   }}
-                  placeholder="Qty"
-                  emptyMessage="No match."
-                />
+                >
+                  <SelectTrigger className="h-9 w-full text-left [&>span]:text-left">
+                    <SelectValue placeholder="Qty" />
+                  </SelectTrigger>
+                  <SelectContent className="max-h-60">
+                    {QUANTITY_OPTIONS.map((opt) => (
+                      <SelectItem key={opt.value} value={opt.value}>
+                        {opt.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
                 <button
                   type="button"
                   onClick={() => removeRow(row.id)}

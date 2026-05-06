@@ -1,4 +1,5 @@
 import * as React from "react"
+import { createPortal } from "react-dom"
 import { Check, ChevronDown } from "lucide-react"
 import { cn } from "@/lib/utils"
 
@@ -17,6 +18,11 @@ interface ComboboxProps {
   inputClassName?: string
   dropdownClassName?: string
   disabled?: boolean
+  /**
+   * Portal the dropdown into this element (e.g. a node inside a Radix Dialog/Sheet).
+   * Defaults to `document.body`. Without this, portaling to body breaks pickers opened inside modal sheets.
+   */
+  portalContainer?: HTMLElement | null
 }
 
 function Combobox({
@@ -29,13 +35,22 @@ function Combobox({
   inputClassName,
   dropdownClassName,
   disabled = false,
+  portalContainer = null,
 }: ComboboxProps) {
   const [open, setOpen] = React.useState(false)
   const [search, setSearch] = React.useState("")
   const [highlightIndex, setHighlightIndex] = React.useState(-1)
+  const [listBox, setListBox] = React.useState<{ top: number; left: number; width: number } | null>(null)
   const containerRef = React.useRef<HTMLDivElement>(null)
   const inputRef = React.useRef<HTMLInputElement>(null)
   const listRef = React.useRef<HTMLDivElement>(null)
+
+  const updateListPosition = React.useCallback(() => {
+    const el = containerRef.current
+    if (!el) return
+    const rect = el.getBoundingClientRect()
+    setListBox({ top: rect.bottom + 4, left: rect.left, width: rect.width })
+  }, [])
 
   const selectedLabel = options.find((o) => o.value === value)?.label ?? ""
 
@@ -52,8 +67,20 @@ function Combobox({
   React.useEffect(() => {
     if (!open) {
       setSearch("")
+      setListBox(null)
     }
   }, [open])
+
+  React.useLayoutEffect(() => {
+    if (!open) return
+    updateListPosition()
+    window.addEventListener("scroll", updateListPosition, true)
+    window.addEventListener("resize", updateListPosition)
+    return () => {
+      window.removeEventListener("scroll", updateListPosition, true)
+      window.removeEventListener("resize", updateListPosition)
+    }
+  }, [open, updateListPosition, filtered.length, search])
 
   React.useEffect(() => {
     function handleClickOutside(e: MouseEvent) {
@@ -125,6 +152,58 @@ function Combobox({
 
   const displayValue = open ? search : selectedLabel
 
+  const listContent = (
+    <div
+      ref={listRef}
+      role="listbox"
+      style={
+        listBox
+          ? {
+              position: "fixed",
+              top: listBox.top,
+              left: listBox.left,
+              width: listBox.width,
+              zIndex: 9999,
+            }
+          : { position: "fixed", left: -9999, top: -9999, visibility: "hidden" as const }
+      }
+      className={cn(
+        "max-h-60 overflow-auto rounded-md border border-border bg-popover p-1 text-popover-foreground shadow-md",
+        dropdownClassName
+      )}
+    >
+      {filtered.length === 0 ? (
+        <div className="py-2 text-center text-sm text-muted-foreground">{emptyMessage}</div>
+      ) : (
+        filtered.map((opt, i) => (
+          <div
+            key={opt.value}
+            data-combobox-item
+            role="option"
+            aria-selected={opt.value === value}
+            className={cn(
+              "relative flex w-full cursor-pointer items-center gap-2 rounded-sm py-1.5 pr-8 pl-2 text-sm select-none",
+              i === highlightIndex && "bg-accent text-accent-foreground",
+              opt.value === value && i !== highlightIndex && "font-medium"
+            )}
+            onMouseEnter={() => setHighlightIndex(i)}
+            onMouseDown={(e) => {
+              e.preventDefault()
+              selectOption(opt)
+            }}
+          >
+            {opt.label}
+            {opt.value === value && (
+              <span className="absolute right-2 flex size-4 items-center justify-center">
+                <Check className="size-4" />
+              </span>
+            )}
+          </div>
+        ))
+      )}
+    </div>
+  )
+
   return (
     <div ref={containerRef} className={cn("relative", className)}>
       <div className="relative">
@@ -174,48 +253,9 @@ function Combobox({
         </button>
       </div>
 
-      {open && (
-        <div
-          ref={listRef}
-          role="listbox"
-          className={cn(
-            "absolute left-0 top-[calc(100%+4px)] z-[9999] max-h-60 w-full overflow-auto rounded-md border border-border bg-popover p-1 text-popover-foreground shadow-md",
-            dropdownClassName
-          )}
-        >
-          {filtered.length === 0 ? (
-            <div className="py-2 text-center text-sm text-muted-foreground">
-              {emptyMessage}
-            </div>
-          ) : (
-            filtered.map((opt, i) => (
-              <div
-                key={opt.value}
-                data-combobox-item
-                role="option"
-                aria-selected={opt.value === value}
-                className={cn(
-                  "relative flex w-full cursor-pointer items-center gap-2 rounded-sm py-1.5 pr-8 pl-2 text-sm select-none",
-                  i === highlightIndex && "bg-accent text-accent-foreground",
-                  opt.value === value && i !== highlightIndex && "font-medium"
-                )}
-                onMouseEnter={() => setHighlightIndex(i)}
-                onMouseDown={(e) => {
-                  e.preventDefault()
-                  selectOption(opt)
-                }}
-              >
-                {opt.label}
-                {opt.value === value && (
-                  <span className="absolute right-2 flex size-4 items-center justify-center">
-                    <Check className="size-4" />
-                  </span>
-                )}
-              </div>
-            ))
-          )}
-        </div>
-      )}
+      {open && typeof document !== "undefined"
+        ? createPortal(listContent, portalContainer ?? document.body)
+        : null}
     </div>
   )
 }

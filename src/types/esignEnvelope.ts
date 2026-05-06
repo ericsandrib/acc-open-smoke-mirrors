@@ -77,7 +77,6 @@ export interface EsignEnvelope {
   id: string
   name: string
   deliveryMethod: PaperworkDeliveryMethod
-  templateId?: string
   /** Required + generated forms per account (required rows are locked on). */
   formSelections: EnvelopeFormSelection[]
   /** Optional add-on forms from the catalog (checkbox). */
