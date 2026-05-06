@@ -14,7 +14,6 @@ export function buildEnvelopeManifestText(envelope: EsignEnvelope): string {
   const lines: string[] = []
   lines.push(`Envelope: ${getEnvelopeDisplayName(envelope)}`)
   lines.push(`Delivery: ${deliveryLabel(envelope.deliveryMethod)}`)
-  if (envelope.templateId) lines.push(`Template: ${envelope.templateId}`)
   lines.push('')
   lines.push('— Forms by account —')
   const grouped = groupFormSelectionsByAccountChild(envelope.formSelections)

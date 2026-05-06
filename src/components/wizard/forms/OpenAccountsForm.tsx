@@ -771,7 +771,7 @@ export function OpenAccountsForm() {
             Accounts
           </h3>
           <p className={subsectionBodyClass}>
-            Add the accounts you plan to open at the custodian, including funding details for each.
+            Add the accounts you plan to open at the custodian, including registration and funding details.
           </p>
         </div>
 

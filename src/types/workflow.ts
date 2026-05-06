@@ -9,7 +9,7 @@ export type TaskStatus =
 
 export type RelatedPartyType = 'household_member' | 'related_contact' | 'related_organization'
 
-/** Trustee or trust owner linked to a trust entity (CIP / required documents). */
+/** Trustee or trust owner linked to a trust entity (CIP / supporting documents). */
 export interface TrustPartyRef {
   id: string
   /** When set, resolves to an existing household or contact party for display and deduplication. */

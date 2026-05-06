@@ -43,11 +43,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
-import {
-  TEMPLATE_OPTIONS,
-  OPTIONAL_ESIGN_FORM_CATALOG,
-  PAPERWORK_DELIVERY_OPTIONS,
-} from '@/data/esignEnvelopeOptions'
+import { OPTIONAL_ESIGN_FORM_CATALOG, PAPERWORK_DELIVERY_OPTIONS } from '@/data/esignEnvelopeOptions'
 import type { EsignEnvelope, EsignEnvelopeSigner } from '@/types/esignEnvelope'
 import { groupFormSelectionsByAccountChild } from '@/utils/buildEsignEnvelopeFormRows'
 import { deriveDefaultEnvelopeName } from '@/utils/deriveEnvelopeDisplayName'
@@ -592,28 +588,6 @@ export function EsignEnvelopeDrawer({
             </Select>
           </div>
 
-          <div className="space-y-2">
-            <Label>Template</Label>
-            <p className="text-xs text-muted-foreground">Optional: select a template to use for this envelope.</p>
-            <Select
-              value={local.templateId ?? '_none'}
-              onValueChange={(v) =>
-                setLocal((p) => ({ ...p, templateId: v === '_none' ? undefined : v }))
-              }
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="Select template (optional)" />
-              </SelectTrigger>
-              <SelectContent>
-                {TEMPLATE_OPTIONS.map((o) => (
-                  <SelectItem key={o.id} value={o.id}>
-                    {o.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-
           <Separator />
 
           <div className="space-y-3">
@@ -665,7 +639,7 @@ export function EsignEnvelopeDrawer({
                           <div className="min-w-0 flex-1">
                             <p className="text-sm text-foreground">{row.label}</p>
                             <p className="text-[11px] text-muted-foreground">
-                              {included ? 'Required for selected account' : 'Excluded with account'}
+                              {included ? 'Included with selected account' : 'Excluded with account'}
                             </p>
                           </div>
                           <EsignFormPdfSampleActions formIdOrDocId={row.formId} displayLabel={row.label} viewMode="preview" />
@@ -704,22 +678,22 @@ export function EsignEnvelopeDrawer({
               <div>
                 <p className="text-sm font-medium">Executed firm / custodian forms</p>
                 <p className="text-xs text-muted-foreground mt-1">
-                  Executed copies are available after the envelope is completed in DocuSign. Wet-signed paper scans are
-                  captured in each account&apos;s Documents step.
+                  Executed copies are available after the envelope is completed in DocuSign. Paper or manually signed
+                  copies are captured in each account&apos;s Documents step.
                 </p>
               </div>
               {accountOpeningChildren.length === 0 ? (
                 <div className="rounded-lg border border-dashed border-border p-4 text-center">
                   <FileText className="mx-auto mb-2 h-8 w-8 text-muted-foreground/50" />
                   <p className="text-sm text-muted-foreground">
-                    Add accounts with registration types in Open Accounts to see required firm and custodian forms.
+                    Add accounts with registration types in Open Accounts to see firm and custodian forms for signing.
                   </p>
                 </div>
               ) : firmCustodianEsignDocs.length === 0 ? (
                 <div className="rounded-lg border border-dashed border-border p-4 text-center">
                   <FileText className="mx-auto mb-2 h-8 w-8 text-muted-foreground/50" />
                   <p className="text-sm text-muted-foreground">
-                    No eSign firm/custodian forms are required for the account types on this application.
+                    No firm or custodian eSignature forms apply to the account types on this application.
                   </p>
                 </div>
               ) : !showExecutedForms ? (

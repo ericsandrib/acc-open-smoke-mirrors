@@ -556,19 +556,8 @@ function WizardLayoutInner() {
       // Section 1: Accounts to Be Opened
       const accountsPct = children.length > 0 ? 100 : 0
 
-      // Section 2: Required Documents (doc-instances-* rows with uploads)
-      const docInstanceKeys = Object.keys(taskData).filter((k) => k.startsWith('doc-instances-'))
-      let docRowsTotal = 0
-      let docRowsUploaded = 0
-      for (const key of docInstanceKeys) {
-        const rows = (taskData[key] as Array<{ fileName?: string }> | undefined) ?? []
-        docRowsTotal += rows.length
-        docRowsUploaded += rows.filter((r) => Boolean(r?.fileName)).length
-      }
-      const documentsPct =
-        docRowsTotal === 0
-          ? (children.length > 0 ? 100 : 0)
-          : (docRowsUploaded > 0 ? 100 : 0)
+      // Section 2: Supporting documents (optional at intake; parent progress does not wait on uploads)
+      const documentsPct = children.length > 0 ? 100 : 0
 
       // Section 3: KYC Verification
       const kycTask = state.tasks.find((t) => t.formKey === 'kyc')
