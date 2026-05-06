@@ -76,7 +76,7 @@ export function OpenAccountsCombinedForm() {
         >
           <AccordionTrigger className="px-5 py-4 hover:bg-muted/30">
             <div className="flex flex-col items-start gap-1 text-left">
-              <span className="text-base font-semibold">Standard Accounts</span>
+              <span className="text-base font-semibold">Accounts without Annuities</span>
             </div>
           </AccordionTrigger>
           <AccordionContent className="px-5 pb-6 pt-2">

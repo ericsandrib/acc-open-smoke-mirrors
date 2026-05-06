@@ -90,7 +90,7 @@ export function TaskContent() {
   const splitV1Title =
     variant === 'v1' && isSplitJourney && activeTask
       ? activeTask.formKey === OPEN_ACCOUNTS_FORM_KEY
-        ? 'Standard Accounts'
+        ? 'Accounts without Annuities'
         : activeTask.formKey === OPEN_ACCOUNTS_WITH_ANNUITY_FORM_KEY
           ? 'Annuity Accounts'
           : null

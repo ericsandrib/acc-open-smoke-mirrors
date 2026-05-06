@@ -587,7 +587,7 @@ function WizardLayoutInner() {
     if (!task) return undefined
     if (isSplitJourney) {
       if (variant === 'v1') {
-        if (task.formKey === OPEN_ACCOUNTS_FORM_KEY) return 'Standard Accounts'
+        if (task.formKey === OPEN_ACCOUNTS_FORM_KEY) return 'Accounts without Annuities'
         if (task.formKey === OPEN_ACCOUNTS_WITH_ANNUITY_FORM_KEY) return 'Annuity Accounts'
       } else if (variant === 'v2') {
         if (

@@ -20,7 +20,7 @@ export type CombinedAccordionSectionGroup = {
 export const combinedOpenAccountsSections: CombinedAccordionSectionGroup[] = [
   {
     key: 'no-annuity',
-    label: 'Standard Accounts',
+    label: 'Accounts without Annuities',
     sections: [
       { id: 'oa-accounts', label: 'Accounts' },
       { id: 'oa-documents', label: 'Supporting Documents' },
