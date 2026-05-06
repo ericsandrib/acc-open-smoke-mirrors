@@ -746,17 +746,17 @@ function WizardLayoutInner() {
               <div className="flex-1 flex flex-col min-h-0 min-w-0 overflow-hidden">
                 <div className="flex flex-1 min-h-0 overflow-hidden">
                   <ChildActionSidebar />
-                  {taskSectionNavStyle === 'compact' && childSections.length > 0 && showKycDocumentsSubTask && (
-                    <TaskSectionPanel
-                      sections={childSections}
-                      onSelectSection={(sectionId) => dispatch({ type: 'FOCUS_PARENT_TASK_SECTION', sectionId })}
-                    />
-                  )}
                   <div className="flex flex-1 min-h-0 overflow-hidden min-w-0">
                     <div className="flex-1 flex flex-col overflow-hidden min-w-0">
                       <WizardAccessoryBar />
                       {showKycDocumentsSubTask ? <ChildActionContent /> : <ChildAmlReviewContent />}
                     </div>
+                    {taskSectionNavStyle === 'compact' && childSections.length > 0 && showKycDocumentsSubTask && (
+                      <TaskSectionPanel
+                        sections={childSections}
+                        onSelectSection={(sectionId) => dispatch({ type: 'FOCUS_PARENT_TASK_SECTION', sectionId })}
+                      />
+                    )}
                     <ChildActionRightSidebar />
                   </div>
                 </div>
@@ -766,17 +766,17 @@ function WizardLayoutInner() {
               <div className="flex-1 flex flex-col min-h-0 min-w-0 overflow-hidden">
                 <div className="flex flex-1 min-h-0 overflow-hidden">
                   <ChildActionSidebar />
-                  {taskSectionNavStyle === 'compact' && childSections.length > 0 && showKycDocumentsSubTask && (
-                    <TaskSectionPanel
-                      sections={childSections}
-                      onSelectSection={(sectionId) => dispatch({ type: 'FOCUS_PARENT_TASK_SECTION', sectionId })}
-                    />
-                  )}
                   <div className="flex flex-1 min-h-0 overflow-hidden min-w-0">
                     <div className="flex-1 flex flex-col overflow-hidden min-w-0">
                       <WizardAccessoryBar />
                       {showKycDocumentsSubTask ? <ChildActionContent /> : <ChildHoKycViewContent />}
                     </div>
+                    {taskSectionNavStyle === 'compact' && childSections.length > 0 && showKycDocumentsSubTask && (
+                      <TaskSectionPanel
+                        sections={childSections}
+                        onSelectSection={(sectionId) => dispatch({ type: 'FOCUS_PARENT_TASK_SECTION', sectionId })}
+                      />
+                    )}
                     <ChildActionRightSidebar />
                   </div>
                 </div>
@@ -787,17 +787,17 @@ function WizardLayoutInner() {
                 <div className="flex-1 flex flex-col min-h-0 min-w-0 overflow-hidden">
                   <div className="flex flex-1 min-h-0 overflow-hidden">
                     <ChildActionSidebar />
-                    {taskSectionNavStyle === 'compact' && childSections.length > 0 && (
-                      <TaskSectionPanel
-                        sections={childSections}
-                        onSelectSection={(sectionId) => dispatch({ type: 'FOCUS_PARENT_TASK_SECTION', sectionId })}
-                      />
-                    )}
                     <div className="flex flex-1 min-h-0 overflow-hidden min-w-0">
                       <div className="flex-1 flex flex-col overflow-hidden min-w-0">
                         <WizardAccessoryBar />
                         <ChildActionContent />
                       </div>
+                      {taskSectionNavStyle === 'compact' && childSections.length > 0 && (
+                        <TaskSectionPanel
+                          sections={childSections}
+                          onSelectSection={(sectionId) => dispatch({ type: 'FOCUS_PARENT_TASK_SECTION', sectionId })}
+                        />
+                      )}
                       <ChildActionRightSidebar />
                     </div>
                   </div>
@@ -821,16 +821,20 @@ function WizardLayoutInner() {
             ) : (
               <>
                 <ChildActionSidebar />
-                {taskSectionNavStyle === 'compact' && childSections.length > 0 && (
-                  <TaskSectionPanel
-                    sections={childSections}
-                    onSelectSection={(sectionId) => dispatch({ type: 'FOCUS_PARENT_TASK_SECTION', sectionId })}
-                  />
-                )}
                 <div className="flex-1 min-h-0 flex flex-col overflow-hidden">
                   <WizardAccessoryBar />
-                  <ChildActionContent />
-                  <ChildActionFooter />
+                  <div className="flex flex-1 min-h-0 overflow-hidden">
+                    <div className="flex-1 min-h-0 flex flex-col overflow-hidden min-w-0">
+                      <ChildActionContent />
+                      <ChildActionFooter />
+                    </div>
+                    {taskSectionNavStyle === 'compact' && childSections.length > 0 && (
+                      <TaskSectionPanel
+                        sections={childSections}
+                        onSelectSection={(sectionId) => dispatch({ type: 'FOCUS_PARENT_TASK_SECTION', sectionId })}
+                      />
+                    )}
+                  </div>
                 </div>
                 <ChildActionRightSidebar />
               </>
@@ -847,34 +851,38 @@ function WizardLayoutInner() {
             return (
               <>
                 <StepSidebar />
-                {taskSectionNavStyle === 'compact' && showCombinedScrollspy ? (
-                  <CombinedSectionPanel />
-                ) : taskSectionNavStyle === 'compact' && sections.length > 0 ? (
-                  (() => {
-                    const groups = toSectionGroups(sections)
-                    return groups ? (
-                      <TaskSectionPanel
-                        sections={[]}
-                        onSelectSection={() => {}}
-                        groups={groups}
-                        onSelectGroupSection={(_groupKey, sectionId) => {
-                          dispatch({ type: 'FOCUS_PARENT_TASK_SECTION', sectionId })
-                        }}
-                      />
-                    ) : (
-                      <TaskSectionPanel
-                        sections={sections.map((s) => ({ id: s.id, label: s.label }))}
-                        onSelectSection={(sectionId) => {
-                          dispatch({ type: 'FOCUS_PARENT_TASK_SECTION', sectionId })
-                        }}
-                      />
-                    )
-                  })()
-                ) : null}
                 <div className="flex-1 min-h-0 flex flex-col overflow-hidden">
                   <WizardAccessoryBar />
-                  <TaskContent />
-                  <WizardFooter />
+                  <div className="flex flex-1 min-h-0 overflow-hidden">
+                    <div className="flex-1 min-h-0 flex flex-col overflow-hidden min-w-0">
+                      <TaskContent />
+                      <WizardFooter />
+                    </div>
+                    {taskSectionNavStyle === 'compact' && showCombinedScrollspy ? (
+                      <CombinedSectionPanel />
+                    ) : taskSectionNavStyle === 'compact' && sections.length > 0 ? (
+                      (() => {
+                        const groups = toSectionGroups(sections)
+                        return groups ? (
+                          <TaskSectionPanel
+                            sections={[]}
+                            onSelectSection={() => {}}
+                            groups={groups}
+                            onSelectGroupSection={(_groupKey, sectionId) => {
+                              dispatch({ type: 'FOCUS_PARENT_TASK_SECTION', sectionId })
+                            }}
+                          />
+                        ) : (
+                          <TaskSectionPanel
+                            sections={sections.map((s) => ({ id: s.id, label: s.label }))}
+                            onSelectSection={(sectionId) => {
+                              dispatch({ type: 'FOCUS_PARENT_TASK_SECTION', sectionId })
+                            }}
+                          />
+                        )
+                      })()
+                    ) : null}
+                  </div>
                 </div>
                 <DetailSidebar />
               </>

@@ -133,7 +133,7 @@ export function TaskContent() {
     <main className="flex-1 overflow-y-auto p-8">
       <div className="max-w-[52.5rem] mx-auto">
         <ReviewBanner />
-        <h2 className="text-3xl font-semibold text-foreground mb-2">{title}</h2>
+        <h2 className="text-3xl font-semibold text-foreground pb-6 mb-6 border-b border-border">{title}</h2>
         {showCombinedOpenAccounts ? (
           <p className="text-base text-muted-foreground mb-6">
             Add the household's accounts. Submit annuity accounts to NetX360 when ready.
