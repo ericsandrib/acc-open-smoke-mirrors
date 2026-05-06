@@ -613,13 +613,15 @@ function EmptyState({ message }: { message: string }) {
 export function RelatedPartiesForm() {
   const { state } = useWorkflow()
   const variant = useOpenAccountsVariant()
+  const isVersion2 = variant === 'v2'
   const isColoredBackgroundVariant = variant === 'v3' || variant === 'v4'
   const isCardVariant = variant === 'v2' || isColoredBackgroundVariant
   const isBorderedCardVariant = variant === 'v2' || variant === 'v4'
   const cardContainerClass = isCardVariant
     ? cn(
         'space-y-4 rounded-xl p-6 overflow-hidden',
-        isBorderedCardVariant && 'border border-border/60',
+        isVersion2 && 'border border-border',
+        variant === 'v4' && 'border border-border/60',
         variant === 'v3'
           ? 'bg-[#fafafa]'
           : variant === 'v4'

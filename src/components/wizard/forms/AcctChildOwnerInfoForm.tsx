@@ -311,7 +311,7 @@ export function AcctChildOwnerInfoForm() {
             isCardVariant &&
               cn(
                 'rounded-xl p-6 space-y-6 overflow-hidden',
-                isVersion2 && 'border border-border/60 bg-background',
+                isVersion2 && 'border border-border bg-background',
                 isVersion3 && 'bg-[#fafafa]',
                 isVersion4 && 'border border-border/60 bg-white',
               ),
@@ -451,7 +451,7 @@ export function AcctChildOwnerInfoForm() {
             isCardVariant &&
               cn(
                 'rounded-xl p-6 space-y-6 overflow-hidden',
-                isVersion2 && 'border border-border/60 bg-background',
+                isVersion2 && 'border border-border bg-background',
                 isVersion3 && 'bg-[#fafafa]',
                 isVersion4 && 'border border-border/60 bg-white',
               ),
@@ -758,7 +758,7 @@ export function AcctChildOwnerInfoForm() {
             isCardVariant &&
               cn(
                 'rounded-xl p-6 space-y-6 overflow-hidden',
-                isVersion2 && 'border border-border/60 bg-background',
+                isVersion2 && 'border border-border bg-background',
                 isVersion3 && 'bg-[#fafafa]',
                 isVersion4 && 'border border-border/60 bg-white',
               ),
@@ -800,7 +800,7 @@ export function AcctChildOwnerInfoForm() {
               isCardVariant &&
                 cn(
                   'rounded-xl p-6 space-y-6 overflow-hidden',
-                  isVersion2 && 'border border-border/60 bg-background',
+                  isVersion2 && 'border border-border bg-background',
                   isVersion3 && 'bg-[#fafafa]',
                   isVersion4 && 'border border-border/60 bg-white',
                 ),

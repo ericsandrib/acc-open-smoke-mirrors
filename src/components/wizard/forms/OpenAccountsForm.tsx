@@ -688,7 +688,8 @@ export function OpenAccountsForm() {
           isCardVariant &&
             cn(
               'rounded-xl p-6 space-y-7 overflow-hidden',
-              isBorderedCardVariant && 'border border-border/60',
+              isVersion2 && 'border border-border',
+              isVersion4 && 'border border-border/60',
               openAccountsVariant === 'v3'
                 ? 'bg-[#fafafa]'
                 : openAccountsVariant === 'v4'
@@ -1000,7 +1001,8 @@ export function OpenAccountsForm() {
             isCardVariant &&
               cn(
                 'rounded-xl p-6 space-y-7 overflow-hidden',
-                isBorderedCardVariant && 'border border-border/60',
+                isVersion2 && 'border border-border',
+                isVersion4 && 'border border-border/60',
                 openAccountsVariant === 'v3'
                   ? 'bg-[#fafafa]'
                   : openAccountsVariant === 'v4'
@@ -1297,7 +1299,8 @@ export function OpenAccountsForm() {
           isCardVariant &&
             cn(
               'rounded-xl p-6 overflow-hidden',
-              isBorderedCardVariant && 'border border-border/60',
+              isVersion2 && 'border border-border',
+              isVersion4 && 'border border-border/60',
               openAccountsVariant === 'v3'
                 ? 'bg-[#fafafa]'
                 : openAccountsVariant === 'v4'
