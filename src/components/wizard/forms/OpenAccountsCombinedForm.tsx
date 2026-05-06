@@ -72,7 +72,7 @@ export function OpenAccountsCombinedForm() {
       {noAnnuityTask ? (
         <AccordionItem
           value="no-annuity"
-          className="rounded-xl border border-border bg-background overflow-hidden"
+          className="rounded-xl border border-border/60 bg-background overflow-hidden"
         >
           <AccordionTrigger className="px-5 py-4 hover:bg-muted/30">
             <div className="flex flex-col items-start gap-1 text-left">
@@ -93,7 +93,7 @@ export function OpenAccountsCombinedForm() {
       {withAnnuityTask ? (
         <AccordionItem
           value="with-annuity"
-          className="rounded-xl border border-border bg-background overflow-hidden"
+          className="rounded-xl border border-border/60 bg-background overflow-hidden"
         >
           <AccordionTrigger className="px-5 py-4 hover:bg-muted/30">
             <div className="flex w-full flex-col items-start gap-1 text-left">

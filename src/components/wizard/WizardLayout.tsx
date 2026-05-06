@@ -95,6 +95,7 @@ import {
   type CombinedAccordionKey,
 } from './openAccountsVariantContext'
 import { combinedOpenAccountsSections } from './combinedOpenAccountsSections'
+import { OpenAccountsVariantSwitcher } from './OpenAccountsVariantSwitcher'
 
 type WizardActionProgressItem = { id: string; title: string; pct: number }
 type HeaderBreadcrumb = {
@@ -399,6 +400,7 @@ export function WizardLayout() {
   return (
     <OpenAccountsVariantAndFocusProvider>
       <WizardLayoutInner />
+      <OpenAccountsVariantSwitcher />
     </OpenAccountsVariantAndFocusProvider>
   )
 }
@@ -409,6 +411,8 @@ function CombinedSectionPanel() {
     <TaskSectionPanel
       sections={[]}
       onSelectSection={() => {}}
+      panelTitle="On this page"
+      visualStyle="v2-bare"
       groups={combinedOpenAccountsSections.map((group) => ({
         key: group.key,
         label: group.label,
@@ -848,6 +852,11 @@ function WizardLayoutInner() {
               !!activeTask &&
               (activeTask.formKey === OPEN_ACCOUNTS_FORM_KEY ||
                 activeTask.formKey === OPEN_ACCOUNTS_WITH_ANNUITY_FORM_KEY)
+            const useV2OpenAccountsScrollspy =
+              variant === 'v2' &&
+              !!activeTask &&
+              (activeTask.formKey === OPEN_ACCOUNTS_FORM_KEY ||
+                activeTask.formKey === OPEN_ACCOUNTS_WITH_ANNUITY_FORM_KEY)
             return (
               <>
                 <StepSidebar />
@@ -867,6 +876,8 @@ function WizardLayoutInner() {
                           <TaskSectionPanel
                             sections={[]}
                             onSelectSection={() => {}}
+                            panelTitle={useV2OpenAccountsScrollspy ? 'On this page' : undefined}
+                            visualStyle={useV2OpenAccountsScrollspy ? 'v2-bare' : 'default'}
                             groups={groups}
                             onSelectGroupSection={(_groupKey, sectionId) => {
                               dispatch({ type: 'FOCUS_PARENT_TASK_SECTION', sectionId })
@@ -878,6 +889,8 @@ function WizardLayoutInner() {
                             onSelectSection={(sectionId) => {
                               dispatch({ type: 'FOCUS_PARENT_TASK_SECTION', sectionId })
                             }}
+                            panelTitle={useV2OpenAccountsScrollspy ? 'On this page' : undefined}
+                            visualStyle={useV2OpenAccountsScrollspy ? 'v2-bare' : 'default'}
                           />
                         )
                       })()

@@ -57,7 +57,7 @@ import {
   getRelevantOpenAccountsTask,
   isAnnuityExternalPlatformOpenAccountsTask,
 } from '@/utils/openAccountsTaskContext'
-import { useOpenAccountsTaskOverride } from '@/components/wizard/openAccountsVariantContext'
+import { useOpenAccountsTaskOverride, useOpenAccountsVariant } from '@/components/wizard/openAccountsVariantContext'
 import { mergeFeatureRequests } from '@/types/featureRequests'
 import { getEsignEnvelopeStatus, ESIGN_ENVELOPE_STATUS_LABELS } from '@/utils/esignEnvelopeStatus'
 import type { EsignEnvelopeHistoryEvent, EsignEnvelopeStatus, EsignSignerStatus } from '@/types/esignEnvelope'
@@ -212,6 +212,8 @@ function EnvelopeKebabMenu({
 
 export function OpenAccountsForm() {
   const { state, dispatch } = useWorkflow()
+  const openAccountsVariant = useOpenAccountsVariant()
+  const isVersion2 = openAccountsVariant === 'v2'
   const taskOverride = useOpenAccountsTaskOverride()
   const openAccountsTask =
     (taskOverride
@@ -676,15 +678,26 @@ export function OpenAccountsForm() {
   return (
     <div className="space-y-7">
       {!externalAnnuityPlatform ? (
-        <div className="flex items-center gap-4 scroll-mt-16" id={sectionId('oa-instructions-group')}>
-          <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-[8px] bg-foreground/80 text-background text-base font-semibold">
-            1
+        <div className={cn(isVersion2 && 'rounded-xl border border-border/60 bg-background p-6 space-y-7 overflow-hidden')}>
+      {!externalAnnuityPlatform ? (
+        isVersion2 ? (
+          <div
+            className="-mx-6 -mt-6 mb-4 border-b border-border/60 bg-[#F5F5F4] px-6 py-4 scroll-mt-16"
+            id={sectionId('oa-instructions-group')}
+          >
+            <h4 className="text-sm font-semibold uppercase tracking-wide">Account instructions</h4>
           </div>
-          <h2 className="text-2xl font-semibold">Account instructions</h2>
-        </div>
+        ) : (
+          <div className="flex items-center gap-4 scroll-mt-16" id={sectionId('oa-instructions-group')}>
+            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-[8px] bg-foreground/80 text-background text-base font-semibold">
+              1
+            </div>
+            <h2 className="text-2xl font-semibold">Account instructions</h2>
+          </div>
+        )
       ) : null}
       <section id={sectionId('oa-accounts')} className="scroll-mt-16">
-        <div className="mb-4">
+        <div className={cn('mb-4', !isVersion2 && 'pt-4')}>
           <h3 className="text-base font-semibold">
             Accounts
           </h3>
@@ -833,7 +846,7 @@ export function OpenAccountsForm() {
       {/* Section 4: Supporting Documents */}
       {!externalAnnuityPlatform ? (
       <section id={sectionId('oa-documents')} className="scroll-mt-16">
-        <div className="mb-4">
+        <div className={cn('mb-4', !isVersion2 && 'pt-4')}>
           <h3 className="text-base font-semibold">
             Supporting Documents
           </h3>
@@ -946,31 +959,50 @@ export function OpenAccountsForm() {
         )}
       </section>
       ) : null}
-
-      {!externalAnnuityPlatform ? (
-        <div className="h-5 mt-14 flex items-center">
-        <hr className="border-t border-border w-full" />
       </div>
+      ) : null}
+
+      {!externalAnnuityPlatform && !isVersion2 ? (
+        <div className="h-5 mt-14 flex items-center">
+          <hr className="border-t border-border w-full" />
+        </div>
       ) : null}
 
       {/* KYC Verification H2 group — KYC sections hidden on annuity path */}
       {!externalAnnuityPlatform ? (
-        <div id={sectionId('oa-kyc')} className="scroll-mt-16">
-          <div className="flex items-center gap-4">
-            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-[8px] bg-foreground/80 text-background text-base font-semibold">
-              2
-            </div>
-            <h2 className="text-2xl font-semibold">KYC Verification</h2>
-          </div>
-          <p className="text-base text-muted-foreground mt-2">
-            Complete identity verification (KYC/KYB) before accounts can be opened. For trust accounts, include trustees
-            and beneficial owners.
-          </p>
+        <div className={cn(isVersion2 && 'rounded-xl border border-border/60 bg-background p-6 space-y-7 overflow-hidden')}>
+        <div
+          id={sectionId('oa-kyc')}
+          className={cn(
+            'scroll-mt-16',
+            isVersion2 && '-mx-6 -mt-6 mb-4 border-b border-border/60 bg-[#F5F5F4] px-6 py-4',
+          )}
+        >
+          {isVersion2 ? (
+            <>
+              <h4 className="text-sm font-semibold uppercase tracking-wide">KYC Verification</h4>
+              <p className="text-sm text-muted-foreground mt-2">
+                Complete identity verification (KYC/KYB) before accounts can be opened. For trust accounts, include trustees
+                and beneficial owners.
+              </p>
+            </>
+          ) : (
+            <>
+              <div className="flex items-center gap-4">
+                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-[8px] bg-foreground/80 text-background text-base font-semibold">
+                  2
+                </div>
+                <h2 className="text-2xl font-semibold">KYC Verification</h2>
+              </div>
+              <p className="text-base text-muted-foreground mt-2">
+                Complete identity verification (KYC/KYB) before accounts can be opened. For trust accounts, include trustees
+                and beneficial owners.
+              </p>
+            </>
+          )}
         </div>
-      ) : null}
-      {!externalAnnuityPlatform ? (
       <section id={sectionId('oa-kyc-owners')} className="scroll-mt-16">
-        <div className="mb-4">
+        <div className={cn('mb-4', !isVersion2 && 'pt-4')}>
           <h3 className="text-base font-semibold">Account Owners</h3>
           <p className="text-base text-muted-foreground mt-2">
             Add all individuals who require identity verification.
@@ -1087,10 +1119,8 @@ export function OpenAccountsForm() {
         )}
 
       </section>
-      ) : null}
 
       {/* KYC Cases — promoted from H4 sub-section under KYC Verification to its own H3 section */}
-      {!externalAnnuityPlatform ? (
       <section id={sectionId('oa-kyc-cases')} className="scroll-mt-16">
         <div className="mb-4">
           <h3 className="text-base font-semibold">KYC Cases</h3>
@@ -1204,26 +1234,47 @@ export function OpenAccountsForm() {
           child={kycTimelineChild}
         />
       </section>
+      </div>
       ) : null}
 
       {!externalAnnuityPlatform ? (
       <>
-      <div className="h-5 mt-14 flex items-center">
-        <hr className="border-t border-border w-full" />
-      </div>
+      {!isVersion2 ? (
+        <div className="h-5 mt-14 flex items-center">
+          <hr className="border-t border-border w-full" />
+        </div>
+      ) : null}
       {/* Envelopes — H2 (no inner H3 child) */}
+      <div className={cn(isVersion2 && 'rounded-xl border border-border/60 bg-background p-6 overflow-hidden')}>
       <section id={sectionId('oa-esign')} className="scroll-mt-16">
-        <div className="mb-4">
-          <div className="flex items-center gap-4">
-            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-[8px] bg-foreground/80 text-background text-base font-semibold">
-              3
-            </div>
-            <h2 className="text-2xl font-semibold">Envelopes</h2>
-          </div>
-          <p className="text-base text-muted-foreground mt-2">
-            Create eSign envelopes for client signatures. Required firm and custodian forms are automatically grouped by
-            account. If delivery is set to in person or mail, those forms become wet-signed and must be uploaded below.
-          </p>
+        <div
+          className={cn(
+            'mb-4',
+            isVersion2 && '-mx-6 -mt-6 mb-4 border-b border-border/60 bg-[#F5F5F4] px-6 py-4',
+          )}
+        >
+          {isVersion2 ? (
+            <>
+              <h4 className="text-sm font-semibold uppercase tracking-wide">Envelopes</h4>
+              <p className="text-sm text-muted-foreground mt-2">
+                Create eSign envelopes for client signatures. Required firm and custodian forms are automatically grouped by
+                account. If delivery is set to in person or mail, those forms become wet-signed and must be uploaded below.
+              </p>
+            </>
+          ) : (
+            <>
+              <div className="flex items-center gap-4">
+                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-[8px] bg-foreground/80 text-background text-base font-semibold">
+                  3
+                </div>
+                <h2 className="text-2xl font-semibold">Envelopes</h2>
+              </div>
+              <p className="text-base text-muted-foreground mt-2">
+                Create eSign envelopes for client signatures. Required firm and custodian forms are automatically grouped by
+                account. If delivery is set to in person or mail, those forms become wet-signed and must be uploaded below.
+              </p>
+            </>
+          )}
         </div>
         {esignEnvelopes.length > 0 ? (
           <div className="mb-3 flex justify-end">
@@ -1303,6 +1354,7 @@ export function OpenAccountsForm() {
           </div>
         )}
       </section>
+      </div>
 
       {envelopeDraft ? (
         <EsignEnvelopeDrawer

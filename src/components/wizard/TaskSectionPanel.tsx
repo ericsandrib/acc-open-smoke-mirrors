@@ -21,6 +21,8 @@ interface TaskSectionPanelProps {
    */
   groups?: SectionGroup[]
   onSelectGroupSection?: (groupKey: string, sectionId: string) => void
+  panelTitle?: string
+  visualStyle?: 'default' | 'v2-bare'
 }
 
 /**
@@ -33,6 +35,8 @@ export function TaskSectionPanel({
   onSelectSection,
   groups,
   onSelectGroupSection,
+  panelTitle,
+  visualStyle = 'default',
 }: TaskSectionPanelProps) {
   const flatFromGroups = groups
     ? groups.flatMap((group) =>
@@ -191,18 +195,30 @@ export function TaskSectionPanel({
         aria-label="Task sections"
         className="hidden 2xl:flex flex-col gap-0.5 w-full"
       >
+        {panelTitle ? (
+          <p className="mb-3 px-0 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+            {panelTitle}
+          </p>
+        ) : null}
         {groups
           ? groups.map((group, groupIndex) => (
               <div
                 key={group.key}
                 className={cn(
                   'flex flex-col gap-0.5',
-                  groupIndex > 0 && 'mt-2',
+                  groupIndex > 0 && (visualStyle === 'v2-bare' ? 'mt-3' : 'mt-2'),
                 )}
               >
                 {group.label ? (
-                  <div className="flex items-center gap-2 pr-3 pb-1 text-sm font-medium text-foreground">
-                    <span className="shrink-0">{groupIndex + 1}.</span>
+                  <div
+                    className={cn(
+                      'flex items-center gap-2 pr-3 pb-1',
+                      visualStyle === 'v2-bare'
+                        ? 'text-sm font-medium text-foreground'
+                        : 'text-sm font-medium text-foreground',
+                    )}
+                  >
+                    {visualStyle === 'default' ? <span className="shrink-0">{groupIndex + 1}.</span> : null}
                     <span className="truncate">{group.label}</span>
                   </div>
                 ) : null}
@@ -215,11 +231,24 @@ export function TaskSectionPanel({
                       type="button"
                       onClick={() => selectGroupSection(group, section)}
                       className={cn(
-                        'w-full text-left text-sm py-1.5 rounded-md transition-colors truncate',
-                        group.label ? 'pl-5 pr-3' : 'px-3',
-                        isActive
-                          ? 'bg-accent/60 text-foreground font-medium'
-                          : 'text-foreground hover:bg-muted/50',
+                        'w-full text-left transition-colors truncate',
+                        visualStyle === 'v2-bare'
+                          ? 'text-sm leading-6 py-0.5 pr-0 rounded-none'
+                          : 'text-sm py-1.5 rounded-md',
+                        group.label
+                          ? visualStyle === 'v2-bare'
+                            ? 'pl-4'
+                            : 'pl-5 pr-3'
+                          : visualStyle === 'v2-bare'
+                            ? 'px-4'
+                            : 'px-3',
+                        visualStyle === 'v2-bare'
+                          ? isActive
+                            ? 'text-foreground font-medium'
+                            : 'text-muted-foreground hover:text-foreground'
+                          : isActive
+                            ? 'bg-accent/60 text-foreground font-medium'
+                            : 'text-foreground hover:bg-muted/50',
                       )}
                     >
                       {section.label}

@@ -105,6 +105,7 @@ export function TaskContent() {
         : null)
       ?? activeChild?.name
       ?? ''
+  const hideHeaderDividerInV2 = variant === 'v2' && title === 'Open Accounts'
 
   const FormComponent = formKey ? formComponents[formKey] : null
   const hasExplicitSections = Boolean(formKey && taskSections[formKey]?.length)
@@ -133,7 +134,15 @@ export function TaskContent() {
     <main className="flex-1 overflow-y-auto p-8 2xl:pr-[20rem]">
       <div className="max-w-[52.5rem] mx-auto">
         <ReviewBanner />
-        <h1 className="text-4xl font-semibold text-foreground pb-6 mb-6 border-b border-border">{title}</h1>
+        <h1
+          className={
+            hideHeaderDividerInV2
+              ? 'text-4xl font-semibold text-foreground mb-6'
+              : 'text-4xl font-semibold text-foreground pb-6 mb-6 border-b border-border'
+          }
+        >
+          {title}
+        </h1>
         {showCombinedOpenAccounts ? null : !hasExplicitSections ? (
           <section id="__top__" className="space-y-1.5 scroll-mt-16 mb-6">
             <h3 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">Overview</h3>

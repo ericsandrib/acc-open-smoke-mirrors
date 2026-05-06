@@ -47,7 +47,7 @@ const VARIANT_OPTIONS: Array<{
   },
   {
     id: 'v2',
-    label: 'Version 2 — Accordion',
+    label: 'Version 2 — Bordered cards',
     description: 'One task with two accordions in a single Open Accounts step.',
     icon: Layers,
   },

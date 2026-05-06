@@ -8,6 +8,8 @@ import { Badge } from '@/components/ui/badge'
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from '@/components/ui/sheet'
 import { Plus, Trash2, Shield } from 'lucide-react'
 import { useWorkflow } from '@/stores/workflowStore'
+import { cn } from '@/lib/utils'
+import { useOpenAccountsVariant } from '@/components/wizard/openAccountsVariantContext'
 import type { RelatedParty } from '@/types/workflow'
 import {
   AddHouseholdMemberSheet,
@@ -610,6 +612,7 @@ function EmptyState({ message }: { message: string }) {
 
 export function RelatedPartiesForm() {
   const { state } = useWorkflow()
+  const isVersion2 = useOpenAccountsVariant() === 'v2'
   const [showAddHouseholdSheet, setShowAddHouseholdSheet] = useState(false)
   const [showAddRelatedIndividualSheet, setShowAddRelatedIndividualSheet] = useState(false)
   const [showAddTrustSheet, setShowAddTrustSheet] = useState(false)
@@ -632,28 +635,38 @@ export function RelatedPartiesForm() {
 
   return (
     <div className="space-y-7">
-      <section id="rcd-household" className="space-y-4 scroll-mt-16">
-        <div>
-          <h3 className="text-base font-semibold">Household</h3>
-          <p className="text-base text-muted-foreground">
-            Add the primary client and their household members (e.g., spouse, dependents).
-          </p>
-        </div>
-
-        <div className="rounded-lg border border-border p-1">
-          <div>
-            {householdMembers.length === 0 ? (
-              <EmptyState message="No household members added yet. Start by adding the primary contact." />
-            ) : (
-              householdMembers.map((member) => (
-                <HouseholdMemberCard key={member.id} party={member} onClick={() => setEditingPartyId(member.id)} />
-              ))
+      <section id="rcd-household" className="scroll-mt-16">
+        <div className={cn('space-y-4', isVersion2 && 'rounded-xl border border-border/60 bg-background p-6 overflow-hidden')}>
+          <div
+            className={cn(
+              isVersion2
+                ? '-mx-6 -mt-6 mb-4 border-b border-border/60 bg-[#F5F5F4] px-6 py-4'
+                : '',
             )}
+          >
+            <h3 className={cn(isVersion2 ? 'text-sm font-semibold uppercase tracking-wide' : 'text-base font-semibold')}>
+              Household
+            </h3>
+            <p className={cn(isVersion2 ? 'text-sm text-muted-foreground mt-2' : 'text-base text-muted-foreground')}>
+              Add the primary client and their household members (e.g., spouse, dependents).
+            </p>
           </div>
-          <Button variant="ghost" className="w-full" onClick={() => setShowAddHouseholdSheet(true)}>
-            <Plus className="h-4 w-4 mr-2" />
-            Add member
-          </Button>
+
+          <div className="rounded-lg border border-border p-1">
+            <div>
+              {householdMembers.length === 0 ? (
+                <EmptyState message="No household members added yet. Start by adding the primary contact." />
+              ) : (
+                householdMembers.map((member) => (
+                  <HouseholdMemberCard key={member.id} party={member} onClick={() => setEditingPartyId(member.id)} />
+                ))
+              )}
+            </div>
+            <Button variant="ghost" className="w-full" onClick={() => setShowAddHouseholdSheet(true)}>
+              <Plus className="h-4 w-4 mr-2" />
+              Add member
+            </Button>
+          </div>
         </div>
 
         <AddHouseholdMemberSheet
@@ -663,28 +676,38 @@ export function RelatedPartiesForm() {
         />
       </section>
 
-      <section id="rcd-related-individuals" className="space-y-4 scroll-mt-16">
-        <div>
-          <h3 className="text-base font-semibold">Related Individuals</h3>
-          <p className="text-base text-muted-foreground">
-            Add other individuals connected to the client (e.g., family members not in the household, beneficiaries, or trusted contacts).
-          </p>
-        </div>
-
-        <div className="rounded-lg border border-border p-1">
-          <div>
-            {relatedIndividuals.length === 0 ? (
-              <EmptyState message="No related individuals yet. Search your directory or create a new record." />
-            ) : (
-              relatedIndividuals.map((contact) => (
-                <ContactCard key={contact.id} party={contact} onClick={() => setEditingPartyId(contact.id)} />
-              ))
+      <section id="rcd-related-individuals" className="scroll-mt-16">
+        <div className={cn('space-y-4', isVersion2 && 'rounded-xl border border-border/60 bg-background p-6 overflow-hidden')}>
+          <div
+            className={cn(
+              isVersion2
+                ? '-mx-6 -mt-6 mb-4 border-b border-border/60 bg-[#F5F5F4] px-6 py-4'
+                : '',
             )}
+          >
+            <h3 className={cn(isVersion2 ? 'text-sm font-semibold uppercase tracking-wide' : 'text-base font-semibold')}>
+              Related Individuals
+            </h3>
+            <p className={cn(isVersion2 ? 'text-sm text-muted-foreground mt-2' : 'text-base text-muted-foreground')}>
+              Add other individuals connected to the client (e.g., family members not in the household, beneficiaries, or trusted contacts).
+            </p>
           </div>
-          <Button variant="ghost" className="w-full" onClick={() => setShowAddRelatedIndividualSheet(true)}>
-            <Plus className="h-4 w-4 mr-2" />
-            Add related individual
-          </Button>
+
+          <div className="rounded-lg border border-border p-1">
+            <div>
+              {relatedIndividuals.length === 0 ? (
+                <EmptyState message="No related individuals yet. Search your directory or create a new record." />
+              ) : (
+                relatedIndividuals.map((contact) => (
+                  <ContactCard key={contact.id} party={contact} onClick={() => setEditingPartyId(contact.id)} />
+                ))
+              )}
+            </div>
+            <Button variant="ghost" className="w-full" onClick={() => setShowAddRelatedIndividualSheet(true)}>
+              <Plus className="h-4 w-4 mr-2" />
+              Add related individual
+            </Button>
+          </div>
         </div>
 
         <AddClientInfoIndividualSheet
@@ -696,28 +719,38 @@ export function RelatedPartiesForm() {
         />
       </section>
 
-      <section id="rcd-trusts" className="space-y-4 scroll-mt-16">
-        <div>
-          <h3 className="text-base font-semibold">Trusts</h3>
-          <p className="text-base text-muted-foreground">
-            Add any trusts associated with this client.
-          </p>
-        </div>
-
-        <div className="rounded-lg border border-border p-1">
-          <div>
-            {trustOrganizations.length === 0 ? (
-              <EmptyState message="No trusts added yet." />
-            ) : (
-              trustOrganizations.map((org) => (
-                <ContactCard key={org.id} party={org} onClick={() => setEditingPartyId(org.id)} />
-              ))
+      <section id="rcd-trusts" className="scroll-mt-16">
+        <div className={cn('space-y-4', isVersion2 && 'rounded-xl border border-border/60 bg-background p-6 overflow-hidden')}>
+          <div
+            className={cn(
+              isVersion2
+                ? '-mx-6 -mt-6 mb-4 border-b border-border/60 bg-[#F5F5F4] px-6 py-4'
+                : '',
             )}
+          >
+            <h3 className={cn(isVersion2 ? 'text-sm font-semibold uppercase tracking-wide' : 'text-base font-semibold')}>
+              Trusts
+            </h3>
+            <p className={cn(isVersion2 ? 'text-sm text-muted-foreground mt-2' : 'text-base text-muted-foreground')}>
+              Add any trusts associated with this client.
+            </p>
           </div>
-          <Button variant="ghost" className="w-full" onClick={() => setShowAddTrustSheet(true)}>
-            <Plus className="h-4 w-4 mr-2" />
-            Add trust
-          </Button>
+
+          <div className="rounded-lg border border-border p-1">
+            <div>
+              {trustOrganizations.length === 0 ? (
+                <EmptyState message="No trusts added yet." />
+              ) : (
+                trustOrganizations.map((org) => (
+                  <ContactCard key={org.id} party={org} onClick={() => setEditingPartyId(org.id)} />
+                ))
+              )}
+            </div>
+            <Button variant="ghost" className="w-full" onClick={() => setShowAddTrustSheet(true)}>
+              <Plus className="h-4 w-4 mr-2" />
+              Add trust
+            </Button>
+          </div>
         </div>
 
         <AddClientInfoLegalEntitySheet
@@ -729,28 +762,38 @@ export function RelatedPartiesForm() {
         />
       </section>
 
-      <section id="rcd-other-entities" className="space-y-4 scroll-mt-16">
-        <div>
-          <h3 className="text-base font-semibold">Other Entities</h3>
-          <p className="text-base text-muted-foreground">
-            Add other legal entities related to the client (e.g., LLCs, corporations, partnerships).
-          </p>
-        </div>
-
-        <div className="rounded-lg border border-border p-1">
-          <div>
-            {otherOrganizations.length === 0 ? (
-              <EmptyState message="No other entities added yet." />
-            ) : (
-              otherOrganizations.map((org) => (
-                <ContactCard key={org.id} party={org} onClick={() => setEditingPartyId(org.id)} />
-              ))
+      <section id="rcd-other-entities" className="scroll-mt-16">
+        <div className={cn('space-y-4', isVersion2 && 'rounded-xl border border-border/60 bg-background p-6 overflow-hidden')}>
+          <div
+            className={cn(
+              isVersion2
+                ? '-mx-6 -mt-6 mb-4 border-b border-border/60 bg-[#F5F5F4] px-6 py-4'
+                : '',
             )}
+          >
+            <h3 className={cn(isVersion2 ? 'text-sm font-semibold uppercase tracking-wide' : 'text-base font-semibold')}>
+              Other Entities
+            </h3>
+            <p className={cn(isVersion2 ? 'text-sm text-muted-foreground mt-2' : 'text-base text-muted-foreground')}>
+              Add other legal entities related to the client (e.g., LLCs, corporations, partnerships).
+            </p>
           </div>
-          <Button variant="ghost" className="w-full" onClick={() => setShowAddOtherEntitySheet(true)}>
-            <Plus className="h-4 w-4 mr-2" />
-            Add entity
-          </Button>
+
+          <div className="rounded-lg border border-border p-1">
+            <div>
+              {otherOrganizations.length === 0 ? (
+                <EmptyState message="No other entities added yet." />
+              ) : (
+                otherOrganizations.map((org) => (
+                  <ContactCard key={org.id} party={org} onClick={() => setEditingPartyId(org.id)} />
+                ))
+              )}
+            </div>
+            <Button variant="ghost" className="w-full" onClick={() => setShowAddOtherEntitySheet(true)}>
+              <Plus className="h-4 w-4 mr-2" />
+              Add entity
+            </Button>
+          </div>
         </div>
 
         <AddClientInfoLegalEntitySheet
@@ -762,28 +805,38 @@ export function RelatedPartiesForm() {
         />
       </section>
 
-      <section id="rcd-professional-contacts" className="space-y-4 scroll-mt-16">
-        <div>
-          <h3 className="text-base font-semibold">Professional Contacts</h3>
-          <p className="text-base text-muted-foreground">
-            Add the client&apos;s professional contacts (e.g., attorney, accountant, other advisors).
-          </p>
-        </div>
-
-        <div className="rounded-lg border border-border p-1">
-          <div>
-            {professionalContacts.length === 0 ? (
-              <EmptyState message="No professional contacts yet." />
-            ) : (
-              professionalContacts.map((contact) => (
-                <ContactCard key={contact.id} party={contact} onClick={() => setEditingPartyId(contact.id)} />
-              ))
+      <section id="rcd-professional-contacts" className="scroll-mt-16">
+        <div className={cn('space-y-4', isVersion2 && 'rounded-xl border border-border/60 bg-background p-6 overflow-hidden')}>
+          <div
+            className={cn(
+              isVersion2
+                ? '-mx-6 -mt-6 mb-4 border-b border-border/60 bg-[#F5F5F4] px-6 py-4'
+                : '',
             )}
+          >
+            <h3 className={cn(isVersion2 ? 'text-sm font-semibold uppercase tracking-wide' : 'text-base font-semibold')}>
+              Professional Contacts
+            </h3>
+            <p className={cn(isVersion2 ? 'text-sm text-muted-foreground mt-2' : 'text-base text-muted-foreground')}>
+              Add the client&apos;s professional contacts (e.g., attorney, accountant, other advisors).
+            </p>
           </div>
-          <Button variant="ghost" className="w-full" onClick={() => setShowAddProfessionalSheet(true)}>
-            <Plus className="h-4 w-4 mr-2" />
-            Add professional
-          </Button>
+
+          <div className="rounded-lg border border-border p-1">
+            <div>
+              {professionalContacts.length === 0 ? (
+                <EmptyState message="No professional contacts yet." />
+              ) : (
+                professionalContacts.map((contact) => (
+                  <ContactCard key={contact.id} party={contact} onClick={() => setEditingPartyId(contact.id)} />
+                ))
+              )}
+            </div>
+            <Button variant="ghost" className="w-full" onClick={() => setShowAddProfessionalSheet(true)}>
+              <Plus className="h-4 w-4 mr-2" />
+              Add professional
+            </Button>
+          </div>
         </div>
 
         <AddClientInfoIndividualSheet
