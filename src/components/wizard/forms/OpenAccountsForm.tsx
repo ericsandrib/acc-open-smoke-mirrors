@@ -689,7 +689,7 @@ export function OpenAccountsForm() {
             cn(
               'rounded-xl p-6 space-y-7 overflow-hidden',
               isVersion2 && 'border border-border',
-              isVersion4 && 'border border-border/60',
+              isVersion4 && 'border border-border',
               openAccountsVariant === 'v3'
                 ? 'bg-[#fafafa]'
                 : openAccountsVariant === 'v4'
@@ -1002,7 +1002,7 @@ export function OpenAccountsForm() {
               cn(
                 'rounded-xl p-6 space-y-7 overflow-hidden',
                 isVersion2 && 'border border-border',
-                isVersion4 && 'border border-border/60',
+                isVersion4 && 'border border-border',
                 openAccountsVariant === 'v3'
                   ? 'bg-[#fafafa]'
                   : openAccountsVariant === 'v4'
@@ -1300,7 +1300,7 @@ export function OpenAccountsForm() {
             cn(
               'rounded-xl p-6 overflow-hidden',
               isVersion2 && 'border border-border',
-              isVersion4 && 'border border-border/60',
+              isVersion4 && 'border border-border',
               openAccountsVariant === 'v3'
                 ? 'bg-[#fafafa]'
                 : openAccountsVariant === 'v4'

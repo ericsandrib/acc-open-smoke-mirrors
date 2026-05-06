@@ -16,7 +16,7 @@ export function ExistingAccountsForm() {
     ? cn(
         'rounded-xl p-6 overflow-hidden',
         isVersion2 && 'border border-border',
-        variant === 'v4' && 'border border-border/60',
+        variant === 'v4' && 'border border-border',
         variant === 'v3'
           ? 'bg-[#fafafa]'
           : variant === 'v4'

@@ -14,7 +14,7 @@ import {
   getMaxAccountOwnersForRegistration,
   registrationAllowsLegalEntityAsAccountOwner,
 } from '@/utils/registrationOwnerLimits'
-import { Plus, Trash2, UserPlus } from 'lucide-react'
+import { Plus, Trash2 } from 'lucide-react'
 import {
   AddClientInfoLegalEntitySheet,
   AddHouseholdMemberSheet,
@@ -313,7 +313,7 @@ export function AcctChildOwnerInfoForm() {
                 'rounded-xl p-6 space-y-6 overflow-hidden',
                 isVersion2 && 'border border-border bg-background',
                 isVersion3 && 'bg-[#fafafa]',
-                isVersion4 && 'border border-border/60 bg-white',
+                isVersion4 && 'border border-border bg-white',
               ),
           )}
         >
@@ -453,7 +453,7 @@ export function AcctChildOwnerInfoForm() {
                 'rounded-xl p-6 space-y-6 overflow-hidden',
                 isVersion2 && 'border border-border bg-background',
                 isVersion3 && 'bg-[#fafafa]',
-                isVersion4 && 'border border-border/60 bg-white',
+                isVersion4 && 'border border-border bg-white',
               ),
           )}
         >
@@ -760,7 +760,7 @@ export function AcctChildOwnerInfoForm() {
                 'rounded-xl p-6 space-y-6 overflow-hidden',
                 isVersion2 && 'border border-border bg-background',
                 isVersion3 && 'bg-[#fafafa]',
-                isVersion4 && 'border border-border/60 bg-white',
+                isVersion4 && 'border border-border bg-white',
               ),
           )}
         >
@@ -802,7 +802,7 @@ export function AcctChildOwnerInfoForm() {
                   'rounded-xl p-6 space-y-6 overflow-hidden',
                   isVersion2 && 'border border-border bg-background',
                   isVersion3 && 'bg-[#fafafa]',
-                  isVersion4 && 'border border-border/60 bg-white',
+                  isVersion4 && 'border border-border bg-white',
                 ),
             )}
           >
