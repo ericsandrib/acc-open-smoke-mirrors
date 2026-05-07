@@ -12,8 +12,9 @@ import { createContext, useContext, useEffect, useState, type ReactNode } from '
  * - `v4`: Clone of `v3` for alternate demo naming.
  * - `v5`: Clone of `v2` presentation (“tasks in sections”); same bordered cards and journey chrome as v2,
  *         with Account Opening tasks grouped under sidebar sections (without / with annuity).
+ * - `v6`: Persistent annuity; currently identical behavior and visuals to `v5`.
  */
-export type OpenAccountsVariant = 'v1' | 'v2' | 'v3' | 'v4' | 'v5'
+export type OpenAccountsVariant = 'v1' | 'v2' | 'v3' | 'v4' | 'v5' | 'v6'
 
 const STORAGE_KEY = 'demo-open-accounts-variant'
 
@@ -31,7 +32,8 @@ export function OpenAccountsVariantProvider({ children }: { children: ReactNode 
       persisted === 'v2' ||
       persisted === 'v3' ||
       persisted === 'v4' ||
-      persisted === 'v5'
+      persisted === 'v5' ||
+      persisted === 'v6'
     ) {
       return persisted
     }
@@ -52,7 +54,9 @@ export function OpenAccountsVariantProvider({ children }: { children: ReactNode 
 
 export function useOpenAccountsVariant(): OpenAccountsVariant {
   const ctx = useContext(OpenAccountsVariantContext)
-  return ctx?.variant ?? 'v1'
+  const variant = ctx?.variant ?? 'v1'
+  // v6 intentionally mirrors v5 exactly for now.
+  return variant === 'v6' ? 'v5' : variant
 }
 
 export function useOpenAccountsVariantControls(): {

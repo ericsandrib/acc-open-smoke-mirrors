@@ -9,7 +9,11 @@ import {
   OPEN_ACCOUNTS_FORM_KEY,
   OPEN_ACCOUNTS_WITH_ANNUITY_FORM_KEY,
 } from '@/utils/openAccountsTaskContext'
-import { type OpenAccountsVariant, useOpenAccountsVariant } from '@/components/wizard/openAccountsVariantContext'
+import {
+  type OpenAccountsVariant,
+  useOpenAccountsVariant,
+  useOpenAccountsVariantControls,
+} from '@/components/wizard/openAccountsVariantContext'
 import { ProgressIcon, pickVariant } from '@/components/wizard/ProgressIcons'
 import type { LucideIcon } from 'lucide-react'
 import { ChevronDown, Users, Wallet, ListChecks } from 'lucide-react'
@@ -203,6 +207,8 @@ type DisplayTaskNode = {
   underlyingTaskIds: string[]
   /** v5: separate “page” within the no-annuity Open Accounts task. */
   v5NoAnnuityPage?: 'instructions' | 'kyc' | 'documents' | 'envelopes'
+  /** v6: synthetic row that merges with-annuity + no-annuity instruction surfaces. */
+  v6CombinedInstructions?: boolean
 }
 
 /** One row in the action task list: either a single task or a v5 collapsible section with nested tasks. */
@@ -363,7 +369,57 @@ function buildDisplayActions(state: WorkflowState, variant: OpenAccountsVariant)
     title: 'Open Accounts',
     taskRows:
       variant === 'v5'
-        ? [v5WithAnnuityGroup, v5WithoutAnnuityGroup]
+        ? [v5WithoutAnnuityGroup, v5WithAnnuityGroup]
+        : variant === 'v6'
+          ? [
+              ...(noAnnuityOpenAccountsTaskId != null
+                ? [
+                    {
+                      type: 'task' as const,
+                      task: {
+                        id: 'v6-account-instructions',
+                        label: 'Account Instructions',
+                        underlyingTaskIds: [
+                          ...(withAnnuityTasks[0]?.id ? [withAnnuityTasks[0].id] : []),
+                          noAnnuityOpenAccountsTaskId,
+                        ],
+                        v6CombinedInstructions: true,
+                      },
+                    },
+                  ]
+                : []),
+              ...(noAnnuityOpenAccountsTaskId != null
+                ? [
+                    {
+                      type: 'task' as const,
+                      task: {
+                        id: 'v5-noann-kyc-verification',
+                        label: 'KYC Verification',
+                        underlyingTaskIds: [noAnnuityOpenAccountsTaskId],
+                        v5NoAnnuityPage: 'kyc' as const,
+                      },
+                    },
+                    {
+                      type: 'task' as const,
+                      task: {
+                        id: 'v5-noann-supporting-documents',
+                        label: 'Supporting Documents',
+                        underlyingTaskIds: [noAnnuityOpenAccountsTaskId],
+                        v5NoAnnuityPage: 'documents' as const,
+                      },
+                    },
+                    {
+                      type: 'task' as const,
+                      task: {
+                        id: 'v5-noann-envelopes',
+                        label: 'Envelopes',
+                        underlyingTaskIds: [noAnnuityOpenAccountsTaskId],
+                        v5NoAnnuityPage: 'envelopes' as const,
+                      },
+                    },
+                  ]
+                : []),
+            ]
         : [
             ...withAnnuityTasks.map((t) => toTaskRow(t, 'Accounts with Annuities')),
             ...noAnnuityTasks.map((t) => toTaskRow(t, 'Accounts without Annuities')),
@@ -391,13 +447,14 @@ export function StepSidebar() {
   const { state, dispatch } = useWorkflow()
   const navigate = useNavigate()
   const variant = useOpenAccountsVariant()
+  const { variant: selectedVariant } = useOpenAccountsVariantControls()
   const [exitToOnboardingOpen, setExitToOnboardingOpen] = useState(false)
   /** v5 collapsible task sections in the pizza tracker; default expanded */
   const [v5GroupOpen, setV5GroupOpen] = useState<Record<string, boolean>>({})
 
   const displayActions = useMemo(
-    () => buildDisplayActions(state, variant),
-    [state, variant],
+    () => buildDisplayActions(state, selectedVariant),
+    [state, selectedVariant],
   )
 
   const isV5GroupOpen = (groupId: string) => v5GroupOpen[groupId] !== false
@@ -463,19 +520,29 @@ export function StepSidebar() {
           return parsed ? c.id === parsed.childId : false
         }),
       )
-    const isActiveTask = displayTask.v5NoAnnuityPage
-      ? baseTaskActive && state.v5NoAnnuityOpenAccountsPage === displayTask.v5NoAnnuityPage
-      : baseTaskActive
+    const isActiveTask = displayTask.v6CombinedInstructions
+      ? baseTaskActive && state.v5NoAnnuityOpenAccountsPage === 'instructions'
+      : displayTask.v5NoAnnuityPage
+        ? baseTaskActive && state.v5NoAnnuityOpenAccountsPage === displayTask.v5NoAnnuityPage
+        : baseTaskActive
     return (
       <li key={displayTask.id}>
         <button
           type="button"
           onClick={() => {
-            const taskId = displayTask.underlyingTaskIds[0] ?? displayTask.id
-            if (displayTask.v5NoAnnuityPage) {
+            const taskId =
+              (displayTask.v6CombinedInstructions
+                ? displayTask.underlyingTaskIds.find((id) => {
+                    const task = state.tasks.find((t) => t.id === id)
+                    return task?.formKey === OPEN_ACCOUNTS_FORM_KEY
+                  })
+                : undefined) ??
+              displayTask.underlyingTaskIds[0] ??
+              displayTask.id
+            if (displayTask.v5NoAnnuityPage || displayTask.v6CombinedInstructions) {
               dispatch({
                 type: 'SET_V5_NO_ANNUITY_OPEN_ACCOUNTS_PAGE',
-                page: displayTask.v5NoAnnuityPage,
+                page: displayTask.v5NoAnnuityPage ?? 'instructions',
               })
             }
             dispatch({ type: 'SET_ACTIVE_TASK', taskId })

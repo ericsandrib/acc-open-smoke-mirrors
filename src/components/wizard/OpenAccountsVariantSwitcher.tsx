@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { GripVertical, LayoutList, Layers, Palette, Rows3 } from 'lucide-react'
+import { GripVertical, LayoutList, Layers, Palette, Rows3, Repeat } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import {
   DropdownMenu,
@@ -69,6 +69,13 @@ const VARIANT_OPTIONS: Array<{
     description:
       'Version 2 visuals, with pizza-tracker task sections for Accounts without / with Annuities.',
     icon: LayoutList,
+  },
+  {
+    id: 'v6',
+    label: 'Version 6 — Persistent Annuity',
+    description:
+      'Same as Version 5 for now (placeholder for future persistent-annuity behavior).',
+    icon: Repeat,
   },
 ]
 

@@ -167,10 +167,10 @@ function markTaskEdited(allTasks: Task[], formKey: string): Task[] {
 
 type V5NoAnnuityPage = 'instructions' | 'kyc' | 'documents' | 'envelopes'
 
-function getPersistedOpenAccountsVariant(): 'v1' | 'v2' | 'v3' | 'v4' | 'v5' {
+function getPersistedOpenAccountsVariant(): 'v1' | 'v2' | 'v3' | 'v4' | 'v5' | 'v6' {
   if (typeof window === 'undefined') return 'v1'
   const v = window.localStorage.getItem('demo-open-accounts-variant')
-  if (v === 'v2' || v === 'v3' || v === 'v4' || v === 'v5' || v === 'v1') return v
+  if (v === 'v2' || v === 'v3' || v === 'v4' || v === 'v5' || v === 'v6' || v === 'v1') return v
   return 'v1'
 }
 
@@ -187,7 +187,7 @@ function nextV5NoAnnuityPageForActiveTask(
   opts?: { enteringOpenAccountsFromAnnuity?: boolean },
 ): V5NoAnnuityPage | null {
   const variant = getPersistedOpenAccountsVariant()
-  if (variant !== 'v5') {
+  if (variant !== 'v5' && variant !== 'v6') {
     return null
   }
   const task = state.tasks.find((t) => t.id === newTaskId)

@@ -252,6 +252,13 @@ export function OpenAccountsForm() {
   const showV5Kyc = !isV5NoAnnuityPaged || v5SubPage === 'kyc'
   const showV5Documents = !isV5NoAnnuityPaged || v5SubPage === 'documents'
   const showV5Envelopes = !isV5NoAnnuityPaged || v5SubPage === 'envelopes'
+  const isV6WithAnnuityInstructions = taskOverride?.idPrefix?.startsWith('v6-wann-') ?? false
+  const isV6WithoutAnnuityInstructions = taskOverride?.idPrefix?.startsWith('v6-noann-') ?? false
+  const accountsSectionTitle = isV6WithAnnuityInstructions
+    ? 'Accounts with Annuity'
+    : isV6WithoutAnnuityInstructions
+      ? 'Accounts without Annuity'
+      : 'Accounts'
   const { data, updateField } = useTaskData(openAccountsTaskId)
   const [pickerOpen, setPickerOpen] = useState(false)
   const [timelineChild, setTimelineChild] = useState<ChildTask | null>(null)
@@ -754,7 +761,7 @@ export function OpenAccountsForm() {
           )}
         >
           <h3 className={subsectionTitleClass}>
-            Accounts
+            {accountsSectionTitle}
           </h3>
           <p className={subsectionBodyClass}>
             Add the accounts you plan to open at the custodian, including registration and funding details.
@@ -892,7 +899,7 @@ export function OpenAccountsForm() {
             <div className="mb-4">
               <h3 className={subsectionTitleClass}>Continue the rest of the account opening</h3>
               <p className={subsectionBodyClass}>
-                Set the account and owners here. NetX360 picks up funding, signatures, KYC, and reviews.
+                Set the account and owners here. NetX360 picks up annuities, funding, signatures, KYC, and reviews.
               </p>
             </div>
             <Netx360HandoffSection />

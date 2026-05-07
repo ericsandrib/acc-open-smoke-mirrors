@@ -4,12 +4,13 @@ import { formComponents, taskSections } from './formRegistry'
 import { parseChildSubTaskId, getSubTaskDisplayTitle } from '@/utils/childTaskRegistry'
 import { Clock, AlertTriangle } from 'lucide-react'
 import { cn } from '@/lib/utils'
-import { useOpenAccountsVariant } from './openAccountsVariantContext'
+import { useOpenAccountsVariant, useOpenAccountsVariantControls } from './openAccountsVariantContext'
 import {
   isOpenAccountsFormKey,
   OPEN_ACCOUNTS_FORM_KEY,
   OPEN_ACCOUNTS_WITH_ANNUITY_FORM_KEY,
 } from '@/utils/openAccountsTaskContext'
+import { OpenAccountsV6InstructionsForm } from './forms/OpenAccountsV6InstructionsForm'
 
 function ReviewBanner() {
   const { state } = useWorkflow()
@@ -62,6 +63,7 @@ function ReviewBanner() {
 export function TaskContent() {
   const { state, dispatch } = useWorkflow()
   const variant = useOpenAccountsVariant()
+  const { variant: selectedVariant } = useOpenAccountsVariantControls()
 
   const activeTask = state.tasks.find((t) => t.id === state.activeTaskId)
   const activeChild = state.tasks
@@ -141,11 +143,13 @@ export function TaskContent() {
     ? state.actions.find((a) => a.id === contextTask.actionId)?.title ?? null
     : null
   const sectionName = contextTask
-    ? isSplitJourney && contextTask.formKey === OPEN_ACCOUNTS_FORM_KEY
+    ? selectedVariant === 'v6'
+      ? null
+      : isSplitJourney && contextTask.formKey === OPEN_ACCOUNTS_FORM_KEY
       ? 'Accounts without Annuities'
       : isSplitJourney && contextTask.formKey === OPEN_ACCOUNTS_WITH_ANNUITY_FORM_KEY
-        ? 'Accounts with Annuities'
-        : contextTask.title
+          ? 'Accounts with Annuities'
+          : contextTask.title
     : null
   const showSectionContext = Boolean(sectionName && sectionName !== title)
   const contextLine =
@@ -161,6 +165,11 @@ export function TaskContent() {
     variant === 'v5' &&
     activeTask?.formKey === OPEN_ACCOUNTS_FORM_KEY &&
     state.v5NoAnnuityOpenAccountsPage != null
+  const showV6CombinedInstructions =
+    selectedVariant === 'v6' &&
+    isSplitJourney &&
+    activeTask?.formKey === OPEN_ACCOUNTS_FORM_KEY &&
+    state.v5NoAnnuityOpenAccountsPage === 'instructions'
 
   useEffect(() => {
     if (isV5NoAnnuityPagedMain && state.parentSectionFocusId) {
@@ -215,7 +224,9 @@ export function TaskContent() {
             <h3 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">Overview</h3>
           </section>
         ) : null}
-        {FormComponent ? (
+        {showV6CombinedInstructions ? (
+          <OpenAccountsV6InstructionsForm />
+        ) : FormComponent ? (
           <FormComponent />
         ) : (
           <p className="text-muted-foreground">No form available.</p>
