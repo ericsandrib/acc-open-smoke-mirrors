@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { useWorkflow } from '@/stores/workflowStore'
 import type { Action, TaskStatus, Task, WorkflowState } from '@/types/workflow'
 import { cn } from '@/lib/utils'
@@ -29,6 +30,15 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from '@/components/ui/tooltip'
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog'
+import { Button } from '@/components/ui/button'
 
 const statusColors: Record<TaskStatus, string> = {
   not_started: 'text-text-tertiary',
@@ -308,7 +318,7 @@ function buildDisplayActions(state: WorkflowState, variant: OpenAccountsVariant)
     label: 'Accounts with Annuities',
     tasks: withAnnuityTasks.map((t) => ({
       id: t.id,
-      label: t.title,
+      label: t.formKey === OPEN_ACCOUNTS_WITH_ANNUITY_FORM_KEY ? 'Account Instructions' : t.title,
       underlyingTaskIds: [t.id],
     })),
   }
@@ -379,7 +389,9 @@ function buildDisplayActions(state: WorkflowState, variant: OpenAccountsVariant)
 
 export function StepSidebar() {
   const { state, dispatch } = useWorkflow()
+  const navigate = useNavigate()
   const variant = useOpenAccountsVariant()
+  const [exitToOnboardingOpen, setExitToOnboardingOpen] = useState(false)
   /** v5 collapsible task sections in the pizza tracker; default expanded */
   const [v5GroupOpen, setV5GroupOpen] = useState<Record<string, boolean>>({})
 
@@ -492,7 +504,17 @@ export function StepSidebar() {
   return (
     <TooltipProvider delayDuration={300}>
       <nav className={cn('w-[330px] border-r border-border overflow-y-auto bg-white')}>
-        <JourneyHeader />
+        <JourneyHeader
+          showChevron={variant !== 'v5'}
+          onChevronBack={() => navigate(-1)}
+          onIconClick={variant === 'v5' ? () => navigate('/onboarding') : undefined}
+          iconTooltip={variant === 'v5' ? 'Onboarding' : undefined}
+          breadcrumbItems={
+            variant === 'v5'
+              ? [{ label: 'Home', onClick: () => setExitToOnboardingOpen(true) }]
+              : undefined
+          }
+        />
         <div className="px-1 pt-2">
         {displayActions.map((action) => {
           const ActionIcon = getActionIcon(action.id)
@@ -545,6 +567,30 @@ export function StepSidebar() {
         })}
         </div>
       </nav>
+      <Dialog open={exitToOnboardingOpen} onOpenChange={setExitToOnboardingOpen}>
+        <DialogContent className="max-w-md !data-[state=closed]:zoom-out-100 !data-[state=open]:zoom-in-100 !data-[state=closed]:slide-out-to-left-0 !data-[state=open]:slide-in-from-left-0 !data-[state=closed]:slide-out-to-top-[50%] !data-[state=open]:slide-in-from-top-[50%]">
+          <DialogHeader>
+            <DialogTitle>Exit current workflow?</DialogTitle>
+            <DialogDescription>
+              This takes you out of the current workflow and back to the home page.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button type="button" variant="outline" onClick={() => setExitToOnboardingOpen(false)}>
+              Continue workflow
+            </Button>
+            <Button
+              type="button"
+              onClick={() => {
+                setExitToOnboardingOpen(false)
+                navigate('/')
+              }}
+            >
+              Exit workflow
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </TooltipProvider>
   )
 }

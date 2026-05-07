@@ -1,4 +1,6 @@
 import { useWorkflow, useChildActionContext, getChildReviewState } from '@/stores/workflowStore'
+import { useNavigate } from 'react-router-dom'
+import { useState } from 'react'
 import { cn } from '@/lib/utils'
 import {
   Tooltip,
@@ -15,7 +17,16 @@ import { useWizardRightPanel } from '@/components/wizard/wizardRightPanelContext
 import { getActiveStageLabel } from '@/components/wizard/ChildActionTimelineSheet'
 import { JourneyHeader } from '@/components/wizard/JourneyHeader'
 import { ProgressIcon, pickVariant } from '@/components/wizard/ProgressIcons'
+import { useOpenAccountsVariant } from '@/components/wizard/openAccountsVariantContext'
 import type { TaskStatus } from '@/types/workflow'
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog'
 
 const CHILD_TYPE_ICONS: Record<string, LucideIcon> = {
   'account-opening': Wallet,
@@ -112,8 +123,11 @@ function SubTaskProgressIndicator({
 
 export function ChildActionSidebar() {
   const { state, dispatch } = useWorkflow()
+  const navigate = useNavigate()
   const ctx = useChildActionContext()
   const { setCollapsed: setRightPanelCollapsed, setActiveTab: setRightPanelTab } = useWizardRightPanel()
+  const variant = useOpenAccountsVariant()
+  const [exitToOnboardingOpen, setExitToOnboardingOpen] = useState(false)
 
   if (!ctx) return null
 
@@ -133,27 +147,41 @@ export function ChildActionSidebar() {
     ? state.actions.find((a) => a.id === parentTask.actionId)
     : undefined
   const breadcrumbLabel = parentAction?.title ?? parentTask?.title ?? 'Back'
+  const v5OpenAccountsLabel = parentTask?.title ?? parentAction?.title ?? 'Open Accounts'
   const ChildIcon = getChildIcon(child.childType)
 
   return (
     <TooltipProvider delayDuration={300}>
       <nav className="w-[330px] border-r border-border bg-white overflow-y-auto flex flex-col">
-        <JourneyHeader />
-        <div className="flex h-9 items-center gap-1 px-2 border-b border-border">
-          <Button
-            type="button"
-            variant="ghost"
-            size="icon"
-            className="h-8 w-8 text-muted-foreground"
-            onClick={() => dispatch({ type: 'EXIT_CHILD_ACTION' })}
-            aria-label={`Back to ${breadcrumbLabel}`}
-          >
-            <ChevronLeft className="h-4 w-4" aria-hidden />
-          </Button>
-          <span className="text-xs text-muted-foreground truncate">
-            {breadcrumbLabel}
-          </span>
-        </div>
+        <JourneyHeader
+          showChevron={variant !== 'v5'}
+          onChevronBack={() => navigate(-1)}
+          breadcrumbItems={
+            variant === 'v5'
+              ? [
+                  { label: 'Home', onClick: () => setExitToOnboardingOpen(true) },
+                  { label: v5OpenAccountsLabel, onClick: () => dispatch({ type: 'EXIT_CHILD_ACTION' }) },
+                ]
+              : undefined
+          }
+        />
+        {variant !== 'v5' && (
+          <div className="flex h-9 items-center gap-1 px-2 border-b border-border">
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon"
+              className="h-8 w-8 text-muted-foreground"
+              onClick={() => dispatch({ type: 'EXIT_CHILD_ACTION' })}
+              aria-label={`Back to ${breadcrumbLabel}`}
+            >
+              <ChevronLeft className="h-4 w-4" aria-hidden />
+            </Button>
+            <span className="text-xs text-muted-foreground truncate">
+              {breadcrumbLabel}
+            </span>
+          </div>
+        )}
         <div className="pt-2">
           <div className="mb-1.5 flex h-9 items-center gap-2 px-3">
             <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-[var(--bg-tertiary)] text-muted-foreground">
@@ -241,6 +269,30 @@ export function ChildActionSidebar() {
           )
         })()}
       </nav>
+      <Dialog open={exitToOnboardingOpen} onOpenChange={setExitToOnboardingOpen}>
+        <DialogContent className="max-w-md !data-[state=closed]:zoom-out-100 !data-[state=open]:zoom-in-100 !data-[state=closed]:slide-out-to-left-0 !data-[state=open]:slide-in-from-left-0 !data-[state=closed]:slide-out-to-top-[50%] !data-[state=open]:slide-in-from-top-[50%]">
+          <DialogHeader>
+            <DialogTitle>Exit current workflow?</DialogTitle>
+            <DialogDescription>
+              This takes you out of the current workflow and back to the home page.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button type="button" variant="outline" onClick={() => setExitToOnboardingOpen(false)}>
+              Continue workflow
+            </Button>
+            <Button
+              type="button"
+              onClick={() => {
+                setExitToOnboardingOpen(false)
+                navigate('/')
+              }}
+            >
+              Exit workflow
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </TooltipProvider>
   )
 }

@@ -75,6 +75,12 @@ export function TaskContent() {
   const subTaskDef = parsed
     ? parsed.config.subTasks.find((s) => s.suffix === parsed.suffix)
     : null
+  const parentTaskForChild =
+    activeChild
+      ? state.tasks.find((t) => (t.children ?? []).some((c) => c.id === activeChild.id))
+      : subTaskChild
+        ? state.tasks.find((t) => (t.children ?? []).some((c) => c.id === subTaskChild.id))
+        : null
 
   const formKey = activeTask?.formKey ?? activeChild?.formKey ?? subTaskDef?.formKey
 
@@ -104,10 +110,25 @@ export function TaskContent() {
               ? 'Envelopes'
               : null
       : null
+  const v5WithAnnuityTaskTitle =
+    variant === 'v5' && activeTask?.formKey === OPEN_ACCOUNTS_WITH_ANNUITY_FORM_KEY
+      ? 'Account Instructions'
+      : null
+  const v5NoAnnuityTaskDescription =
+    variant === 'v5' && activeTask?.formKey === OPEN_ACCOUNTS_FORM_KEY
+      ? state.v5NoAnnuityOpenAccountsPage === 'kyc'
+        ? 'Complete identity verification (KYC/KYB) before accounts can be opened. For trust accounts, include trustees and beneficial owners.'
+        : state.v5NoAnnuityOpenAccountsPage === 'documents'
+          ? 'Upload client-provided documents that may support account opening, identity verification, or custodian review. Documents are optional unless requested during review. Firm and custodian-generated forms are handled in Envelopes.'
+        : state.v5NoAnnuityOpenAccountsPage === 'envelopes'
+          ? 'Create eSignature envelopes for client signatures. Firm and custodian forms are automatically grouped by account. For in-person or mail delivery, signed documents can be uploaded manually instead of using eSignature.'
+          : null
+      : null
 
   const title = showCombinedOpenAccounts
     ? 'Open Accounts'
-    : v5NoAnnuityTaskTitle
+    : v5WithAnnuityTaskTitle
+      ?? v5NoAnnuityTaskTitle
       ?? splitV1Title
       ?? activeTask?.title
       ?? (subTaskChild && subTaskDef && parsed
@@ -115,6 +136,22 @@ export function TaskContent() {
         : null)
       ?? activeChild?.name
       ?? ''
+  const contextTask = activeTask ?? parentTaskForChild ?? null
+  const actionName = contextTask
+    ? state.actions.find((a) => a.id === contextTask.actionId)?.title ?? null
+    : null
+  const sectionName = contextTask
+    ? isSplitJourney && contextTask.formKey === OPEN_ACCOUNTS_FORM_KEY
+      ? 'Accounts without Annuities'
+      : isSplitJourney && contextTask.formKey === OPEN_ACCOUNTS_WITH_ANNUITY_FORM_KEY
+        ? 'Accounts with Annuities'
+        : contextTask.title
+    : null
+  const showSectionContext = Boolean(sectionName && sectionName !== title)
+  const contextLine =
+    actionName && showSectionContext
+      ? `${actionName} \u00b7 ${sectionName}`
+      : actionName ?? (showSectionContext ? sectionName : null)
   const hideHeaderDividerInCardVariants =
     variant === 'v2' || variant === 'v3' || variant === 'v4' || variant === 'v5'
 
@@ -153,6 +190,11 @@ export function TaskContent() {
     <main className={cn('flex-1 overflow-y-auto p-8 2xl:pr-[20rem]', variant === 'v4' && 'bg-[#fafafa]')}>
       <div className="max-w-[52.5rem] mx-auto">
         <ReviewBanner />
+        {contextLine ? (
+          <p className="mb-3 text-sm font-medium text-muted-foreground">
+            {contextLine}
+          </p>
+        ) : null}
         <h1
           className={
             hideHeaderDividerInCardVariants
@@ -162,6 +204,11 @@ export function TaskContent() {
         >
           {title}
         </h1>
+        {v5NoAnnuityTaskDescription ? (
+          <p className="text-[14px] text-muted-foreground leading-normal -mt-6 mb-6">
+            {v5NoAnnuityTaskDescription}
+          </p>
+        ) : null}
         {showCombinedOpenAccounts ? null : isV5NoAnnuityPagedMain ? null : !hasExplicitSections &&
           !isOpenAccountsFormKey(formKey) ? (
           <section id="__top__" className="space-y-1.5 scroll-mt-16 mb-6">

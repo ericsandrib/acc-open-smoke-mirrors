@@ -1,7 +1,16 @@
 import { useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { useWorkflow } from '@/stores/workflowStore'
 import { Button } from '@/components/ui/button'
 import { ChevronLeft, ChevronRight, Pencil, ShieldAlert } from 'lucide-react'
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog'
 import type { TaskStatus } from '@/types/workflow'
 import { parseChildSubTaskId } from '@/utils/childTaskRegistry'
 import { getOpenAccountsSubmitForReviewBlockers } from '@/utils/openAccountsDocumentValidation'
@@ -98,9 +107,11 @@ export function CompleteAccountOpeningConfirmModal({
 
 export function WizardFooter() {
   const { state, dispatch } = useWorkflow()
+  const navigate = useNavigate()
   const openAccountsVariant = useOpenAccountsVariant()
   const [completeAccountOpeningOpen, setCompleteAccountOpeningOpen] = useState(false)
   const [completeAccountOpeningWarnings, setCompleteAccountOpeningWarnings] = useState<string[]>([])
+  const [exitWorkflowOpen, setExitWorkflowOpen] = useState(false)
   const idx = state.flatTaskOrder.indexOf(state.activeTaskId)
   const isFirst = idx === 0
   const isLast = idx === state.flatTaskOrder.length - 1
@@ -173,6 +184,10 @@ export function WizardFooter() {
               Next
               <ChevronRight className="h-4 w-4" />
             </Button>
+          ) : openAccountsVariant === 'v5' && showsOpenAccountsSubmit ? (
+            <Button variant="outline" onClick={() => setExitWorkflowOpen(true)}>
+              Exit workflow
+            </Button>
           ) : isLast || showsOpenAccountsSubmit || showsAnnuityComplete ? (
             <Button
               onClick={() => {
@@ -242,6 +257,30 @@ export function WizardFooter() {
         }}
       />
     )}
+    <Dialog open={exitWorkflowOpen} onOpenChange={setExitWorkflowOpen}>
+      <DialogContent className="max-w-md !data-[state=closed]:zoom-out-100 !data-[state=open]:zoom-in-100 !data-[state=closed]:slide-out-to-left-0 !data-[state=open]:slide-in-from-left-0 !data-[state=closed]:slide-out-to-top-[50%] !data-[state=open]:slide-in-from-top-[50%]">
+        <DialogHeader>
+          <DialogTitle>Exit current workflow?</DialogTitle>
+          <DialogDescription>
+            This takes you out of the current workflow and back to the home page.
+          </DialogDescription>
+        </DialogHeader>
+        <DialogFooter>
+          <Button type="button" variant="outline" onClick={() => setExitWorkflowOpen(false)}>
+            Continue workflow
+          </Button>
+          <Button
+            type="button"
+            onClick={() => {
+              setExitWorkflowOpen(false)
+              navigate('/')
+            }}
+          >
+            Exit workflow
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
     </>
   )
 }
