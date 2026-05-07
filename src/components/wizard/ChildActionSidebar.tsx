@@ -1,7 +1,5 @@
-import { useEffect, useMemo, useState } from 'react'
 import { useWorkflow, useChildActionContext, getChildReviewState } from '@/stores/workflowStore'
 import { cn } from '@/lib/utils'
-import { taskSections } from './formRegistry'
 import {
   Tooltip,
   TooltipContent,
@@ -15,13 +13,9 @@ import { ChevronLeft, FileText, Clock, ShieldCheck, Wallet, ArrowDownToLine, Cog
 import { Button } from '@/components/ui/button'
 import { useWizardRightPanel } from '@/components/wizard/wizardRightPanelContext'
 import { getActiveStageLabel } from '@/components/wizard/ChildActionTimelineSheet'
-import { useTheme } from '@/stores/themeStore'
 import { JourneyHeader } from '@/components/wizard/JourneyHeader'
 import { ProgressIcon, pickVariant } from '@/components/wizard/ProgressIcons'
 import type { TaskStatus } from '@/types/workflow'
-
-const DEFAULT_TASK_SECTIONS = [{ id: '__top__', label: 'Overview' }] as const
-const BENEFICIARY_ENABLED_REGISTRATIONS = new Set(['TOD_IND', 'TOD_JT', 'IRA', 'ROTH_IRA'])
 
 const CHILD_TYPE_ICONS: Record<string, LucideIcon> = {
   'account-opening': Wallet,
@@ -118,9 +112,7 @@ function SubTaskProgressIndicator({
 
 export function ChildActionSidebar() {
   const { state, dispatch } = useWorkflow()
-  const { taskSectionNavStyle } = useTheme()
   const ctx = useChildActionContext()
-  const [activeSectionId, setActiveSectionId] = useState<string | null>(null)
   const { setCollapsed: setRightPanelCollapsed, setActiveTab: setRightPanelTab } = useWizardRightPanel()
 
   if (!ctx) return null
@@ -133,15 +125,6 @@ export function ChildActionSidebar() {
     child.childType !== 'funding-line' &&
     child.childType !== 'feature-service-line'
   const viewMode = state.demoViewMode
-  const activeSubTask = config.subTasks[subTaskIndex]
-  const activeSections = useMemo(
-    () => (activeSubTask ? taskSections[activeSubTask.formKey] ?? DEFAULT_TASK_SECTIONS : DEFAULT_TASK_SECTIONS),
-    [activeSubTask],
-  )
-
-  useEffect(() => {
-    setActiveSectionId(activeSections[0]?.id ?? null)
-  }, [subTaskIndex, activeSections])
 
   const parentTask = state.tasks.find((t) =>
     (t.children ?? []).some((c) => c.id === child.id),
@@ -184,13 +167,6 @@ export function ChildActionSidebar() {
           <ul className="space-y-1 px-1">
           {config.subTasks.map((subTask, idx) => {
             const subTaskId = `${child.id}-${subTask.suffix}`
-            const childMeta = state.taskData[child.id] as Record<string, unknown> | undefined
-            const childRegType = (childMeta?.registrationType as string | undefined) ?? null
-            const sections = (taskSections[subTask.formKey] ?? DEFAULT_TASK_SECTIONS).filter((section) => {
-              if (subTask.formKey !== 'acct-child-account-owners') return true
-              if (section.id !== 'acct-beneficiaries') return true
-              return childRegType != null && BENEFICIARY_ENABLED_REGISTRATIONS.has(childRegType)
-            })
             return (
               <li key={subTask.suffix}>
                 <button
@@ -220,33 +196,6 @@ export function ChildActionSidebar() {
                     subTaskSuffix={child.childType === 'account-opening' ? subTask.suffix : undefined}
                   />
                 </button>
-                {taskSectionNavStyle === 'nested' && idx === subTaskIndex && sections.length > 0 ? (
-                  <ul className="mt-1.5 ml-4 space-y-1.5 border-l border-border/80 pl-2.5">
-                    {sections.map((section) => (
-                      <li key={section.id}>
-                        <button
-                          type="button"
-                          onClick={() => {
-                            if (idx !== subTaskIndex) {
-                              dispatch({ type: 'SET_CHILD_SUB_TASK', index: idx })
-                            }
-                            setActiveSectionId(section.id)
-                            dispatch({ type: 'FOCUS_PARENT_TASK_SECTION', sectionId: section.id })
-                          }}
-                          aria-current={activeSectionId === section.id ? 'page' : undefined}
-                          className={cn(
-                            'w-full text-left px-2.5 py-1.5 text-[12px] rounded-md transition-colors',
-                            activeSectionId === section.id
-                              ? 'bg-muted text-foreground font-semibold'
-                              : 'cursor-pointer text-foreground/85 hover:text-foreground hover:bg-muted/60',
-                          )}
-                        >
-                          {section.label}
-                        </button>
-                      </li>
-                    ))}
-                  </ul>
-                ) : null}
               </li>
             )
           })}

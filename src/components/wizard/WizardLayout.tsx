@@ -75,7 +75,6 @@ import { ComposeDialog } from '@/components/dashboard/ComposeDialog'
 import { useWorkflow } from '@/stores/workflowStore'
 import { cn } from '@/lib/utils'
 import { useNavigate, useSearchParams } from 'react-router-dom'
-import { useTheme } from '@/stores/themeStore'
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -90,13 +89,7 @@ import {
   OPEN_ACCOUNTS_FORM_KEY,
   OPEN_ACCOUNTS_WITH_ANNUITY_FORM_KEY,
 } from '@/utils/openAccountsTaskContext'
-import {
-  OpenAccountsVariantAndFocusProvider,
-  useCombinedSectionFocus,
-  useOpenAccountsVariant,
-  type CombinedAccordionKey,
-} from './openAccountsVariantContext'
-import { combinedOpenAccountsSections } from './combinedOpenAccountsSections'
+import { OpenAccountsVariantAndFocusProvider, useOpenAccountsVariant } from './openAccountsVariantContext'
 import { OpenAccountsVariantSwitcher } from './OpenAccountsVariantSwitcher'
 
 type WizardActionProgressItem = { id: string; title: string; pct: number }
@@ -407,29 +400,8 @@ export function WizardLayout() {
   )
 }
 
-function CombinedSectionPanel() {
-  const { requestFocus } = useCombinedSectionFocus()
-  return (
-    <TaskSectionPanel
-      sections={[]}
-      onSelectSection={() => {}}
-      panelTitle="On this page"
-      visualStyle="v2-bare"
-      groups={combinedOpenAccountsSections.map((group) => ({
-        key: group.key,
-        label: group.label,
-        sections: group.sections.map((s) => ({ id: s.id, label: s.label })),
-      }))}
-      onSelectGroupSection={(groupKey, sectionId) => {
-        requestFocus(groupKey as CombinedAccordionKey, sectionId)
-      }}
-    />
-  )
-}
-
 function WizardLayoutInner() {
   const { state, dispatch } = useWorkflow()
-  const { taskSectionNavStyle } = useTheme()
   const navigate = useNavigate()
   const variant = useOpenAccountsVariant()
   const [searchParams] = useSearchParams()
@@ -597,8 +569,7 @@ function WizardLayoutInner() {
   const isSplitJourney =
     state.tasks.some((t) => t.formKey === OPEN_ACCOUNTS_FORM_KEY) &&
     state.tasks.some((t) => t.formKey === OPEN_ACCOUNTS_WITH_ANNUITY_FORM_KEY)
-  const isAccountOpeningActionId = (actionId: string | undefined) =>
-    actionId === 'account-opening' || actionId === 'account-opening-annuity'
+  const isAccountOpeningActionId = (actionId: string | undefined) => actionId === 'account-opening'
 
   const getActionTitle = (actionId: string | undefined) => {
     if (!actionId) return undefined
@@ -617,10 +588,7 @@ function WizardLayoutInner() {
     if (!actionId) return []
     if (isSplitJourney && isAccountOpeningActionId(actionId)) {
       const merged = state.tasks.filter(
-        (t) =>
-          (t.actionId === 'account-opening' || t.actionId === 'account-opening-annuity') &&
-          t.formKey !== 'kyc' &&
-          t.id !== 'kyc-review',
+        (t) => t.actionId === 'account-opening' && t.formKey !== 'kyc' && t.id !== 'kyc-review',
       )
       return merged
         .slice()
@@ -756,8 +724,7 @@ function WizardLayoutInner() {
                       <WizardAccessoryBar />
                       {showKycDocumentsSubTask ? <ChildActionContent /> : <ChildAmlReviewContent />}
                     </div>
-                    {taskSectionNavStyle === 'compact' &&
-                      variant !== 'v5' &&
+                    {variant !== 'v5' &&
                       childSections.length > 0 &&
                       showKycDocumentsSubTask && (
                       <TaskSectionPanel
@@ -779,8 +746,7 @@ function WizardLayoutInner() {
                       <WizardAccessoryBar />
                       {showKycDocumentsSubTask ? <ChildActionContent /> : <ChildHoKycViewContent />}
                     </div>
-                    {taskSectionNavStyle === 'compact' &&
-                      variant !== 'v5' &&
+                    {variant !== 'v5' &&
                       childSections.length > 0 &&
                       showKycDocumentsSubTask && (
                       <TaskSectionPanel
@@ -803,8 +769,7 @@ function WizardLayoutInner() {
                         <WizardAccessoryBar />
                         <ChildActionContent />
                       </div>
-                      {taskSectionNavStyle === 'compact' &&
-                        variant !== 'v5' &&
+                      {variant !== 'v5' &&
                         childSections.length > 0 && (
                         <TaskSectionPanel
                           sections={childSections}
@@ -841,8 +806,7 @@ function WizardLayoutInner() {
                       <ChildActionContent />
                       <ChildActionFooter />
                     </div>
-                    {taskSectionNavStyle === 'compact' &&
-                      variant !== 'v5' &&
+                    {variant !== 'v5' &&
                       childSections.length > 0 && (
                       <TaskSectionPanel
                         sections={childSections}
@@ -857,16 +821,10 @@ function WizardLayoutInner() {
           ) : (() => {
             const activeTask = state.tasks.find((t) => t.id === state.activeTaskId)
             const sections = activeTask ? (taskSections[activeTask.formKey] ?? []) : []
-            const showCombinedScrollspy = false
             const useV2StyledScrollspy =
               (variant === 'v2' || variant === 'v3' || variant === 'v4' || variant === 'v5') &&
               !!activeTask &&
-              (
-                activeTask.formKey === OPEN_ACCOUNTS_FORM_KEY ||
-                activeTask.formKey === OPEN_ACCOUNTS_WITH_ANNUITY_FORM_KEY ||
-                activeTask.formKey === 'related-parties' ||
-                activeTask.formKey === 'existing-accounts'
-              )
+              (activeTask.formKey === 'related-parties' || activeTask.formKey === 'existing-accounts')
             return (
               <>
                 <StepSidebar />
@@ -877,11 +835,7 @@ function WizardLayoutInner() {
                       <TaskContent />
                       <WizardFooter />
                     </div>
-                    {taskSectionNavStyle === 'compact' && showCombinedScrollspy ? (
-                      <CombinedSectionPanel />
-                    ) : taskSectionNavStyle === 'compact' &&
-                      variant !== 'v5' &&
-                      sections.length > 0 ? (
+                    {variant !== 'v5' && sections.length > 0 ? (
                       (() => {
                         const groups = toSectionGroups(sections)
                         return groups ? (

@@ -69,27 +69,6 @@ export function OpenAccountsCombinedForm() {
       onValueChange={(next) => setOpenAccordions(next as string[])}
       className="space-y-3"
     >
-      {noAnnuityTask ? (
-        <AccordionItem
-          value="no-annuity"
-          className="rounded-xl border border-border/60 bg-background overflow-hidden"
-        >
-          <AccordionTrigger className="px-5 py-4 hover:bg-muted/30">
-            <div className="flex flex-col items-start gap-1 text-left">
-              <span className="text-base font-semibold">Accounts without Annuities</span>
-            </div>
-          </AccordionTrigger>
-          <AccordionContent className="px-5 pb-6 pt-2">
-            <OpenAccountsTaskOverrideProvider
-              taskId={noAnnuityTask.id}
-              idPrefix={COMBINED_ACCORDION_PREFIX['no-annuity']}
-            >
-              <OpenAccountsForm />
-            </OpenAccountsTaskOverrideProvider>
-          </AccordionContent>
-        </AccordionItem>
-      ) : null}
-
       {withAnnuityTask ? (
         <AccordionItem
           value="with-annuity"
@@ -115,6 +94,27 @@ export function OpenAccountsCombinedForm() {
             <OpenAccountsTaskOverrideProvider
               taskId={withAnnuityTask.id}
               idPrefix={COMBINED_ACCORDION_PREFIX['with-annuity']}
+            >
+              <OpenAccountsForm />
+            </OpenAccountsTaskOverrideProvider>
+          </AccordionContent>
+        </AccordionItem>
+      ) : null}
+
+      {noAnnuityTask ? (
+        <AccordionItem
+          value="no-annuity"
+          className="rounded-xl border border-border/60 bg-background overflow-hidden"
+        >
+          <AccordionTrigger className="px-5 py-4 hover:bg-muted/30">
+            <div className="flex flex-col items-start gap-1 text-left">
+              <span className="text-base font-semibold">Accounts without Annuities</span>
+            </div>
+          </AccordionTrigger>
+          <AccordionContent className="px-5 pb-6 pt-2">
+            <OpenAccountsTaskOverrideProvider
+              taskId={noAnnuityTask.id}
+              idPrefix={COMBINED_ACCORDION_PREFIX['no-annuity']}
             >
               <OpenAccountsForm />
             </OpenAccountsTaskOverrideProvider>

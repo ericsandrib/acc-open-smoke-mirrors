@@ -6,6 +6,7 @@ import { Clock, AlertTriangle } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useOpenAccountsVariant } from './openAccountsVariantContext'
 import {
+  isOpenAccountsFormKey,
   OPEN_ACCOUNTS_FORM_KEY,
   OPEN_ACCOUNTS_WITH_ANNUITY_FORM_KEY,
 } from '@/utils/openAccountsTaskContext'
@@ -148,7 +149,8 @@ export function TaskContent() {
         >
           {title}
         </h1>
-        {showCombinedOpenAccounts ? null : isV5NoAnnuityPagedMain ? null : !hasExplicitSections ? (
+        {showCombinedOpenAccounts ? null : isV5NoAnnuityPagedMain ? null : !hasExplicitSections &&
+          !isOpenAccountsFormKey(formKey) ? (
           <section id="__top__" className="space-y-1.5 scroll-mt-16 mb-6">
             <h3 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">Overview</h3>
           </section>

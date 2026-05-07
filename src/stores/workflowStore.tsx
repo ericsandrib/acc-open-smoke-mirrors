@@ -600,32 +600,36 @@ function workflowReducer(state: WorkflowState, action: WorkflowAction): Workflow
       const oaSeed = baseTasks.find((t) => t.id === 'open-accounts')!
 
       if (multipleAccounts && hasAnnuity) {
-        // Both paths: no-annuity + with-annuity
-        actionsForState = [
-          collectDataAction,
-          { id: 'account-opening', title: 'Account opening (no annuity)', order: 2 },
-          { id: 'account-opening-annuity', title: 'Account opening (with annuity)', order: 3 },
-        ]
-        const open1: Task = { ...mkFresh(oaSeed), actionId: 'account-opening' }
-        const open2: Task = {
-          id: 'open-accounts-annuity', title: 'Open Accounts',
-          actionId: 'account-opening-annuity', status: 'in_progress' as const,
-          assignedTo: assignee, formKey: 'open-accounts-with-annuity', order: 1,
-          unread: true, edited: false, children: [],
+        // Both paths under one Account Opening action: with-annuity first, then without.
+        actionsForState = [collectDataAction, { id: 'account-opening', title: 'Account Opening', order: 2 }]
+        const openWith: Task = {
+          id: 'open-accounts-annuity',
+          title: 'Open Accounts',
+          actionId: 'account-opening',
+          status: 'in_progress' as const,
+          assignedTo: assignee,
+          formKey: 'open-accounts-with-annuity',
+          order: 1,
+          unread: true,
+          edited: false,
+          children: [],
         }
-        tasksForState = [...collect, open1, open2]
+        const openNo: Task = { ...mkFresh(oaSeed), actionId: 'account-opening', order: 2 }
+        tasksForState = [...collect, openWith, openNo]
         extraTaskData = { 'open-accounts-annuity': { additionalInstructions: seedOpenAccountsAdditionalInstructions } }
       } else if (!multipleAccounts && hasAnnuity) {
-        // Single account with annuity: only the annuity path
-        actionsForState = [
-          collectDataAction,
-          { id: 'account-opening-annuity', title: 'Account Opening', order: 2 },
-        ]
+        actionsForState = [collectDataAction, { id: 'account-opening', title: 'Account Opening', order: 2 }]
         const openAnnuity: Task = {
-          id: 'open-accounts-annuity', title: 'Open Accounts',
-          actionId: 'account-opening-annuity', status: 'in_progress' as const,
-          assignedTo: assignee, formKey: 'open-accounts-with-annuity', order: 1,
-          unread: true, edited: false, children: [],
+          id: 'open-accounts-annuity',
+          title: 'Open Accounts',
+          actionId: 'account-opening',
+          status: 'in_progress' as const,
+          assignedTo: assignee,
+          formKey: 'open-accounts-with-annuity',
+          order: 1,
+          unread: true,
+          edited: false,
+          children: [],
         }
         tasksForState = [...collect, openAnnuity]
         extraTaskData = { 'open-accounts-annuity': { additionalInstructions: seedOpenAccountsAdditionalInstructions } }

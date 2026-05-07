@@ -1,9 +1,8 @@
 import type { CombinedAccordionKey } from '@/components/wizard/openAccountsVariantContext'
 
 /**
- * Hierarchical sections shown in the StepSidebar / TaskSectionPanel when the v2
- * combined-accordion view is active. Top-level entries map to an accordion in
- * `OpenAccountsCombinedForm`; nested entries map to `<section>` ids inside that accordion.
+ * Hierarchical sections for the v2+ combined Open Accounts accordions (`OpenAccountsCombinedForm`).
+ * Top-level entries map to an accordion; nested entries map to `<section>` ids inside that accordion.
  */
 export type CombinedAccordionSection = {
   id: string
@@ -19,6 +18,15 @@ export type CombinedAccordionSectionGroup = {
 
 export const combinedOpenAccountsSections: CombinedAccordionSectionGroup[] = [
   {
+    key: 'with-annuity',
+    label: 'Accounts with Annuities',
+    sections: [
+      { id: 'oa-accounts', label: 'Accounts' },
+      { id: 'oa-netx360-next-steps', label: 'Continue the rest of the account opening' },
+      { id: 'oa-netx360-submit', label: 'Submit to NetX360' },
+    ],
+  },
+  {
     key: 'no-annuity',
     label: 'Accounts without Annuities',
     sections: [
@@ -26,15 +34,6 @@ export const combinedOpenAccountsSections: CombinedAccordionSectionGroup[] = [
       { id: 'oa-documents', label: 'Supporting Documents' },
       { id: 'oa-kyc', label: 'KYC Verification' },
       { id: 'oa-esign', label: 'Envelopes' },
-    ],
-  },
-  {
-    key: 'with-annuity',
-    label: 'Accounts with Annuities',
-    sections: [
-      { id: 'oa-accounts', label: 'Accounts' },
-      { id: 'oa-netx360-next-steps', label: 'Continue the rest of the account opening' },
-      { id: 'oa-netx360-submit', label: 'Submit to NetX360' },
     ],
   },
 ]

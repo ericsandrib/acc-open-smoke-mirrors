@@ -8,23 +8,10 @@ import {
   OPEN_ACCOUNTS_FORM_KEY,
   OPEN_ACCOUNTS_WITH_ANNUITY_FORM_KEY,
 } from '@/utils/openAccountsTaskContext'
-import { taskSections } from '@/components/wizard/formRegistry'
-import { useTheme } from '@/stores/themeStore'
-import {
-  type OpenAccountsVariant,
-  useCombinedSectionFocus,
-  useOpenAccountsVariant,
-} from '@/components/wizard/openAccountsVariantContext'
-import { combinedOpenAccountsSections } from '@/components/wizard/combinedOpenAccountsSections'
+import { type OpenAccountsVariant, useOpenAccountsVariant } from '@/components/wizard/openAccountsVariantContext'
 import { ProgressIcon, pickVariant } from '@/components/wizard/ProgressIcons'
 import type { LucideIcon } from 'lucide-react'
-import {
-  ChevronDown,
-  ChevronRight,
-  Users,
-  Wallet,
-  ListChecks,
-} from 'lucide-react'
+import { ChevronDown, Users, Wallet, ListChecks } from 'lucide-react'
 import { Circle, Loader, CheckCircle2, Ban, Clock, XCircle } from 'lucide-react'
 import { JourneyHeader } from '@/components/wizard/JourneyHeader'
 
@@ -153,8 +140,6 @@ function getTaskNavLabel(label: string): string {
   return label
 }
 
-const DEFAULT_TASK_SECTIONS = [{ id: '__top__', label: 'Overview' }] as const
-
 function TaskProgressIndicator({
   pct,
   total,
@@ -224,11 +209,10 @@ type DisplayActionNode = {
 /**
  * Build the action/task display structure honoring the demo Account Opening variant.
  *
- * - In a non-split journey (no `account-opening-annuity` action) the structure is unchanged.
- * - In v1 split: merge the two account-opening actions into a single "Account Opening" group,
- *   and rename each open-accounts task to clarify the annuity vs. no-annuity flow.
+ * - In a non-split journey (only one of the two open-accounts form keys) the structure is unchanged.
+ * - In v1 split: one Account Opening action with two tasks; rows are labeled by annuity path.
  * - In v2/v3/v4 split: keep both open-accounts tasks visible (renamed labels on each row).
- * - In v5 split: collapsible “Accounts without Annuities” / “Accounts with Annuities”.
+ * - In v5 split: collapsible “Accounts with Annuities” first, then “Accounts without Annuities”.
  *   Without-annuity side uses three navigator rows (Account Instructions, KYC Verification, Envelopes)
  *   that all bind to the same underlying task and swap full-page `OpenAccountsForm` content.
  */
@@ -241,9 +225,11 @@ function buildDisplayActions(state: WorkflowState, variant: OpenAccountsVariant)
       .filter((t) => t.actionId === action.id && t.formKey !== 'kyc' && t.id !== 'kyc-review')
       .sort((a, b) => a.order - b.order)
 
-  const noAnnuityAction = visibleActions.find((a) => a.id === 'account-opening')
-  const withAnnuityAction = visibleActions.find((a) => a.id === 'account-opening-annuity')
-  const isSplit = !!(noAnnuityAction && withAnnuityAction)
+  const accountOpeningAction = visibleActions.find((a) => a.id === 'account-opening')
+  const aoTasks = accountOpeningAction ? visibleTasks(accountOpeningAction) : []
+  const noAnnuityTasks = aoTasks.filter((t) => t.formKey === OPEN_ACCOUNTS_FORM_KEY)
+  const withAnnuityTasks = aoTasks.filter((t) => t.formKey === OPEN_ACCOUNTS_WITH_ANNUITY_FORM_KEY)
+  const isSplit = noAnnuityTasks.length > 0 && withAnnuityTasks.length > 0
 
   const toTaskRow = (t: Task, label: string): DisplayTaskRow => ({
     type: 'task',
@@ -258,74 +244,76 @@ function buildDisplayActions(state: WorkflowState, variant: OpenAccountsVariant)
     }))
   }
 
-  const otherActions = visibleActions.filter(
-    (a) => a.id !== 'account-opening' && a.id !== 'account-opening-annuity',
-  )
+  if (!accountOpeningAction) {
+    return visibleActions.map((action) => ({
+      id: action.id,
+      title: action.title,
+      taskRows: visibleTasks(action).map((t) => toTaskRow(t, t.title)),
+    }))
+  }
 
-  const noAnnuityTasks = visibleTasks(noAnnuityAction)
-  const withAnnuityTasks = visibleTasks(withAnnuityAction)
+  const otherActions = visibleActions.filter((a) => a.id !== 'account-opening')
+
   const noAnnuityOpenAccountsTaskId =
     noAnnuityTasks.find((t) => t.formKey === OPEN_ACCOUNTS_FORM_KEY)?.id ??
     noAnnuityTasks[0]?.id
+
+  const v5WithAnnuityGroup: DisplayTaskRow = {
+    type: 'group',
+    id: 'v5-accounts-with-annuity',
+    label: 'Accounts with Annuities',
+    tasks: withAnnuityTasks.map((t) => ({
+      id: t.id,
+      label: t.title,
+      underlyingTaskIds: [t.id],
+    })),
+  }
+
+  const v5WithoutAnnuityGroup: DisplayTaskRow = {
+    type: 'group',
+    id: 'v5-accounts-without-annuity',
+    label: 'Accounts without Annuities',
+    tasks:
+      noAnnuityOpenAccountsTaskId != null
+        ? [
+            {
+              id: 'v5-noann-account-instructions',
+              label: 'Account Instructions',
+              underlyingTaskIds: [noAnnuityOpenAccountsTaskId],
+              v5NoAnnuityPage: 'instructions',
+            },
+            {
+              id: 'v5-noann-kyc-verification',
+              label: 'KYC Verification',
+              underlyingTaskIds: [noAnnuityOpenAccountsTaskId],
+              v5NoAnnuityPage: 'kyc',
+            },
+            {
+              id: 'v5-noann-envelopes',
+              label: 'Envelopes',
+              underlyingTaskIds: [noAnnuityOpenAccountsTaskId],
+              v5NoAnnuityPage: 'envelopes',
+            },
+          ]
+        : [],
+  }
 
   const accountOpeningGroup: DisplayActionNode = {
     id: 'account-opening',
     title: 'Account Opening',
     taskRows:
       variant === 'v5'
-        ? [
-            {
-              type: 'group',
-              id: 'v5-accounts-without-annuity',
-              label: 'Accounts without Annuities',
-              tasks:
-                noAnnuityOpenAccountsTaskId != null
-                  ? [
-                      {
-                        id: 'v5-noann-account-instructions',
-                        label: 'Account Instructions',
-                        underlyingTaskIds: [noAnnuityOpenAccountsTaskId],
-                        v5NoAnnuityPage: 'instructions',
-                      },
-                      {
-                        id: 'v5-noann-kyc-verification',
-                        label: 'KYC Verification',
-                        underlyingTaskIds: [noAnnuityOpenAccountsTaskId],
-                        v5NoAnnuityPage: 'kyc',
-                      },
-                      {
-                        id: 'v5-noann-envelopes',
-                        label: 'Envelopes',
-                        underlyingTaskIds: [noAnnuityOpenAccountsTaskId],
-                        v5NoAnnuityPage: 'envelopes',
-                      },
-                    ]
-                  : [],
-            },
-            {
-              type: 'group',
-              id: 'v5-accounts-with-annuity',
-              label: 'Accounts with Annuities',
-              tasks: withAnnuityTasks.map((t) => ({
-                id: t.id,
-                label: t.title,
-                underlyingTaskIds: [t.id],
-              })),
-            },
-          ]
+        ? [v5WithAnnuityGroup, v5WithoutAnnuityGroup]
         : [
-            ...noAnnuityTasks.map((t) => toTaskRow(t, 'Accounts without Annuities')),
             ...withAnnuityTasks.map((t) => toTaskRow(t, 'Accounts with Annuities')),
+            ...noAnnuityTasks.map((t) => toTaskRow(t, 'Accounts without Annuities')),
           ],
   }
 
   const result: DisplayActionNode[] = []
   let inserted = false
   for (const action of otherActions) {
-    if (
-      !inserted &&
-      action.order > Math.min(noAnnuityAction.order, withAnnuityAction.order)
-    ) {
+    if (!inserted && action.order > accountOpeningAction.order) {
       result.push(accountOpeningGroup)
       inserted = true
     }
@@ -341,32 +329,9 @@ function buildDisplayActions(state: WorkflowState, variant: OpenAccountsVariant)
 
 export function StepSidebar() {
   const { state, dispatch } = useWorkflow()
-  const { taskSectionNavStyle } = useTheme()
   const variant = useOpenAccountsVariant()
-  const { requestFocus } = useCombinedSectionFocus()
-  const [activeSectionId, setActiveSectionId] = useState<string | null>(null)
   /** v5 collapsible task sections in the pizza tracker; default expanded */
   const [v5GroupOpen, setV5GroupOpen] = useState<Record<string, boolean>>({})
-
-  const activeTopLevelTask = useMemo(
-    () => state.tasks.find((t) => t.id === state.activeTaskId),
-    [state.tasks, state.activeTaskId],
-  )
-  const isV2CombinedActive =
-    (variant === 'v2' || variant === 'v3' || variant === 'v4' || variant === 'v5') &&
-    !!activeTopLevelTask &&
-    (activeTopLevelTask.formKey === OPEN_ACCOUNTS_FORM_KEY ||
-      activeTopLevelTask.formKey === OPEN_ACCOUNTS_WITH_ANNUITY_FORM_KEY) &&
-    state.tasks.some((t) => t.formKey === OPEN_ACCOUNTS_FORM_KEY) &&
-    state.tasks.some((t) => t.formKey === OPEN_ACCOUNTS_WITH_ANNUITY_FORM_KEY)
-  const activeSections = useMemo(
-    () => (activeTopLevelTask ? taskSections[activeTopLevelTask.formKey] ?? DEFAULT_TASK_SECTIONS : DEFAULT_TASK_SECTIONS),
-    [activeTopLevelTask],
-  )
-
-  useEffect(() => {
-    setActiveSectionId(activeSections[0]?.id ?? null)
-  }, [state.activeTaskId, activeSections])
 
   const displayActions = useMemo(
     () => buildDisplayActions(state, variant),
@@ -439,11 +404,6 @@ export function StepSidebar() {
     const isActiveTask = displayTask.v5NoAnnuityPage
       ? baseTaskActive && state.v5NoAnnuityOpenAccountsPage === displayTask.v5NoAnnuityPage
       : baseTaskActive
-    const sections = (() => {
-      const formKey = underlyingTasks[0]?.formKey
-      if (!formKey) return DEFAULT_TASK_SECTIONS
-      return taskSections[formKey] ?? DEFAULT_TASK_SECTIONS
-    })()
     return (
       <li key={displayTask.id}>
         <button
@@ -475,102 +435,6 @@ export function StepSidebar() {
             status={aggregatedStatus}
           />
         </button>
-        {taskSectionNavStyle === 'nested' && isActiveTask && isV2CombinedActive ? (
-          <ul className="mt-1.5 ml-4 space-y-2 border-l border-border/80 pl-2.5">
-            {combinedOpenAccountsSections.map((group) => (
-              <li key={group.key} className="space-y-1">
-                <div className="flex items-center gap-1.5 px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground/80">
-                  <ChevronRight className="h-3 w-3" />
-                  <span className="truncate">{group.label}</span>
-                </div>
-                <ul className="ml-3 space-y-1 border-l border-border/60 pl-2.5">
-                  {group.sections.map((section) => {
-                    const compositeId = `${group.key}::${section.id}`
-                    return (
-                      <li key={compositeId}>
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setActiveSectionId(compositeId)
-                            requestFocus(group.key, section.id)
-                          }}
-                          aria-current={activeSectionId === compositeId ? 'page' : undefined}
-                          className={cn(
-                            'w-full text-left px-2.5 py-1.5 text-[12px] rounded-md transition-colors',
-                            activeSectionId === compositeId
-                              ? 'bg-muted text-foreground font-semibold'
-                              : 'cursor-pointer text-foreground/85 hover:text-foreground hover:bg-muted/60',
-                          )}
-                        >
-                          {section.label}
-                        </button>
-                      </li>
-                    )
-                  })}
-                </ul>
-              </li>
-            ))}
-          </ul>
-        ) : taskSectionNavStyle === 'nested' && isActiveTask && sections.length > 0 ? (
-          <ul className="mt-1.5 ml-4 space-y-1.5 border-l border-border/80 pl-2.5">
-            {sections.map((section) => {
-              const childSections = 'children' in section ? section.children : undefined
-              const hasChildren = !!childSections?.length
-              if (hasChildren && childSections) {
-                return (
-                  <li key={section.id} className="space-y-1">
-                    <div className="flex items-center gap-1.5 px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground/80">
-                      <ChevronRight className="h-3 w-3" />
-                      <span className="truncate">{section.label}</span>
-                    </div>
-                    <ul className="ml-3 space-y-1 border-l border-border/60 pl-2.5">
-                      {childSections.map((child) => (
-                        <li key={child.id}>
-                          <button
-                            type="button"
-                            onClick={() => {
-                              setActiveSectionId(child.id)
-                              dispatch({ type: 'FOCUS_PARENT_TASK_SECTION', sectionId: child.id })
-                            }}
-                            aria-current={activeSectionId === child.id ? 'page' : undefined}
-                            className={cn(
-                              'w-full text-left px-2.5 py-1.5 text-[12px] rounded-md transition-colors',
-                              activeSectionId === child.id
-                                ? 'bg-muted text-foreground font-semibold'
-                                : 'cursor-pointer text-foreground/85 hover:text-foreground hover:bg-muted/60',
-                            )}
-                          >
-                            {child.label}
-                          </button>
-                        </li>
-                      ))}
-                    </ul>
-                  </li>
-                )
-              }
-              return (
-                <li key={section.id}>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setActiveSectionId(section.id)
-                      dispatch({ type: 'FOCUS_PARENT_TASK_SECTION', sectionId: section.id })
-                    }}
-                    aria-current={activeSectionId === section.id ? 'page' : undefined}
-                    className={cn(
-                      'w-full text-left px-2.5 py-1.5 text-[12px] rounded-md transition-colors',
-                      activeSectionId === section.id
-                        ? 'bg-muted text-foreground font-semibold'
-                        : 'cursor-pointer text-foreground/85 hover:text-foreground hover:bg-muted/60',
-                    )}
-                  >
-                    {section.label}
-                  </button>
-                </li>
-              )
-            })}
-          </ul>
-        ) : null}
       </li>
     )
   }
