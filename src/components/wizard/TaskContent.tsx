@@ -108,7 +108,6 @@ export function TaskContent() {
   const hasExplicitSections = Boolean(formKey && taskSections[formKey]?.length)
   const isV5NoAnnuityPagedMain =
     variant === 'v5' &&
-    isSplitJourney &&
     activeTask?.formKey === OPEN_ACCOUNTS_FORM_KEY &&
     state.v5NoAnnuityOpenAccountsPage != null
 

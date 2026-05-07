@@ -17,13 +17,9 @@ import { AccountTypePickerDialog } from './AccountTypePickerDialog'
 import type { Selection } from './AccountTypePickerDialog'
 import { spawnOpenAccountChildrenFromSelections } from '@/utils/spawnOpenAccountChildrenFromSelections'
 import {
-  getRegistrationDocuments,
+  getOpenAccountsCoreSupportingDocumentSections,
   getDocSubTypes,
-  partitionRegistrationDocumentsByFulfillment,
-  sortUploadDocumentsForOpenAccounts,
-  getAssigneePartyIdsForClientUploadDoc,
-  getTrustOrganizationIdsForAccountOwners,
-  TRUST_VERIFICATION_DOC_ID,
+  type DocumentRequirementWithSubTypes,
 } from '@/utils/registrationDocuments'
 import type { RegistrationType } from '@/utils/registrationDocuments'
 import {
@@ -50,19 +46,22 @@ import { buildRequiredEsignFormRows } from '@/utils/buildEsignEnvelopeFormRows'
 import { downloadEnvelopeManifest } from '@/utils/downloadEsignEnvelopeManifest'
 import { getEnvelopeDisplayName } from '@/utils/deriveEnvelopeDisplayName'
 import { EsignEnvelopeDrawer } from '@/components/wizard/forms/EsignEnvelopeDrawer'
-import { getRegistrationTypesForOpenAccountsUploadSection } from '@/utils/openAccountsDocumentValidation'
 import { getAccountOwnersMissingKyc } from '@/utils/accountOpeningOwnerKyc'
 import { getAccountOpeningChildSubmissionIssues } from '@/utils/accountOpeningChildProgress'
 import {
   getRelevantOpenAccountsTask,
   isAnnuityExternalPlatformOpenAccountsTask,
   OPEN_ACCOUNTS_FORM_KEY,
-  OPEN_ACCOUNTS_WITH_ANNUITY_FORM_KEY,
 } from '@/utils/openAccountsTaskContext'
 import { useOpenAccountsTaskOverride, useOpenAccountsVariant } from '@/components/wizard/openAccountsVariantContext'
 import { mergeFeatureRequests } from '@/types/featureRequests'
 import { getEsignEnvelopeStatus, ESIGN_ENVELOPE_STATUS_LABELS } from '@/utils/esignEnvelopeStatus'
 import type { EsignEnvelopeHistoryEvent, EsignEnvelopeStatus, EsignSignerStatus } from '@/types/esignEnvelope'
+import {
+  defaultSupportingDocumentStatus,
+  nextStatusAfterUpload,
+  type SupportingDocumentStatus,
+} from '@/utils/supportingDocuments'
 import { CompleteAccountOpeningConfirmModal } from '@/components/wizard/WizardFooter'
 import { Netx360HandoffSection, Netx360SubmitSection } from './Netx360HandoffSection'
 import { DocumentUploadInstancesTable } from './DocumentUploadInstancesTable'
@@ -80,6 +79,9 @@ interface DocInstance {
   assignedTo: string
   fileName?: string
   subType?: string
+  customSubTypeLabel?: string
+  status?: SupportingDocumentStatus
+  requestedBy?: string
 }
 
 type OwnerSlot = { partyId?: string; type: string }
@@ -220,7 +222,6 @@ export function OpenAccountsForm() {
   const isVersion4 = openAccountsVariant === 'v4'
   const isColoredBackgroundVariant = openAccountsVariant === 'v3' || openAccountsVariant === 'v4'
   const isCardVariant = isVersion2 || isColoredBackgroundVariant
-  const isBorderedCardVariant = isVersion2 || isVersion4
   const subsectionTitleClass =
     openAccountsVariant === 'v5'
       ? 'text-base font-semibold leading-snug'
@@ -246,21 +247,15 @@ export function OpenAccountsForm() {
   const openAccountsTaskId = openAccountsTask?.id ?? 'open-accounts'
   const sectionId = (id: string) => (taskOverride?.idPrefix ? `${taskOverride.idPrefix}${id}` : id)
   const externalAnnuityPlatform = isAnnuityExternalPlatformOpenAccountsTask(openAccountsTask)
-  const isSplitOpenAccountsJourney = useMemo(
-    () =>
-      state.tasks.some((t) => t.formKey === OPEN_ACCOUNTS_FORM_KEY) &&
-      state.tasks.some((t) => t.formKey === OPEN_ACCOUNTS_WITH_ANNUITY_FORM_KEY),
-    [state.tasks],
-  )
   const v5SubPage = state.v5NoAnnuityOpenAccountsPage
   const isV5NoAnnuityPaged =
     openAccountsVariant === 'v5' &&
     !externalAnnuityPlatform &&
-    isSplitOpenAccountsJourney &&
     openAccountsTask?.formKey === OPEN_ACCOUNTS_FORM_KEY &&
     v5SubPage != null
   const showV5Instructions = !isV5NoAnnuityPaged || v5SubPage === 'instructions'
   const showV5Kyc = !isV5NoAnnuityPaged || v5SubPage === 'kyc'
+  const showV5Documents = !isV5NoAnnuityPaged || v5SubPage === 'documents'
   const showV5Envelopes = !isV5NoAnnuityPaged || v5SubPage === 'envelopes'
   const { data, updateField } = useTaskData(openAccountsTaskId)
   const [pickerOpen, setPickerOpen] = useState(false)
@@ -312,7 +307,6 @@ export function OpenAccountsForm() {
     setKycAddContactBump((b) => b + 1)
   }
   const accountOpeningChildren = (openAccountsTask?.children ?? []).filter((c) => c.childType === 'account-opening')
-  const householdMembers = state.relatedParties.filter((p) => p.type === 'household_member' && !p.isHidden)
 
   const kycOwnerParties = useMemo(() => {
     const byId = new Map<string, RelatedParty>()
@@ -328,20 +322,10 @@ export function OpenAccountsForm() {
     return Array.from(byId.values())
   }, [accountOpeningChildren, state.relatedParties, state.taskData])
 
-  const childRegistrationTypes = useMemo<RegistrationType[]>(
-    () => getRegistrationTypesForOpenAccountsUploadSection(accountOpeningChildren, state.taskData),
-    [accountOpeningChildren, state.taskData],
+  const supportingDocSections = useMemo<DocumentRequirementWithSubTypes[]>(
+    () => getOpenAccountsCoreSupportingDocumentSections(),
+    [],
   )
-
-  const registrationDocsBundle = useMemo(
-    () => getRegistrationDocuments(childRegistrationTypes, state.relatedParties),
-    [childRegistrationTypes, state.relatedParties],
-  )
-
-  const uploadDocs = useMemo(() => {
-    const { upload } = partitionRegistrationDocumentsByFulfillment(registrationDocsBundle)
-    return sortUploadDocumentsForOpenAccounts(upload)
-  }, [registrationDocsBundle])
 
   const ownerPartyIdsByAccountChild = useMemo(() => {
     const map = new Map<string, string[]>()
@@ -354,22 +338,22 @@ export function OpenAccountsForm() {
     return map
   }, [accountOpeningChildren, state.taskData])
 
-  // Collect all owner party IDs across all child accounts for smart dedup
-  const allOwnerPartyIds = useMemo(() => {
-    const ids = new Set<string>()
-    for (const ownerIds of ownerPartyIdsByAccountChild.values()) {
-      for (const id of ownerIds) ids.add(id)
-    }
-    return ids
-  }, [ownerPartyIdsByAccountChild])
-
-  /** Trust entity(ies) selected as owner(s)—assignee dropdown for trust verification uploads. */
-  const trustVerificationAssigneeParties = useMemo(
-    () =>
-      getTrustOrganizationIdsForAccountOwners(state.relatedParties, allOwnerPartyIds)
-        .map((id) => state.relatedParties.find((p) => p.id === id))
-        .filter((p): p is RelatedParty => Boolean(p)),
-    [state.relatedParties, allOwnerPartyIds],
+  const supportingDocumentAssignees = useMemo(
+    () => [
+      ...state.relatedParties
+        .filter((p) => !p.isHidden)
+        .map((p) => ({
+          id: p.id,
+          name: p.name?.trim() || p.organizationName?.trim() || p.role || 'Party',
+        })),
+      ...accountOpeningChildren.map((child) => ({
+        id: `workflow:${child.id}`,
+        name: `${child.name} workflow`,
+      })),
+      { id: 'workflow:kyc', name: 'KYC workflow' },
+      { id: 'workflow:account-opening', name: 'Account Opening workflow' },
+    ],
+    [state.relatedParties, accountOpeningChildren],
   )
 
   const requiredEsignFormRows = useMemo(
@@ -717,7 +701,7 @@ export function OpenAccountsForm() {
 
   return (
     <div className="space-y-7">
-      {showV5Instructions ? (
+      {showV5Instructions || showV5Documents ? (
       <div
         className={cn(
           isCardVariant &&
@@ -735,7 +719,7 @@ export function OpenAccountsForm() {
             ),
         )}
       >
-      {isCardVariant || !externalAnnuityPlatform ? (
+      {showV5Instructions && (isCardVariant || !externalAnnuityPlatform) ? (
         isCardVariant ? (
           <div
             className={cn(
@@ -760,6 +744,7 @@ export function OpenAccountsForm() {
           </div>
         )
       ) : null}
+      {showV5Instructions ? (
       <section id={sectionId('oa-accounts')} className="scroll-mt-16">
         <div
           className={cn(
@@ -891,8 +876,9 @@ export function OpenAccountsForm() {
           child={timelineChild}
         />
       </section>
+      ) : null}
 
-      {externalAnnuityPlatform ? (
+      {showV5Instructions && externalAnnuityPlatform ? (
         <>
           <section id={sectionId('oa-netx360-submit')} className="scroll-mt-16">
             <div className="mb-4">
@@ -913,7 +899,7 @@ export function OpenAccountsForm() {
       ) : null}
 
       {/* Section 4: Supporting Documents */}
-      {!externalAnnuityPlatform ? (
+      {!externalAnnuityPlatform && showV5Documents ? (
       <section id={sectionId('oa-documents')} className="scroll-mt-16">
         <div
           className={cn(
@@ -925,23 +911,16 @@ export function OpenAccountsForm() {
             Supporting Documents
           </h3>
           <p className={subsectionBodyClass}>
-            {externalAnnuityPlatform ? (
-              <>
-                Client file uploads (for example ID or trust documents) go here. Firm and custodian forms for this path
-                are completed in your external platform—not in this demo.
-              </>
-            ) : (
-              <>
-                Upload client-provided documents (for example ID or trust documents). Firm and custodian forms are handled in{' '}
-                <span className="font-medium text-foreground">Envelopes</span>, not here.
-              </>
-            )}
+            Upload client-provided documents that may support account opening, identity verification, or custodian review.
+            Documents are optional unless requested during review. Firm and custodian-generated forms are handled in
+            {' '}
+            <span className="font-medium text-foreground">Envelopes</span>.
           </p>
         </div>
-        {accountOpeningChildren.length > 0 && uploadDocs.length > 0 ? (
+        {supportingDocSections.length > 0 ? (
           <div className="space-y-2">
             <div className="space-y-4">
-            {uploadDocs.map((doc) => {
+            {supportingDocSections.map((doc) => {
               const instances = ((data[`doc-instances-${doc.id}`] as DocInstance[] | undefined) ?? [])
 
               const updateInstances = (next: DocInstance[]) => {
@@ -959,37 +938,25 @@ export function OpenAccountsForm() {
                 input.onchange = (e) => {
                   const file = (e.target as HTMLInputElement).files?.[0]
                   if (file) {
-                    updateInstance(instanceId, { fileName: file.name })
+                    const prior = instances.find((i) => i.id === instanceId)
+                    updateInstance(instanceId, {
+                      fileName: file.name,
+                      status: nextStatusAfterUpload(prior?.status),
+                    })
                   }
                 }
                 input.click()
               }
 
-              // Auto-generate rows: same rules as account-opening Documents step (per doc type).
-              const ownerIds = getAssigneePartyIdsForClientUploadDoc(
-                doc.id,
-                state.relatedParties,
-                allOwnerPartyIds,
-              )
-              const existingAssignees = new Set(instances.map((i) => i.assignedTo))
-              const missing = ownerIds.filter((id) => !existingAssignees.has(id))
-              if (missing.length > 0) {
-                const newInstances = [
-                  ...instances,
-                  ...missing.map((pid) => ({
-                    id: `di-${Date.now()}-${Math.random().toString(36).slice(2, 6)}-${pid.slice(-4)}`,
-                    docTypeId: doc.id,
-                    assignedTo: pid,
-                  })),
-                ]
-                // Schedule the update (can't set state during render)
-                setTimeout(() => updateInstances(newInstances), 0)
-              }
-
               const addInstance = () => {
                 updateInstances([
                   ...instances,
-                  { id: `di-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`, docTypeId: doc.id, assignedTo: '' },
+                  {
+                    id: `di-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+                    docTypeId: doc.id,
+                    assignedTo: '',
+                    status: defaultSupportingDocumentStatus(),
+                  },
                 ])
               }
 
@@ -997,11 +964,6 @@ export function OpenAccountsForm() {
                 updateInstances(instances.filter((i) => i.id !== instanceId))
               }
               const subTypes = getDocSubTypes(doc.id)
-              const assigneeParties =
-                doc.id === TRUST_VERIFICATION_DOC_ID
-                  ? trustVerificationAssigneeParties
-                  : householdMembers
-
               return (
                 <DocumentUploadInstancesTable
                   key={doc.id}
@@ -1009,8 +971,9 @@ export function OpenAccountsForm() {
                   docDescription={doc.description}
                   instances={instances}
                   subTypes={subTypes}
-                  assignees={assigneeParties.map((p) => ({ id: p.id, name: p.name }))}
-                  emptyMessage="No documents added yet. Click “Add” to upload and assign to a member."
+                  assignees={supportingDocumentAssignees}
+                  emptyMessage="No documents added yet."
+                  emptyHelper="Click Add to upload an optional document."
                   onAdd={addInstance}
                   onRemove={removeInstance}
                   onUpload={handleFileSelect}
@@ -1023,11 +986,7 @@ export function OpenAccountsForm() {
         ) : (
           <div className="rounded-lg border border-dashed border-border p-4 text-center">
             <p className="text-sm text-muted-foreground">
-              {accountOpeningChildren.length === 0
-                ? 'Add accounts above to see required documents.'
-                : externalAnnuityPlatform
-                  ? 'No client uploads required for these accounts. Use your external platform for firm and custodian forms.'
-                  : 'No client uploads required for these accounts. Use eSign envelopes below for firm and custodian forms.'}
+              No documents added yet.
             </p>
           </div>
         )}
@@ -1395,8 +1354,9 @@ export function OpenAccountsForm() {
                 Envelopes
               </h4>
               <p className={cardGroupIntroClass}>
-                Create eSign envelopes for client signatures. Required firm and custodian forms are automatically grouped by
-                account. If delivery is set to in person or mail, those forms become wet-signed and must be uploaded below.
+                Create eSignature envelopes for client signatures. Firm and custodian forms are automatically grouped by
+                account. For in-person or mail delivery, signed documents can be uploaded manually instead of using
+                eSignature.
               </p>
             </>
           ) : (
@@ -1408,8 +1368,9 @@ export function OpenAccountsForm() {
                 <h2 className="text-2xl font-semibold">Envelopes</h2>
               </div>
               <p className="text-base text-muted-foreground mt-2">
-                Create eSign envelopes for client signatures. Required firm and custodian forms are automatically grouped by
-                account. If delivery is set to in person or mail, those forms become wet-signed and must be uploaded below.
+                Create eSignature envelopes for client signatures. Firm and custodian forms are automatically grouped by
+                account. For in-person or mail delivery, signed documents can be uploaded manually instead of using
+                eSignature.
               </p>
             </>
           )}

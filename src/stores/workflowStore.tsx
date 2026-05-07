@@ -165,7 +165,7 @@ function markTaskEdited(allTasks: Task[], formKey: string): Task[] {
   return allTasks.map((t) => (t.formKey === formKey ? { ...t, edited: true } : t))
 }
 
-type V5NoAnnuityPage = 'instructions' | 'kyc' | 'envelopes'
+type V5NoAnnuityPage = 'instructions' | 'kyc' | 'documents' | 'envelopes'
 
 function getPersistedOpenAccountsVariant(): 'v1' | 'v2' | 'v3' | 'v4' | 'v5' {
   if (typeof window === 'undefined') return 'v1'
@@ -187,7 +187,7 @@ function nextV5NoAnnuityPageForActiveTask(
   opts?: { enteringOpenAccountsFromAnnuity?: boolean },
 ): V5NoAnnuityPage | null {
   const variant = getPersistedOpenAccountsVariant()
-  if (variant !== 'v5' || !isSplitOpenAccountsJourney(state)) {
+  if (variant !== 'v5') {
     return null
   }
   const task = state.tasks.find((t) => t.id === newTaskId)
@@ -600,8 +600,8 @@ function workflowReducer(state: WorkflowState, action: WorkflowAction): Workflow
       const oaSeed = baseTasks.find((t) => t.id === 'open-accounts')!
 
       if (multipleAccounts && hasAnnuity) {
-        // Both paths under one Account Opening action: with-annuity first, then without.
-        actionsForState = [collectDataAction, { id: 'account-opening', title: 'Account Opening', order: 2 }]
+        // Both paths under one Open Accounts action: with-annuity first, then without.
+        actionsForState = [collectDataAction, { id: 'account-opening', title: 'Open Accounts', order: 2 }]
         const openWith: Task = {
           id: 'open-accounts-annuity',
           title: 'Open Accounts',
@@ -618,7 +618,7 @@ function workflowReducer(state: WorkflowState, action: WorkflowAction): Workflow
         tasksForState = [...collect, openWith, openNo]
         extraTaskData = { 'open-accounts-annuity': { additionalInstructions: seedOpenAccountsAdditionalInstructions } }
       } else if (!multipleAccounts && hasAnnuity) {
-        actionsForState = [collectDataAction, { id: 'account-opening', title: 'Account Opening', order: 2 }]
+        actionsForState = [collectDataAction, { id: 'account-opening', title: 'Open Accounts', order: 2 }]
         const openAnnuity: Task = {
           id: 'open-accounts-annuity',
           title: 'Open Accounts',
@@ -678,7 +678,7 @@ function workflowReducer(state: WorkflowState, action: WorkflowAction): Workflow
         activeTask?.formKey === OPEN_ACCOUNTS_FORM_KEY &&
         state.v5NoAnnuityOpenAccountsPage != null
       ) {
-        const order: V5NoAnnuityPage[] = ['instructions', 'kyc', 'envelopes']
+        const order: V5NoAnnuityPage[] = ['instructions', 'kyc', 'documents', 'envelopes']
         const i = order.indexOf(state.v5NoAnnuityOpenAccountsPage)
         if (i >= 0 && i < order.length - 1) {
           return { ...state, v5NoAnnuityOpenAccountsPage: order[i + 1] }
@@ -706,7 +706,7 @@ function workflowReducer(state: WorkflowState, action: WorkflowAction): Workflow
         activeTask?.formKey === OPEN_ACCOUNTS_FORM_KEY &&
         state.v5NoAnnuityOpenAccountsPage != null
       ) {
-        const order: V5NoAnnuityPage[] = ['instructions', 'kyc', 'envelopes']
+        const order: V5NoAnnuityPage[] = ['instructions', 'kyc', 'documents', 'envelopes']
         const i = order.indexOf(state.v5NoAnnuityOpenAccountsPage)
         if (i > 0) {
           return { ...state, v5NoAnnuityOpenAccountsPage: order[i - 1] }

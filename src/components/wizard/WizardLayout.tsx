@@ -573,7 +573,7 @@ function WizardLayoutInner() {
 
   const getActionTitle = (actionId: string | undefined) => {
     if (!actionId) return undefined
-    if (isSplitJourney && isAccountOpeningActionId(actionId)) return 'Account Opening'
+    if (isSplitJourney && isAccountOpeningActionId(actionId)) return 'Open Accounts'
     return state.actions.find((a) => a.id === actionId)?.title
   }
   const getTaskBreadcrumbLabel = (task: Task | undefined) => {

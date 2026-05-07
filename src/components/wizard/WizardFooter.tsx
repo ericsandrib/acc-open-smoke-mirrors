@@ -9,7 +9,6 @@ import {
   isAnnuityExternalPlatformOpenAccountsTask,
   isOpenAccountsTask,
   OPEN_ACCOUNTS_FORM_KEY,
-  OPEN_ACCOUNTS_WITH_ANNUITY_FORM_KEY,
 } from '@/utils/openAccountsTaskContext'
 import { useOpenAccountsVariant } from '@/components/wizard/openAccountsVariantContext'
 
@@ -108,12 +107,8 @@ export function WizardFooter() {
   const activeStatus = getActiveTaskStatus(state)
   const isSubmitted = state.submittedTaskIds.includes(state.activeTaskId)
   const active = state.tasks.find((t) => t.id === state.activeTaskId)
-  const isSplitOpenAccountsJourney =
-    state.tasks.some((t) => t.formKey === OPEN_ACCOUNTS_FORM_KEY) &&
-    state.tasks.some((t) => t.formKey === OPEN_ACCOUNTS_WITH_ANNUITY_FORM_KEY)
   const v5OpenAccountsMoreSubPages =
     openAccountsVariant === 'v5' &&
-    isSplitOpenAccountsJourney &&
     active?.formKey === OPEN_ACCOUNTS_FORM_KEY &&
     state.v5NoAnnuityOpenAccountsPage != null &&
     state.v5NoAnnuityOpenAccountsPage !== 'envelopes'

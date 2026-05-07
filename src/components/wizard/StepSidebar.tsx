@@ -192,7 +192,7 @@ type DisplayTaskNode = {
   /** Underlying task ids that this display node represents (1:1 in default/v1, both in v2). */
   underlyingTaskIds: string[]
   /** v5: separate “page” within the no-annuity Open Accounts task. */
-  v5NoAnnuityPage?: 'instructions' | 'kyc' | 'envelopes'
+  v5NoAnnuityPage?: 'instructions' | 'kyc' | 'documents' | 'envelopes'
 }
 
 /** One row in the action task list: either a single task or a v5 collapsible section with nested tasks. */
@@ -212,7 +212,7 @@ type DisplayActionNode = {
  * - In a non-split journey (only one of the two open-accounts form keys) the structure is unchanged.
  * - In v1 split: one Account Opening action with two tasks; rows are labeled by annuity path.
  * - In v2/v3/v4 split: keep both open-accounts tasks visible (renamed labels on each row).
- * - In v5 split: collapsible “Accounts with Annuities” first, then “Accounts without Annuities”.
+ * - In v5 split: collapsible “Accounts without Annuities” first, then “Accounts with Annuities”.
  *   Without-annuity side uses three navigator rows (Account Instructions, KYC Verification, Envelopes)
  *   that all bind to the same underlying task and swap full-page `OpenAccountsForm` content.
  */
@@ -237,10 +237,54 @@ function buildDisplayActions(state: WorkflowState, variant: OpenAccountsVariant)
   })
 
   if (!isSplit) {
+    const noAnnuityOnlyTaskId =
+      variant === 'v5'
+        ? aoTasks.find((t) => t.formKey === OPEN_ACCOUNTS_FORM_KEY)?.id
+        : undefined
     return visibleActions.map((action) => ({
       id: action.id,
       title: action.title,
-      taskRows: visibleTasks(action).map((t) => toTaskRow(t, t.title)),
+      taskRows:
+        variant === 'v5' && action.id === 'account-opening' && noAnnuityOnlyTaskId
+          ? [
+              {
+                type: 'task',
+                task: {
+                  id: 'v5-noann-account-instructions',
+                  label: 'Account Instructions',
+                  underlyingTaskIds: [noAnnuityOnlyTaskId],
+                  v5NoAnnuityPage: 'instructions',
+                },
+              },
+              {
+                type: 'task',
+                task: {
+                  id: 'v5-noann-kyc-verification',
+                  label: 'KYC Verification',
+                  underlyingTaskIds: [noAnnuityOnlyTaskId],
+                  v5NoAnnuityPage: 'kyc',
+                },
+              },
+              {
+                type: 'task',
+                task: {
+                  id: 'v5-noann-supporting-documents',
+                  label: 'Supporting Documents',
+                  underlyingTaskIds: [noAnnuityOnlyTaskId],
+                  v5NoAnnuityPage: 'documents',
+                },
+              },
+              {
+                type: 'task',
+                task: {
+                  id: 'v5-noann-envelopes',
+                  label: 'Envelopes',
+                  underlyingTaskIds: [noAnnuityOnlyTaskId],
+                  v5NoAnnuityPage: 'envelopes',
+                },
+              },
+            ]
+          : visibleTasks(action).map((t) => toTaskRow(t, t.title)),
     }))
   }
 
@@ -289,6 +333,12 @@ function buildDisplayActions(state: WorkflowState, variant: OpenAccountsVariant)
               v5NoAnnuityPage: 'kyc',
             },
             {
+              id: 'v5-noann-supporting-documents',
+              label: 'Supporting Documents',
+              underlyingTaskIds: [noAnnuityOpenAccountsTaskId],
+              v5NoAnnuityPage: 'documents',
+            },
+            {
               id: 'v5-noann-envelopes',
               label: 'Envelopes',
               underlyingTaskIds: [noAnnuityOpenAccountsTaskId],
@@ -300,7 +350,7 @@ function buildDisplayActions(state: WorkflowState, variant: OpenAccountsVariant)
 
   const accountOpeningGroup: DisplayActionNode = {
     id: 'account-opening',
-    title: 'Account Opening',
+    title: 'Open Accounts',
     taskRows:
       variant === 'v5'
         ? [v5WithAnnuityGroup, v5WithoutAnnuityGroup]
