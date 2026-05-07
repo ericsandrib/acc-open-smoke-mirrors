@@ -22,6 +22,7 @@ import { toast } from 'sonner'
 import { useWorkflow } from '@/stores/workflowStore'
 import { useServicing } from '@/stores/servicingStore'
 import { relationships } from '@/data/relationships'
+import { useOpenAccountsVariantControls } from '@/components/wizard/openAccountsVariantContext'
 
 interface ComposeDialogProps {
   onClose: () => void
@@ -109,6 +110,8 @@ export function ComposeDialog({ onClose }: ComposeDialogProps) {
   }
 
   const { dispatch } = useWorkflow()
+  const { variant: wizardOpenAccountsVariant } = useOpenAccountsVariantControls()
+  const hideActionSettings = wizardOpenAccountsVariant === 'v6'
   const { currentLiveJourney, saveCurrentJourney } = useServicing()
   const location = useLocation()
   const navigate = useNavigate()
@@ -129,8 +132,9 @@ export function ComposeDialog({ onClose }: ComposeDialogProps) {
   const canSubmit =
     actionType === 'client-onboarding' &&
     relationshipId !== '' &&
-    (openMultipleAccounts === 'yes' || openMultipleAccounts === 'no') &&
-    (openAnnuityAccount === 'yes' || openAnnuityAccount === 'no')
+    (hideActionSettings ||
+      ((openMultipleAccounts === 'yes' || openMultipleAccounts === 'no') &&
+        (openAnnuityAccount === 'yes' || openAnnuityAccount === 'no')))
 
   function handleSnooze() {
     toast.message('Snooze scheduled (demo)', {
@@ -186,12 +190,19 @@ export function ComposeDialog({ onClose }: ComposeDialogProps) {
       journeyName: name,
       journeyId: newJourneyId,
       assignedTo: undefined,
-      journeyOnboardingConfig: {
-        office: '',
-        investmentProfessionalId: '',
-        openMultipleAccounts: openMultipleAccounts === 'yes',
-        openAnnuityAccount: openAnnuityAccount === 'yes',
-      },
+      journeyOnboardingConfig: hideActionSettings
+        ? {
+            office: '',
+            investmentProfessionalId: '',
+            openMultipleAccounts: true,
+            openAnnuityAccount: true,
+          }
+        : {
+            office: '',
+            investmentProfessionalId: '',
+            openMultipleAccounts: openMultipleAccounts === 'yes',
+            openAnnuityAccount: openAnnuityAccount === 'yes',
+          },
     })
     toast.success(`Journey "${name}" created for ${relationship.name}`)
 
@@ -228,8 +239,9 @@ export function ComposeDialog({ onClose }: ComposeDialogProps) {
           <div className="min-w-0 flex-1">
             <h2 className="text-lg font-semibold text-[var(--text-primary)]">New journey</h2>
             <p className="mt-1 text-sm text-muted-foreground">
-              Select the relationship and action type, then complete any settings that appear for that action before you
-              start.
+              {hideActionSettings
+                ? 'Select the relationship and action type, then start.'
+                : 'Select the relationship and action type, then complete any settings that appear for that action before you start.'}
             </p>
           </div>
           <Button
@@ -303,7 +315,8 @@ export function ComposeDialog({ onClose }: ComposeDialogProps) {
               </div>
             </section>
 
-            {/* Settings vary by action type — client onboarding fields shown when that action is selected */}
+            {/* Settings vary by action type — v6: decision lives in the wizard, not here */}
+            {!hideActionSettings ? (
             <section className="space-y-4">
               <div>
                 <h3 className="text-sm font-semibold text-foreground">Action settings</h3>
@@ -363,6 +376,7 @@ export function ComposeDialog({ onClose }: ComposeDialogProps) {
                 </div>
               )}
             </section>
+            ) : null}
           </div>
         </div>
 
