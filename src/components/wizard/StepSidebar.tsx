@@ -207,7 +207,7 @@ type DisplayTaskNode = {
   underlyingTaskIds: string[]
   /** v5: separate “page” within the no-annuity Open Accounts task. */
   v5NoAnnuityPage?: 'instructions' | 'kyc' | 'documents' | 'envelopes'
-  /** v6: synthetic row that merges with-annuity + no-annuity instruction surfaces. */
+  /** v6: “Account Setup” row binds to the no-annuity task (combined-instructions page is no-annuity only). */
   v6CombinedInstructions?: boolean
 }
 
@@ -228,8 +228,9 @@ type DisplayActionNode = {
  * - In a non-split journey (only one of the two open-accounts form keys) the structure is unchanged.
  * - In v1 split: one Account Opening action with two tasks; rows are labeled by annuity path.
  * - In v2/v3/v4 split: keep both open-accounts tasks visible (renamed labels on each row).
- * - In v5 split: collapsible “Accounts without Annuities” first, then “Accounts with Annuities”.
- *   Without-annuity side uses three navigator rows (Account Instructions, KYC Verification, Envelopes)
+ * - In v5 split: collapsible “Non-Annuity Accounts” first, then “Annuity Accounts”.
+ * - In v6 split: optional flat “Annuity Accounts Setup” row after non-annuity (when annuity path is enabled).
+ *   Without-annuity side uses navigator rows (Account Setup, KYC Initiation, Supporting Documents, Envelopes)
  *   that all bind to the same underlying task and swap full-page `OpenAccountsForm` content.
  */
 function buildDisplayActions(state: WorkflowState, variant: OpenAccountsVariant): DisplayActionNode[] {
@@ -267,7 +268,7 @@ function buildDisplayActions(state: WorkflowState, variant: OpenAccountsVariant)
                 type: 'task',
                 task: {
                   id: 'v5-noann-account-instructions',
-                  label: 'Account Instructions',
+                  label: 'Account Setup',
                   underlyingTaskIds: [noAnnuityOnlyTaskId],
                   v5NoAnnuityPage: 'instructions',
                 },
@@ -276,7 +277,7 @@ function buildDisplayActions(state: WorkflowState, variant: OpenAccountsVariant)
                 type: 'task',
                 task: {
                   id: 'v5-noann-kyc-verification',
-                  label: 'KYC Verification',
+                  label: 'KYC Initiation',
                   underlyingTaskIds: [noAnnuityOnlyTaskId],
                   v5NoAnnuityPage: 'kyc',
                 },
@@ -321,10 +322,10 @@ function buildDisplayActions(state: WorkflowState, variant: OpenAccountsVariant)
   const v5WithAnnuityGroup: DisplayTaskRow = {
     type: 'group',
     id: 'v5-accounts-with-annuity',
-    label: 'Accounts with Annuities',
+    label: 'Annuity Accounts',
     tasks: withAnnuityTasks.map((t) => ({
       id: t.id,
-      label: t.formKey === OPEN_ACCOUNTS_WITH_ANNUITY_FORM_KEY ? 'Account Instructions' : t.title,
+      label: t.formKey === OPEN_ACCOUNTS_WITH_ANNUITY_FORM_KEY ? 'Account Setup' : t.title,
       underlyingTaskIds: [t.id],
     })),
   }
@@ -332,19 +333,54 @@ function buildDisplayActions(state: WorkflowState, variant: OpenAccountsVariant)
   const v5WithoutAnnuityGroup: DisplayTaskRow = {
     type: 'group',
     id: 'v5-accounts-without-annuity',
-    label: 'Accounts without Annuities',
+    label: 'Non-Annuity Accounts',
     tasks:
       noAnnuityOpenAccountsTaskId != null
         ? [
             {
               id: 'v5-noann-account-instructions',
-              label: 'Account Instructions',
+              label: 'Account Setup',
               underlyingTaskIds: [noAnnuityOpenAccountsTaskId],
               v5NoAnnuityPage: 'instructions',
             },
             {
               id: 'v5-noann-kyc-verification',
-              label: 'KYC Verification',
+              label: 'KYC Initiation',
+              underlyingTaskIds: [noAnnuityOpenAccountsTaskId],
+              v5NoAnnuityPage: 'kyc',
+            },
+            {
+              id: 'v5-noann-supporting-documents',
+              label: 'Supporting Documents',
+              underlyingTaskIds: [noAnnuityOpenAccountsTaskId],
+              v5NoAnnuityPage: 'documents',
+            },
+            {
+              id: 'v5-noann-envelopes',
+              label: 'Envelopes',
+              underlyingTaskIds: [noAnnuityOpenAccountsTaskId],
+              v5NoAnnuityPage: 'envelopes',
+            },
+          ]
+        : [],
+  }
+
+  const v6WithoutAnnuityGroup: DisplayTaskRow = {
+    type: 'group',
+    id: 'v6-accounts-without-annuity',
+    label: 'Non-Annuity Accounts',
+    tasks:
+      noAnnuityOpenAccountsTaskId != null
+        ? [
+            {
+              id: 'v6-account-instructions',
+              label: 'Account Setup',
+              underlyingTaskIds: [noAnnuityOpenAccountsTaskId],
+              v6CombinedInstructions: true,
+            },
+            {
+              id: 'v5-noann-kyc-verification',
+              label: 'KYC Initiation',
               underlyingTaskIds: [noAnnuityOpenAccountsTaskId],
               v5NoAnnuityPage: 'kyc',
             },
@@ -372,57 +408,23 @@ function buildDisplayActions(state: WorkflowState, variant: OpenAccountsVariant)
         ? [v5WithoutAnnuityGroup, v5WithAnnuityGroup]
         : variant === 'v6'
           ? [
-              ...(noAnnuityOpenAccountsTaskId != null
+              v6WithoutAnnuityGroup,
+              ...(withAnnuityTasks[0]?.id
                 ? [
                     {
                       type: 'task' as const,
                       task: {
-                        id: 'v6-account-instructions',
-                        label: 'Account Instructions',
-                        underlyingTaskIds: [
-                          ...(withAnnuityTasks[0]?.id ? [withAnnuityTasks[0].id] : []),
-                          noAnnuityOpenAccountsTaskId,
-                        ],
-                        v6CombinedInstructions: true,
-                      },
-                    },
-                  ]
-                : []),
-              ...(noAnnuityOpenAccountsTaskId != null
-                ? [
-                    {
-                      type: 'task' as const,
-                      task: {
-                        id: 'v5-noann-kyc-verification',
-                        label: 'KYC Verification',
-                        underlyingTaskIds: [noAnnuityOpenAccountsTaskId],
-                        v5NoAnnuityPage: 'kyc' as const,
-                      },
-                    },
-                    {
-                      type: 'task' as const,
-                      task: {
-                        id: 'v5-noann-supporting-documents',
-                        label: 'Supporting Documents',
-                        underlyingTaskIds: [noAnnuityOpenAccountsTaskId],
-                        v5NoAnnuityPage: 'documents' as const,
-                      },
-                    },
-                    {
-                      type: 'task' as const,
-                      task: {
-                        id: 'v5-noann-envelopes',
-                        label: 'Envelopes',
-                        underlyingTaskIds: [noAnnuityOpenAccountsTaskId],
-                        v5NoAnnuityPage: 'envelopes' as const,
+                        id: 'v6-annuity-accounts-setup',
+                        label: 'Annuity Accounts Setup',
+                        underlyingTaskIds: [withAnnuityTasks[0].id],
                       },
                     },
                   ]
                 : []),
             ]
         : [
-            ...withAnnuityTasks.map((t) => toTaskRow(t, 'Accounts with Annuities')),
-            ...noAnnuityTasks.map((t) => toTaskRow(t, 'Accounts without Annuities')),
+            ...withAnnuityTasks.map((t) => toTaskRow(t, 'Annuity Accounts')),
+            ...noAnnuityTasks.map((t) => toTaskRow(t, 'Non-Annuity Accounts')),
           ],
   }
 
@@ -448,6 +450,8 @@ export function StepSidebar() {
   const navigate = useNavigate()
   const variant = useOpenAccountsVariant()
   const { variant: selectedVariant } = useOpenAccountsVariantControls()
+  const sidebarGroupHeaderPrimary =
+    selectedVariant === 'v5' || selectedVariant === 'v6'
   const [exitToOnboardingOpen, setExitToOnboardingOpen] = useState(false)
   /** v5 collapsible task sections in the pizza tracker; default expanded */
   const [v5GroupOpen, setV5GroupOpen] = useState<Record<string, boolean>>({})
@@ -526,7 +530,13 @@ export function StepSidebar() {
         ? baseTaskActive && state.v5NoAnnuityOpenAccountsPage === displayTask.v5NoAnnuityPage
         : baseTaskActive
     return (
-      <li key={displayTask.id}>
+      <li
+        key={displayTask.id}
+        className={cn(
+          displayTask.id === 'v6-annuity-accounts-setup' &&
+            'motion-safe:animate-in motion-safe:fade-in motion-safe:zoom-in-[0.99] motion-safe:duration-300',
+        )}
+      >
         <button
           type="button"
           onClick={() => {
@@ -550,7 +560,7 @@ export function StepSidebar() {
           aria-current={isActiveTask ? 'page' : undefined}
           className={cn(
             'w-full text-left pr-3 py-2.5 rounded-lg text-sm font-medium flex items-center justify-between gap-2 transition-colors',
-            nestedInV5Group ? 'pl-9' : 'pl-12',
+            nestedInV5Group ? 'pl-2' : 'pl-12',
             isActiveTask ? 'bg-accent/60 text-foreground' : 'hover:bg-muted/50 text-foreground',
           )}
         >
@@ -607,13 +617,21 @@ export function StepSidebar() {
                       type="button"
                       onClick={() => toggleV5Group(row.id)}
                       aria-expanded={expanded}
-                      className="flex w-full items-center justify-start rounded-lg py-2 pl-8 pr-3 text-left text-xs font-medium text-muted-foreground transition-colors hover:bg-muted/50 hover:text-muted-foreground"
+                      className={cn(
+                        'flex w-full items-center justify-start rounded-lg py-2 pl-12 pr-3 text-left text-sm font-medium transition-colors hover:bg-muted/50',
+                        sidebarGroupHeaderPrimary
+                          ? 'text-foreground hover:text-foreground'
+                          : 'text-muted-foreground hover:text-muted-foreground',
+                      )}
                     >
                       <span className="inline-flex min-w-0 max-w-full items-center gap-1">
                         <span className="min-w-0 truncate">{row.label}</span>
                         <ChevronDown
                           className={cn(
-                            'h-3.5 w-3.5 shrink-0 text-muted-foreground/90 transition-transform',
+                            'h-3.5 w-3.5 shrink-0 transition-transform',
+                            sidebarGroupHeaderPrimary
+                              ? 'text-foreground/80'
+                              : 'text-muted-foreground/90',
                             !expanded && '-rotate-90',
                           )}
                           aria-hidden
@@ -621,7 +639,7 @@ export function StepSidebar() {
                       </span>
                     </button>
                     {expanded ? (
-                      <ul className="ml-2 space-y-1 border-l border-border/70 pl-2">
+                      <ul className="ml-12 mt-1 space-y-1 border-l border-border/70 pl-3">
                         {row.tasks.map((t) => renderTaskNavListItem(t, true))}
                       </ul>
                     ) : null}

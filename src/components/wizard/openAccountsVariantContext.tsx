@@ -12,7 +12,8 @@ import { createContext, useContext, useEffect, useState, type ReactNode } from '
  * - `v4`: Clone of `v3` for alternate demo naming.
  * - `v5`: Clone of `v2` presentation (“tasks in sections”); same bordered cards and journey chrome as v2,
  *         with Account Opening tasks grouped under sidebar sections (without / with annuity).
- * - `v6`: Persistent annuity; currently identical behavior and visuals to `v5`.
+ * - `v6`: Same overall chrome as `v5`, with a persisted “open annuity accounts?” control that can
+ *         hide the with-annuity path in the sidebar and main content.
  */
 export type OpenAccountsVariant = 'v1' | 'v2' | 'v3' | 'v4' | 'v5' | 'v6'
 

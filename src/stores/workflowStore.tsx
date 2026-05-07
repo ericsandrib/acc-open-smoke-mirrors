@@ -137,6 +137,7 @@ const initialState: WorkflowState = {
   submittedTaskIds: [],
   assignedTo: 'Sarah Chen',
   v5NoAnnuityOpenAccountsPage: null,
+  v6IncludeAnnuityAccounts: false,
 }
 
 const WORKFLOW_STORAGE_KEY = 'demo-workflow-state'
@@ -155,7 +156,17 @@ function getInitialWorkflowState(): WorkflowState {
     ) {
       return initialState
     }
-    return parsed
+    const variant = getPersistedOpenAccountsVariant()
+    const merged: WorkflowState = {
+      ...parsed,
+      /**
+       * v6: always start with No for the annuity gate on each page load (ignore stale localStorage).
+       * Other variants: only explicit `true` in storage selects Yes.
+       */
+      v6IncludeAnnuityAccounts:
+        variant === 'v6' ? false : parsed.v6IncludeAnnuityAccounts === true,
+    }
+    return normalizeV6AnnuityActiveTask(merged)
   } catch {
     return initialState
   }
@@ -181,6 +192,45 @@ function isSplitOpenAccountsJourney(state: WorkflowState): boolean {
   )
 }
 
+function shouldSkipAnnuityTaskInV6Split(_state: WorkflowState, _taskId: string): boolean {
+  return false
+}
+
+function nextVisibleFlatTaskId(state: WorkflowState, fromTaskId: string): string | null {
+  const idx = state.flatTaskOrder.indexOf(fromTaskId)
+  if (idx < 0) return null
+  for (let i = idx + 1; i < state.flatTaskOrder.length; i++) {
+    const id = state.flatTaskOrder[i]
+    if (!shouldSkipAnnuityTaskInV6Split(state, id)) return id
+  }
+  return null
+}
+
+function prevVisibleFlatTaskId(state: WorkflowState, fromTaskId: string): string | null {
+  const idx = state.flatTaskOrder.indexOf(fromTaskId)
+  if (idx <= 0) return null
+  for (let i = idx - 1; i >= 0; i--) {
+    const id = state.flatTaskOrder[i]
+    if (!shouldSkipAnnuityTaskInV6Split(state, id)) return id
+  }
+  return null
+}
+
+/** Next task in flat order, skipping the v6 hidden annuity task when applicable. */
+export function getNextVisibleFlatTaskId(state: WorkflowState): string | null {
+  return nextVisibleFlatTaskId(state, state.activeTaskId)
+}
+
+function redirectActiveIfV6AnnuityHidden(state: WorkflowState, taskId: string): string {
+  if (!shouldSkipAnnuityTaskInV6Split(state, taskId)) return taskId
+  const noAnnuity = state.tasks.find((t) => t.formKey === OPEN_ACCOUNTS_FORM_KEY)
+  return noAnnuity?.id ?? taskId
+}
+
+function normalizeV6AnnuityActiveTask(state: WorkflowState): WorkflowState {
+  return state
+}
+
 function nextV5NoAnnuityPageForActiveTask(
   state: WorkflowState,
   newTaskId: string,
@@ -201,22 +251,32 @@ function nextV5NoAnnuityPageForActiveTask(
 function workflowReducer(state: WorkflowState, action: WorkflowAction): WorkflowState {
   switch (action.type) {
     case 'SET_ACTIVE_TASK': {
-      const taskExists =
-        state.flatTaskOrder.includes(action.taskId)
+      const redirectedId = redirectActiveIfV6AnnuityHidden(state, action.taskId)
+      const blockedAnnuityNavigation =
+        redirectedId !== action.taskId &&
+        state.tasks.find((t) => t.id === action.taskId)?.formKey ===
+          OPEN_ACCOUNTS_WITH_ANNUITY_FORM_KEY
+      const taskExists = state.flatTaskOrder.includes(redirectedId)
       if (!taskExists) return state
       const newTasks = state.tasks.map((t) =>
-        t.id === action.taskId ? { ...t, unread: false } : t
+        t.id === redirectedId ? { ...t, unread: false } : t
       )
       return {
         ...state,
-        activeTaskId: action.taskId,
+        activeTaskId: redirectedId,
         tasks: newTasks,
-        v5NoAnnuityOpenAccountsPage: nextV5NoAnnuityPageForActiveTask(state, action.taskId),
+        v5NoAnnuityOpenAccountsPage: blockedAnnuityNavigation
+          ? 'envelopes'
+          : nextV5NoAnnuityPageForActiveTask(state, redirectedId),
       }
     }
 
     case 'SET_V5_NO_ANNUITY_OPEN_ACCOUNTS_PAGE': {
       return { ...state, v5NoAnnuityOpenAccountsPage: action.page }
+    }
+
+    case 'SET_V6_INCLUDE_ANNUITY_ACCOUNTS': {
+      return { ...state, v6IncludeAnnuityAccounts: action.include === true }
     }
 
     case 'FOCUS_PARENT_TASK_SECTION': {
@@ -229,18 +289,25 @@ function workflowReducer(state: WorkflowState, action: WorkflowAction): Workflow
     }
 
     case 'GO_TO_TASK': {
-      if (!state.flatTaskOrder.includes(action.taskId)) return state
+      const redirectedId = redirectActiveIfV6AnnuityHidden(state, action.taskId)
+      const blockedAnnuityNavigation =
+        redirectedId !== action.taskId &&
+        state.tasks.find((t) => t.id === action.taskId)?.formKey ===
+          OPEN_ACCOUNTS_WITH_ANNUITY_FORM_KEY
+      if (!state.flatTaskOrder.includes(redirectedId)) return state
       const goToTasks = state.tasks.map((t) =>
-        t.id === action.taskId ? { ...t, unread: false } : t
+        t.id === redirectedId ? { ...t, unread: false } : t
       )
       return {
         ...state,
-        activeTaskId: action.taskId,
+        activeTaskId: redirectedId,
         tasks: goToTasks,
         activeChildActionId: undefined,
         activeChildSubTaskIndex: undefined,
         childActionResume: undefined,
-        v5NoAnnuityOpenAccountsPage: nextV5NoAnnuityPageForActiveTask(state, action.taskId),
+        v5NoAnnuityOpenAccountsPage: blockedAnnuityNavigation
+          ? 'envelopes'
+          : nextV5NoAnnuityPageForActiveTask(state, redirectedId),
       }
     }
 
@@ -663,6 +730,7 @@ function workflowReducer(state: WorkflowState, action: WorkflowAction): Workflow
         activeChildSubTaskIndex: undefined,
         childActionResume: undefined,
         v5NoAnnuityOpenAccountsPage: null,
+        v6IncludeAnnuityAccounts: false,
       }
     }
 
@@ -673,7 +741,7 @@ function workflowReducer(state: WorkflowState, action: WorkflowAction): Workflow
       const variant = getPersistedOpenAccountsVariant()
       const activeTask = state.tasks.find((t) => t.id === state.activeTaskId)
       if (
-        variant === 'v5' &&
+        (variant === 'v5' || variant === 'v6') &&
         isSplitOpenAccountsJourney(state) &&
         activeTask?.formKey === OPEN_ACCOUNTS_FORM_KEY &&
         state.v5NoAnnuityOpenAccountsPage != null
@@ -685,7 +753,8 @@ function workflowReducer(state: WorkflowState, action: WorkflowAction): Workflow
         }
       }
 
-      const nextId = state.flatTaskOrder[idx + 1]
+      const nextId = nextVisibleFlatTaskId(state, state.activeTaskId)
+      if (!nextId) return state
       const goNextTasks = state.tasks.map((t) =>
         t.id === nextId ? { ...t, unread: false } : t
       )
@@ -701,7 +770,7 @@ function workflowReducer(state: WorkflowState, action: WorkflowAction): Workflow
       const variant = getPersistedOpenAccountsVariant()
       const activeTask = state.tasks.find((t) => t.id === state.activeTaskId)
       if (
-        variant === 'v5' &&
+        (variant === 'v5' || variant === 'v6') &&
         isSplitOpenAccountsJourney(state) &&
         activeTask?.formKey === OPEN_ACCOUNTS_FORM_KEY &&
         state.v5NoAnnuityOpenAccountsPage != null
@@ -713,25 +782,22 @@ function workflowReducer(state: WorkflowState, action: WorkflowAction): Workflow
         }
       }
 
-      const idx = state.flatTaskOrder.indexOf(state.activeTaskId)
-      if (idx > 0) {
-        const prevId = state.flatTaskOrder[idx - 1]
-        const goBackTasks = state.tasks.map((t) =>
-          t.id === prevId ? { ...t, unread: false } : t
-        )
-        const fromTask = state.tasks.find((t) => t.id === state.activeTaskId)
-        const enteringFromAnnuity =
-          fromTask?.formKey === OPEN_ACCOUNTS_WITH_ANNUITY_FORM_KEY
-        return {
-          ...state,
-          activeTaskId: prevId,
-          tasks: goBackTasks,
-          v5NoAnnuityOpenAccountsPage: nextV5NoAnnuityPageForActiveTask(state, prevId, {
-            enteringOpenAccountsFromAnnuity: enteringFromAnnuity,
-          }),
-        }
+      const prevId = prevVisibleFlatTaskId(state, state.activeTaskId)
+      if (prevId == null) return state
+      const goBackTasks = state.tasks.map((t) =>
+        t.id === prevId ? { ...t, unread: false } : t
+      )
+      const fromTask = state.tasks.find((t) => t.id === state.activeTaskId)
+      const enteringFromAnnuity =
+        fromTask?.formKey === OPEN_ACCOUNTS_WITH_ANNUITY_FORM_KEY
+      return {
+        ...state,
+        activeTaskId: prevId,
+        tasks: goBackTasks,
+        v5NoAnnuityOpenAccountsPage: nextV5NoAnnuityPageForActiveTask(state, prevId, {
+          enteringOpenAccountsFromAnnuity: enteringFromAnnuity,
+        }),
       }
-      return state
     }
 
     case 'ENTER_CHILD_ACTION': {

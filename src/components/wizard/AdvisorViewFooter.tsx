@@ -1,4 +1,4 @@
-import { useWorkflow } from '@/stores/workflowStore'
+import { getNextVisibleFlatTaskId, useWorkflow } from '@/stores/workflowStore'
 import { Button } from '@/components/ui/button'
 import { ChevronLeft, ChevronRight, Clock } from 'lucide-react'
 
@@ -7,6 +7,7 @@ export function AdvisorViewFooter() {
   const idx = state.flatTaskOrder.indexOf(state.activeTaskId)
   const isFirst = idx === 0
   const isLast = idx === state.flatTaskOrder.length - 1
+  const hasNextVisibleTask = getNextVisibleFlatTaskId(state) != null
 
   return (
     <footer className="border-t border-border bg-background px-8 2xl:pr-[20rem] py-3 min-h-14 flex justify-between items-center shrink-0 box-border">
@@ -25,7 +26,7 @@ export function AdvisorViewFooter() {
             <Clock className="h-3.5 w-3.5" />
             <span>Submitted for home office review at {state.submittedAt ?? 'N/A'}</span>
           </div>
-          {!isLast && (
+          {!isLast && hasNextVisibleTask && (
             <Button onClick={() => dispatch({ type: 'GO_NEXT' })}>
               Next
               <ChevronRight className="h-4 w-4" />

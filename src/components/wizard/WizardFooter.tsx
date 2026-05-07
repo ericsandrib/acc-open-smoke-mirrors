@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { useWorkflow } from '@/stores/workflowStore'
+import { getNextVisibleFlatTaskId, useWorkflow } from '@/stores/workflowStore'
 import { Button } from '@/components/ui/button'
 import { ChevronLeft, ChevronRight, Pencil, ShieldAlert } from 'lucide-react'
 import {
@@ -115,6 +115,7 @@ export function WizardFooter() {
   const idx = state.flatTaskOrder.indexOf(state.activeTaskId)
   const isFirst = idx === 0
   const isLast = idx === state.flatTaskOrder.length - 1
+  const hasNextVisibleTask = getNextVisibleFlatTaskId(state) != null
   const activeStatus = getActiveTaskStatus(state)
   const isSubmitted = state.submittedTaskIds.includes(state.activeTaskId)
   const active = state.tasks.find((t) => t.id === state.activeTaskId)
@@ -188,7 +189,7 @@ export function WizardFooter() {
             <Button variant="outline" onClick={() => setExitWorkflowOpen(true)}>
               Exit workflow
             </Button>
-          ) : isLast || showsOpenAccountsSubmit || showsAnnuityComplete ? (
+          ) : isLast || !hasNextVisibleTask || showsOpenAccountsSubmit || showsAnnuityComplete ? (
             <Button
               onClick={() => {
                 setCompleteAccountOpeningWarnings([])

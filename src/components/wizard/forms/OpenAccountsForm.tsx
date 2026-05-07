@@ -3,6 +3,7 @@ import { useWorkflow, useTaskData } from '@/stores/workflowStore'
 import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
+import { SegmentedControl } from '@/components/ui/segmented-control'
 import { ChildActionKebabMenu } from '@/components/wizard/ChildActionKebabMenu'
 import { ChildActionTimelineSheet } from '@/components/wizard/ChildActionTimelineSheet'
 import {
@@ -52,8 +53,9 @@ import {
   getRelevantOpenAccountsTask,
   isAnnuityExternalPlatformOpenAccountsTask,
   OPEN_ACCOUNTS_FORM_KEY,
+  OPEN_ACCOUNTS_WITH_ANNUITY_FORM_KEY,
 } from '@/utils/openAccountsTaskContext'
-import { useOpenAccountsTaskOverride, useOpenAccountsVariant } from '@/components/wizard/openAccountsVariantContext'
+import { useOpenAccountsTaskOverride, useOpenAccountsVariant, useOpenAccountsVariantControls } from '@/components/wizard/openAccountsVariantContext'
 import { mergeFeatureRequests } from '@/types/featureRequests'
 import { getEsignEnvelopeStatus, ESIGN_ENVELOPE_STATUS_LABELS } from '@/utils/esignEnvelopeStatus'
 import type { EsignEnvelopeHistoryEvent, EsignEnvelopeStatus, EsignSignerStatus } from '@/types/esignEnvelope'
@@ -252,13 +254,17 @@ export function OpenAccountsForm() {
   const showV5Kyc = !isV5NoAnnuityPaged || v5SubPage === 'kyc'
   const showV5Documents = !isV5NoAnnuityPaged || v5SubPage === 'documents'
   const showV5Envelopes = !isV5NoAnnuityPaged || v5SubPage === 'envelopes'
-  const isV6WithAnnuityInstructions = taskOverride?.idPrefix?.startsWith('v6-wann-') ?? false
   const isV6WithoutAnnuityInstructions = taskOverride?.idPrefix?.startsWith('v6-noann-') ?? false
-  const accountsSectionTitle = isV6WithAnnuityInstructions
-    ? 'Accounts with Annuity'
-    : isV6WithoutAnnuityInstructions
-      ? 'Accounts without Annuity'
-      : 'Accounts'
+  const isV6WithAnnuitySetup = taskOverride?.idPrefix?.startsWith('v6-wann-') ?? false
+  const { variant: wizardOpenAccountsVariant } = useOpenAccountsVariantControls()
+  const isV6SplitJourney =
+    state.tasks.some((t) => t.formKey === OPEN_ACCOUNTS_FORM_KEY) &&
+    state.tasks.some((t) => t.formKey === OPEN_ACCOUNTS_WITH_ANNUITY_FORM_KEY)
+  const showV6AnnuityDecisionAboveCard =
+    wizardOpenAccountsVariant === 'v6' && isV6SplitJourney && isV6WithAnnuitySetup
+  const accountsSectionTitle = isV6WithoutAnnuityInstructions
+    ? 'Accounts without Annuity'
+    : 'Accounts'
   const { data, updateField } = useTaskData(openAccountsTaskId)
   const [pickerOpen, setPickerOpen] = useState(false)
   const [timelineChild, setTimelineChild] = useState<ChildTask | null>(null)
@@ -701,8 +707,47 @@ export function OpenAccountsForm() {
     setSubmitChildConfirmOpen(true)
   }
 
+  const v6AnnuityDecisionIsYes = state.v6IncludeAnnuityAccounts === true
+
+  if (showV6AnnuityDecisionAboveCard && !v6AnnuityDecisionIsYes) {
+    return (
+      <div className="space-y-7">
+        <div className="scroll-mt-16" id={sectionId('oa-v6-annuity-decision')}>
+          <SegmentedControl
+            label="Will this client open annuity accounts?"
+            value="no"
+            options={[
+              { value: 'no', label: 'No' },
+              { value: 'yes', label: 'Yes' },
+            ]}
+            onValueChange={(v) =>
+              dispatch({ type: 'SET_V6_INCLUDE_ANNUITY_ACCOUNTS', include: v === 'yes' })
+            }
+            className="max-w-xl"
+          />
+        </div>
+      </div>
+    )
+  }
+
   return (
     <div className="space-y-7">
+      {showV6AnnuityDecisionAboveCard ? (
+        <div className="scroll-mt-16" id={sectionId('oa-v6-annuity-decision')}>
+          <SegmentedControl
+            label="Will this client open annuity accounts?"
+            value={v6AnnuityDecisionIsYes ? 'yes' : 'no'}
+            options={[
+              { value: 'no', label: 'No' },
+              { value: 'yes', label: 'Yes' },
+            ]}
+            onValueChange={(v) =>
+              dispatch({ type: 'SET_V6_INCLUDE_ANNUITY_ACCOUNTS', include: v === 'yes' })
+            }
+            className="max-w-xl"
+          />
+        </div>
+      ) : null}
       {showV5Instructions || showV5Documents ? (
       <div
         className={cn(

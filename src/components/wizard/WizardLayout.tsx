@@ -89,7 +89,11 @@ import {
   OPEN_ACCOUNTS_FORM_KEY,
   OPEN_ACCOUNTS_WITH_ANNUITY_FORM_KEY,
 } from '@/utils/openAccountsTaskContext'
-import { OpenAccountsVariantAndFocusProvider, useOpenAccountsVariant } from './openAccountsVariantContext'
+import {
+  OpenAccountsVariantAndFocusProvider,
+  useOpenAccountsVariant,
+  useOpenAccountsVariantControls,
+} from './openAccountsVariantContext'
 import { OpenAccountsVariantSwitcher } from './OpenAccountsVariantSwitcher'
 
 type WizardActionProgressItem = { id: string; title: string; pct: number }
@@ -404,10 +408,23 @@ function WizardLayoutInner() {
   const { state, dispatch } = useWorkflow()
   const navigate = useNavigate()
   const variant = useOpenAccountsVariant()
+  const { variant: wizardOpenAccountsVariantRaw } = useOpenAccountsVariantControls()
+  const prevOpenAccountsVariantRef = useRef<typeof wizardOpenAccountsVariantRaw | null>(null)
   const [searchParams] = useSearchParams()
   const [composeOpen, setComposeOpen] = useState(false)
   const inChildAction = !!state.activeChildActionId
   const viewMode = state.demoViewMode
+
+  useEffect(() => {
+    const prev = prevOpenAccountsVariantRef.current
+    prevOpenAccountsVariantRef.current = wizardOpenAccountsVariantRaw
+
+    const enteredV6 =
+      wizardOpenAccountsVariantRaw === 'v6' && prev !== null && prev !== 'v6'
+    if (!enteredV6 || state.v6IncludeAnnuityAccounts !== true) return
+
+    dispatch({ type: 'SET_V6_INCLUDE_ANNUITY_ACCOUNTS', include: false })
+  }, [wizardOpenAccountsVariantRaw, state.v6IncludeAnnuityAccounts, dispatch])
 
   // Handle taskId and sectionId from query parameters
   const queryTaskId = searchParams.get('taskId')
@@ -579,8 +596,8 @@ function WizardLayoutInner() {
   const getTaskBreadcrumbLabel = (task: Task | undefined) => {
     if (!task) return undefined
     if (isSplitJourney) {
-      if (task.formKey === OPEN_ACCOUNTS_FORM_KEY) return 'Accounts without Annuities'
-      if (task.formKey === OPEN_ACCOUNTS_WITH_ANNUITY_FORM_KEY) return 'Accounts with Annuities'
+      if (task.formKey === OPEN_ACCOUNTS_FORM_KEY) return 'Non-Annuity Accounts'
+      if (task.formKey === OPEN_ACCOUNTS_WITH_ANNUITY_FORM_KEY) return 'Annuity Accounts'
     }
     return task.title
   }

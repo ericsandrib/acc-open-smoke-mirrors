@@ -233,6 +233,11 @@ export interface WorkflowState {
    * (Account Instructions / KYC Verification / Envelopes). Null when not in that mode.
    */
   v5NoAnnuityOpenAccountsPage?: 'instructions' | 'kyc' | 'documents' | 'envelopes' | null
+  /**
+   * v6 split journey: whether the with-annuity Open Accounts path is shown in the sidebar and main area.
+   * Persisted with workflow state; default false (No).
+   */
+  v6IncludeAnnuityAccounts?: boolean
   /** Tracks the furthest sub-task index each child has reached (for progress display). */
   childHighWaterMark?: Record<string, number>
 }
@@ -243,6 +248,7 @@ export type WorkflowAction =
   | { type: 'FOCUS_PARENT_TASK_SECTION'; sectionId: string }
   | { type: 'CLEAR_PARENT_SECTION_FOCUS' }
   | { type: 'SET_V5_NO_ANNUITY_OPEN_ACCOUNTS_PAGE'; page: 'instructions' | 'kyc' | 'documents' | 'envelopes' }
+  | { type: 'SET_V6_INCLUDE_ANNUITY_ACCOUNTS'; include: boolean }
   /** Leave any child / drill-in flow and open a top-level task from {@link WorkflowState.flatTaskOrder}. */
   | { type: 'GO_TO_TASK'; taskId: string }
   | { type: 'SET_TASK_STATUS'; taskId: string; status: TaskStatus }

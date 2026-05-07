@@ -11,6 +11,8 @@ import {
   OPEN_ACCOUNTS_WITH_ANNUITY_FORM_KEY,
 } from '@/utils/openAccountsTaskContext'
 import { OpenAccountsV6InstructionsForm } from './forms/OpenAccountsV6InstructionsForm'
+import { OpenAccountsForm } from './forms/OpenAccountsForm'
+import { OpenAccountsTaskOverrideProvider } from './openAccountsVariantContext'
 
 function ReviewBanner() {
   const { state } = useWorkflow()
@@ -94,18 +96,18 @@ export function TaskContent() {
   const splitV1Title =
     variant !== 'v5' && isSplitJourney && activeTask
       ? activeTask.formKey === OPEN_ACCOUNTS_FORM_KEY
-        ? 'Accounts without Annuities'
+        ? 'Non-Annuity Accounts'
         : activeTask.formKey === OPEN_ACCOUNTS_WITH_ANNUITY_FORM_KEY
-          ? 'Accounts with Annuities'
+          ? 'Annuity Accounts'
           : null
       : null
 
   const v5NoAnnuityTaskTitle =
     variant === 'v5' && activeTask?.formKey === OPEN_ACCOUNTS_FORM_KEY
       ? state.v5NoAnnuityOpenAccountsPage === 'instructions'
-        ? 'Account Instructions'
+        ? 'Account Setup'
         : state.v5NoAnnuityOpenAccountsPage === 'kyc'
-          ? 'KYC Verification'
+          ? 'KYC Initiation'
           : state.v5NoAnnuityOpenAccountsPage === 'documents'
             ? 'Supporting Documents'
             : state.v5NoAnnuityOpenAccountsPage === 'envelopes'
@@ -114,7 +116,11 @@ export function TaskContent() {
       : null
   const v5WithAnnuityTaskTitle =
     variant === 'v5' && activeTask?.formKey === OPEN_ACCOUNTS_WITH_ANNUITY_FORM_KEY
-      ? 'Account Instructions'
+      ? selectedVariant === 'v6'
+        ? 'Annuity Accounts Setup'
+        : selectedVariant === 'v5'
+          ? 'Account Setup'
+          : 'Account Instructions'
       : null
   const v5NoAnnuityTaskDescription =
     variant === 'v5' && activeTask?.formKey === OPEN_ACCOUNTS_FORM_KEY
@@ -143,15 +149,27 @@ export function TaskContent() {
     ? state.actions.find((a) => a.id === contextTask.actionId)?.title ?? null
     : null
   const sectionName = contextTask
-    ? selectedVariant === 'v6'
-      ? null
+    ? selectedVariant === 'v6' && isSplitJourney
+      ? contextTask.formKey === OPEN_ACCOUNTS_FORM_KEY
+        ? 'Non-Annuity Accounts'
+        : contextTask.formKey === OPEN_ACCOUNTS_WITH_ANNUITY_FORM_KEY
+          ? 'Annuity Accounts'
+          : contextTask.title
       : isSplitJourney && contextTask.formKey === OPEN_ACCOUNTS_FORM_KEY
-      ? 'Accounts without Annuities'
+      ? 'Non-Annuity Accounts'
       : isSplitJourney && contextTask.formKey === OPEN_ACCOUNTS_WITH_ANNUITY_FORM_KEY
-          ? 'Accounts with Annuities'
+          ? 'Annuity Accounts'
           : contextTask.title
     : null
-  const showSectionContext = Boolean(sectionName && sectionName !== title)
+  const v6OpenAccountsGroupContext =
+    selectedVariant === 'v6' &&
+    isSplitJourney &&
+    contextTask != null &&
+    (contextTask.formKey === OPEN_ACCOUNTS_FORM_KEY ||
+      contextTask.formKey === OPEN_ACCOUNTS_WITH_ANNUITY_FORM_KEY)
+  const showSectionContext = Boolean(
+    sectionName && (v6OpenAccountsGroupContext || sectionName !== title),
+  )
   const contextLine =
     actionName && showSectionContext
       ? `${actionName} \u00b7 ${sectionName}`
@@ -170,6 +188,10 @@ export function TaskContent() {
     isSplitJourney &&
     activeTask?.formKey === OPEN_ACCOUNTS_FORM_KEY &&
     state.v5NoAnnuityOpenAccountsPage === 'instructions'
+  const showV6AnnuityAccountsSetup =
+    selectedVariant === 'v6' &&
+    isSplitJourney &&
+    activeTask?.formKey === OPEN_ACCOUNTS_WITH_ANNUITY_FORM_KEY
 
   useEffect(() => {
     if (isV5NoAnnuityPagedMain && state.parentSectionFocusId) {
@@ -224,7 +246,13 @@ export function TaskContent() {
             <h3 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">Overview</h3>
           </section>
         ) : null}
-        {showV6CombinedInstructions ? (
+        {showV6AnnuityAccountsSetup && activeTask ? (
+          <div className="motion-safe:animate-in motion-safe:fade-in motion-safe:zoom-in-[0.99] motion-safe:duration-300">
+            <OpenAccountsTaskOverrideProvider taskId={activeTask.id} idPrefix="v6-wann-">
+              <OpenAccountsForm />
+            </OpenAccountsTaskOverrideProvider>
+          </div>
+        ) : showV6CombinedInstructions ? (
           <OpenAccountsV6InstructionsForm />
         ) : FormComponent ? (
           <FormComponent />
