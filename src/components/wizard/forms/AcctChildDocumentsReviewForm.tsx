@@ -2,23 +2,16 @@ import { useMemo } from 'react'
 import { useChildActionContext, useTaskData, useWorkflow } from '@/stores/workflowStore'
 import { Label } from '@/components/ui/label'
 import { Button } from '@/components/ui/button'
-import {
-  Select,
-  SelectTrigger,
-  SelectValue,
-  SelectContent,
-  SelectItem,
-} from '@/components/ui/select'
-import { Plus, Trash2, FileText, Paperclip, Upload, X, FolderOpen } from 'lucide-react'
+import { FileText, FolderOpen } from 'lucide-react'
 import { EsignFormPdfSampleActions } from '@/components/wizard/EsignFormPdfSampleActions'
 import { EsignDocumentsBundleViewerButton } from '@/components/wizard/EsignDocumentsBundleViewer'
 import type { RegistrationType } from '@/utils/registrationDocuments'
 import {
   getRegistrationDocumentsForType,
+  getOpenAccountsCoreSupportingDocumentSections,
   getDocSubTypes,
-  partitionRegistrationDocumentsByFulfillment,
-  getAssigneePartyIdsForClientUploadDoc,
 } from '@/utils/registrationDocuments'
+import type { DocumentRequirementWithSubTypes } from '@/utils/registrationDocuments'
 import { WetSignedFirmUploadsGroup } from '@/components/wizard/forms/WetSignedFirmUploadsGroup'
 import {
   parseWetSignedFirmUploads,
@@ -28,6 +21,12 @@ import {
 import { findParentTaskForChild } from '@/utils/openAccountsTaskContext'
 import { useOpenAccountsVariant } from '@/components/wizard/openAccountsVariantContext'
 import { cn } from '@/lib/utils'
+import { DocumentUploadInstancesTable } from './DocumentUploadInstancesTable'
+import {
+  defaultSupportingDocumentStatus,
+  nextStatusAfterUpload,
+  type SupportingDocumentStatus,
+} from '@/utils/supportingDocuments'
 
 interface DocInstance {
   id: string
@@ -36,14 +35,8 @@ interface DocInstance {
   fileName?: string
   subType?: string
   customSubTypeLabel?: string
-  status?:
-    | 'draft'
-    | 'suggested'
-    | 'uploaded'
-    | 'requested_by_review'
-    | 'accepted'
-    | 'rejected_needs_replacement'
-  source?: 'upstream' | 'local'
+  status?: SupportingDocumentStatus
+  requestedBy?: string
 }
 
 interface ExecutedEsignForm {
@@ -54,8 +47,6 @@ interface ExecutedEsignForm {
   fileName: string
   executedAt: string
 }
-
-type OwnerRow = { id: string; type: 'existing'; partyId?: string }
 
 export function AcctChildDocumentsReviewForm() {
   const { state } = useWorkflow()
@@ -78,11 +69,10 @@ export function AcctChildDocumentsReviewForm() {
   const registrationType = (childMeta?.registrationType as RegistrationType | undefined) ?? undefined
 
   const ruleDrivenDocs = useMemo(() => {
-    if (!registrationType) return { clientUpload: [], firmCustodianEsign: [] }
+    if (!registrationType) return { firmCustodianEsign: [] }
     const docs = getRegistrationDocumentsForType(registrationType, { relatedParties: state.relatedParties })
-    const { upload, esign } = partitionRegistrationDocumentsByFulfillment(docs)
+    const esign = docs.filter((d) => d.fulfillment === 'esign')
     return {
-      clientUpload: upload,
       firmCustodianEsign: esign,
     }
   }, [registrationType, state.relatedParties])
@@ -124,101 +114,63 @@ export function AcctChildDocumentsReviewForm() {
     updateOpenAccountsField(WET_SIGNED_FIRM_UPLOADS_KEY, [...taggedOtherAccounts, ...next])
   }
 
-  const ownersTaskId = ctx ? `${ctx.child.id}-account-owners` : ''
-  const ownersData = state.taskData[ownersTaskId] as Record<string, unknown> | undefined
-  const owners = useMemo(
-    () => (ownersData?.owners as OwnerRow[] | undefined) ?? [],
-    [ownersData?.owners],
+  const supportingDocSections = useMemo<DocumentRequirementWithSubTypes[]>(
+    () => getOpenAccountsCoreSupportingDocumentSections(),
+    [],
   )
-  const selectedOwnerPartyIds = useMemo(
-    () => new Set(owners.filter((o) => o.type === 'existing' && o.partyId).map((o) => o.partyId!)),
-    [owners],
+  const supportingDocumentAssignees = useMemo(
+    () => [
+      ...state.relatedParties
+        .filter((p) => !p.isHidden)
+        .map((p) => ({
+          id: p.id,
+          name: p.name?.trim() || p.organizationName?.trim() || p.role || 'Party',
+        })),
+      ...accountOpeningChildren.map((child) => ({
+        id: `workflow:${child.id}`,
+        name: `${child.name} workflow`,
+      })),
+      { id: 'workflow:kyc', name: 'KYC workflow' },
+      { id: 'workflow:account-opening', name: 'Account Opening workflow' },
+    ],
+    [state.relatedParties, accountOpeningChildren],
   )
 
-  const allDocInstances = useMemo(() => {
-    if (selectedOwnerPartyIds.size === 0 || ruleDrivenDocs.clientUpload.length === 0) return []
-    const results: (DocInstance & { docLabel: string; ownerName: string })[] = []
-
-    for (const doc of ruleDrivenDocs.clientUpload) {
-      const parentInstances = (openAccountsData[`doc-instances-${doc.id}`] as DocInstance[] | undefined) ?? []
-      const assigneeIds = getAssigneePartyIdsForClientUploadDoc(
-        doc.id,
-        state.relatedParties,
-        selectedOwnerPartyIds,
-      )
-
-      for (const ownerId of assigneeIds) {
-        const member = state.relatedParties.find((p) => p.id === ownerId)
-        const ownerName = member?.name ?? 'Unknown'
-        const parentMatch = parentInstances.find((inst) => inst.assignedTo === ownerId)
-
-        if (parentMatch) {
-          results.push({ ...parentMatch, source: 'upstream', docLabel: doc.label, ownerName })
-        } else {
-          results.push({
-            id: `auto-${doc.id}-${ownerId}`,
-            docTypeId: doc.id,
-            assignedTo: ownerId,
-            source: 'upstream',
-            docLabel: doc.label,
-            ownerName,
-          })
-        }
-      }
-    }
-
-    const local = (data['child-local-docs'] as (DocInstance & { docLabel?: string })[] | undefined) ?? []
-    for (const inst of local) {
-      const docDef = ruleDrivenDocs.clientUpload.find((d) => d.id === inst.docTypeId)
-      const member = inst.assignedTo ? state.relatedParties.find((p) => p.id === inst.assignedTo) : null
-      results.push({
-        ...inst,
-        source: 'local',
-        docLabel: docDef?.label ?? (inst.docTypeId || 'Other'),
-        ownerName: member?.name ?? '',
-      })
-    }
-    return results
-  }, [selectedOwnerPartyIds, ruleDrivenDocs.clientUpload, openAccountsData, data, state.relatedParties])
-
-  const updateOpenAccountDocInstance = (docTypeId: string, instanceId: string, updates: Partial<DocInstance>) => {
-    const key = `doc-instances-${docTypeId}`
-    const instances = (openAccountsData[key] as DocInstance[] | undefined) ?? []
-    const existing = instances.find((i) => i.id === instanceId)
-    if (existing) {
-      updateOpenAccountsField(key, instances.map((i) => (i.id === instanceId ? { ...i, ...updates } : i)))
-    } else {
-      updateOpenAccountsField(key, [...instances, { id: instanceId, docTypeId, assignedTo: '', ...updates }])
-    }
-  }
-
-  const handleUpstreamFileSelect = (inst: DocInstance & { docLabel: string; ownerName: string }) => {
+  const handleSupportingDocFileSelect = (docTypeId: string, instanceId: string) => {
     const input = document.createElement('input')
     input.type = 'file'
     input.accept = '.pdf,.jpg,.jpeg,.png'
     input.onchange = (e) => {
       const file = (e.target as HTMLInputElement).files?.[0]
       if (file) {
-        const key = `doc-instances-${inst.docTypeId}`
+        const key = `doc-instances-${docTypeId}`
         const instances = (openAccountsData[key] as DocInstance[] | undefined) ?? []
-        const existing = instances.find((i) => i.id === inst.id)
+        const existing = instances.find((i) => i.id === instanceId)
         if (existing) {
           updateOpenAccountsField(
             key,
-            instances.map((i) => (i.id === inst.id ? { ...i, fileName: file.name } : i)),
+            instances.map((i) =>
+              i.id === instanceId
+                ? { ...i, fileName: file.name, status: nextStatusAfterUpload(i.status) }
+                : i,
+            ),
           )
         } else {
           updateOpenAccountsField(key, [
             ...instances,
-            { id: inst.id, docTypeId: inst.docTypeId, assignedTo: inst.assignedTo, fileName: file.name },
+            {
+              id: instanceId,
+              docTypeId,
+              assignedTo: '',
+              fileName: file.name,
+              status: nextStatusAfterUpload(undefined),
+            },
           ])
         }
       }
     }
     input.click()
   }
-
-  const localDocs = (data['child-local-docs'] as DocInstance[] | undefined) ?? []
   const executedEsignForms = useMemo(
     () => (data.esignExecutedForms as ExecutedEsignForm[] | undefined) ?? [],
     [data.esignExecutedForms],
@@ -236,30 +188,6 @@ export function AcctChildDocumentsReviewForm() {
     )
   }, [ruleDrivenDocs.firmCustodianEsign, executedFormsByFormId, accountChildId])
 
-  const updateLocalDocs = (next: DocInstance[]) => {
-    updateField('child-local-docs', next)
-  }
-
-  const removeLocalDoc = (docId: string) => {
-    updateLocalDocs(localDocs.filter((d) => d.id !== docId))
-  }
-
-  const updateLocalDoc = (docId: string, updates: Partial<DocInstance>) => {
-    updateLocalDocs(localDocs.map((d) => (d.id === docId ? { ...d, ...updates } : d)))
-  }
-
-  const handleLocalFileSelect = (docId: string) => {
-    const input = document.createElement('input')
-    input.type = 'file'
-    input.accept = '.pdf,.jpg,.jpeg,.png'
-    input.onchange = (e) => {
-      const file = (e.target as HTMLInputElement).files?.[0]
-      if (file) {
-        updateLocalDoc(docId, { fileName: file.name })
-      }
-    }
-    input.click()
-  }
 
   if (!ctx) {
     return <p className="text-sm text-muted-foreground">Open this step from account opening.</p>
@@ -385,17 +313,29 @@ export function AcctChildDocumentsReviewForm() {
             </p>
           )}
         </div>
+        </div>
+      </section>
 
-        <section id="acct-docs-client-upload" className="space-y-4 scroll-mt-16">
+      <section id="acct-docs-client-upload" className="space-y-4 scroll-mt-16">
+        <div
+          className={cn(
+            isCardVariant &&
+              cn(
+                'rounded-xl p-6 space-y-6 overflow-hidden',
+                isVersion2 && 'border border-foreground/30 bg-background',
+                isVersion3 && 'v3-card-inner-strokes border border-foreground/20 bg-[#fafafa]',
+                isVersion4 && 'border border-foreground/30 bg-white',
+              ),
+          )}
+        >
           <div
             className={cn(
               isCardVariant &&
                 cn(
-                  '-mx-6 mb-4 px-6 py-4',
-                  isVersion2 && 'border-y border-border/60 bg-[#F5F5F4]',
-                  isVersion4 && 'border-b border-border/60',
-                    isVersion3 && 'mx-0 mt-0 px-0 pt-0 pb-4 border-b border-border/60',
-                  isVersion4 && 'bg-[#F5F5F4]',
+                  '-mx-6 -mt-6 mb-4 px-6 py-4',
+                  isVersion2 && 'border-b border-border/60 bg-[#F5F5F4]',
+                  isVersion4 && 'border-b border-border/60 bg-[#F5F5F4]',
+                  isVersion3 && 'mx-0 mt-0 px-0 pt-0 pb-4 border-b border-border/60',
                 ),
             )}
           >
@@ -403,192 +343,90 @@ export function AcctChildDocumentsReviewForm() {
               Supporting Client Documents
             </h3>
             <p className="text-sm text-muted-foreground mt-2">
-              End-client uploads such as government-issued ID, trust documents, and other supporting files.
+              Upload client-provided documents that may support account opening, identity verification, or custodian
+              review. Documents are optional unless requested during review.
             </p>
           </div>
-
-        {ruleDrivenDocs.clientUpload.length === 0 ? (
-          <div className="rounded-lg border border-dashed border-border p-6 text-center">
-            <FileText className="mx-auto mb-2 h-8 w-8 text-muted-foreground/50" />
-            <p className="text-sm text-muted-foreground">
-              No client-upload documents are required for this registration type.
-            </p>
-          </div>
-        ) : selectedOwnerPartyIds.size === 0 ? (
-          <div className="rounded-lg border border-dashed border-border p-6 text-center">
-            <FileText className="mx-auto mb-2 h-8 w-8 text-muted-foreground/50" />
-            <p className="text-sm text-muted-foreground">
-              Add owners in <span className="font-medium text-foreground">Account &amp; owners</span> to manage document
-              uploads by person.
-            </p>
-          </div>
-        ) : (
           <div className="space-y-4">
-            {ruleDrivenDocs.clientUpload.map((doc) => {
-              const instancesForDoc = allDocInstances.filter((inst) => inst.docTypeId === doc.id)
+            {supportingDocSections.map((doc) => {
+              const key = `doc-instances-${doc.id}`
+              const instances = (openAccountsData[key] as DocInstance[] | undefined) ?? []
               const subTypes = getDocSubTypes(doc.id)
 
-              const handleAddForDoc = () => {
-                updateLocalDocs([
-                  ...localDocs,
-                  { id: `cld-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`, docTypeId: doc.id, assignedTo: '' },
+              const addInstance = () => {
+                updateOpenAccountsField(key, [
+                  ...instances,
+                  {
+                    id: `di-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+                    docTypeId: doc.id,
+                    assignedTo: '',
+                    status: defaultSupportingDocumentStatus(),
+                  },
                 ])
               }
 
-              return (
-                <div key={doc.id} className="rounded-lg border border-border overflow-hidden">
-                  <div className="bg-muted/50 px-4 py-2.5 border-b border-border flex items-center justify-between">
-                    <div>
-                      <p className="text-sm font-medium text-foreground">{doc.label}</p>
-                      <p className="text-xs text-muted-foreground">{doc.description}</p>
-                    </div>
-                    <Button variant="ghost" size="sm" className="h-7 text-xs gap-1" onClick={handleAddForDoc}>
-                      <Plus className="h-3 w-3" />
-                      Add
-                    </Button>
-                  </div>
+              const removeInstance = (instanceId: string) => {
+                updateOpenAccountsField(
+                  key,
+                  instances.filter((i) => i.id !== instanceId),
+                )
+              }
 
-                  {instancesForDoc.length > 0 ? (
-                    <table className="w-full text-sm table-fixed">
-                      <thead>
-                        <tr className="border-b border-border bg-muted/20">
-                          <th className="text-left font-medium text-muted-foreground px-4 py-2 text-xs w-[36%]">
-                            Specification
-                          </th>
-                          <th className="text-left font-medium text-muted-foreground px-4 py-2 text-xs w-[11rem] max-w-[11rem]">
-                            Owner
-                          </th>
-                          <th className="text-left font-medium text-muted-foreground px-4 py-2 text-xs">File</th>
-                          <th className="w-[40px]" />
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {instancesForDoc.map((inst, idx) => {
-                          const isUpstream = inst.source === 'upstream'
-                          return (
-                            <tr key={inst.id} className={idx < instancesForDoc.length - 1 ? 'border-b border-border' : ''}>
-                              <td className="px-4 py-2.5 min-w-0 align-top w-[36%] max-w-[36%] overflow-hidden">
-                                {subTypes.length > 0 ? (
-                                  <Select
-                                    value={inst.subType ?? ''}
-                                    onValueChange={(v) => {
-                                      if (isUpstream) {
-                                        updateOpenAccountDocInstance(inst.docTypeId, inst.id, {
-                                          subType: v,
-                                          assignedTo: inst.assignedTo,
-                                        })
-                                      } else {
-                                        updateLocalDoc(inst.id, { subType: v })
-                                      }
-                                    }}
-                                  >
-                                    <SelectTrigger className="h-8 text-xs w-full max-w-full min-w-0">
-                                      <SelectValue placeholder="Select type..." />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                      {subTypes.map((st) => (
-                                        <SelectItem key={st.value} value={st.value}>
-                                          {st.label}
-                                        </SelectItem>
-                                      ))}
-                                    </SelectContent>
-                                  </Select>
-                                ) : (
-                                  <div className="flex min-w-0 max-w-full cursor-default items-center h-8 px-3 rounded-md border border-border bg-muted/30">
-                                    <span className="text-xs text-foreground truncate min-w-0" title={doc.label}>
-                                      {doc.label}
-                                    </span>
-                                  </div>
-                                )}
-                              </td>
-                              <td className="px-4 py-2.5 w-[11rem] max-w-[11rem] align-top">
-                                <div className="flex min-w-0 items-center gap-1.5 h-8 px-3 rounded-md border border-border bg-muted/30">
-                                  <span
-                                    className="text-xs text-foreground truncate min-w-0"
-                                    title={inst.ownerName || 'Unassigned'}
-                                  >
-                                    {inst.ownerName || 'Unassigned'}
-                                  </span>
-                                </div>
-                              </td>
-                              <td className="px-4 py-2.5">
-                                {inst.fileName ? (
-                                  <div className="flex items-center gap-2">
-                                    <Paperclip className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
-                                    <span className="text-xs text-foreground truncate max-w-[180px]">{inst.fileName}</span>
-                                    <button
-                                      type="button"
-                                      onClick={() => {
-                                        if (isUpstream) {
-                                          updateOpenAccountDocInstance(inst.docTypeId, inst.id, {
-                                            fileName: undefined,
-                                            assignedTo: inst.assignedTo,
-                                          })
-                                        } else {
-                                          updateLocalDoc(inst.id, { fileName: undefined })
-                                        }
-                                      }}
-                                      className="text-muted-foreground hover:text-destructive shrink-0"
-                                    >
-                                      <X className="h-3 w-3" />
-                                    </button>
-                                  </div>
-                                ) : (
-                                  <Button
-                                    variant="ghost"
-                                    size="sm"
-                                    className="h-7 text-xs gap-1.5 text-muted-foreground"
-                                    onClick={() => {
-                                      if (isUpstream) {
-                                        handleUpstreamFileSelect(inst)
-                                      } else {
-                                        handleLocalFileSelect(inst.id)
-                                      }
-                                    }}
-                                  >
-                                    <Upload className="h-3 w-3" />
-                                    Upload
-                                  </Button>
-                                )}
-                              </td>
-                              <td className="px-2 py-2.5">
-                                {!isUpstream ? (
-                                  <button
-                                    type="button"
-                                    onClick={() => removeLocalDoc(inst.id)}
-                                    className="text-muted-foreground hover:text-destructive p-1"
-                                  >
-                                    <Trash2 className="h-3.5 w-3.5" />
-                                  </button>
-                                ) : null}
-                              </td>
-                            </tr>
-                          )
-                        })}
-                      </tbody>
-                    </table>
-                  ) : (
-                    <div className="px-4 py-3 text-center">
-                      <p className="text-xs text-muted-foreground">
-                        No documents added yet. Click &ldquo;Add&rdquo; to upload and assign to an owner.
-                      </p>
-                    </div>
-                  )}
-                </div>
+              const updateInstance = (instanceId: string, updates: Partial<DocInstance>) => {
+                updateOpenAccountsField(
+                  key,
+                  instances.map((i) => (i.id === instanceId ? { ...i, ...updates } : i)),
+                )
+              }
+
+              return (
+                <DocumentUploadInstancesTable
+                  key={doc.id}
+                  docLabel={doc.label}
+                  docDescription={doc.description}
+                  instances={instances}
+                  subTypes={subTypes}
+                  assignees={supportingDocumentAssignees}
+                  emptyMessage="No documents added yet."
+                  emptyHelper="Click Add to upload an optional document."
+                  onAdd={addInstance}
+                  onRemove={removeInstance}
+                  onUpload={(instanceId) => handleSupportingDocFileSelect(doc.id, instanceId)}
+                  onUpdate={updateInstance}
+                  lockAssignedWhenPresent={false}
+                />
               )
             })}
           </div>
-        )}
-        </section>
-
-        <div id="acct-docs-notes" className="space-y-2 scroll-mt-16">
-          <Label>Exceptions / notes</Label>
-          <textarea
-            className="flex min-h-[88px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
-            value={(data.exceptionsNotes as string) ?? ''}
-            onChange={(e) => updateField('exceptionsNotes', e.target.value)}
-          />
         </div>
+      </section>
+
+      <section id="acct-docs-notes" className="space-y-4 scroll-mt-16">
+        <div
+          className={cn(
+            isCardVariant &&
+              cn(
+                'rounded-xl p-6 space-y-4 overflow-hidden',
+                isVersion2 && 'border border-foreground/30 bg-background',
+                isVersion3 && 'v3-card-inner-strokes border border-foreground/20 bg-[#fafafa]',
+                isVersion4 && 'border border-foreground/30 bg-white',
+              ),
+          )}
+        >
+          <div>
+            <h3 className={cn(isCardVariant ? 'text-sm font-semibold uppercase tracking-wide' : 'text-sm font-semibold uppercase tracking-wide text-muted-foreground mb-1')}>
+              Exceptions / notes
+            </h3>
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="acct-docs-exceptions-notes">Exceptions / notes</Label>
+            <textarea
+              id="acct-docs-exceptions-notes"
+              className="flex min-h-[88px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+              value={(data.exceptionsNotes as string) ?? ''}
+              onChange={(e) => updateField('exceptionsNotes', e.target.value)}
+            />
+          </div>
         </div>
       </section>
     </div>

@@ -6,10 +6,8 @@ import {
   getAlternativeStrategyBlockingIssues,
 } from '@/utils/alternativeStrategyValidation'
 import {
-  getRegistrationDocumentsForType,
+  getOpenAccountsCoreSupportingDocumentSections,
   getDocSubTypes,
-  partitionRegistrationDocumentsByFulfillment,
-  getAssigneePartyIdsForClientUploadDoc,
 } from '@/utils/registrationDocuments'
 import type { RegistrationType } from '@/utils/registrationDocuments'
 import { getMaxAccountOwnersForRegistration } from '@/utils/registrationOwnerLimits'
@@ -104,22 +102,6 @@ function featureLineSetupProgress(data: Record<string, unknown>): { filled: numb
   filled += countStr(data.featureEffectiveDate)
   filled += countStr(data.featureInternalRef)
   return { filled, total }
-}
-
-function slotSatisfied(
-  docId: string,
-  ownerId: string,
-  openAccountsData: Record<string, unknown>,
-  localDocs: DocInstance[],
-): boolean {
-  const subTypesCount = getDocSubTypes(docId).length
-  const parentInstances = (openAccountsData[`doc-instances-${docId}`] as DocInstance[] | undefined) ?? []
-  const fromParent = parentInstances.find((i) => i.assignedTo === ownerId)
-  const fromLocal = localDocs.find((i) => i.docTypeId === docId && i.assignedTo === ownerId)
-  const inst = fromParent ?? fromLocal
-  if (!inst?.fileName?.trim()) return false
-  if (!instanceSpecificationComplete(inst.subType, inst.customSubTypeLabel, subTypesCount)) return false
-  return true
 }
 
 function progressAccountOwners(state: WorkflowState, accountChildId: string): { filled: number; total: number } {
@@ -220,54 +202,39 @@ function progressFeaturesHub(state: WorkflowState, accountChildId: string): { fi
 function progressDocuments(state: WorkflowState, accountChildId: string): { filled: number; total: number } {
   const taskId = `${accountChildId}-documents-review`
   const docsData = (state.taskData[taskId] as Record<string, unknown> | undefined) ?? {}
-  const childMeta = state.taskData[accountChildId] as Record<string, unknown> | undefined
-  const registrationType = childMeta?.registrationType as RegistrationType | undefined
   const parent = findParentTaskForChild(state, accountChildId)
   const openAccountsData = (state.taskData[parent?.id ?? 'open-accounts'] as Record<string, unknown> | undefined) ?? {}
   const localDocs = (docsData['child-local-docs'] as DocInstance[] | undefined) ?? []
+  const notes = countStr(docsData.exceptionsNotes)
+  const supportingDocs = getOpenAccountsCoreSupportingDocumentSections()
 
-  const ownersTaskId = `${accountChildId}-account-owners`
-  const owners =
-    ((state.taskData[ownersTaskId] as Record<string, unknown> | undefined)?.owners as
-      | { type?: string; partyId?: string }[]
-      | undefined) ?? []
-  const ownerIds = owners.filter((o) => o.type === 'existing' && o.partyId).map((o) => o.partyId!)
-
-  if (!registrationType) {
-    const notes = countStr(docsData.exceptionsNotes)
-    return applySubmittedCap(state, taskId, { filled: notes, total: 1 })
-  }
-
-  const docs = getRegistrationDocumentsForType(registrationType, { relatedParties: state.relatedParties })
-  const { upload } = partitionRegistrationDocumentsByFulfillment(docs)
-
-  if (upload.length === 0) {
-    const notes = countStr(docsData.exceptionsNotes)
-    return applySubmittedCap(state, taskId, { filled: Math.min(1, notes), total: 1 })
-  }
-
-  if (ownerIds.length === 0) {
-    return applySubmittedCap(state, taskId, { filled: 0, total: 1 })
-  }
-
-  let total = 0
-  let filled = 0
-  for (const doc of upload) {
-    const assignees = getAssigneePartyIdsForClientUploadDoc(doc.id, state.relatedParties, ownerIds)
-    for (const ownerId of assignees) {
-      const parentInstances = (openAccountsData[`doc-instances-${doc.id}`] as DocInstance[] | undefined) ?? []
-      const inst = parentInstances.find((i) => i.assignedTo === ownerId)
-      if (inst?.status !== 'requested_by_review') continue
-      total += 1
-      if (slotSatisfied(doc.id, ownerId, openAccountsData, localDocs)) filled++
+  let reviewRequestedTotal = 0
+  let reviewRequestedFilled = 0
+  for (const doc of supportingDocs) {
+    const parentInstances = (openAccountsData[`doc-instances-${doc.id}`] as DocInstance[] | undefined) ?? []
+    for (const inst of parentInstances) {
+      if (inst.status !== 'requested_by_review') continue
+      reviewRequestedTotal += 1
+      const hasUpload = !!inst.fileName?.trim() || localDocs.some((l) => l.id === inst.id && !!l.fileName?.trim())
+      if (!hasUpload) continue
+      const subTypesCount = getDocSubTypes(doc.id).length
+      if (instanceSpecificationComplete(inst.subType, inst.customSubTypeLabel, subTypesCount)) {
+        reviewRequestedFilled += 1
+      }
     }
   }
 
-  if (total === 0) {
-    return applySubmittedCap(state, taskId, { filled: 1, total: 1 })
+  if (reviewRequestedTotal > 0) {
+    return applySubmittedCap(state, taskId, { filled: reviewRequestedFilled, total: reviewRequestedTotal })
   }
 
-  return applySubmittedCap(state, taskId, { filled, total })
+  // Optional workspace: no automatic completion unless user actually adds uploads/notes.
+  const optionalUploadsCount = supportingDocs.reduce((sum, doc) => {
+    const parentInstances = (openAccountsData[`doc-instances-${doc.id}`] as DocInstance[] | undefined) ?? []
+    return sum + parentInstances.filter((i) => !!i.fileName?.trim()).length
+  }, 0)
+  const optionalFilled = optionalUploadsCount > 0 || notes > 0 ? 1 : 0
+  return applySubmittedCap(state, taskId, { filled: optionalFilled, total: 1 })
 }
 
 const ACCOUNT_OPENING_SUFFIXES = [

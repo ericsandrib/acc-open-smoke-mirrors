@@ -80,6 +80,7 @@ export const taskSections: Partial<Record<string, Array<TaskSection>>> = {
   'acct-child-documents-review': [
     { id: 'acct-docs-forms', label: 'Forms for This Account' },
     { id: 'acct-docs-client-upload', label: 'Supporting Client Documents' },
+    { id: 'acct-docs-notes', label: 'Exceptions / Notes' },
   ],
   'acct-child-funding-transfers': [
     { id: '__top__', label: 'Movement Details' },
