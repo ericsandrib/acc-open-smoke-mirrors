@@ -84,7 +84,7 @@ export function TaskContent() {
   const showCombinedOpenAccounts = false
 
   const splitV1Title =
-    isSplitJourney && activeTask
+    variant !== 'v5' && isSplitJourney && activeTask
       ? activeTask.formKey === OPEN_ACCOUNTS_FORM_KEY
         ? 'Accounts without Annuities'
         : activeTask.formKey === OPEN_ACCOUNTS_WITH_ANNUITY_FORM_KEY
@@ -92,9 +92,23 @@ export function TaskContent() {
           : null
       : null
 
+  const v5NoAnnuityTaskTitle =
+    variant === 'v5' && activeTask?.formKey === OPEN_ACCOUNTS_FORM_KEY
+      ? state.v5NoAnnuityOpenAccountsPage === 'instructions'
+        ? 'Account Instructions'
+        : state.v5NoAnnuityOpenAccountsPage === 'kyc'
+          ? 'KYC Verification'
+          : state.v5NoAnnuityOpenAccountsPage === 'documents'
+            ? 'Supporting Documents'
+            : state.v5NoAnnuityOpenAccountsPage === 'envelopes'
+              ? 'Envelopes'
+              : null
+      : null
+
   const title = showCombinedOpenAccounts
     ? 'Open Accounts'
-    : splitV1Title
+    : v5NoAnnuityTaskTitle
+      ?? splitV1Title
       ?? activeTask?.title
       ?? (subTaskChild && subTaskDef && parsed
         ? `${subTaskChild.name} — ${getSubTaskDisplayTitle(parsed.config.childType, subTaskDef, state.demoViewMode)}`
