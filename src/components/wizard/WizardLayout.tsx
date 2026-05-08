@@ -94,7 +94,6 @@ import {
   useOpenAccountsVariant,
   useOpenAccountsVariantControls,
 } from './openAccountsVariantContext'
-import { OpenAccountsVariantSwitcher } from './OpenAccountsVariantSwitcher'
 
 type WizardActionProgressItem = { id: string; title: string; pct: number }
 type HeaderBreadcrumb = {
@@ -396,12 +395,7 @@ function WizardProgressHeaderRow({
 }
 
 export function WizardLayout() {
-  return (
-    <>
-      <WizardLayoutInner />
-      <OpenAccountsVariantSwitcher />
-    </>
-  )
+  return <WizardLayoutInner />
 }
 
 function WizardLayoutInner() {

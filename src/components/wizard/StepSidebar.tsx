@@ -268,7 +268,7 @@ function buildDisplayActions(state: WorkflowState, variant: OpenAccountsVariant)
                 type: 'task',
                 task: {
                   id: 'v5-noann-account-instructions',
-                  label: 'Account Setup',
+                  label: 'Accounts',
                   underlyingTaskIds: [noAnnuityOnlyTaskId],
                   v5NoAnnuityPage: 'instructions',
                 },
@@ -277,7 +277,7 @@ function buildDisplayActions(state: WorkflowState, variant: OpenAccountsVariant)
                 type: 'task',
                 task: {
                   id: 'v5-noann-kyc-verification',
-                  label: 'KYC Initiation',
+                  label: 'KYC',
                   underlyingTaskIds: [noAnnuityOnlyTaskId],
                   v5NoAnnuityPage: 'kyc',
                 },
@@ -325,7 +325,7 @@ function buildDisplayActions(state: WorkflowState, variant: OpenAccountsVariant)
     label: 'Annuity Accounts',
     tasks: withAnnuityTasks.map((t) => ({
       id: t.id,
-      label: t.formKey === OPEN_ACCOUNTS_WITH_ANNUITY_FORM_KEY ? 'Account Setup' : t.title,
+      label: t.formKey === OPEN_ACCOUNTS_WITH_ANNUITY_FORM_KEY ? 'Accounts' : t.title,
       underlyingTaskIds: [t.id],
     })),
   }
@@ -339,13 +339,13 @@ function buildDisplayActions(state: WorkflowState, variant: OpenAccountsVariant)
         ? [
             {
               id: 'v5-noann-account-instructions',
-              label: 'Account Setup',
+              label: 'Accounts',
               underlyingTaskIds: [noAnnuityOpenAccountsTaskId],
               v5NoAnnuityPage: 'instructions',
             },
             {
               id: 'v5-noann-kyc-verification',
-              label: 'KYC Initiation',
+              label: 'KYC',
               underlyingTaskIds: [noAnnuityOpenAccountsTaskId],
               v5NoAnnuityPage: 'kyc',
             },
@@ -374,13 +374,13 @@ function buildDisplayActions(state: WorkflowState, variant: OpenAccountsVariant)
         ? [
             {
               id: 'v6-account-instructions',
-              label: 'Account Setup',
+              label: 'Accounts',
               underlyingTaskIds: [noAnnuityOpenAccountsTaskId],
               v6CombinedInstructions: true,
             },
             {
               id: 'v5-noann-kyc-verification',
-              label: 'KYC Initiation',
+              label: 'KYC',
               underlyingTaskIds: [noAnnuityOpenAccountsTaskId],
               v5NoAnnuityPage: 'kyc',
             },
@@ -415,7 +415,7 @@ function buildDisplayActions(state: WorkflowState, variant: OpenAccountsVariant)
                       type: 'task' as const,
                       task: {
                         id: 'v6-annuity-accounts-setup',
-                        label: 'Annuity Accounts Setup',
+                        label: 'Annuity Accounts',
                         underlyingTaskIds: [withAnnuityTasks[0].id],
                       },
                     },

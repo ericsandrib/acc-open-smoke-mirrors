@@ -983,6 +983,46 @@ function workflowReducer(state: WorkflowState, action: WorkflowAction): Workflow
       }
     }
 
+    case 'SUBMIT_ACCOUNT_OPENING_CHILDREN_FOR_REVIEW': {
+      const childIds = new Set(action.childIds)
+      if (childIds.size === 0) return state
+
+      const updatedTasks = state.tasks.map((t) => {
+        if (!t.children) return t
+        return {
+          ...t,
+          children: t.children.map((c) =>
+            childIds.has(c.id) && c.childType === 'account-opening'
+              ? { ...c, status: 'awaiting_review' as const }
+              : c,
+          ),
+        }
+      })
+
+      const nextChildReviews = { ...(state.childReviewsByChildId ?? {}) }
+      for (const childId of childIds) {
+        const prev = nextChildReviews[childId] ?? {}
+        nextChildReviews[childId] = {
+          ...prev,
+          documentReview: prev.documentReview ?? { status: 'pending' },
+          principalReview: prev.principalReview ?? { status: 'pending' },
+          accountOpeningPreReviewTimeline:
+            prev.accountOpeningPreReviewTimeline ?? buildAccountOpeningPreReviewTimeline(),
+        }
+      }
+
+      return {
+        ...state,
+        tasks: updatedTasks,
+        childReviewsByChildId: nextChildReviews,
+        childReviewDecisionsByChildId: Object.fromEntries(
+          Object.entries(state.childReviewDecisionsByChildId ?? {}).filter(
+            ([childId]) => !childIds.has(childId),
+          ),
+        ),
+      }
+    }
+
     case 'ACCEPT_REVIEW': {
       const acceptedTasks = state.tasks.map((t) => {
         const updated = { ...t, status: 'complete' as const }

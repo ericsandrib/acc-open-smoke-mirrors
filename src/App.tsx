@@ -14,6 +14,7 @@ import { ProgressIndicatorTestPage } from '@/pages/tests/ProgressIndicatorTestPa
 import { Toaster } from '@/components/ui/sonner'
 import { AppPasswordGate } from '@/components/AppPasswordGate'
 import { OpenAccountsVariantAndFocusProvider } from '@/components/wizard/openAccountsVariantContext'
+import { OpenAccountsVariantSwitcher } from '@/components/wizard/OpenAccountsVariantSwitcher'
 
 export default function App() {
   return (
@@ -37,6 +38,7 @@ export default function App() {
                   <Route path="*" element={<Navigate to="/" replace />} />
                 </Routes>
               </BrowserRouter>
+              <OpenAccountsVariantSwitcher />
             </OpenAccountsVariantAndFocusProvider>
           </ServicingProvider>
         </WorkflowProvider>

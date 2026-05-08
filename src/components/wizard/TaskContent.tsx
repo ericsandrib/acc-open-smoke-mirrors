@@ -105,9 +105,9 @@ export function TaskContent() {
   const v5NoAnnuityTaskTitle =
     variant === 'v5' && activeTask?.formKey === OPEN_ACCOUNTS_FORM_KEY
       ? state.v5NoAnnuityOpenAccountsPage === 'instructions'
-        ? 'Account Setup'
+        ? 'Accounts'
         : state.v5NoAnnuityOpenAccountsPage === 'kyc'
-          ? 'KYC Initiation'
+          ? 'KYC'
           : state.v5NoAnnuityOpenAccountsPage === 'documents'
             ? 'Supporting Documents'
             : state.v5NoAnnuityOpenAccountsPage === 'envelopes'
@@ -117,9 +117,9 @@ export function TaskContent() {
   const v5WithAnnuityTaskTitle =
     variant === 'v5' && activeTask?.formKey === OPEN_ACCOUNTS_WITH_ANNUITY_FORM_KEY
       ? selectedVariant === 'v6'
-        ? 'Annuity Accounts Setup'
+        ? 'Annuity Accounts'
         : selectedVariant === 'v5'
-          ? 'Account Setup'
+          ? 'Accounts'
           : 'Account Instructions'
       : null
   const v5NoAnnuityTaskDescription =

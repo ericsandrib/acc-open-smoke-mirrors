@@ -162,7 +162,7 @@ export function DocumentUploadInstancesTable({
                           <SelectTrigger className="h-8 text-xs w-full max-w-full min-w-0">
                             <SelectValue placeholder="Assign to…" />
                           </SelectTrigger>
-                          <SelectContent>
+                          <SelectContent sideOffset={6}>
                             {assignees.map((member) => (
                               <SelectItem key={member.id} value={member.id}>
                                 {member.name}

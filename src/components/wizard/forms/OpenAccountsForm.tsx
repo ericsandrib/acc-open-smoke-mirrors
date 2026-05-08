@@ -267,7 +267,9 @@ export function OpenAccountsForm() {
     wizardOpenAccountsVariant === 'v6' && isV6SplitJourney && isV6WithAnnuitySetup
   const accountsSectionTitle = isV6WithoutAnnuityInstructions
     ? 'Accounts without Annuity'
-    : 'Accounts'
+    : isV6WithAnnuitySetup
+      ? 'Accounts with Annuity'
+      : 'Accounts'
   const { data, updateField } = useTaskData(openAccountsTaskId)
   const [pickerOpen, setPickerOpen] = useState(false)
   const [timelineChild, setTimelineChild] = useState<ChildTask | null>(null)
@@ -358,14 +360,8 @@ export function OpenAccountsForm() {
           id: p.id,
           name: p.name?.trim() || p.organizationName?.trim() || p.role || 'Party',
         })),
-      ...accountOpeningChildren.map((child) => ({
-        id: `workflow:${child.id}`,
-        name: `${child.name} workflow`,
-      })),
-      { id: 'workflow:kyc', name: 'KYC workflow' },
-      { id: 'workflow:account-opening', name: 'Account Opening workflow' },
     ],
-    [state.relatedParties, accountOpeningChildren],
+    [state.relatedParties],
   )
 
   const requiredEsignFormRows = useMemo(
@@ -619,6 +615,37 @@ export function OpenAccountsForm() {
         type: 'SET_TASK_DATA',
         taskId,
         fields: { esignExecutedForms: merged },
+      })
+    }
+
+    const signedRows = env.formSelections.filter((row) => row.included)
+    const signedAccountNumberLabels = new Set(
+      signedRows
+        .map((row) => row.accountNumberLabel.trim().toLowerCase())
+        .filter((label) => label.length > 0),
+    )
+    const signedAccountChildIds = new Set<string>(signedRows.map((row) => row.accountChildId))
+
+    const accountChildren = (openAccountsTask?.children ?? []).filter(
+      (c) => c.childType === 'account-opening',
+    )
+    const childIdsToSubmitForReview = accountChildren
+      .filter((child) => {
+        const meta = (state.taskData[child.id] as Record<string, unknown> | undefined) ?? {}
+        const acct = String(meta.accountNumber ?? '').trim()
+        const short = String(meta.shortName ?? '').trim()
+        const accountNumberLabel = (acct || short || 'Not assigned').toLowerCase()
+        return (
+          signedAccountChildIds.has(child.id) ||
+          signedAccountNumberLabels.has(accountNumberLabel)
+        )
+      })
+      .map((child) => child.id)
+
+    if (childIdsToSubmitForReview.length > 0) {
+      dispatch({
+        type: 'SUBMIT_ACCOUNT_OPENING_CHILDREN_FOR_REVIEW',
+        childIds: childIdsToSubmitForReview,
       })
     }
   }
@@ -1035,6 +1062,7 @@ export function OpenAccountsForm() {
                   assignees={supportingDocumentAssignees}
                   emptyMessage="No documents added yet."
                   emptyHelper="Click Add to upload an optional document."
+                  lockAssignedWhenPresent={false}
                   onAdd={addInstance}
                   onRemove={removeInstance}
                   onUpload={handleFileSelect}

@@ -8,6 +8,12 @@ interface ComboboxOption {
   label: string
 }
 
+type ListBoxPosition = {
+  left: number
+  width: number
+  maxHeight: number
+} & ({ top: number; bottom?: never } | { bottom: number; top?: never })
+
 interface ComboboxProps {
   options: ComboboxOption[]
   value: string
@@ -40,7 +46,7 @@ function Combobox({
   const [open, setOpen] = React.useState(false)
   const [search, setSearch] = React.useState("")
   const [highlightIndex, setHighlightIndex] = React.useState(-1)
-  const [listBox, setListBox] = React.useState<{ top: number; left: number; width: number } | null>(null)
+  const [listBox, setListBox] = React.useState<ListBoxPosition | null>(null)
   const containerRef = React.useRef<HTMLDivElement>(null)
   const inputRef = React.useRef<HTMLInputElement>(null)
   const listRef = React.useRef<HTMLDivElement>(null)
@@ -49,7 +55,32 @@ function Combobox({
     const el = containerRef.current
     if (!el) return
     const rect = el.getBoundingClientRect()
-    setListBox({ top: rect.bottom + 4, left: rect.left, width: rect.width })
+    const viewportHeight = window.innerHeight
+    const spaceBelow = viewportHeight - rect.bottom
+    const spaceAbove = rect.top
+    const openUpward = spaceBelow < 220 && spaceAbove > spaceBelow
+    const edgePadding = 8
+    const verticalGap = 4
+    const available = openUpward
+      ? Math.max(120, spaceAbove - edgePadding - verticalGap)
+      : Math.max(120, spaceBelow - edgePadding - verticalGap)
+
+    if (openUpward) {
+      setListBox({
+        bottom: viewportHeight - rect.top + verticalGap,
+        left: rect.left,
+        width: rect.width,
+        maxHeight: Math.min(320, available),
+      })
+      return
+    }
+
+    setListBox({
+      top: rect.bottom + verticalGap,
+      left: rect.left,
+      width: rect.width,
+      maxHeight: Math.min(320, available),
+    })
   }, [])
 
   const selectedLabel = options.find((o) => o.value === value)?.label ?? ""
@@ -83,17 +114,31 @@ function Combobox({
   }, [open, updateListPosition, filtered.length, search])
 
   React.useEffect(() => {
-    function handleClickOutside(e: MouseEvent) {
-      if (
-        containerRef.current && !containerRef.current.contains(e.target as Node) &&
-        listRef.current && !listRef.current.contains(e.target as Node)
-      ) {
-        setOpen(false)
-      }
+    function shouldKeepOpen(target: EventTarget | null): boolean {
+      const node = target as Node | null
+      if (!node) return false
+      if (containerRef.current?.contains(node)) return true
+      if (listRef.current?.contains(node)) return true
+      return false
     }
+
+    function handlePointerDownOutside(e: PointerEvent) {
+      if (!shouldKeepOpen(e.target)) setOpen(false)
+    }
+
+    function handleFocusInOutside(e: FocusEvent) {
+      if (!shouldKeepOpen(e.target)) setOpen(false)
+    }
+
     if (open) {
-      document.addEventListener("mousedown", handleClickOutside)
-      return () => document.removeEventListener("mousedown", handleClickOutside)
+      // Capture phase ensures this still runs even when another control
+      // stops bubbling events (e.g. Radix Select trigger/content internals).
+      document.addEventListener("pointerdown", handlePointerDownOutside, true)
+      document.addEventListener("focusin", handleFocusInOutside, true)
+      return () => {
+        document.removeEventListener("pointerdown", handlePointerDownOutside, true)
+        document.removeEventListener("focusin", handleFocusInOutside, true)
+      }
     }
   }, [open])
 
@@ -160,15 +205,16 @@ function Combobox({
         listBox
           ? {
               position: "fixed",
-              top: listBox.top,
+              ...(listBox.top !== undefined ? { top: listBox.top } : { bottom: listBox.bottom }),
               left: listBox.left,
               width: listBox.width,
+              maxHeight: listBox.maxHeight,
               zIndex: 9999,
             }
           : { position: "fixed", left: -9999, top: -9999, visibility: "hidden" as const }
       }
       className={cn(
-        "max-h-60 overflow-auto rounded-md border border-border bg-popover p-1 text-popover-foreground shadow-md",
+        "overflow-auto rounded-md border border-border bg-popover p-1 text-popover-foreground shadow-md",
         dropdownClassName
       )}
     >
