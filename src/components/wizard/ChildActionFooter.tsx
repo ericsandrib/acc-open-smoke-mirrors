@@ -9,7 +9,7 @@ import {
   getChildReviewDecision,
 } from '@/stores/workflowStore'
 import { Button } from '@/components/ui/button'
-import { CheckCircle2, ChevronLeft, ChevronRight, Clock, ShieldAlert, RotateCcw } from 'lucide-react'
+import { CheckCircle2, ChevronLeft, ChevronRight, Clock, ShieldAlert } from 'lucide-react'
 import { getKycValidationErrors, kycChildHasOptionalIdVerification } from './forms/KycChildInfoForm'
 import {
   getAccountOpeningChildSubmissionIssues,
@@ -168,12 +168,12 @@ export function ChildActionFooter() {
           </div>
           <div className="flex items-center gap-2">
             {isLast ? (
-              <Button onClick={() => dispatch({ type: 'EXIT_CHILD_ACTION' })}>
+              <Button variant="outline" onClick={() => dispatch({ type: 'EXIT_CHILD_ACTION' })}>
                 Next
                 <ChevronRight className="h-4 w-4" />
               </Button>
             ) : (
-              <Button onClick={() => dispatch({ type: 'CHILD_GO_NEXT' })}>
+              <Button variant="outline" onClick={() => dispatch({ type: 'CHILD_GO_NEXT' })}>
                 Next
                 <ChevronRight className="h-4 w-4" />
               </Button>
@@ -315,10 +315,15 @@ export function ChildActionFooter() {
             </div>
             <div className="flex items-center gap-3">
             {advisorResubmitEligible && isLast ? (
-              <Button onClick={handleResubmit}>
-                <RotateCcw className="h-4 w-4" />
-                Resubmit for Review
-              </Button>
+              isKyc ? (
+                <Button onClick={handleResubmit}>
+                  Submit for Review
+                </Button>
+              ) : (
+                <Button variant="outline" onClick={() => dispatch({ type: 'EXIT_CHILD_ACTION' })}>
+                  Exit workflow
+                </Button>
+              )
             ) : child.status === 'complete' ? (
               <div className="flex items-center gap-1.5 text-sm text-green-700">
                 <CheckCircle2 className="h-3.5 w-3.5" />
@@ -344,20 +349,12 @@ export function ChildActionFooter() {
                 </span>
               </div>
             ) : isLast && (child.status === 'in_progress' || child.status === 'not_started') ? (
-              child.childType === 'account-opening' &&
-              !hasAccountOpeningChildBeenSubmittedForReview(state, child.id) ? (
-                <Button onClick={() => dispatch({ type: 'EXIT_CHILD_ACTION' })}>
-                  Next
-                  <ChevronRight className="h-4 w-4" />
-                </Button>
-              ) : (
-                <Button onClick={handleDone}>
-                  Submit for Review
-                </Button>
-              )
+              <Button onClick={handleDone}>
+                Submit for Review
+              </Button>
             ) : null}
             {!isLast && !hideNextInAdvisorAfterSubmit && !hideNextForCompletedAnnuityOwners && (
-              <Button onClick={() => dispatch({ type: 'CHILD_GO_NEXT' })}>
+              <Button variant="outline" onClick={() => dispatch({ type: 'CHILD_GO_NEXT' })}>
                 Next
                 <ChevronRight className="h-4 w-4" />
               </Button>
@@ -442,7 +439,7 @@ export function ChildActionFooter() {
                 </Button>
               )
             ) : (
-              <Button onClick={() => dispatch({ type: 'CHILD_GO_NEXT' })}>
+              <Button variant="outline" onClick={() => dispatch({ type: 'CHILD_GO_NEXT' })}>
                 Next
                 <ChevronRight className="h-4 w-4" />
               </Button>

@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { ExternalLink, Send } from 'lucide-react'
+import { CheckCircle2, ExternalLink, Send } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { useWorkflow } from '@/stores/workflowStore'
 import { CompleteAccountOpeningConfirmModal } from '@/components/wizard/WizardFooter'
@@ -10,7 +10,7 @@ const NETX360_DEEPLINK = 'https://xat-www2.netx360.inautix.com/plus/servicing/ac
 /** Deeplink to the NetX360 onboarding workflow (a separate platform). */
 export function Netx360HandoffSection({ disabled = false }: { disabled?: boolean }) {
   const button = (
-    <Button type="button" variant="outline" className="gap-1.5" disabled={disabled}>
+    <Button type="button" className="gap-1.5" disabled={disabled}>
       Continue in NetX360
       <ExternalLink className="h-3.5 w-3.5" />
     </Button>
@@ -48,20 +48,38 @@ export function Netx360SubmitSection({
   const hasSubmittable = accountOpeningChildren.some(
     (c) => c.status !== 'awaiting_review' && c.status !== 'complete' && c.status !== 'canceled',
   )
+  const submittedToNetX360 =
+    accountOpeningChildren.length > 0 &&
+    accountOpeningChildren.every((c) => {
+      const ownersTaskId = `${c.id}-account-owners`
+      const ownersData = state.taskData[ownersTaskId] as Record<string, unknown> | undefined
+      return ownersData?.submittedToNetX360 === true
+    })
 
   return (
     <>
       <Button
         type="button"
+        variant="secondary"
         onClick={() => {
+          if (submittedToNetX360) return
           setWarnings([])
           setModalOpen(true)
         }}
-        disabled={!hasSubmittable}
+        disabled={!hasSubmittable || submittedToNetX360}
         className="gap-1.5"
       >
-        <Send className="h-4 w-4" />
-        Submit to NetX360
+        {submittedToNetX360 ? (
+          <>
+            <CheckCircle2 className="h-4 w-4" />
+            Submitted to NetX360
+          </>
+        ) : (
+          <>
+            <Send className="h-4 w-4" />
+            Submit to NetX360
+          </>
+        )}
       </Button>
       {modalOpen && (
         <CompleteAccountOpeningConfirmModal

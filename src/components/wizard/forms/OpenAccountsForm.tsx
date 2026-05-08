@@ -720,6 +720,7 @@ export function OpenAccountsForm() {
           <SegmentedControl
             label="Will this client open annuity accounts?"
             value="no"
+            selectedStyle="neutral"
             options={[
               { value: 'no', label: 'No' },
               { value: 'yes', label: 'Yes' },
@@ -741,6 +742,7 @@ export function OpenAccountsForm() {
           <SegmentedControl
             label="Will this client open annuity accounts?"
             value={v6AnnuityDecisionIsYes ? 'yes' : 'no'}
+            selectedStyle="neutral"
             options={[
               { value: 'no', label: 'No' },
               { value: 'yes', label: 'Yes' },
@@ -909,7 +911,7 @@ export function OpenAccountsForm() {
             <p className="text-sm text-muted-foreground mb-3">
               No accounts added yet. Add the account types you want to open.
             </p>
-            <Button onClick={() => setPickerOpen(true)}>
+            <Button variant="secondary" onClick={() => setPickerOpen(true)}>
               <Plus className="h-4 w-4 mr-1" />
               Add accounts
             </Button>
@@ -935,7 +937,7 @@ export function OpenAccountsForm() {
         <>
           <section id={sectionId('oa-netx360-submit')} className="scroll-mt-16 mt-6 mb-6">
             <div className="mb-4">
-              <h3 className={subsectionTitleClass}>Submit to NetX360</h3>
+              <h3 className={subsectionTitleClass}>Submit all accounts to NetX360</h3>
             </div>
             <Netx360SubmitSection taskId={openAccountsTaskId} onSubmitted={() => setNetx360Submitted(true)} />
           </section>
@@ -1459,7 +1461,7 @@ export function OpenAccountsForm() {
           <div className="rounded-lg border border-dashed border-border p-6 text-center">
             <FileSignature className="mx-auto mb-2 h-8 w-8 text-muted-foreground/50" />
             <p className="text-sm font-medium text-muted-foreground mb-4">No envelopes created yet.</p>
-            <Button type="button" onClick={openNewEnvelopeDrawer}>
+            <Button type="button" variant="secondary" onClick={openNewEnvelopeDrawer}>
               <Plus className="h-4 w-4 mr-2" />
               New envelope
             </Button>

@@ -225,7 +225,7 @@ export function WizardFooter() {
                   <ChevronRight className="h-4 w-4" />
                 </Button>
               ) : (
-                <Button onClick={() => setExitWorkflowOpen(true)}>
+                <Button variant="outline" onClick={() => setExitWorkflowOpen(true)}>
                   Exit workflow
                 </Button>
               )
@@ -294,6 +294,7 @@ export function WizardFooter() {
             Continue workflow
           </Button>
           <Button
+            variant="outline"
             type="button"
             onClick={() => {
               setExitWorkflowOpen(false)

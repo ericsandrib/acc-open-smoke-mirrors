@@ -89,8 +89,8 @@ import {
   OPEN_ACCOUNTS_FORM_KEY,
   OPEN_ACCOUNTS_WITH_ANNUITY_FORM_KEY,
 } from '@/utils/openAccountsTaskContext'
+import type { Task } from '@/types/workflow'
 import {
-  OpenAccountsVariantAndFocusProvider,
   useOpenAccountsVariant,
   useOpenAccountsVariantControls,
 } from './openAccountsVariantContext'
@@ -397,10 +397,10 @@ function WizardProgressHeaderRow({
 
 export function WizardLayout() {
   return (
-    <OpenAccountsVariantAndFocusProvider>
+    <>
       <WizardLayoutInner />
       <OpenAccountsVariantSwitcher />
-    </OpenAccountsVariantAndFocusProvider>
+    </>
   )
 }
 

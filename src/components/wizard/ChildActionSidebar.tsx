@@ -282,6 +282,7 @@ export function ChildActionSidebar() {
               Continue workflow
             </Button>
             <Button
+              variant="outline"
               type="button"
               onClick={() => {
                 setExitToOnboardingOpen(false)

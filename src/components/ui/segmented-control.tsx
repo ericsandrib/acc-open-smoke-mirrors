@@ -11,6 +11,7 @@ export type SegmentedControlProps<T extends string> = {
   onValueChange: (value: T) => void
   /** Optional id for the label element (for external references). */
   labelId?: string
+  selectedStyle?: 'primary' | 'neutral'
   className?: string
 }
 
@@ -20,6 +21,7 @@ export function SegmentedControl<T extends string>({
   options,
   onValueChange,
   labelId: labelIdProp,
+  selectedStyle = 'primary',
   className,
 }: SegmentedControlProps<T>) {
   const autoLabelId = React.useId()
@@ -72,7 +74,9 @@ export function SegmentedControl<T extends string>({
                 'min-h-9 flex-1 rounded-md px-3 py-1.5 text-center text-sm font-medium transition-colors',
                 'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background',
                 selected
-                  ? 'bg-primary text-primary-foreground shadow-sm'
+                  ? selectedStyle === 'neutral'
+                    ? 'bg-background text-foreground shadow-sm border border-border'
+                    : 'bg-primary text-primary-foreground shadow-sm'
                   : 'bg-transparent text-muted-foreground hover:bg-background/80 hover:text-foreground',
               )}
             >
