@@ -20,7 +20,8 @@ import { useOpenAccountsVariant } from '@/components/wizard/openAccountsVariantC
 export function FundChildFundingForm() {
   const { state, dispatch } = useWorkflow()
   const variant = useOpenAccountsVariant()
-  const isVersion2 = variant === 'v2' || variant === 'v5'
+  // v5/v6 intentionally render flat, with no section cards or card-only header strips.
+  const isVersion2 = variant === 'v2'
   const isVersion3 = variant === 'v3'
   const isVersion4 = variant === 'v4'
   const isCardVariant = isVersion2 || isVersion3 || isVersion4
@@ -65,7 +66,7 @@ export function FundChildFundingForm() {
   }
 
   return (
-    <div className="space-y-7">
+    <div className={variant === 'v5' || variant === 'v6' ? 'space-y-9' : 'space-y-7'}>
       <section>
         <div
           className={cn(

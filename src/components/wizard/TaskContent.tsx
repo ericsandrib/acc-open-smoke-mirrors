@@ -247,7 +247,12 @@ export function TaskContent() {
           </section>
         ) : null}
         {showV6AnnuityAccountsSetup && activeTask ? (
-          <div className="motion-safe:animate-in motion-safe:fade-in motion-safe:zoom-in-[0.99] motion-safe:duration-300">
+          <div
+            className={cn(
+              (variant !== 'v5' && variant !== 'v6') &&
+                'motion-safe:animate-in motion-safe:fade-in motion-safe:zoom-in-[0.99] motion-safe:duration-300',
+            )}
+          >
             <OpenAccountsTaskOverrideProvider taskId={activeTask.id} idPrefix="v6-wann-">
               <OpenAccountsForm />
             </OpenAccountsTaskOverrideProvider>

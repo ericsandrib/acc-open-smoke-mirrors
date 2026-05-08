@@ -8,9 +8,12 @@ export function ExistingAccountsForm() {
   const { state, dispatch } = useWorkflow()
   const { data, updateField } = useTaskData('open-accounts')
   const variant = useOpenAccountsVariant()
-  const isVersion2 = variant === 'v2' || variant === 'v5'
+  // v5/v6 intentionally render flat, with no section cards.
+  const isVersion2 = variant === 'v2'
   const isColoredBackgroundVariant = variant === 'v3' || variant === 'v4'
   const isCardVariant = isVersion2 || isColoredBackgroundVariant
+  const sectionHeaderSpacingClass =
+    variant === 'v5' || variant === 'v6' ? 'mb-3' : 'mb-8'
   const cardContainerClass = isCardVariant
     ? cn(
         'rounded-xl p-6 overflow-hidden',
@@ -35,19 +38,19 @@ export function ExistingAccountsForm() {
   }
 
   return (
-    <div className="space-y-7">
+    <div className={variant === 'v5' || variant === 'v6' ? 'space-y-9' : 'space-y-7'}>
       <section id="ea-existing-accounts" className="scroll-mt-16">
         <div className={cardContainerClass}>
           <div
             className={cn(
-              'mb-8',
+              sectionHeaderSpacingClass,
               isCardVariant &&
                 cn(
                   '-mx-6 -mt-6 px-6 py-4',
                   isVersion2 && 'border-b border-border/60',
                   variant === 'v4' && 'border-b border-border/60',
                   variant === 'v3' && 'mx-0 mt-0 px-0 pt-0 pb-4 border-b border-border/60',
-                  (variant === 'v2' || variant === 'v5' || variant === 'v4') && 'bg-[#F5F5F4]',
+                  (variant === 'v2' || variant === 'v4') && 'bg-[#F5F5F4]',
                 ),
             )}
           >
@@ -72,14 +75,14 @@ export function ExistingAccountsForm() {
         <div className={cardContainerClass}>
           <div
             className={cn(
-              'mb-8',
+              sectionHeaderSpacingClass,
               isCardVariant &&
                 cn(
                   '-mx-6 -mt-6 px-6 py-4',
                   isVersion2 && 'border-b border-border/60',
                   variant === 'v4' && 'border-b border-border/60',
                   variant === 'v3' && 'mx-0 mt-0 px-0 pt-0 pb-4 border-b border-border/60',
-                  (variant === 'v2' || variant === 'v5' || variant === 'v4') && 'bg-[#F5F5F4]',
+                  (variant === 'v2' || variant === 'v4') && 'bg-[#F5F5F4]',
                 ),
             )}
           >

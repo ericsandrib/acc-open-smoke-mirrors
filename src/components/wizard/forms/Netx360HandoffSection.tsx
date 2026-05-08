@@ -8,19 +8,37 @@ import { getOpenAccountsSubmitForReviewBlockers } from '@/utils/openAccountsDocu
 const NETX360_DEEPLINK = 'https://xat-www2.netx360.inautix.com/plus/servicing/account-service/client-onboarding'
 
 /** Deeplink to the NetX360 onboarding workflow (a separate platform). */
-export function Netx360HandoffSection() {
+export function Netx360HandoffSection({ disabled = false }: { disabled?: boolean }) {
+  const button = (
+    <Button type="button" variant="outline" className="gap-1.5" disabled={disabled}>
+      Continue in NetX360
+      <ExternalLink className="h-3.5 w-3.5" />
+    </Button>
+  )
+
+  if (disabled) {
+    return (
+      <span className="inline-block" aria-disabled="true">
+        {button}
+      </span>
+    )
+  }
+
   return (
     <a href={NETX360_DEEPLINK} target="_blank" rel="noreferrer" className="inline-block">
-      <Button type="button" variant="outline" className="gap-1.5">
-        Continue in NetX360
-        <ExternalLink className="h-3.5 w-3.5" />
-      </Button>
+      {button}
     </a>
   )
 }
 
 /** Submit annuity account-opening children for review (drives the demo's submit flow). */
-export function Netx360SubmitSection({ taskId }: { taskId: string }) {
+export function Netx360SubmitSection({
+  taskId,
+  onSubmitted,
+}: {
+  taskId: string
+  onSubmitted?: () => void
+}) {
   const { state, dispatch } = useWorkflow()
   const [modalOpen, setModalOpen] = useState(false)
   const [warnings, setWarnings] = useState<string[]>([])
@@ -64,6 +82,7 @@ export function Netx360SubmitSection({ taskId }: { taskId: string }) {
               type: 'SUBMIT_ALL_ACCOUNT_OPENING_CHILDREN_FOR_REVIEW',
               openAccountsTaskId: taskId,
             })
+            onSubmitted?.()
             setModalOpen(false)
             setWarnings([])
           }}

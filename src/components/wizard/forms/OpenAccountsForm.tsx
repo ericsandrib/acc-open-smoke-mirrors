@@ -219,7 +219,8 @@ function EnvelopeKebabMenu({
 export function OpenAccountsForm() {
   const { state, dispatch } = useWorkflow()
   const openAccountsVariant = useOpenAccountsVariant()
-  const isVersion2 = openAccountsVariant === 'v2' || openAccountsVariant === 'v5'
+  // v5/v6 intentionally render flat, with no section cards or card-only header strips.
+  const isVersion2 = openAccountsVariant === 'v2'
   const isVersion3 = openAccountsVariant === 'v3'
   const isVersion4 = openAccountsVariant === 'v4'
   const isColoredBackgroundVariant = openAccountsVariant === 'v3' || openAccountsVariant === 'v4'
@@ -236,6 +237,8 @@ export function OpenAccountsForm() {
     openAccountsVariant === 'v5'
       ? 'text-[14px] text-muted-foreground mt-2 leading-normal'
       : 'text-base text-muted-foreground mt-2'
+  const sectionHeaderSpacingClass =
+    openAccountsVariant === 'v5' || openAccountsVariant === 'v6' ? 'mb-3' : 'mb-8'
   const taskOverride = useOpenAccountsTaskOverride()
   const openAccountsTask =
     (taskOverride
@@ -276,6 +279,7 @@ export function OpenAccountsForm() {
   const [submitChildWarnings, setSubmitChildWarnings] = useState<string[]>([])
   const [submitTargetChildId, setSubmitTargetChildId] = useState<string | null>(null)
   const [signingBlockers, setSigningBlockers] = useState<string[] | null>(null)
+  const [netx360Submitted, setNetx360Submitted] = useState(false)
   /** Bumps when the drawer opens so the sheet remounts with fresh local state from `envelopeDraft`. */
   const [envelopeDrawerMountKey, setEnvelopeDrawerMountKey] = useState(0)
 
@@ -711,7 +715,7 @@ export function OpenAccountsForm() {
 
   if (showV6AnnuityDecisionAboveCard && !v6AnnuityDecisionIsYes) {
     return (
-      <div className="space-y-7">
+      <div className={openAccountsVariant === 'v5' || openAccountsVariant === 'v6' ? 'space-y-10' : 'space-y-7'}>
         <div className="scroll-mt-16" id={sectionId('oa-v6-annuity-decision')}>
           <SegmentedControl
             label="Will this client open annuity accounts?"
@@ -731,7 +735,7 @@ export function OpenAccountsForm() {
   }
 
   return (
-    <div className="space-y-7">
+    <div className={openAccountsVariant === 'v5' || openAccountsVariant === 'v6' ? 'space-y-10' : 'space-y-7'}>
       {showV6AnnuityDecisionAboveCard ? (
         <div className="scroll-mt-16" id={sectionId('oa-v6-annuity-decision')}>
           <SegmentedControl
@@ -751,14 +755,11 @@ export function OpenAccountsForm() {
       {showV5Instructions || showV5Documents ? (
       <div
         className={cn(
+          (openAccountsVariant === 'v5' || openAccountsVariant === 'v6') && 'space-y-10',
           isCardVariant &&
             cn(
-              'rounded-xl overflow-hidden',
-              openAccountsVariant === 'v5' ? 'p-0 space-y-4' : 'p-0 space-y-9',
-              (openAccountsVariant === 'v2' ||
-                (openAccountsVariant === 'v5' &&
-                  (externalAnnuityPlatform || (!externalAnnuityPlatform && showV5Instructions)))) &&
-                'border border-foreground/30',
+              'rounded-xl overflow-hidden p-0 space-y-9',
+              openAccountsVariant === 'v2' && 'border border-foreground/30',
               isVersion4 && 'border border-foreground/30',
               openAccountsVariant === 'v3'
                 ? 'v3-card-inner-strokes border border-foreground/20 bg-[#fafafa]'
@@ -799,9 +800,7 @@ export function OpenAccountsForm() {
       <section id={sectionId('oa-accounts')} className="scroll-mt-16">
         <div
           className={cn(
-            openAccountsVariant === 'v5'
-              ? 'mb-0 px-6 pt-4 pb-4 border-b border-border/60 bg-[#F5F5F4]'
-              : 'mb-8',
+            sectionHeaderSpacingClass,
             !isCardVariant && 'pt-4',
           )}
         >
@@ -812,7 +811,7 @@ export function OpenAccountsForm() {
             Add the accounts you plan to open at the custodian, including registration and funding details.
           </p>
         </div>
-        <div className={cn(openAccountsVariant === 'v5' && 'px-6 pt-6 pb-6')}>
+        <div>
         {accountOpeningChildren.length > 0 ? (
           <div className="rounded-lg border border-border p-1">
             {topLevelChildren.map((child) => {
@@ -934,20 +933,26 @@ export function OpenAccountsForm() {
 
       {showV5Instructions && externalAnnuityPlatform ? (
         <>
-          <section id={sectionId('oa-netx360-submit')} className="scroll-mt-16 px-6">
+          <section id={sectionId('oa-netx360-submit')} className="scroll-mt-16 mt-6 mb-6">
             <div className="mb-4">
               <h3 className={subsectionTitleClass}>Submit to NetX360</h3>
             </div>
-            <Netx360SubmitSection taskId={openAccountsTaskId} />
+            <Netx360SubmitSection taskId={openAccountsTaskId} onSubmitted={() => setNetx360Submitted(true)} />
           </section>
-          <section id={sectionId('oa-netx360-next-steps')} className="scroll-mt-16 mx-6 mb-6">
+          <section
+            id={sectionId('oa-netx360-next-steps')}
+            className={cn(
+              'scroll-mt-16 mb-6',
+              (openAccountsVariant === 'v5' || openAccountsVariant === 'v6') ? 'mt-10' : 'mt-6',
+            )}
+          >
             <div className="mb-4">
               <h3 className={subsectionTitleClass}>Continue the rest of the account opening</h3>
               <p className={subsectionBodyClass}>
                 Set the account and owners here. NetX360 picks up annuities, funding, signatures, KYC, and reviews.
               </p>
             </div>
-            <Netx360HandoffSection />
+            <Netx360HandoffSection disabled={!netx360Submitted} />
           </section>
         </>
       ) : null}
@@ -955,24 +960,22 @@ export function OpenAccountsForm() {
       {/* Section 4: Supporting Documents */}
       {!externalAnnuityPlatform && showV5Documents ? (
       <section id={sectionId('oa-documents')} className="scroll-mt-16">
-        {openAccountsVariant !== 'v5' ? (
-          <div
-            className={cn(
-              'mb-8',
-              !isCardVariant && 'pt-4',
-            )}
-          >
-            <h3 className={subsectionTitleClass}>
-              Supporting Documents
-            </h3>
-            <p className={subsectionBodyClass}>
-              Upload client-provided documents that may support account opening, identity verification, or custodian review.
-              Documents are optional unless requested during review. Firm and custodian-generated forms are handled in
-              {' '}
-              <span className="font-medium text-foreground">Envelopes</span>.
-            </p>
-          </div>
-        ) : null}
+        <div
+          className={cn(
+            sectionHeaderSpacingClass,
+            !isCardVariant && 'pt-4',
+          )}
+        >
+          <h3 className={subsectionTitleClass}>
+            Supporting Documents
+          </h3>
+          <p className={subsectionBodyClass}>
+            Upload client-provided documents that may support account opening, identity verification, or custodian review.
+            Documents are optional unless requested during review. Firm and custodian-generated forms are handled in
+            {' '}
+            <span className="font-medium text-foreground">Envelopes</span>.
+          </p>
+        </div>
         {supportingDocSections.length > 0 ? (
           <div className="space-y-2">
             <div className="space-y-4">
@@ -1061,12 +1064,11 @@ export function OpenAccountsForm() {
       {!externalAnnuityPlatform && showV5Kyc ? (
         <div
           className={cn(
+            (openAccountsVariant === 'v5' || openAccountsVariant === 'v6') && 'space-y-9',
             isCardVariant &&
               cn(
-                'rounded-xl overflow-hidden',
-                openAccountsVariant === 'v5' ? 'p-0 space-y-4' : 'p-6 space-y-9',
-                (openAccountsVariant === 'v2' || (openAccountsVariant === 'v5' && externalAnnuityPlatform)) &&
-                  'border border-foreground/30',
+                'rounded-xl overflow-hidden p-6 space-y-9',
+                openAccountsVariant === 'v2' && 'border border-foreground/30',
                 isVersion4 && 'border border-foreground/30',
                 openAccountsVariant === 'v3'
                   ? 'v3-card-inner-strokes border border-foreground/20 bg-[#fafafa]'
@@ -1121,29 +1123,20 @@ export function OpenAccountsForm() {
         ) : null}
       <section
         id={sectionId('oa-kyc-owners')}
-        className={cn(
-          'scroll-mt-16',
-          openAccountsVariant === 'v5' && 'rounded-xl border border-foreground/30 overflow-hidden',
-        )}
+        className="scroll-mt-16"
       >
         <div
           className={cn(
-            openAccountsVariant === 'v5'
-              ? 'mb-4 px-6 py-4 border-b border-border/60 bg-[#F5F5F4]'
-              : 'mb-8',
-            !isCardVariant && openAccountsVariant !== 'v5' && 'pt-4',
+            sectionHeaderSpacingClass,
+            !isCardVariant && 'pt-4',
           )}
         >
-          {openAccountsVariant === 'v5' ? (
-            <h4 className={subsectionTitleClass}>Account Owners</h4>
-          ) : (
-            <h3 className={subsectionTitleClass}>Account Owners</h3>
-          )}
+          <h3 className={subsectionTitleClass}>Account Owners</h3>
           <p className={subsectionBodyClass}>
             Add all individuals who require identity verification.
           </p>
         </div>
-        <div className={cn(openAccountsVariant === 'v5' && 'px-6 pb-6')}>
+        <div>
         {kycOwnerParties.length > 0 ? (
           <div className="rounded-lg border border-border overflow-hidden mb-4">
             <table className="w-full text-sm">
@@ -1257,31 +1250,18 @@ export function OpenAccountsForm() {
 
       </section>
 
-      {/* KYC Cases — v5 uses h4 under the card strip; other variants use h3 */}
+      {/* KYC Cases */}
       <section
         id={sectionId('oa-kyc-cases')}
-        className={cn(
-          'scroll-mt-16',
-          openAccountsVariant === 'v5' && 'rounded-xl border border-foreground/30 overflow-hidden',
-        )}
+        className="scroll-mt-16"
       >
-        <div
-          className={cn(
-            openAccountsVariant === 'v5'
-              ? 'mb-4 px-6 py-4 border-b border-border/60 bg-[#F5F5F4]'
-              : 'mb-4',
-          )}
-        >
-          {openAccountsVariant === 'v5' ? (
-            <h4 className={subsectionTitleClass}>KYC Cases</h4>
-          ) : (
-            <h3 className={subsectionTitleClass}>KYC Cases</h3>
-          )}
+        <div className="mb-4">
+          <h3 className={subsectionTitleClass}>KYC Cases</h3>
           <p className={subsectionBodyClass}>
             Each row represents a KYC case. Open a case to complete and submit it for review.
           </p>
         </div>
-        <div className={cn(openAccountsVariant === 'v5' && 'px-6 pb-6')}>
+        <div>
           <div className="rounded-lg border border-border p-1">
           {kycChildren.map((child) => (
             <div
@@ -1404,8 +1384,7 @@ export function OpenAccountsForm() {
           isCardVariant &&
             cn(
               'rounded-xl p-0 overflow-hidden',
-              (openAccountsVariant === 'v2' || (openAccountsVariant === 'v5' && externalAnnuityPlatform)) &&
-                'border border-foreground/30',
+              openAccountsVariant === 'v2' && 'border border-foreground/30',
               isVersion4 && 'border border-foreground/30',
               openAccountsVariant === 'v3'
                 ? 'v3-card-inner-strokes border border-foreground/20 bg-[#fafafa]'
@@ -1418,10 +1397,9 @@ export function OpenAccountsForm() {
         )}
       >
       <section id={sectionId('oa-esign')} className="scroll-mt-16">
-        {openAccountsVariant !== 'v5' ? (
         <div
           className={cn(
-            'mb-8',
+            sectionHeaderSpacingClass,
             isCardVariant &&
               cn(
                 '-mx-6 -mt-6 mb-8 px-6 py-4',
@@ -1430,6 +1408,7 @@ export function OpenAccountsForm() {
                     isVersion3 && 'mx-0 mt-0 px-0 pt-0 pb-4 border-b border-border/60',
                 (isVersion2 || isVersion4) && 'bg-[#F5F5F4]',
               ),
+            !isCardVariant && openAccountsVariant === 'v5' && 'pt-4',
           )}
         >
           {isCardVariant ? (
@@ -1438,6 +1417,15 @@ export function OpenAccountsForm() {
                 Envelopes
               </h4>
               <p className="text-sm text-muted-foreground mt-2">
+                Create eSignature envelopes for client signatures. Firm and custodian forms are automatically grouped by
+                account. For in-person or mail delivery, signed documents can be uploaded manually instead of using
+                eSignature.
+              </p>
+            </>
+          ) : openAccountsVariant === 'v5' ? (
+            <>
+              <h3 className={subsectionTitleClass}>Envelopes</h3>
+              <p className={subsectionBodyClass}>
                 Create eSignature envelopes for client signatures. Firm and custodian forms are automatically grouped by
                 account. For in-person or mail delivery, signed documents can be uploaded manually instead of using
                 eSignature.
@@ -1459,7 +1447,6 @@ export function OpenAccountsForm() {
             </>
           )}
         </div>
-        ) : null}
         {esignEnvelopes.length > 0 ? (
           <div className="mb-3 flex justify-end">
             <Button type="button" variant="outline" size="sm" className="gap-1.5 shrink-0" onClick={openNewEnvelopeDrawer}>

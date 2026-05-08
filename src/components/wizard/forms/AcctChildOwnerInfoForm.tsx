@@ -78,7 +78,8 @@ function parsePercent(raw?: string): number {
 export function AcctChildOwnerInfoForm() {
   const { state, dispatch } = useWorkflow()
   const variant = useOpenAccountsVariant()
-  const isVersion2 = variant === 'v2' || variant === 'v5'
+  // v5/v6 intentionally render flat, with no section cards or card-only header strips.
+  const isVersion2 = variant === 'v2'
   const isVersion3 = variant === 'v3'
   const isVersion4 = variant === 'v4'
   const isCardVariant = isVersion2 || isVersion3 || isVersion4
@@ -296,7 +297,7 @@ export function AcctChildOwnerInfoForm() {
   }
 
   return (
-    <div className="space-y-7">
+    <div className={variant === 'v5' || variant === 'v6' ? 'space-y-9' : 'space-y-7'}>
       {lockForExternalSubmission ? (
         <div className="rounded-md border border-blue-200 bg-blue-50 dark:border-blue-900/60 dark:bg-blue-950/40 px-3 py-2.5">
           <p className="text-xs font-medium text-blue-900 dark:text-blue-100">

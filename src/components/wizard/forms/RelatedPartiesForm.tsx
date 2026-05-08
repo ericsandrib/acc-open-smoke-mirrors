@@ -613,7 +613,8 @@ function EmptyState({ message }: { message: string }) {
 export function RelatedPartiesForm() {
   const { state } = useWorkflow()
   const variant = useOpenAccountsVariant()
-  const isVersion2 = variant === 'v2' || variant === 'v5'
+  // v5/v6 intentionally render flat, with no section cards.
+  const isVersion2 = variant === 'v2'
   const isColoredBackgroundVariant = variant === 'v3' || variant === 'v4'
   const isCardVariant = isVersion2 || isColoredBackgroundVariant
   const isBorderedCardVariant = variant === 'v2' || variant === 'v5' || variant === 'v4'
@@ -661,7 +662,7 @@ export function RelatedPartiesForm() {
   const editingParty = editingPartyId ? state.relatedParties.find((p) => p.id === editingPartyId) ?? null : null
 
   return (
-    <div className="space-y-7">
+    <div className={variant === 'v5' || variant === 'v6' ? 'space-y-9' : 'space-y-7'}>
       <section id="rcd-household" className="scroll-mt-16">
         <div className={cardContainerClass}>
           <div

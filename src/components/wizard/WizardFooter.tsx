@@ -140,6 +140,7 @@ export function WizardFooter() {
   const showsAnnuityComplete =
     isOnOpenAccountsTask && isAnnuityOpenAccountsTask && allAccountChildrenTerminal
   const openAccountsSubmitLabel = 'Submit for Review'
+  const isV5OrV6 = openAccountsVariant === 'v5' || openAccountsVariant === 'v6'
 
   return (
     <>
@@ -181,13 +182,22 @@ export function WizardFooter() {
           )}
 
           {v5OpenAccountsMoreSubPages ? (
-            <Button onClick={() => dispatch({ type: 'GO_NEXT' })}>
+            <Button variant={isV5OrV6 ? 'outline' : undefined} onClick={() => dispatch({ type: 'GO_NEXT' })}>
               Next
               <ChevronRight className="h-4 w-4" />
             </Button>
-          ) : openAccountsVariant === 'v5' && showsOpenAccountsSubmit ? (
-            <Button variant="outline" onClick={() => setExitWorkflowOpen(true)}>
-              Exit workflow
+          ) : isV5OrV6 &&
+            (isLast || !hasNextVisibleTask) &&
+            !showsOpenAccountsSubmit &&
+            !showsAnnuityComplete ? (
+            <Button variant="outline" onClick={() => dispatch({ type: 'GO_NEXT' })}>
+              Next
+              <ChevronRight className="h-4 w-4" />
+            </Button>
+          ) : isV5OrV6 && showsOpenAccountsSubmit ? (
+            <Button variant="outline" onClick={() => dispatch({ type: 'GO_NEXT' })}>
+              Next
+              <ChevronRight className="h-4 w-4" />
             </Button>
           ) : isLast || !hasNextVisibleTask || showsOpenAccountsSubmit || showsAnnuityComplete ? (
             <Button
@@ -208,12 +218,25 @@ export function WizardFooter() {
                 : 'Complete'}
             </Button>
           ) : (
-            <Button
-              onClick={() => dispatch({ type: 'GO_NEXT' })}
-            >
-              Next
-              <ChevronRight className="h-4 w-4" />
-            </Button>
+            isV5OrV6 ? (
+              active?.formKey === 'related-parties' || active?.formKey === 'existing-accounts' ? (
+                <Button variant="outline" onClick={() => dispatch({ type: 'GO_NEXT' })}>
+                  Next
+                  <ChevronRight className="h-4 w-4" />
+                </Button>
+              ) : (
+                <Button onClick={() => setExitWorkflowOpen(true)}>
+                  Exit workflow
+                </Button>
+              )
+            ) : (
+              <Button
+                onClick={() => dispatch({ type: 'GO_NEXT' })}
+              >
+                Next
+                <ChevronRight className="h-4 w-4" />
+              </Button>
+            )
           )}
         </div>
       </div>
