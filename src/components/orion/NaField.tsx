@@ -13,8 +13,8 @@ import { cn } from '@/lib/utils'
  */
 export function NaField({
   className,
-  /** Optional override label. Default is just the visual indicator. */
-  label = 'Not in Stratos Orion',
+  /** Optional override label. Default reads "N/A — Not in Stratos Orion". */
+  label = 'N/A — Not in Stratos Orion',
   /** When true, render as a tiny inline chip rather than a row-spanning pill. */
   compact = false,
 }: {
@@ -26,8 +26,8 @@ export function NaField({
     <span
       title={label + ' — this field is not currently populated in Stratos\'s Orion instance.'}
       className={cn(
-        'inline-flex items-center gap-1 rounded-md border border-dashed border-amber-300 bg-amber-50/60 text-amber-900',
-        compact ? 'h-5 px-1.5 text-[10px] font-medium' : 'h-6 px-2 text-xs font-medium',
+        'inline-flex items-center gap-1 rounded-md border border-red-400 bg-red-50 text-red-700 font-semibold',
+        compact ? 'h-5 px-1.5 text-[10px]' : 'h-6 px-2 text-xs',
         className,
       )}
     >
