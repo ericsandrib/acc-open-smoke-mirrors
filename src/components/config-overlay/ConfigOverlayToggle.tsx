@@ -3,13 +3,17 @@ import { useConfigOverlay } from './ConfigOverlayProvider'
 import { cn } from '@/lib/utils'
 
 /**
- * Floating control bar — bottom-right corner.
+ * Floating control bar — top-right corner.
  *
  *   [ Config Overlay  ON / OFF ]   [ Captured (3) ]
  *
  * The toggle controls whether hotspots are visible across the app. The
  * "Captured" pill opens the side panel listing every knob the team has
  * pinned during the live review.
+ *
+ * Was originally bottom-right but moved up so it doesn't sit over the
+ * page's primary call-to-action button (`Create` etc.) in the lower-left
+ * sidebar area.
  */
 export function ConfigOverlayToggle() {
   const { enabled, toggle, captured, capturePanelOpen, setCapturePanelOpen } =
@@ -17,7 +21,7 @@ export function ConfigOverlayToggle() {
   const count = Object.keys(captured).length
 
   return (
-    <div className="fixed bottom-4 right-4 z-50 flex items-center gap-2 print:hidden">
+    <div className="fixed top-4 right-4 z-50 flex items-center gap-2 print:hidden">
       <button
         onClick={toggle}
         className={cn(
