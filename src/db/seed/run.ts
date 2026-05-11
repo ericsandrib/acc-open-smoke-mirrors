@@ -14,6 +14,7 @@ import {
   TENANT_ID,
   type SeedHousehold,
 } from './data'
+import { profileForHousehold, profileForAccount } from './orion'
 
 const TODAY = new Date().toISOString().slice(0, 10)
 
@@ -101,8 +102,13 @@ async function seedActionBlueprints(pg: PGlite) {
 
 async function seedHousehold(pg: PGlite, hh: SeedHousehold) {
   const orgId = `co_${hh.slug}`
+  const orionProfile = profileForHousehold(hh)
 
   // 1. client_organisation
+  // The upstream schema has an `extra_properties` JSONB column on this
+  // table — we use it as the parking spot for Orion-derived attributes
+  // (suitability, risk, statement delivery, etc.) so the upstream schema
+  // stays untouched.
   const relationshipStatus =
     hh.type === 'Existing' ? 'active' : hh.type === 'Onboarding' ? 'onboarding' : 'prospect'
 
@@ -111,8 +117,9 @@ async function seedHousehold(pg: PGlite, hh: SeedHousehold) {
     `INSERT INTO client_organisations
      (tenant_id, id, name, client_organisation_type, agent_organisation_id,
       relationship_status, approx_aum, next_meeting,
-      client_segmentation, relationship_start_date, last_interaction_date, notes)
-     VALUES ($1, $2, $3, 'household', $4, $5, $6, $7, $8, $9, $10, $11)`,
+      client_segmentation, relationship_start_date, last_interaction_date, notes,
+      extra_properties)
+     VALUES ($1, $2, $3, 'household', $4, $5, $6, $7, $8, $9, $10, $11, $12::jsonb)`,
     [
       TENANT_ID,
       orgId,
@@ -125,6 +132,7 @@ async function seedHousehold(pg: PGlite, hh: SeedHousehold) {
       hh.clientSince,
       hh.lastInteraction,
       `Household ${hh.household} • ${hh.city || 'no city on file'}${hh.state ? ', ' + hh.state : ''}`,
+      JSON.stringify({ orion: orionProfile }),
     ],
   )
 
@@ -202,13 +210,14 @@ async function seedHousehold(pg: PGlite, hh: SeedHousehold) {
       const balance = i === hh.accountCount - 1
         ? hh.totalAum - perAccount * (hh.accountCount - 1)
         : perAccount
+      const orionAcct = profileForAccount(hh.slug, i)
       await exec(
         pg,
         `INSERT INTO financial_accounts
          (tenant_id, id, account_number, open_date, status, primary_owner_id,
           tax_status, currency_code, client_organisation_id, name, balance,
-          cash_balance, custodian)
-         VALUES ($1, $2, $3, $4, 'active', $5, $6, 'USD', $7, $8, $9, $10, 'Fidelity')`,
+          cash_balance, custodian, additional_attributes)
+         VALUES ($1, $2, $3, $4, 'active', $5, $6, 'USD', $7, $8, $9, $10, 'Fidelity', $11::jsonb)`,
         [
           TENANT_ID,
           acctId,
@@ -220,6 +229,7 @@ async function seedHousehold(pg: PGlite, hh: SeedHousehold) {
           t.name,
           balance,
           Math.floor(balance * 0.03), // ~3% cash
+          JSON.stringify({ orion: orionAcct }),
         ],
       )
     }

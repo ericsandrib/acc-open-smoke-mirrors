@@ -17,6 +17,8 @@ import type { ComponentType, SVGProps } from 'react'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
 import type { Relationship } from '@/data/relationshipsSeed'
+import { NaField } from '@/components/orion/NaField'
+import { useOrionProfile } from '@/db/queries/relationships'
 
 type IconType = ComponentType<SVGProps<SVGSVGElement>>
 
@@ -409,7 +411,7 @@ function BasicSection({ contact }: { contact: Contact }) {
       <DetailsRow label="Middle Name" value={contact.middleName} />
       <DetailsRow label="Last Name" value={contact.lastName} />
       <DetailsRow label="Preferred Name" value={contact.preferredName} />
-      <DetailsRow label="Verbal Password" value="-" />
+      <DetailsRow label="Verbal Password" value={<NaField compact />} />
       <DetailsRow
         label="SSN"
         value={<span className="tabular-nums">{contact.ssn}</span>}
@@ -426,13 +428,13 @@ function BasicSection({ contact }: { contact: Contact }) {
       />
       <DetailsRow label="Date of Birth" value={contact.dob} />
       <DetailsRow label="Age" value={contact.age ?? '-'} />
-      <DetailsRow label="RMD Required?" value="-" />
-      <DetailsRow label="Gender" value="-" />
-      <DetailsRow label="Contact Marketing Salutation" value="-" />
-      <DetailsRow label="Maiden Name" value="-" />
-      <DetailsRow label="Officer/Director of a Public Company" value="-" />
-      <DetailsRow label="Subject to Security Restrictions?" value="-" />
-      <DetailsRow label="Description" value="-" />
+      <DetailsRow label="RMD Required?" value={<NaField compact />} />
+      <DetailsRow label="Gender" value={<NaField compact />} />
+      <DetailsRow label="Contact Marketing Salutation" value={<NaField compact />} />
+      <DetailsRow label="Maiden Name" value={<NaField compact />} />
+      <DetailsRow label="Officer/Director of a Public Company" value={<NaField compact />} />
+      <DetailsRow label="Subject to Security Restrictions?" value={<NaField compact />} />
+      <DetailsRow label="Description" value={<NaField compact />} />
       <DetailsRow label="Status" value={contact.status} />
     </dl>
   )
@@ -442,10 +444,11 @@ function ContactSection({ contact }: { contact: Contact }) {
   return (
     <dl>
       <DetailsRow label={contact.phoneLabel} value={contact.phone} />
-      <DetailsRow label="Home Phone" value="-" />
-      <DetailsRow label="Work Phone" value="-" />
+      <DetailsRow label="Home Phone" value={<NaField compact />} />
+      <DetailsRow label="Work Phone" value={<NaField compact />} />
+      <DetailsRow label="Mobile" value={<NaField compact />} />
       <DetailsRow label={contact.emailLabel} value={contact.email} />
-      <DetailsRow label="Work Email" value="-" />
+      <DetailsRow label="Work Email" value={<NaField compact />} />
     </dl>
   )
 }
@@ -454,9 +457,9 @@ function AddressSection({ contact }: { contact: Contact }) {
   return (
     <dl>
       <DetailsRow label="Mailing Address" value={contact.address} />
-      <DetailsRow label="Billing Address" value="-" />
-      <DetailsRow label="Shipping Address" value="-" />
-      <DetailsRow label="Other Address" value="-" />
+      <DetailsRow label="Billing Address" value={<NaField compact />} />
+      <DetailsRow label="Shipping Address" value={<NaField compact />} />
+      <DetailsRow label="Other Address" value={<NaField compact />} />
       <DetailsRow label="Preferred Address" value="Mailing" />
     </dl>
   )
@@ -467,40 +470,63 @@ function EmploymentSection({ contact }: { contact: Contact }) {
     <dl>
       <DetailsRow label="Employer" value={contact.employer} />
       <DetailsRow label="Job Title" value={contact.jobTitle} />
-      <DetailsRow label="Annual Income" value="-" />
-      <DetailsRow label="Years Employed" value="-" />
-      <DetailsRow label="Source of Income" value="-" />
+      <DetailsRow label="Annual Income" value={<NaField compact />} />
+      <DetailsRow label="Years Employed" value={<NaField compact />} />
+      <DetailsRow label="Source of Income" value={<NaField compact />} />
     </dl>
   )
 }
 
-function KycSection() {
+function KycSection({ r }: { r: Relationship }) {
+  const { data: orion } = useOrionProfile(r.id)
+  // Format helpers for the Orion-derived numbers.
+  const money = (n: unknown) =>
+    typeof n === 'number'
+      ? n.toLocaleString('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 })
+      : '-'
+  const pct = (n: unknown) => (typeof n === 'number' ? `${n}%` : '-')
+
   return (
     <dl>
-      <DetailsRow label="KYC Date" value="-" />
-      <DetailsRow label="KYC Status" value="-" />
-      <DetailsRow label="Drivers License Number" value="-" />
-      <DetailsRow label="Date of Death" value="-" />
-      <DetailsRow label="Primary Citizenship" value="United States" />
-      <DetailsRow label="Secondary Citizenship" value="United States" />
-      <DetailsRow label="Marital Status" value="-" />
-      <DetailsRow label="Wedding Anniversary" value="-" />
-      <DetailsRow label="Time Horizon" value="-" />
-      <DetailsRow label="Risk Tolerance" value="-" />
-      <DetailsRow label="Investment Experience" value="-" />
-      <DetailsRow label="Investment Objectives" value="-" />
-      <DetailsRow label="Tax Bracket" value="-" />
-      <DetailsRow label="Financial Interests" value="-" />
-      <DetailsRow label="Personal Interests" value="-" />
+      {/* Available in Orion */}
+      <DetailsRow label="Investment Objective" value={(orion?.investmentObjective as string) ?? '-'} />
+      <DetailsRow label="Time Horizon" value={(orion?.timeHorizon as string) ?? '-'} />
+      <DetailsRow label="Risk Exposure" value={(orion?.riskExposure as string) ?? '-'} />
+      <DetailsRow label="Risk Tolerance" value={(orion?.riskTolerance as string) ?? '-'} />
+      <DetailsRow label="Liquid Net Worth" value={money(orion?.liquidNetWorth)} />
+      <DetailsRow label="Net Worth" value={money(orion?.netWorth)} />
+      <DetailsRow label="Net Income" value={money(orion?.netIncome)} />
+      <DetailsRow label="Stock %" value={pct(orion?.stockPercent)} />
+      <DetailsRow label="Bond %" value={pct(orion?.bondPercent)} />
+      <DetailsRow label="Investment Knowledge" value={(orion?.investmentKnowledge as string) ?? '-'} />
+      <DetailsRow label="Investment Experience" value={(orion?.investmentExperience as string) ?? '-'} />
+      {/* Not in Orion — flagged */}
+      <DetailsRow label="KYC Date" value={<NaField compact />} />
+      <DetailsRow label="KYC Status" value={<NaField compact />} />
+      <DetailsRow label="Drivers License Number" value={<NaField compact />} />
+      <DetailsRow label="Date of Death" value={<NaField compact />} />
+      <DetailsRow label="Marital Status" value={<NaField compact />} />
+      <DetailsRow label="Wedding Anniversary" value={<NaField compact />} />
+      <DetailsRow label="Risk Budget" value={<NaField compact label="Not in Stratos Orion — Riskalyze/Nitrogen?" />} />
+      <DetailsRow label="Return Objective" value={<NaField compact />} />
+      <DetailsRow label="Lifestyle Option" value={<NaField compact />} />
+      <DetailsRow label="Suitability Review Completed" value={<NaField compact />} />
+      <DetailsRow label="Net Worth (Excl. Residence)" value={<NaField compact />} />
+      <DetailsRow label="Qualified Investor" value={<NaField compact />} />
+      <DetailsRow label="Tax Bracket" value={<NaField compact />} />
+      <DetailsRow label="Financial Interests" value={<NaField compact />} />
+      <DetailsRow label="Personal Interests" value={<NaField compact />} />
     </dl>
   )
 }
 
 function ContactDetailsModal({
   contact,
+  r,
   onClose,
 }: {
   contact: Contact
+  r: Relationship
   onClose: () => void
 }) {
   const [section, setSection] = useState<DetailsSection>('Basic')
@@ -579,7 +605,7 @@ function ContactDetailsModal({
             {section === 'Contact' && <ContactSection contact={contact} />}
             {section === 'Address' && <AddressSection contact={contact} />}
             {section === 'Employment' && <EmploymentSection contact={contact} />}
-            {section === 'Know Your Client' && <KycSection />}
+            {section === 'Know Your Client' && <KycSection r={r} />}
           </div>
         </div>
       </div>
@@ -612,6 +638,7 @@ export function HouseholdTab({ r }: { r: Relationship }) {
       {detailsOpen && (
         <ContactDetailsModal
           contact={selected}
+          r={r}
           onClose={() => setDetailsOpen(false)}
         />
       )}

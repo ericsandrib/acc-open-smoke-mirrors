@@ -11,6 +11,7 @@ import { JourneyDetailPage } from '@/pages/JourneyDetailPage'
 import { RelationshipsPage } from '@/pages/RelationshipsPage'
 import { RelationshipDetailPage } from '@/pages/RelationshipDetailPage'
 import { SettingsPage } from '@/pages/SettingsPage'
+import { OrionGapsPage } from '@/pages/OrionGapsPage'
 import { Toaster } from '@/components/ui/sonner'
 import { AppPasswordGate } from '@/components/AppPasswordGate'
 import {
@@ -40,6 +41,7 @@ export default function App() {
                   <Route path="/relationships" element={<RelationshipsPage />} />
                   <Route path="/relationships/:id" element={<RelationshipDetailPage />} />
                   <Route path="/settings" element={<SettingsPage />} />
+                  <Route path="/orion-gaps" element={<OrionGapsPage />} />
                   <Route path="*" element={<Navigate to="/" replace />} />
                 </Routes>
               </BrowserRouter>

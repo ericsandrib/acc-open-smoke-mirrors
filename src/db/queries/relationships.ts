@@ -18,6 +18,8 @@ interface ClientOrgRow {
   relationship_start_date: string | null
   last_interaction_date: string | null
   notes: string | null
+  /** Orion-derived attributes, parked in extra_properties.orion. */
+  extra_properties: { orion?: Record<string, unknown> } | null
 }
 
 function mapTypeFromStatus(s: string | null): RelationshipType {
@@ -85,7 +87,8 @@ function rowToRelationship(r: ClientOrgRow): Relationship {
 
 const LIST_SQL = `
   SELECT id, name, relationship_status, approx_aum, next_meeting,
-         client_segmentation, relationship_start_date, last_interaction_date, notes
+         client_segmentation, relationship_start_date, last_interaction_date, notes,
+         extra_properties
   FROM client_organisations
   WHERE deleted_at IS NULL
   ORDER BY name
@@ -99,6 +102,34 @@ export function useRelationships(): UseQueryResult<Relationship> & {
     ...q,
     data: q.data ? q.data.map(rowToRelationship) : null,
   } as UseQueryResult<Relationship> & { data: Relationship[] | null }
+}
+
+/**
+ * Pull the Orion-derived attributes for a relationship out of
+ * client_organisations.extra_properties.orion. Used by the Household tab
+ * and account drawer to render the suitability/risk/billing profile.
+ */
+export function useOrionProfile(id: string): {
+  data: Record<string, unknown> | null
+  loading: boolean
+  error: Error | null
+} {
+  const { data, loading, error } = useQuery<ClientOrgRow>(
+    `SELECT id, name, relationship_status, approx_aum, next_meeting,
+            client_segmentation, relationship_start_date, last_interaction_date, notes,
+            extra_properties
+     FROM client_organisations
+     WHERE id = $1 AND deleted_at IS NULL`,
+    [id],
+  )
+  return {
+    loading,
+    error,
+    data:
+      data && data.length > 0
+        ? (data[0].extra_properties?.orion as Record<string, unknown> | undefined) ?? null
+        : null,
+  }
 }
 
 export function useRelationship(id: string) {

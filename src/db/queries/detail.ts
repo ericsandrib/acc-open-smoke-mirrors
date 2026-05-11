@@ -16,6 +16,8 @@ export interface FinancialAccountRow {
   status: string
   balance: number
   cashBalance: number
+  /** Orion-derived attributes parked in additional_attributes.orion. */
+  orion: Record<string, unknown> | null
 }
 
 interface FaRaw {
@@ -27,11 +29,13 @@ interface FaRaw {
   status: string
   balance: number | null
   cash_balance: number | null
+  additional_attributes: { orion?: Record<string, unknown> } | null
 }
 
 export function useFinancialAccounts(orgId: string) {
   const { data, loading, error } = useQuery<FaRaw>(
-    `SELECT id, name, account_number, custodian, tax_status, status, balance, cash_balance
+    `SELECT id, name, account_number, custodian, tax_status, status, balance,
+            cash_balance, additional_attributes
      FROM financial_accounts
      WHERE client_organisation_id = $1
      ORDER BY balance DESC NULLS LAST`,
@@ -50,6 +54,7 @@ export function useFinancialAccounts(orgId: string) {
         status: r.status,
         balance: Number(r.balance ?? 0),
         cashBalance: Number(r.cash_balance ?? 0),
+        orion: r.additional_attributes?.orion ?? null,
       })) ?? null,
   }
 }
