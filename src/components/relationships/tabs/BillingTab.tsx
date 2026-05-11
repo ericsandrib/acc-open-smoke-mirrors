@@ -3,6 +3,7 @@ import { Check } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 import { ConfigHotspot } from '@/components/config-overlay'
 import { useFinancialAccounts } from '@/db/queries/detail'
+import { NaField } from '@/components/orion/NaField'
 import type { Relationship } from '@/data/relationshipsSeed'
 import { cn } from '@/lib/utils'
 
@@ -133,6 +134,56 @@ export function BillingTab({ r }: { r: Relationship }) {
                 </tr>
               </tbody>
             </table>
+          </div>
+
+          {/* Bank details (ACH) + Performance fees — Orion gap surfaces */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+            <div className="rounded-lg border border-border p-4">
+              <h3 className="text-sm font-semibold text-foreground mb-2">
+                ACH Bank Details
+              </h3>
+              <p className="text-xs text-muted-foreground mb-3">
+                Required when Pay Method = ACH bank debit. Stratos's Orion does
+                not currently store these.
+              </p>
+              <dl className="space-y-2 text-xs">
+                <div className="flex items-center justify-between">
+                  <dt className="text-muted-foreground">Bank Name</dt>
+                  <dd><NaField compact /></dd>
+                </div>
+                <div className="flex items-center justify-between">
+                  <dt className="text-muted-foreground">ABA Number</dt>
+                  <dd><NaField compact /></dd>
+                </div>
+                <div className="flex items-center justify-between">
+                  <dt className="text-muted-foreground">Bank Account Number</dt>
+                  <dd><NaField compact /></dd>
+                </div>
+                <div className="flex items-center justify-between">
+                  <dt className="text-muted-foreground">Name On Account</dt>
+                  <dd><NaField compact /></dd>
+                </div>
+              </dl>
+            </div>
+            <div className="rounded-lg border border-border p-4">
+              <h3 className="text-sm font-semibold text-foreground mb-2">
+                Performance Fees
+              </h3>
+              <p className="text-xs text-muted-foreground mb-3">
+                Only relevant for performance-fee accounts. Not in Stratos's
+                Orion today.
+              </p>
+              <dl className="space-y-2 text-xs">
+                <div className="flex items-center justify-between">
+                  <dt className="text-muted-foreground">Performance Billed</dt>
+                  <dd><NaField compact /></dd>
+                </div>
+                <div className="flex items-center justify-between">
+                  <dt className="text-muted-foreground">Performance Fee Schedule</dt>
+                  <dd><NaField compact /></dd>
+                </div>
+              </dl>
+            </div>
           </div>
 
           {/* Billable accounts */}

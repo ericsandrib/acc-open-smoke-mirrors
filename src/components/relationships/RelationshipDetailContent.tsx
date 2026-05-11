@@ -31,6 +31,7 @@ import { useRelationship } from '@/db/queries/relationships'
 import { useFinancialAccounts } from '@/db/queries/detail'
 import { cn } from '@/lib/utils'
 import { ConfigHotspot } from '@/components/config-overlay'
+import { NaField } from '@/components/orion/NaField'
 import { InvestmentsOverview } from './tabs/InvestmentsOverview'
 import { PlanningTab } from './tabs/PlanningTab'
 import { ServicingTab } from './tabs/ServicingTab'
@@ -362,6 +363,8 @@ interface AccountRow {
   pms: string
   qualified: 'Yes' | 'No'
   closed?: string
+  /** Orion-derived attributes for the Stratos field map; null for missing. */
+  orion: Record<string, unknown> | null
 }
 
 function useDbAccounts(r: Relationship): AccountRow[] {
@@ -388,6 +391,7 @@ function useDbAccounts(r: Relationship): AccountRow[] {
     custodian: `${a.custodian}-${a.accountNumber}`,
     pms: 'Orion',
     qualified: a.taxStatus === 'tax-deferred' || a.taxStatus === 'tax-free' ? 'Yes' : 'No',
+    orion: a.orion,
   }))
 }
 
@@ -847,7 +851,95 @@ function AccountSection({
           </div>
         </dl>
       </section>
+
+      <AccountOrionDetails account={account} />
     </div>
+  )
+}
+
+// Two-column row helper for the Orion details section.
+function OrionRow({ label, value }: { label: string; value: React.ReactNode }) {
+  return (
+    <div className="grid grid-cols-2 py-2.5 border-b border-border last:border-b-0 items-center">
+      <dt className="text-sm text-muted-foreground">{label}</dt>
+      <dd className="text-sm text-foreground">{value ?? <NaField compact />}</dd>
+    </div>
+  )
+}
+
+// The Orion-mapped account detail block — drives the live walkthrough.
+// Y-fields render values from the seed; N-fields render the red N/A pill.
+function AccountOrionDetails({ account }: { account: AccountRow }) {
+  const o = (account.orion ?? {}) as Record<string, unknown>
+  const has = (k: string) => o[k] !== undefined && o[k] !== null && o[k] !== ''
+  const val = (k: string) => (has(k) ? String(o[k]) : null)
+
+  return (
+    <>
+      <section className="rounded-xl border border-border bg-white p-6">
+        <h4 className="text-base font-semibold text-foreground mb-4">
+          Account details
+        </h4>
+        <dl>
+          {/* Y in Orion */}
+          <OrionRow label="Discretionary" value={val('discretionary')} />
+          <OrionRow label="Custodial Rep Code" value={val('custodialRepCode')} />
+          <OrionRow label="Fund Family" value={val('fundFamily')} />
+          <OrionRow label="Management Style" value={val('managementStyle')} />
+          <OrionRow label="ADV Reportable" value={val('advReportable')} />
+          <OrionRow label="Sub-advisor" value={val('subAdvisor')} />
+          <OrionRow label="Managed" value={val('managed')} />
+          <OrionRow label="Download Source" value={val('downloadSource')} />
+          <OrionRow label="Share Class" value={val('shareClass')} />
+          <OrionRow label="Business Line" value={val('businessLine')} />
+          <OrionRow label="Price Hierarchy" value={val('priceHierarchy')} />
+          {/* N in Orion — red pills */}
+          <OrionRow label="Wrap Managed" value={<NaField compact />} />
+          <OrionRow label="Nickname" value={<NaField compact />} />
+          <OrionRow label="Wrap Sponsored" value={<NaField compact />} />
+          <OrionRow label="13f Reportable" value={<NaField compact />} />
+          <OrionRow label="AUA Reportable" value={<NaField compact />} />
+          <OrionRow label="Provider" value={<NaField compact />} />
+          <OrionRow label="Linked Account" value={<NaField compact />} />
+          <OrionRow label="Sweep Account" value={<NaField compact />} />
+          <OrionRow label="Position Only Recon" value={<NaField compact />} />
+          <OrionRow label="Unfunded" value={<NaField compact />} />
+          <OrionRow label="Bundled Fees" value={<NaField compact />} />
+          <OrionRow label="Risk Score" value={<NaField compact label="N/A — Riskalyze/Nitrogen?" />} />
+          <OrionRow label="Exclude Firm Assets For Composites" value={<NaField compact />} />
+          <OrionRow label="Outside ID" value={<NaField compact />} />
+          <OrionRow label="Qualified Plan" value={<NaField compact />} />
+        </dl>
+      </section>
+
+      <section className="rounded-xl border border-border bg-white p-6">
+        <h4 className="text-base font-semibold text-foreground mb-4">
+          Billing
+        </h4>
+        <dl>
+          {/* Y in Orion */}
+          <OrionRow label="Pay Method" value={val('payMethod')} />
+          <OrionRow label="Fee Schedule" value={val('feeSchedule')} />
+          <OrionRow label="Payout Schedule" value={val('payoutSchedule')} />
+          <OrionRow label="Billing Status" value={val('billingStatus')} />
+          <OrionRow label="Style" value={val('billingStyle')} />
+          <OrionRow label="Frequency" value={val('frequency')} />
+          <OrionRow label="Cycle Month" value={val('cycleMonth')} />
+          <OrionRow label="Valuation Method" value={val('valuationMethod')} />
+          <OrionRow label="Start Date" value={val('billingStartDate')} />
+          {/* N in Orion */}
+          <OrionRow label="Custodial Account Number" value={<NaField compact />} />
+          <OrionRow label="Include In Aggregate" value={<NaField compact />} />
+          <OrionRow label="Linked Billing Account" value={<NaField compact />} />
+          <OrionRow label="Bank Name (ACH)" value={<NaField compact />} />
+          <OrionRow label="ABA Number" value={<NaField compact />} />
+          <OrionRow label="Bank Account Number" value={<NaField compact />} />
+          <OrionRow label="Name On Account" value={<NaField compact />} />
+          <OrionRow label="Performance Billed" value={<NaField compact />} />
+          <OrionRow label="Performance Fee Schedule" value={<NaField compact />} />
+        </dl>
+      </section>
+    </>
   )
 }
 
