@@ -42,7 +42,6 @@ const workItems: NavItem[] = [
   { label: 'KPI Dashboard', href: '/kpi-dashboard', icon: BarChart3 },
 ]
 
-
 const advisorItems: NavItem[] = [
   { label: 'Advisor Directory', href: '/advisor-directory', icon: BookOpen },
   { label: 'Advisor Matching', href: '/advisor-matching', icon: MessagesSquare },
