@@ -118,7 +118,7 @@ export function getSupportingGovernmentIssuedIdRequirement(): DocumentRequiremen
     id: GOVERNMENT_ISSUED_ID_DOC_ID,
     label: 'Government-issued ID',
     description:
-      'Upload a legible government-issued ID if available or requested during review.',
+      'Upload a government-issued ID if available or requested during review.',
     subTypes: GOVERNMENT_ID_SUBTYPES,
     fulfillment: 'upload',
   }
@@ -249,7 +249,7 @@ function trustVerificationBundleRequirement(): DocumentRequirementWithSubTypes {
     id: TRUST_VERIFICATION_DOC_ID,
     label: 'Trust verification documents',
     description:
-      'Upload trust-related documents such as trust agreements, certificates of trust, probate documents, or trust tax ID documentation.',
+      'Upload trust-related documents, such as trust agreements or certificates of trust.',
     subTypes: TRUST_VERIFICATION_SUBTYPES,
     fulfillment: 'upload',
   }
@@ -260,7 +260,7 @@ function entityVerificationBundleRequirement(): DocumentRequirementWithSubTypes 
     id: ENTITY_VERIFICATION_DOC_ID,
     label: 'Entity verification documents',
     description:
-      'Upload entity formation or authorization documents such as articles of incorporation, certificates of formation, partnership agreements, business licenses, or tax ID documentation.',
+      'Upload entity formation or authorization documents.',
     subTypes: ENTITY_VERIFICATION_SUBTYPES,
     fulfillment: 'upload',
   }
@@ -284,7 +284,7 @@ export function getOpenAccountsCoreSupportingDocumentSections(): DocumentRequire
       id: GOVERNMENT_ISSUED_ID_DOC_ID,
       label: 'Government-issued ID',
       description:
-        'Upload a legible government-issued ID if available or requested during review.',
+        'Upload a government-issued ID if available or requested during review.',
       subTypes: GOVERNMENT_ID_SUBTYPES,
       fulfillment: 'upload',
     },

@@ -99,7 +99,7 @@ export function FundChildFeaturesForm() {
             </h3>
           </div>
           {linesForAccount.length > 0 && (
-            <Button variant="outline" size="sm" type="button" onClick={() => setPickerOpen(true)}>
+            <Button variant="secondary" size="sm" type="button" onClick={() => setPickerOpen(true)}>
               <Plus className="h-3 w-3 mr-1" />
               Add More
             </Button>
@@ -158,7 +158,7 @@ export function FundChildFeaturesForm() {
               No feature or service workflows yet. Add administrative, setup, or lifecycle items for this account (not
               transactional movements—those are under Funding & asset movement).
             </p>
-            <Button type="button" onClick={() => setPickerOpen(true)}>
+            <Button type="button" variant="secondary" onClick={() => setPickerOpen(true)}>
               <Plus className="h-4 w-4 mr-1" />
               Add features & services
             </Button>

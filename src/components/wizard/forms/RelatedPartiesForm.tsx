@@ -638,7 +638,7 @@ export function RelatedPartiesForm() {
         isVersion2 && 'border-b border-border/60',
         variant === 'v4' && 'border-b border-border/60',
                   variant === 'v3' && 'mx-0 mt-0 px-0 pt-0 pb-4 border-b border-border/60',
-        (variant === 'v2' || variant === 'v5' || variant === 'v4') && 'bg-[#F5F5F4]',
+        (variant === 'v2' || variant === 'v4') && 'bg-[#F5F5F4]',
       )
     : ''
   const [showAddHouseholdSheet, setShowAddHouseholdSheet] = useState(false)

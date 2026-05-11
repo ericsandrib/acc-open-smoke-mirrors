@@ -152,7 +152,7 @@ export function ChildActionFooter() {
     return (
       <footer
         ref={footerRef}
-        className="border-t border-border bg-background px-8 2xl:pr-[20rem] py-3 min-h-14 flex justify-between items-center shrink-0 box-border"
+        className="border-t border-border bg-background px-8 py-3 min-h-14 flex justify-between items-center shrink-0 box-border"
       >
         <div className="max-w-[52.5rem] mx-auto w-full flex items-center justify-between">
           <div>
@@ -302,7 +302,7 @@ export function ChildActionFooter() {
       <>
         <footer
           ref={footerRef}
-          className="border-t border-border bg-background px-8 2xl:pr-[20rem] py-3 min-h-14 flex justify-between items-center shrink-0 box-border"
+          className="border-t border-border bg-background px-8 py-3 min-h-14 flex justify-between items-center shrink-0 box-border"
         >
           <div className="max-w-[52.5rem] mx-auto w-full flex items-center justify-between">
             <div>
@@ -315,15 +315,9 @@ export function ChildActionFooter() {
             </div>
             <div className="flex items-center gap-3">
             {advisorResubmitEligible && isLast ? (
-              isKyc ? (
-                <Button onClick={handleResubmit}>
-                  Submit for Review
-                </Button>
-              ) : (
-                <Button variant="outline" onClick={() => dispatch({ type: 'EXIT_CHILD_ACTION' })}>
-                  Exit workflow
-                </Button>
-              )
+              <Button onClick={handleResubmit}>
+                Submit for Review
+              </Button>
             ) : child.status === 'complete' ? (
               <div className="flex items-center gap-1.5 text-sm text-green-700">
                 <CheckCircle2 className="h-3.5 w-3.5" />
@@ -349,9 +343,16 @@ export function ChildActionFooter() {
                 </span>
               </div>
             ) : isLast && (child.status === 'in_progress' || child.status === 'not_started') ? (
-              <Button onClick={handleDone}>
-                Submit for Review
-              </Button>
+              child.childType === 'account-opening' ? (
+                <Button variant="outline" onClick={() => dispatch({ type: 'EXIT_CHILD_ACTION' })}>
+                  Next
+                  <ChevronRight className="h-4 w-4" />
+                </Button>
+              ) : (
+                <Button onClick={handleDone}>
+                  Submit for Review
+                </Button>
+              )
             ) : null}
             {!isLast && !hideNextInAdvisorAfterSubmit && !hideNextForCompletedAnnuityOwners && (
               <Button variant="outline" onClick={() => dispatch({ type: 'CHILD_GO_NEXT' })}>
@@ -401,7 +402,7 @@ export function ChildActionFooter() {
     <>
       <footer
         ref={footerRef}
-        className="border-t border-border bg-background px-8 2xl:pr-[20rem] py-3 min-h-14 flex justify-between items-center shrink-0 box-border"
+        className="border-t border-border bg-background px-8 py-3 min-h-14 flex justify-between items-center shrink-0 box-border"
       >
         <div className="max-w-[52.5rem] mx-auto w-full flex items-center justify-between">
           <div>

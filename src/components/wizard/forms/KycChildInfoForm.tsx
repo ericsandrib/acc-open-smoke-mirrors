@@ -288,7 +288,7 @@ export function KycChildInfoForm() {
           contactPerson: party.contactPerson ?? '',
           email: party.email ?? '',
           phone: party.phone ?? '',
-          sourceOfFunds: party.businessProfile?.sourceOfFunds ?? '',
+          sourceOfFunds: party.businessProfile?.sourceOfFunds ?? 'Business income',
           bizIndustry: party.businessProfile?.industry ?? '',
           annualRevenueRange: party.businessProfile?.annualRevenueRange ?? '',
           registrationNumber: party.clientId ?? '',
@@ -361,7 +361,7 @@ export function KycChildInfoForm() {
           employerName: ext.employerName ?? '',
           occupation: ext.occupation ?? '',
           industry: ext.industry ?? '',
-          sourceOfFunds: ext.sourceOfFunds ?? '',
+          sourceOfFunds: ext.sourceOfFunds ?? 'Employment income',
         })
       }
     }

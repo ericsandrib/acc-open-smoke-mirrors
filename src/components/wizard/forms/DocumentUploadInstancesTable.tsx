@@ -78,7 +78,7 @@ export function DocumentUploadInstancesTable({
         </div>
         <Button variant="ghost" size="sm" className="h-7 text-xs gap-1" onClick={onAdd} disabled={disabled}>
           <Plus className="h-3 w-3" />
-          Add
+          Upload
         </Button>
       </div>
 
@@ -159,7 +159,7 @@ export function DocumentUploadInstancesTable({
                           onValueChange={(v) => onUpdate(inst.id, { assignedTo: v })}
                           disabled={disabled}
                         >
-                          <SelectTrigger className="h-8 text-xs w-full max-w-full min-w-0">
+                          <SelectTrigger className="h-8 text-xs w-full max-w-full min-w-0 [&>svg]:!rotate-0 [&>svg]:!transition-none">
                             <SelectValue placeholder="Assign to…" />
                           </SelectTrigger>
                           <SelectContent sideOffset={6}>

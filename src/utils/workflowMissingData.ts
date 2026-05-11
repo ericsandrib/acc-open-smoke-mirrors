@@ -64,7 +64,7 @@ export function computeWorkflowMissingData(state: WorkflowState): MissingDataEnt
     )
     const issues: string[] = []
     if (needsKycMembers.length > 0) {
-      issues.push(`Start KYC initiation for: ${needsKycMembers.map((m) => m.name).join(', ')}`)
+      issues.push(`Create KYC review for: ${needsKycMembers.map((m) => m.name).join(', ')}`)
     }
     for (const c of children) {
       if (c.status === 'complete') continue

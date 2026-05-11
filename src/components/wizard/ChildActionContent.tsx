@@ -423,8 +423,8 @@ export function ChildActionContent() {
     <main
       className={
         variant === 'v4'
-          ? 'flex-1 overflow-y-auto overscroll-contain p-8 2xl:pr-[20rem] bg-[#fafafa]'
-          : 'flex-1 overflow-y-auto overscroll-contain p-8 2xl:pr-[20rem]'
+          ? 'flex-1 overflow-y-auto overscroll-contain p-8 bg-[#fafafa]'
+          : 'flex-1 overflow-y-auto overscroll-contain p-8'
       }
     >
       <div className="max-w-[52.5rem] mx-auto">

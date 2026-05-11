@@ -988,23 +988,25 @@ export function OpenAccountsForm() {
 
       {/* Section 4: Supporting Documents */}
       {!externalAnnuityPlatform && showV5Documents ? (
-      <section id={sectionId('oa-documents')} className="scroll-mt-16">
-        <div
-          className={cn(
-            sectionHeaderSpacingClass,
-            !isCardVariant && 'pt-4',
-          )}
-        >
-          <h3 className={subsectionTitleClass}>
-            Supporting Documents
-          </h3>
-          <p className={subsectionBodyClass}>
-            Upload client-provided documents that may support account opening, identity verification, or custodian review.
-            Documents are optional unless requested during review. Firm and custodian-generated forms are handled in
-            {' '}
-            <span className="font-medium text-foreground">Envelopes</span>.
-          </p>
-        </div>
+      <section
+        id={sectionId('oa-documents')}
+        className={cn('scroll-mt-16', isV5NoAnnuityPaged && 'pt-2')}
+      >
+        {!isV5NoAnnuityPaged ? (
+          <div
+            className={cn(
+              sectionHeaderSpacingClass,
+              !isCardVariant && 'pt-4',
+            )}
+          >
+            <h3 className={subsectionTitleClass}>
+              Supporting Documents
+            </h3>
+            <p className={subsectionBodyClass}>
+              Supporting documents are optional unless requested during review. Firm and custodian-generated forms are handled in <span className="font-medium text-foreground">Envelopes</span>.
+            </p>
+          </div>
+        ) : null}
         {supportingDocSections.length > 0 ? (
           <div className="space-y-2">
             <div className="space-y-4">
@@ -1061,7 +1063,6 @@ export function OpenAccountsForm() {
                   subTypes={subTypes}
                   assignees={supportingDocumentAssignees}
                   emptyMessage="No documents added yet."
-                  emptyHelper="Click Add to upload an optional document."
                   lockAssignedWhenPresent={false}
                   onAdd={addInstance}
                   onRemove={removeInstance}
@@ -1259,7 +1260,7 @@ export function OpenAccountsForm() {
                             }}
                           >
                             <Play className="h-3 w-3" />
-                            Start KYC initiation
+                            Create KYC review
                           </Button>
                         ) : null}
                       </td>
@@ -1280,15 +1281,15 @@ export function OpenAccountsForm() {
 
       </section>
 
-      {/* KYC Cases */}
+      {/* KYC Reviews */}
       <section
         id={sectionId('oa-kyc-cases')}
         className="scroll-mt-16"
       >
         <div className="mb-4">
-          <h3 className={subsectionTitleClass}>KYC Cases</h3>
+          <h3 className={subsectionTitleClass}>KYC Reviews</h3>
           <p className={subsectionBodyClass}>
-            Each row represents a KYC case. Open a case to complete and submit it for review.
+            Track and complete KYC reviews, including CIP and AML screening.
           </p>
         </div>
         <div>
@@ -1363,10 +1364,10 @@ export function OpenAccountsForm() {
               </div>
               <p className="text-sm text-muted-foreground">
                 {kycOwnerParties.length > 0
-                  ? 'No KYC cases started yet.'
-                  : 'No KYC cases started yet.'}
+                  ? 'No KYC reviews started yet.'
+                  : 'No KYC reviews started yet.'}
               </p>
-              <Button type="button" className="mt-4" onClick={() => setKycAddSheetOpen(true)}>
+              <Button type="button" variant="secondary" className="mt-4" onClick={() => setKycAddSheetOpen(true)}>
                 <UserPlus className="h-4 w-4 mr-2" />
                 Add contact
               </Button>
@@ -1426,57 +1427,62 @@ export function OpenAccountsForm() {
             ),
         )}
       >
-      <section id={sectionId('oa-esign')} className="scroll-mt-16">
-        <div
-          className={cn(
-            sectionHeaderSpacingClass,
-            isCardVariant &&
-              cn(
-                '-mx-6 -mt-6 mb-8 px-6 py-4',
-                isVersion2 && 'border-b border-border/60',
-                isVersion4 && 'border-b border-border/60',
-                    isVersion3 && 'mx-0 mt-0 px-0 pt-0 pb-4 border-b border-border/60',
-                (isVersion2 || isVersion4) && 'bg-[#F5F5F4]',
-              ),
-            !isCardVariant && openAccountsVariant === 'v5' && 'pt-4',
-          )}
-        >
-          {isCardVariant ? (
-            <>
-              <h4 className={cardGroupHeadingClass}>
-                Envelopes
-              </h4>
-              <p className="text-sm text-muted-foreground mt-2">
-                Create eSignature envelopes for client signatures. Firm and custodian forms are automatically grouped by
-                account. For in-person or mail delivery, signed documents can be uploaded manually instead of using
-                eSignature.
-              </p>
-            </>
-          ) : openAccountsVariant === 'v5' ? (
-            <>
-              <h3 className={subsectionTitleClass}>Envelopes</h3>
-              <p className={subsectionBodyClass}>
-                Create eSignature envelopes for client signatures. Firm and custodian forms are automatically grouped by
-                account. For in-person or mail delivery, signed documents can be uploaded manually instead of using
-                eSignature.
-              </p>
-            </>
-          ) : (
-            <>
-              <div className="flex items-center gap-4">
-                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-[8px] bg-foreground/80 text-background text-base font-semibold">
-                  3
+      <section
+        id={sectionId('oa-esign')}
+        className={cn('scroll-mt-16', isV5NoAnnuityPaged && 'pt-2')}
+      >
+        {!isV5NoAnnuityPaged ? (
+          <div
+            className={cn(
+              sectionHeaderSpacingClass,
+              isCardVariant &&
+                cn(
+                  '-mx-6 -mt-6 mb-8 px-6 py-4',
+                  isVersion2 && 'border-b border-border/60',
+                  isVersion4 && 'border-b border-border/60',
+                      isVersion3 && 'mx-0 mt-0 px-0 pt-0 pb-4 border-b border-border/60',
+                  (isVersion2 || isVersion4) && 'bg-[#F5F5F4]',
+                ),
+              !isCardVariant && openAccountsVariant === 'v5' && 'pt-4',
+            )}
+          >
+            {isCardVariant ? (
+              <>
+                <h4 className={cardGroupHeadingClass}>
+                  Envelopes
+                </h4>
+                <p className="text-sm text-muted-foreground mt-2">
+                  Create eSignature envelopes for client signatures. Firm and custodian forms are automatically grouped by
+                  account. For in-person or mail delivery, signed documents can be uploaded manually instead of using
+                  eSignature.
+                </p>
+              </>
+            ) : openAccountsVariant === 'v5' ? (
+              <>
+                <h3 className={subsectionTitleClass}>Envelopes</h3>
+                <p className={subsectionBodyClass}>
+                  Create eSignature envelopes for client signatures. Firm and custodian forms are automatically grouped by
+                  account. For in-person or mail delivery, signed documents can be uploaded manually instead of using
+                  eSignature.
+                </p>
+              </>
+            ) : (
+              <>
+                <div className="flex items-center gap-4">
+                  <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-[8px] bg-foreground/80 text-background text-base font-semibold">
+                    3
+                  </div>
+                  <h2 className="text-2xl font-semibold">Envelopes</h2>
                 </div>
-                <h2 className="text-2xl font-semibold">Envelopes</h2>
-              </div>
-              <p className="text-base text-muted-foreground mt-2">
-                Create eSignature envelopes for client signatures. Firm and custodian forms are automatically grouped by
-                account. For in-person or mail delivery, signed documents can be uploaded manually instead of using
-                eSignature.
-              </p>
-            </>
-          )}
-        </div>
+                <p className="text-base text-muted-foreground mt-2">
+                  Create eSignature envelopes for client signatures. Firm and custodian forms are automatically grouped by
+                  account. For in-person or mail delivery, signed documents can be uploaded manually instead of using
+                  eSignature.
+                </p>
+              </>
+            )}
+          </div>
+        ) : null}
         {esignEnvelopes.length > 0 ? (
           <div className="mb-3 flex justify-end">
             <Button type="button" variant="outline" size="sm" className="gap-1.5 shrink-0" onClick={openNewEnvelopeDrawer}>

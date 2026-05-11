@@ -99,7 +99,7 @@ export function FundChildFundingForm() {
             </h3>
           </div>
           {linesForAccount.length > 0 && (
-            <Button variant="outline" size="sm" type="button" onClick={() => setPickerOpen(true)}>
+            <Button variant="secondary" size="sm" type="button" onClick={() => setPickerOpen(true)}>
               <Plus className="h-3 w-3 mr-1" />
               Add More
             </Button>
@@ -159,7 +159,7 @@ export function FundChildFundingForm() {
               No funding or asset movement workflows yet. Add how cash or positions should move for this account—ACH,
               transfers, wires, journals, standing instructions, and recurring mutual fund orders.
             </p>
-            <Button type="button" onClick={() => setPickerOpen(true)}>
+            <Button type="button" variant="secondary" onClick={() => setPickerOpen(true)}>
               <Plus className="h-4 w-4 mr-1" />
               Add funding & asset movement
             </Button>

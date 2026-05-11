@@ -344,8 +344,7 @@ export function AcctChildDocumentsReviewForm() {
               Supporting Client Documents
             </h3>
             <p className="text-sm text-muted-foreground mt-2">
-              Upload client-provided documents that may support account opening, identity verification, or custodian
-              review. Documents are optional unless requested during review.
+              Supporting documents are optional unless requested during review. Firm and custodian-generated forms are handled in Envelopes.
             </p>
           </div>
           <div className="space-y-4">
@@ -389,7 +388,6 @@ export function AcctChildDocumentsReviewForm() {
                   subTypes={subTypes}
                   assignees={supportingDocumentAssignees}
                   emptyMessage="No documents added yet."
-                  emptyHelper="Click Add to upload an optional document."
                   onAdd={addInstance}
                   onRemove={removeInstance}
                   onUpload={(instanceId) => handleSupportingDocFileSelect(doc.id, instanceId)}

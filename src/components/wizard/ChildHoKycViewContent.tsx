@@ -152,8 +152,8 @@ export function ChildHoKycViewContent() {
   if (!ctx || !child) return null
 
   return (
-    <main className="flex-1 overflow-y-auto p-8">
-      <div className="max-w-2xl mx-auto space-y-6">
+    <main className="flex-1 overflow-y-auto overscroll-contain p-8">
+      <div className="max-w-[52.5rem] mx-auto space-y-6">
         {/* Status Banners */}
         {hoKycReview?.status === 'approved' && (
           <div className="rounded-lg border border-green-200 bg-green-50 px-4 py-3">
@@ -210,7 +210,7 @@ export function ChildHoKycViewContent() {
 
         {/* Header */}
         <div>
-          <h2 className="text-2xl font-semibold text-foreground">{fullName}</h2>
+          <h1 className="text-4xl font-semibold text-foreground">{fullName}</h1>
           <p className="text-sm text-muted-foreground mt-1">
             {documentsOnlyView
               ? (isEntity

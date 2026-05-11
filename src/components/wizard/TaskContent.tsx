@@ -127,7 +127,7 @@ export function TaskContent() {
       ? state.v5NoAnnuityOpenAccountsPage === 'kyc'
         ? 'Complete identity verification (KYC/KYB) before accounts can be opened. For trust accounts, include trustees and beneficial owners.'
         : state.v5NoAnnuityOpenAccountsPage === 'documents'
-          ? 'Upload client-provided documents that may support account opening, identity verification, or custodian review. Documents are optional unless requested during review. Firm and custodian-generated forms are handled in Envelopes.'
+          ? 'Supporting documents are optional unless requested during review. Firm and custodian-generated forms are handled in Envelopes.'
         : state.v5NoAnnuityOpenAccountsPage === 'envelopes'
           ? 'Create eSignature envelopes for client signatures. Firm and custodian forms are automatically grouped by account. For in-person or mail delivery, signed documents can be uploaded manually instead of using eSignature.'
           : null
@@ -218,7 +218,7 @@ export function TaskContent() {
   }, [state.parentSectionFocusId, dispatch, isV5NoAnnuityPagedMain])
 
   return (
-    <main className={cn('flex-1 overflow-y-auto p-8 2xl:pr-[20rem]', variant === 'v4' && 'bg-[#fafafa]')}>
+    <main className={cn('flex-1 overflow-y-auto p-8', variant === 'v4' && 'bg-[#fafafa]')}>
       <div className="max-w-[52.5rem] mx-auto">
         <ReviewBanner />
         {contextLine ? (

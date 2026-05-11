@@ -112,7 +112,7 @@ export function KycForm() {
                             }
                           >
                             <Play className="h-3 w-3" />
-                            Start KYC initiation
+                            Create KYC review
                           </Button>
                         ) : (
                           <div className="flex items-center gap-1.5">
@@ -204,7 +204,7 @@ export function KycForm() {
                 <ShieldCheck className="h-6 w-6 text-muted-foreground" />
               </div>
               <p className="text-sm text-muted-foreground">
-                No contacts to verify yet. Use &ldquo;Start KYC initiation&rdquo; above or add a new contact.
+                No contacts to verify yet. Use &ldquo;Create KYC review&rdquo; above or add a new contact.
               </p>
               <Button className="mt-4" onClick={() => setAddSheetOpen(true)}>
                 <UserPlus className="h-4 w-4 mr-2" />

@@ -1,12 +1,13 @@
 import { cn } from "@/lib/utils";
 
 interface DataTableCellProps {
-  children: React.ReactNode;
+  children?: React.ReactNode;
   align?: "start" | "end" | "center";
   type?: "primary" | "secondary" | "positive" | "negative" | "link" | "badge" | "person" | "relationship" | "button" | "document" | "options";
   size?: "default" | "comfortable";
   className?: string;
   style?: React.CSSProperties;
+  onClick?: () => void | Promise<void>;
 }
 
 const alignClasses = {
@@ -36,6 +37,7 @@ export function DataTableCell({
   size = "default",
   className,
   style,
+  onClick,
 }: DataTableCellProps) {
   return (
     <td
@@ -47,6 +49,7 @@ export function DataTableCell({
         className
       )}
       style={style}
+      onClick={onClick}
     >
       <div className={cn("px-2", align === "end" && "flex justify-end", align === "center" && "flex justify-center")}>
         {children}

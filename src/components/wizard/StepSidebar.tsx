@@ -665,8 +665,9 @@ export function StepSidebar() {
               Continue workflow
             </Button>
             <Button
-              variant="outline"
               type="button"
+              style={{ backgroundColor: '#000000', color: '#ffffff' }}
+              className="hover:opacity-90"
               onClick={() => {
                 setExitToOnboardingOpen(false)
                 navigate('/')

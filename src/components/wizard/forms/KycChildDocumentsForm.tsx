@@ -11,6 +11,12 @@ import {
   type DocumentUploadInstance,
 } from '@/components/wizard/forms/DocumentUploadInstancesTable'
 import { AlertTriangle, CheckCircle2 } from 'lucide-react'
+import {
+  getOpenAccountsCoreSupportingDocumentSections,
+  getDocSubTypes,
+  type DocumentRequirementWithSubTypes,
+} from '@/utils/registrationDocuments'
+import { defaultSupportingDocumentStatus, nextStatusAfterUpload } from '@/utils/supportingDocuments'
 
 export function KycChildDocumentsForm() {
   const ctx = useChildActionContext()
@@ -28,24 +34,10 @@ export function KycChildDocumentsForm() {
   const isApproved = child?.status === 'complete'
   const isLocked = isApproved || (isAdvisorView && statusLocked && !advisorFormsEditable)
 
-  const docs = [
-    {
-      id: 'gov-id',
-      label: isEntity ? 'Formation Document' : 'Government-Issued ID',
-      description: isEntity
-        ? 'Upload certificate of formation/incorporation, trust deed, or equivalent'
-        : 'Upload a passport, driver\'s license, or national ID card',
-      hint: 'PDF, JPG, or PNG up to 10 MB',
-    },
-    {
-      id: 'supporting-docs',
-      label: isEntity ? 'Supporting KYB Documents' : 'Supporting Documents',
-      description: isEntity
-        ? 'Upload ownership/control, operating agreement, or proof of registered address'
-        : 'Upload proof of address, utility bills, or other supporting documentation',
-      hint: 'PDF, JPG, or PNG up to 10 MB',
-    },
-  ]
+  const docs = useMemo<DocumentRequirementWithSubTypes[]>(
+    () => getOpenAccountsCoreSupportingDocumentSections(),
+    [],
+  )
   const assignmentOptions = useMemo(
     () =>
       state.relatedParties
@@ -56,7 +48,7 @@ export function KycChildDocumentsForm() {
         })),
     [state.relatedParties],
   )
-  const defaultAssignedTo = (childMeta.kycSubjectPartyId as string | undefined) ?? ''
+  const defaultAssignedTo = ''
 
   const updateDocInstances = (docId: string, next: DocumentUploadInstance[]) => {
     updateField(`doc-instances-${docId}`, next)
@@ -75,8 +67,12 @@ export function KycChildDocumentsForm() {
     input.onchange = (e) => {
       const file = (e.target as HTMLInputElement).files?.[0]
       if (!file) return
+      const prior = ((data[`doc-instances-${docId}`] as DocumentUploadInstance[] | undefined) ?? [])
+        .find((d) => d.id === instanceId)
       const instances = ((data[`doc-instances-${docId}`] as DocumentUploadInstance[] | undefined) ?? []).map((d) =>
-        d.id === instanceId ? { ...d, fileName: file.name } : d,
+        d.id === instanceId
+          ? { ...d, fileName: file.name, status: nextStatusAfterUpload(prior?.status) }
+          : d,
       )
       updateDocInstances(docId, instances)
     }
@@ -86,9 +82,10 @@ export function KycChildDocumentsForm() {
   return (
     <div className="space-y-4">
       <div id="kyc-docs-overview" className="scroll-mt-16" />
-      <div className="rounded-md border border-border bg-muted/20 px-3 py-2.5">
-        <p className="text-xs text-muted-foreground">
-          Documents are optional by default and only needed for step-up verification (e.g., registry mismatch, higher risk, or AML request).
+      <div className="space-y-2">
+        <h3 className="text-base font-semibold">Supporting Documents</h3>
+        <p className="text-sm text-muted-foreground">
+          Supporting documents are optional unless requested during review. Firm and custodian-generated forms are handled in <span className="font-medium text-foreground">Envelopes</span>.
         </p>
       </div>
       {advisorResubmitEligible && (
@@ -119,13 +116,13 @@ export function KycChildDocumentsForm() {
           <div key={doc.id} id={`kyc-doc-${doc.id}`} className="scroll-mt-16">
             <DocumentUploadInstancesTable
               docLabel={doc.label}
-              docDescription={`${doc.description}. ${doc.hint}`}
+              docDescription={doc.description}
               instances={instances}
-              subTypes={[]}
+              subTypes={getDocSubTypes(doc.id)}
               assignees={nextAssignees}
               lockAssignedWhenPresent={false}
               disabled={isLocked}
-              emptyMessage="No documents added yet. Click “Add” to assign and upload."
+              emptyMessage="No documents added yet."
               onAdd={() =>
                 updateDocInstances(doc.id, [
                   ...instances,
@@ -133,6 +130,7 @@ export function KycChildDocumentsForm() {
                     id: `kyc-doc-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
                     docTypeId: doc.id,
                     assignedTo: defaultAssignedTo,
+                    status: defaultSupportingDocumentStatus(),
                   },
                 ])
               }

@@ -465,7 +465,7 @@ export function PartySlotCard({
                     type="button"
                     onClick={() => onStartKyc(matchedParty.id)}
                   >
-                    Start KYC initiation
+                    Create KYC review
                   </Button>
                 )}
                 {matchedParty.kycStatus === 'pending' && onGoToKyc && getPartyKycAction(matchedParty) === 'go' && (

@@ -56,9 +56,9 @@ function SubTaskProgressIndicator({
   const hasData = !!state.taskData[subTaskId] && Object.keys(state.taskData[subTaskId]).length > 0
   const isSubmitted = state.submittedTaskIds.includes(subTaskId)
 
-  const accountChild =
-    accountOpeningChildId &&
-    state.tasks.flatMap((t) => t.children ?? []).find((c) => c.id === accountOpeningChildId)
+  const accountChild = accountOpeningChildId
+    ? state.tasks.flatMap((t) => t.children ?? []).find((c) => c.id === accountOpeningChildId)
+    : undefined
   const lockedComplete =
     accountChild &&
     (accountChild.status === 'awaiting_review' || accountChild.status === 'complete')
@@ -282,8 +282,9 @@ export function ChildActionSidebar() {
               Continue workflow
             </Button>
             <Button
-              variant="outline"
               type="button"
+              style={{ backgroundColor: '#000000', color: '#ffffff' }}
+              className="hover:opacity-90"
               onClick={() => {
                 setExitToOnboardingOpen(false)
                 navigate('/')
