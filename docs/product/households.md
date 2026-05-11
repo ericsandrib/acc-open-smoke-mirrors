@@ -23,7 +23,6 @@ When a household member is selected, the platform displays:
 - **Basic information** — status, preferred name, date of birth, age, and identification number (with copy-to-clipboard support).
 - **Contact information** — preferred phone and email, with type labels (e.g., "Mobile," "Work Email").
 - **Addresses** — up to four addresses (mailing, billing, shipping, other) with a preferred-address indicator.
-- **Client portal status** — whether the member is registered for the client portal and their last login date.
 
 ### Household in the sidebar
 
@@ -43,7 +42,6 @@ The Passport quick-view card includes a Household tab listing all members with:
 
 - **Edit in CRM** — opens the corresponding account record in the CRM for editing.
 - **Add contact** — opens the CRM to add a new contact to the household.
-- **Launch client portal** — generates an authenticated session and opens the client portal for the selected household member.
 - **View details** — opens an extended information drawer.
 
 ---
@@ -90,13 +88,6 @@ The Passport quick-view card includes a Household tab listing all members with:
 | Other Address | Additional address | 789 Lake Road, Falmouth, MA 02540 | Synced from CRM |
 | Preferred Address | Which address is marked as preferred | Mailing | Synced from CRM |
 
-### Household member (client portal)
-
-| Data Point | Description | Example | Source |
-|-----------|-------------|---------|--------|
-| Registered for Client Portal | Whether the member has a client portal account | Yes | Synced from CRM |
-| Last Login | Date of most recent client portal login | Mar 20, 2026 | Synced from CRM |
-
 ### Related contacts
 
 | Data Point | Description | Example | Source |
@@ -125,7 +116,6 @@ The Passport quick-view card includes a Household tab listing all members with:
 | Primary member designation | Which household member is flagged as the primary contact | Any household member can be designated as primary | Set in CRM | CRM administrator |
 | Address types tracked | Which address types are captured per member | Mailing, Billing, Shipping, Other | All four types available | Administrator |
 | Preferred address indicator | Which address is marked as the member's preferred address | Any of the tracked address types | None | CRM administrator |
-| Client portal access | Whether the "Launch Client Portal" button appears for a member | Available for household members with portal registration | Available if registered | Administrator |
 | CRM edit links | Whether "Edit in CRM" and "Add contact" buttons are available | Enabled when CRM integration is active | Enabled | Administrator |
 | Contact detail fields | Which phone and email fields are displayed | Preferred, Home, Work, Other (for both phone and email) | All available fields shown | Administrator |
 | Role labels | The labels used for household member roles | Configurable in the CRM (e.g., Client, Spouse, Dependent, Trustee, Power of Attorney) | CRM-defined | CRM administrator |
