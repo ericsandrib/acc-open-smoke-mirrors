@@ -12,10 +12,6 @@ import { RelationshipsPage } from '@/pages/RelationshipsPage'
 import { RelationshipDetailPage } from '@/pages/RelationshipDetailPage'
 import { SettingsPage } from '@/pages/SettingsPage'
 import { OrionGapsPage } from '@/pages/OrionGapsPage'
-import { WorkflowV2Page } from '@/pages/WorkflowV2Page'
-import { WorkflowV1ArchivePage } from '@/pages/WorkflowV1ArchivePage'
-import { RulesExplorerPage } from '@/pages/RulesExplorerPage'
-import { ReviewQueuePage } from '@/pages/ReviewQueuePage'
 import { Toaster } from '@/components/ui/sonner'
 import { AppPasswordGate } from '@/components/AppPasswordGate'
 import {
@@ -37,11 +33,7 @@ export default function App() {
                 <Routes>
                   <Route path="/" element={<DashboardPage />} />
                   <Route path="/wizard" element={<WizardPage />} />
-                  <Route path="/workflow" element={<WorkflowV2Page />} />
-                  <Route path="/workflow-v1" element={<WorkflowV1ArchivePage />} />
-                  <Route path="/workflow-legacy" element={<WorkflowPage />} />
-                  <Route path="/rules" element={<RulesExplorerPage />} />
-                  <Route path="/queue" element={<ReviewQueuePage />} />
+                  <Route path="/workflow" element={<WorkflowPage />} />
                   <Route path="/servicing" element={<ServicingPage />} />
                   <Route path="/servicing/:journeyId" element={<JourneyDetailPage />} />
                   <Route path="/servicing/:journeyId/action/:actionId" element={<JourneyDetailPage />} />

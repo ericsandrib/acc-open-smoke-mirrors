@@ -15,9 +15,6 @@ import {
   PanelLeftClose,
   PanelLeftOpen,
   Plus,
-  GitBranch,
-  Sparkles,
-  ListChecks,
 } from 'lucide-react'
 import type { ComponentType, SVGProps } from 'react'
 
@@ -45,11 +42,6 @@ const workItems: NavItem[] = [
   { label: 'KPI Dashboard', href: '/kpi-dashboard', icon: BarChart3 },
 ]
 
-const v2Items: NavItem[] = [
-  { label: 'Workflow', href: '/workflow', icon: GitBranch, badge: 'V2' },
-  { label: 'Rules engine', href: '/rules', icon: Sparkles },
-  { label: 'Review queue', href: '/queue', icon: ListChecks },
-]
 
 const advisorItems: NavItem[] = [
   { label: 'Advisor Directory', href: '/advisor-directory', icon: BookOpen },
@@ -111,8 +103,6 @@ export function SideNav({ collapsed, onToggle, onCreateClick }: SideNavProps) {
         <NavGroup items={primaryItems} collapsed={collapsed} isActive={isActive} />
         <Divider />
         <NavGroup items={workItems} collapsed={collapsed} isActive={isActive} />
-        <Divider />
-        <NavGroup items={v2Items} collapsed={collapsed} isActive={isActive} />
         <Divider />
         <NavGroup items={advisorItems} collapsed={collapsed} isActive={isActive} />
       </div>

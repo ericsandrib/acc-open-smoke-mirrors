@@ -3,6 +3,7 @@ import { useWorkflow, useTaskData } from '@/stores/workflowStore'
 import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
+import { V2RoutingSummary } from '@/components/wizard/V2RoutingSummary'
 import { ChildActionKebabMenu } from '@/components/wizard/ChildActionKebabMenu'
 import { ChildActionTimelineSheet } from '@/components/wizard/ChildActionTimelineSheet'
 import {
@@ -622,6 +623,8 @@ export function OpenAccountsForm() {
 
   return (
     <div className="space-y-12">
+      <V2RoutingSummary />
+
       <section id="oa-accounts" className="scroll-mt-16">
         <div className="mb-4">
           <h3 className="text-base font-semibold">
