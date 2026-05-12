@@ -35,6 +35,7 @@ export const LIQUID_NET_WORTH_RANGES = [
 export const INVESTMENT_OBJECTIVES = [
   'Income',
   'Growth',
+  'Aggressive Growth',
   'Capital preservation',
   'Speculation',
 ] as const

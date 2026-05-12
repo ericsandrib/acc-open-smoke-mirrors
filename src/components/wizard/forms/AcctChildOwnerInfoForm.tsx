@@ -31,6 +31,8 @@ import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from '
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { useOpenAccountsVariant } from '@/components/wizard/openAccountsVariantContext'
 import { cn } from '@/lib/utils'
+import type { CustodianId } from '@/utils/custodians'
+import { SchwabAccountForm } from '@/components/wizard/forms/schwab/SchwabAccountForm'
 
 type OwnerRow = { id: string; type: 'existing'; partyId?: string }
 type BeneficiaryDesignationType = 'primary' | 'contingent'
@@ -97,6 +99,8 @@ export function AcctChildOwnerInfoForm() {
   const childId = ctx?.child.id ?? ''
   const childMeta = state.taskData[childId] as Record<string, unknown> | undefined
   const childRegType = (childMeta?.registrationType as RegistrationType | undefined) ?? null
+  const childCustodian = (childMeta?.custodian as CustodianId | undefined) ?? null
+  const childApplicationType = (childMeta?.applicationType as string | undefined) ?? null
   const showBeneficiariesSection =
     childRegType != null && BENEFICIARY_ENABLED_REGISTRATIONS.has(childRegType)
   const trustEntityOwnersOnly = childRegType === 'TRUST'
@@ -132,7 +136,21 @@ export function AcctChildOwnerInfoForm() {
     [data.beneficiaries],
   )
 
-  const maxOwners = getMaxAccountOwnersForRegistration(childRegType)
+  // Schwab applications don't carry a registration type at child-creation
+  // (it's captured inside the Schwab paperwork). Derive the slot count from
+  // the application type to avoid the registration-less default (ENTITY cap).
+  const schwabMaxOwners =
+    childCustodian === 'schwab'
+      ? childApplicationType === 'schwab-ira'
+        ? 1
+        : childApplicationType === 'schwab-transfer'
+          ? 3
+          : 2 // schwab-one-personal, schwab-managed-account (Individual default; Joint adds slot 2)
+      : null
+  const maxOwners =
+    schwabMaxOwners !== null
+      ? schwabMaxOwners
+      : getMaxAccountOwnersForRegistration(childRegType)
   const requiredOwnerSlots = Math.max(1, maxOwners)
 
   const [addMemberSheetOwnerId, setAddMemberSheetOwnerId] = useState<string | null>(null)
@@ -296,6 +314,8 @@ export function AcctChildOwnerInfoForm() {
     )
   }
 
+  const isSchwabFlow = childCustodian === 'schwab' && Boolean(childId)
+
   return (
     <div className={variant === 'v5' || variant === 'v6' ? 'space-y-9' : 'space-y-7'}>
       {lockForExternalSubmission ? (
@@ -448,7 +468,11 @@ export function AcctChildOwnerInfoForm() {
         </div>
       </section>
 
-      {showBeneficiariesSection ? (
+      {isSchwabFlow && childId ? (
+        <SchwabAccountForm childId={childId} />
+      ) : null}
+
+      {!isSchwabFlow && showBeneficiariesSection ? (
       <section id="acct-beneficiaries" className="space-y-6 scroll-mt-16">
         <div
           className={cn(
@@ -758,6 +782,7 @@ export function AcctChildOwnerInfoForm() {
       </section>
       ) : null}
 
+      {!isSchwabFlow ? (
       <section id="acct-info" className="space-y-6 scroll-mt-16">
         <div
           className={cn(
@@ -800,8 +825,9 @@ export function AcctChildOwnerInfoForm() {
         <AccountAdditionalInformationSection data={data} updateField={updateField} hideHeader />
         </div>
       </section>
+      ) : null}
 
-      {childId ? (
+      {!isSchwabFlow && childId ? (
         <section id="acct-features" className="space-y-6 scroll-mt-16">
           <div
             className={cn(

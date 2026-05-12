@@ -326,15 +326,20 @@ export function AccountOwnerIndividualFormFields({ value: s, onChange, variant =
         </div>
         <div className="space-y-1.5">
           <Label className={field}>Source of funds / wealth</Label>
-          <textarea
-            className={cn(
-              'flex min-h-[80px] w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-sm',
-              'placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring',
-            )}
-            value={s.sourceOfFunds}
-            onChange={(e) => onChange({ sourceOfFunds: e.target.value })}
-            placeholder="Describe sources (e.g. salary, sale of business, inheritance)"
-          />
+          <Select
+            value={s.sourceOfFunds || undefined}
+            onValueChange={(v) => onChange({ sourceOfFunds: v })}
+          >
+            <SelectTrigger>
+              <SelectValue placeholder="Select source" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="Salary">Salary</SelectItem>
+              <SelectItem value="Savings">Savings</SelectItem>
+              <SelectItem value="Proceeds from sale of home">Proceeds from sale of home</SelectItem>
+              <SelectItem value="Rollover">Rollover</SelectItem>
+            </SelectContent>
+          </Select>
         </div>
       </section>
 

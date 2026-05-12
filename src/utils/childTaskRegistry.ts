@@ -31,7 +31,6 @@ const CHILD_TYPE_CONFIGS: Record<ChildType, ChildTypeConfig> = {
       { suffix: 'account-owners', title: 'Account & Owners', formKey: 'acct-child-account-owners' },
       { suffix: 'funding-transfers', title: 'Funding & Asset Movement', formKey: 'acct-child-funding-transfers' },
       { suffix: 'features-services', title: 'Account Features & Services', formKey: 'acct-child-features-services' },
-      { suffix: 'documents-review', title: 'Documents', formKey: 'acct-child-documents-review' },
     ],
   },
   'funding-line': {

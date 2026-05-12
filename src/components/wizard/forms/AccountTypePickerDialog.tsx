@@ -1,6 +1,4 @@
 import { useState } from 'react'
-import type { RegistrationType } from '@/utils/registrationDocuments'
-import { registrationTypeLabels } from '@/utils/registrationDocuments'
 import { Button } from '@/components/ui/button'
 import { Label } from '@/components/ui/label'
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from '@/components/ui/sheet'
@@ -13,10 +11,14 @@ import {
 } from '@/components/ui/select'
 import { Plus, Trash2 } from 'lucide-react'
 import { teamMembers } from '@/data/teamMembers'
-
-const REGISTRATION_TYPE_OPTIONS: { value: string; label: string }[] = (
-  Object.entries(registrationTypeLabels) as [RegistrationType, string][]
-).map(([value, label]) => ({ value, label }))
+import {
+  CUSTODIAN_OPTIONS,
+  ACCOUNT_CATEGORY_OPTIONS,
+  SCHWAB_APPLICATION_OPTIONS,
+  type CustodianId,
+  type AccountCategoryId,
+  type SchwabApplicationType,
+} from '@/utils/custodians'
 
 const QUANTITY_OPTIONS = Array.from({ length: 10 }, (_, i) => ({
   value: String(i + 1),
@@ -25,20 +27,23 @@ const QUANTITY_OPTIONS = Array.from({ length: 10 }, (_, i) => ({
 
 interface Row {
   id: string
-  registrationType: RegistrationType | ''
+  applicationType: SchwabApplicationType | ''
   quantity: number
 }
 
 export type Selection = {
-  registrationType: RegistrationType
+  applicationType: SchwabApplicationType
   label: string
   count: number
+  custodian: CustodianId
+  category: AccountCategoryId
+  /** Retained for back-compat with downstream consumers; sourced from advisor team member. */
   officeCode: string
   investmentProfessionalId: string
 }
 
 function createRow(): Row {
-  return { id: `row-${Date.now()}-${Math.random().toString(36).slice(2)}`, registrationType: '', quantity: 1 }
+  return { id: `row-${Date.now()}-${Math.random().toString(36).slice(2)}`, applicationType: '', quantity: 1 }
 }
 
 interface AccountTypePickerDialogProps {
@@ -47,19 +52,20 @@ interface AccountTypePickerDialogProps {
   onConfirm: (selections: Selection[]) => void
 }
 
+const DEFAULT_CATEGORY: AccountCategoryId = 'open-new'
+
 export function AccountTypePickerDialog({ open, onOpenChange, onConfirm }: AccountTypePickerDialogProps) {
   const [rows, setRows] = useState<Row[]>(() => [createRow()])
-  const [officeCode, setOfficeCode] = useState('')
+  const [custodian, setCustodian] = useState<CustodianId | ''>('')
+  const [category, setCategory] = useState<AccountCategoryId>(DEFAULT_CATEGORY)
   const [investmentProfessionalId, setInvestmentProfessionalId] = useState('')
 
-  const officeOptions = [...new Set(teamMembers.map((m) => m.officeCode))]
-    .sort()
-    .map((code) => ({ value: code, label: `Product ${code}` }))
   const advisorOptions = teamMembers.map((m) => ({ value: m.id, label: m.name }))
 
   const handleReset = () => {
     setRows([createRow()])
-    setOfficeCode('')
+    setCustodian('')
+    setCategory(DEFAULT_CATEGORY)
     setInvestmentProfessionalId('')
   }
 
@@ -81,24 +87,29 @@ export function AccountTypePickerDialog({ open, onOpenChange, onConfirm }: Accou
 
   const addRow = () => setRows((prev) => [...prev, createRow()])
 
-  const validRows = rows.filter((r) => r.registrationType !== '')
+  const validRows = rows.filter((r) => r.applicationType !== '')
 
   const totalAccounts = validRows.reduce((sum, r) => sum + r.quantity, 0)
 
   const buildSelections = (): Selection[] => {
-    const grouped = new Map<RegistrationType, number>()
+    const grouped = new Map<SchwabApplicationType, number>()
 
     for (const row of validRows) {
-      const type = row.registrationType as RegistrationType
-      grouped.set(type, (grouped.get(type) ?? 0) + row.quantity)
+      const t = row.applicationType as SchwabApplicationType
+      grouped.set(t, (grouped.get(t) ?? 0) + row.quantity)
     }
 
-    return Array.from(grouped.entries()).map(([type, count]) => {
-      const label = registrationTypeLabels[type]
+    const advisor = teamMembers.find((m) => m.id === investmentProfessionalId)
+    const officeCode = advisor?.officeCode ?? ''
+
+    return Array.from(grouped.entries()).map(([t, count]) => {
+      const opt = SCHWAB_APPLICATION_OPTIONS.find((o) => o.id === t)
       return {
-        registrationType: type,
-        label,
+        applicationType: t,
+        label: opt?.label ?? String(t),
         count,
+        custodian: custodian as CustodianId,
+        category,
         officeCode,
         investmentProfessionalId,
       }
@@ -114,9 +125,9 @@ export function AccountTypePickerDialog({ open, onOpenChange, onConfirm }: Accou
   }
 
   const canSubmit =
-    officeCode !== '' &&
+    custodian !== '' &&
     investmentProfessionalId !== '' &&
-    rows.some((r) => r.registrationType !== '' && r.quantity >= 1)
+    rows.some((r) => r.applicationType !== '' && r.quantity >= 1)
 
   return (
     <Sheet open={open} onOpenChange={handleOpenChange}>
@@ -127,9 +138,8 @@ export function AccountTypePickerDialog({ open, onOpenChange, onConfirm }: Accou
         <SheetHeader className="px-6 pt-6 pb-4 border-b border-border shrink-0">
           <SheetTitle>Add accounts</SheetTitle>
           <SheetDescription>
-            Choose registration types for accounts to open (individual, joint, retirement, trust, entity, and other
-            custodian offerings). Each row is one or more parallel account-opening workflows—use quantity when you need
-            the same registration type more than once.
+            Choose a custodian and the application(s) you want to start. Each row is one or more parallel
+            account-opening workflows—use quantity when you need more than one of the same application.
           </SheetDescription>
         </SheetHeader>
 
@@ -138,15 +148,15 @@ export function AccountTypePickerDialog({ open, onOpenChange, onConfirm }: Accou
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               <div className="space-y-1.5">
                 <Label>
-                  Product <span className="text-destructive">*</span>
+                  Custodian <span className="text-destructive">*</span>
                 </Label>
-                <Select value={officeCode || undefined} onValueChange={setOfficeCode}>
+                <Select value={custodian || undefined} onValueChange={(v) => setCustodian(v as CustodianId)}>
                   <SelectTrigger className="h-9 w-full text-left [&>span]:text-left">
-                    <SelectValue placeholder="Select product…" />
+                    <SelectValue placeholder="Select custodian…" />
                   </SelectTrigger>
                   <SelectContent className="max-h-[min(24rem,70vh)]">
-                    {officeOptions.map((opt) => (
-                      <SelectItem key={opt.value} value={opt.value}>
+                    {CUSTODIAN_OPTIONS.map((opt) => (
+                      <SelectItem key={opt.id} value={opt.id}>
                         {opt.label}
                       </SelectItem>
                     ))}
@@ -174,12 +184,29 @@ export function AccountTypePickerDialog({ open, onOpenChange, onConfirm }: Accou
                 </Select>
               </div>
             </div>
+            <div className="space-y-1.5">
+              <Label>
+                Category <span className="text-destructive">*</span>
+              </Label>
+              <Select value={category} onValueChange={(v) => setCategory(v as AccountCategoryId)}>
+                <SelectTrigger className="h-9 w-full text-left [&>span]:text-left">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent className="max-h-[min(24rem,70vh)]">
+                  {ACCOUNT_CATEGORY_OPTIONS.map((opt) => (
+                    <SelectItem key={opt.id} value={opt.id}>
+                      {opt.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
           </div>
 
           <div className="rounded-lg border border-border overflow-visible">
             <div className="grid grid-cols-[1fr_90px_40px] gap-3 px-4 py-2.5 bg-muted/50 border-b border-border">
               <span className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-                Registration type
+                Application type
               </span>
               <span className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Qty</span>
               <span />
@@ -191,19 +218,19 @@ export function AccountTypePickerDialog({ open, onOpenChange, onConfirm }: Accou
                 className="grid grid-cols-[1fr_90px_40px] gap-3 items-center px-4 py-3 border-b border-border last:border-b-0"
               >
                 <div className="space-y-1.5 min-w-0">
-                  <Label className="sr-only">Registration type</Label>
+                  <Label className="sr-only">Application type</Label>
                   <Select
-                    value={row.registrationType || undefined}
-                    onValueChange={(v) => updateRow(row.id, { registrationType: v as RegistrationType })}
+                    value={row.applicationType || undefined}
+                    onValueChange={(v) => updateRow(row.id, { applicationType: v as SchwabApplicationType })}
                   >
                     <SelectTrigger className="h-9 w-full text-left [&>span]:line-clamp-2 [&>span]:text-left">
-                      <SelectValue placeholder="Select registration type…" />
+                      <SelectValue placeholder="Select application type…" />
                     </SelectTrigger>
                     <SelectContent className="max-h-[min(24rem,70vh)] w-[var(--radix-select-trigger-width)] max-w-[var(--radix-select-trigger-width)] min-w-0">
-                      {REGISTRATION_TYPE_OPTIONS.map((opt) => (
+                      {SCHWAB_APPLICATION_OPTIONS.map((opt) => (
                         <SelectItem
-                          key={opt.value}
-                          value={opt.value}
+                          key={opt.id}
+                          value={opt.id}
                           className="whitespace-normal break-words text-left py-2"
                         >
                           {opt.label}
@@ -247,11 +274,12 @@ export function AccountTypePickerDialog({ open, onOpenChange, onConfirm }: Accou
               className="w-full flex items-center gap-2 px-4 py-3 text-sm text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors"
             >
               <Plus className="h-4 w-4" />
-              Add another registration type
+              Add another application type
             </button>
           </div>
           <p className="text-xs text-muted-foreground leading-relaxed">
-            Quantities above 1 create numbered copies of the same registration type so each can be completed on its own.
+            Registration details (Individual, Joint, IRA subtype, etc.) are captured inside each
+            application's form sections.
           </p>
         </div>
 

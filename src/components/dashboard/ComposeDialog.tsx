@@ -32,12 +32,6 @@ const JOURNEY_COMPOSE_DRAFT_KEY = 'journey-compose-draft'
 
 const actionTypes = [
   { value: 'client-onboarding', label: 'Client Onboarding', enabled: true },
-  { value: 'portfolio-rebalancing', label: 'Portfolio Rebalancing', enabled: false },
-  { value: 'account-transfer', label: 'Account Transfer', enabled: false },
-  { value: 'trust-administration', label: 'Trust Administration', enabled: false },
-  { value: 'estate-planning', label: 'Estate Planning Review', enabled: false },
-  { value: 'tax-loss-harvesting', label: 'Tax Loss Harvesting', enabled: false },
-  { value: 'beneficiary-update', label: 'Beneficiary Update', enabled: false },
 ]
 
 function RequiredMark() {
@@ -133,8 +127,8 @@ export function ComposeDialog({ onClose }: ComposeDialogProps) {
     actionType === 'client-onboarding' &&
     relationshipId !== '' &&
     (hideActionSettings ||
-      ((openMultipleAccounts === 'yes' || openMultipleAccounts === 'no') &&
-        (openAnnuityAccount === 'yes' || openAnnuityAccount === 'no')))
+      openMultipleAccounts === 'yes' ||
+      openMultipleAccounts === 'no')
 
   function handleSnooze() {
     toast.message('Snooze scheduled (demo)', {
@@ -337,24 +331,6 @@ export function ComposeDialog({ onClose }: ComposeDialogProps) {
                       onValueChange={(v) => setOpenMultipleAccounts(v as 'yes' | 'no' | '')}
                     >
                       <SelectTrigger id="compose-multi-account">
-                        <SelectValue placeholder="Select…" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="yes">Yes</SelectItem>
-                        <SelectItem value="no">No</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="compose-annuity">
-                      Do you expect to add an annuity to any of the accounts?
-                      <RequiredMark />
-                    </Label>
-                    <Select
-                      value={openAnnuityAccount}
-                      onValueChange={(v) => setOpenAnnuityAccount(v as 'yes' | 'no' | '')}
-                    >
-                      <SelectTrigger id="compose-annuity">
                         <SelectValue placeholder="Select…" />
                       </SelectTrigger>
                       <SelectContent>

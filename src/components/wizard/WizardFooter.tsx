@@ -139,7 +139,17 @@ export function WizardFooter() {
     isOnOpenAccountsTask && !isAnnuityOpenAccountsTask && !allAccountChildrenTerminal
   const showsAnnuityComplete =
     isOnOpenAccountsTask && isAnnuityOpenAccountsTask && allAccountChildrenTerminal
-  const openAccountsSubmitLabel = 'Submit for Review'
+  const openAccountsSubmitLabel = 'Send client packet'
+  // Household name for the "Send client packet" confirmation popup. Prefer
+  // the journey name; fall back to the primary household member's display name.
+  const primaryHouseholdMember = state.relatedParties.find(
+    (p) => p.type === 'household_member' && p.isPrimary && !p.isHidden,
+  )
+  const recipientName =
+    state.journeyName?.trim() ||
+    primaryHouseholdMember?.name?.trim() ||
+    'the client'
+  const [sendClientPacketOpen, setSendClientPacketOpen] = useState(false)
   const isV5OrV6 = openAccountsVariant === 'v5' || openAccountsVariant === 'v6'
 
   return (
@@ -202,6 +212,12 @@ export function WizardFooter() {
           ) : isLast || !hasNextVisibleTask || showsOpenAccountsSubmit || showsAnnuityComplete ? (
             <Button
               onClick={() => {
+                // Open Accounts "Send client packet" is a prototype dead-end:
+                // show a confirmation popup naming the household, don't submit.
+                if (isOnOpenAccountsTask && !allAccountChildrenTerminal) {
+                  setSendClientPacketOpen(true)
+                  return
+                }
                 setCompleteAccountOpeningWarnings([])
                 setCompleteAccountOpeningOpen(true)
               }}
@@ -281,6 +297,29 @@ export function WizardFooter() {
         }}
       />
     )}
+    <Dialog open={sendClientPacketOpen} onOpenChange={setSendClientPacketOpen}>
+      <DialogContent className="max-w-md">
+        <DialogHeader>
+          <DialogTitle>Send client packet</DialogTitle>
+          <DialogDescription>
+            The completed account-opening packet — applications, supporting documents, and supervisory
+            sign-offs — will be sent to{' '}
+            <span className="font-medium text-foreground">{recipientName}</span> for client signature.
+          </DialogDescription>
+        </DialogHeader>
+        <div className="rounded-md border border-border bg-muted/30 px-3 py-2 text-xs text-muted-foreground">
+          Prototype — clicking Send is a dead-end and won't change application state.
+        </div>
+        <DialogFooter>
+          <Button variant="outline" onClick={() => setSendClientPacketOpen(false)}>
+            Cancel
+          </Button>
+          <Button onClick={() => setSendClientPacketOpen(false)}>
+            Send
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
     <Dialog open={exitWorkflowOpen} onOpenChange={setExitWorkflowOpen}>
       <DialogContent className="max-w-md !data-[state=closed]:zoom-out-100 !data-[state=open]:zoom-in-100 !data-[state=closed]:slide-out-to-left-0 !data-[state=open]:slide-in-from-left-0 !data-[state=closed]:slide-out-to-top-[50%] !data-[state=open]:slide-in-from-top-[50%]">
         <DialogHeader>

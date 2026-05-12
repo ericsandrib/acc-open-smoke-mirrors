@@ -467,9 +467,19 @@ function WizardLayoutInner() {
     if (activeChildSubTask.formKey !== 'acct-child-account-owners') return sections
     const childMeta = state.taskData[activeChild.id] as Record<string, unknown> | undefined
     const childRegType = (childMeta?.registrationType as string | undefined) ?? null
+    const childCustodian = (childMeta?.custodian as string | undefined) ?? null
     return sections.filter((section) => {
-      if (section.id !== 'acct-beneficiaries') return true
-      return childRegType != null && BENEFICIARY_ENABLED_REGISTRATIONS.has(childRegType)
+      if (section.id === 'acct-beneficiaries') {
+        return childRegType != null && BENEFICIARY_ENABLED_REGISTRATIONS.has(childRegType)
+      }
+      // Custodian-native flows (Schwab today, Fidelity later) render their own
+      // Account Information and Investment Elections content inside the
+      // paperwork — hide the legacy section anchors from the right-rail nav so
+      // they aren't dead links.
+      if (childCustodian === 'schwab') {
+        if (section.id === 'acct-info' || section.id === 'acct-features') return false
+      }
+      return true
     })
   })()
 

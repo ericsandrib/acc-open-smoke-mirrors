@@ -153,3 +153,77 @@
 - [x] Smooth animation pass
 - [x] Keyboard accessibility check
 - [x] Verify build passes
+
+## Spec 006: Custodian Selection + Schwab Native Forms
+
+### Phase 1: Picker Dialog
+- [x] Add `src/utils/custodians.ts` with `CUSTODIAN_OPTIONS` and `ACCOUNT_CATEGORY_OPTIONS`
+- [x] Replace Product dropdown with Custodian dropdown in `AccountTypePickerDialog`
+- [x] Add Category dropdown
+- [x] Update `Selection` type with `custodian` + `category`
+- [x] Thread `custodian` + `accountCategory` through `spawnOpenAccountChildrenFromSelections` metadata
+
+### Phase 2: Schwab Form Infrastructure
+- [x] Create shared primitives (`schwabPrimitives.tsx`)
+- [x] Create shared sections (`SchwabSharedSections.tsx` — IA cover, Account Holder, Trusted Contact, Source/Purpose, Issuer Communications)
+- [x] Create `useSchwabFormState` hook with pre-population seeding
+- [x] Create `buildSchwabPrefill` derivation from related parties + client info + advisor
+- [x] Create registration-type → Schwab-form-key router
+
+### Phase 3: Four Schwab Forms
+- [x] `SchwabOnePersonalForm` (APP13582) — 12 sections
+- [x] `SchwabIraForm` (APP10539) — 11 sections + 4 beneficiary blocks
+- [x] `SchwabManagedAccountForm` (APP20284) — 13 sections + 7 manager blocks + Appendix A
+- [x] `SchwabTransferForm` (APP10864) — 6 sections
+
+### Phase 4: Wiring
+- [x] `SchwabAccountForm` router component
+- [x] `AcctChildOwnerInfoForm` short-circuits to `SchwabAccountForm` when `custodian === 'schwab'`
+- [x] TypeScript build clean
+- [x] Lint clean for Schwab files (warnings only)
+
+### Phase 5: Picker simplification (2026-05-12 follow-up)
+- [x] Compose dialog: action type dropdown reduced to "Client Onboarding" only
+- [x] Compose dialog: "Do you expect to add an annuity…" field removed
+- [x] OpenAccountsVariantSwitcher (floating demo widget) removed from App / Dashboard / Onboarding pages
+- [x] AccountTypePickerDialog: Category reduced to "Open a new account" only
+- [x] AccountTypePickerDialog: Registration type → Application type with 4 Schwab options (Schwab One Personal / IRA Account / Managed Account Marketplace / Transfer)
+- [x] Spawned child name now derived from application type shortLabel
+- [x] getSchwabFormKey simplified — application type IS the form key
+
+### Phase 8: Documents-first cleanup + Supervision Review (2026-05-12 follow-up)
+- [x] Removed duplicate "Documents" sub-task from account-opening child config — documents now live only at the parent Open Accounts step
+- [x] Renamed OpenAccountsForm section headers: Supporting Documents → "1. Gather documents"; Account instructions → "2. Account forms"; KYC Verification → "3. KYC and Supervision"; Envelopes badge bumped to "4"
+- [x] Added "Aggressive Growth" to INVESTMENT_OBJECTIVES so owner suitability profiles can be tagged
+- [x] New `src/utils/supervisionRules.ts` with `evaluateSupervisionRules(accountChildId, state, kycVerified)` returning `{ status, triggered[] }`. 6 active rules:
+  1. Owner age ≥70 with Aggressive Growth objective
+  2. Owner Retired / Not Employed with Aggressive Growth objective
+  3. Risk tolerance × Investment Objective mismatch (Conservative × Growth/Aggressive/Speculation; Aggressive × Capital Preservation)
+  4. Source of Funds = Rollover
+  5. Margin requested (account feature OR Schwab One "with Margin" radio)
+  6. Options requested (level included in detail when present)
+- [x] New "Supervision Review" sub-section inside "3. KYC and Supervision" — lists each account-opening child with its supervision status badge (Not started / In review / Passed / Returned / Pending approval) and the list of triggered rules
+- [x] Gating logic: KYC review can complete normally; when any rule fires AND KYC is verified, supervision = "Pending approval" (manual sign-off); when no rules fire AND KYC is verified, supervision = "Passed"
+- [x] Deferred per Owner's instruction: advisor email rule, Stratos Registered Employee (OBA) rule, Advisory fee threshold rule, Options activity level — Owner still discovering these fields
+
+### Phase 7: Owner-picker unification + dropdown source-of-funds (2026-05-12 follow-up)
+- [x] AcctChildOwnerInfoForm: removed Schwab early-return; now renders Owners & Participants for every custodian
+- [x] Schwab flow renders Owners section → SchwabAccountForm; Beneficiaries / Account Information / Investment Elections sections are hidden for Schwab (their data lives in the native Schwab paperwork)
+- [x] Schwab owner-slot count derived from applicationType (1 for IRA, 2 for Schwab One / Managed, 3 for Transfer) — no longer falls back to the entity multi-owner cap
+- [x] useSchwabFormState reads selectedOwnerPartyIds from `taskData['<childId>-account-owners'].owners`; primary/additional Holder fields auto-fill from selected owners and re-sync when the operator changes them
+- [x] AccountFinancialSection rewired to read each selected owner's `accountOwnerIndividual.liquidNetWorthRange` / `.netWorthRange`; ranges parse to numeric midpoints via new `src/utils/netWorthRange.ts`; multiple owners sum their midpoints
+- [x] AccountFinancialSection surfaces "missing range on Owner X" hint plus combined estimate readout
+- [x] Right-rail nav (WizardLayout) filters `acct-info` / `acct-features` anchors for Schwab so dead links are gone
+- [x] Standalone Financial summary section removed from RelatedPartiesForm; ClientInfoForm reverted to its original simple state
+- [x] Source of funds / wealth field converted from textarea to dropdown (Salary / Savings / Proceeds from sale of home / Rollover) in AccountOwnerIndividualFormFields
+
+### Phase 6: Documents-first flow + signing-ceremony separation + net-worth validation (2026-05-12 follow-up)
+- [x] Open Accounts page: Supporting Documents section moved BEFORE Account Instructions
+- [x] Add accounts button disabled until at least one supporting document is uploaded; hint text shown
+- [x] Schwab forms: removed all signature blocks (collected later in signing ceremony) — Schwab One Section 11, IRA Section 11, Managed Sections 11/12/13 sigs, Transfer Section 6 sigs, Appendix A sigs all dropped
+- [x] Schwab forms: kept the non-signature acknowledgement / data fields from those sections so application data is still captured
+- [x] Client Info (RelatedPartiesForm): added Financial Summary section with Liquid Net Worth + Net Worth fields, validates Liquid > Net error
+- [x] New shared AccountFinancialSection component: Approximate Account Value + Client's Liquidity Need fields with three validations (vs Liquid Net Worth, vs Net Worth, vs Liquidity Need)
+- [x] AccountFinancialSection inserted into all 4 Schwab forms (One §6a, IRA §11, Managed §4a, Transfer §7)
+- [x] schwabPrePopulation: new deriveIdentityFromUploadedDocs() generates fake-but-plausible ID type, number, country, state, issue/expiration date from filename + subType
+- [x] useSchwabFormState wired to seed idType/idNumber/idCountry/idState/idIssueDate/idExpirationDate from the document identity

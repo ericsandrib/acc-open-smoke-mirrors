@@ -11,3 +11,4 @@ Specs are numbered sequentially to show the order in which features were designe
 | 003 | [Servicing Route](003-servicing-route.md) | Complete |
 | 004 | [Child KYC Tasks](004-child-kyc-tasks.md) | Complete |
 | 005 | [Port Filter Sidebar](005-port-filter-sidebar.md) | In Progress |
+| 006 | [Custodian Selection + Schwab Native Forms](006-custodian-schwab-forms.md) | Complete |
