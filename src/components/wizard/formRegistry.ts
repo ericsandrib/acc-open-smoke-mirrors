@@ -80,7 +80,6 @@ export const taskSections: Partial<Record<string, Array<{ id: string; label: str
     { id: 'acct-owners', label: 'Owners & Participants' },
     { id: 'acct-beneficiaries', label: 'Beneficiaries' },
     { id: 'acct-info', label: 'Account Information' },
-    { id: 'acct-features', label: 'Investment Elections' },
   ],
   'acct-child-documents-review': [
     { id: 'acct-docs-forms', label: 'Forms for This Account' },

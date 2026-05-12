@@ -344,6 +344,61 @@ export function AccountAdditionalInformationSection({
           </div>
 
           <div className="space-y-2">
+            <Label htmlFor="approximate-account-value">
+              Approximate account value
+              <span className="text-rose-600 ml-0.5">*</span>
+            </Label>
+            <div className="relative">
+              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-muted-foreground">$</span>
+              <Input
+                id="approximate-account-value"
+                type="number"
+                min={0}
+                step={1000}
+                inputMode="numeric"
+                placeholder="0"
+                className="pl-7 tabular-nums"
+                value={(data.approximateAccountValue as number | string | undefined) ?? ''}
+                onChange={(e) =>
+                  updateField(
+                    'approximateAccountValue',
+                    e.target.value === '' ? '' : Number(e.target.value),
+                  )
+                }
+              />
+            </div>
+            <p className="text-xs text-muted-foreground">
+              Used to evaluate system guardrails against owner Net Worth and Liquid Net Worth.
+            </p>
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="liquidity-need">Client liquidity need</Label>
+            <div className="relative">
+              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-muted-foreground">$</span>
+              <Input
+                id="liquidity-need"
+                type="number"
+                min={0}
+                step={1000}
+                inputMode="numeric"
+                placeholder="0"
+                className="pl-7 tabular-nums"
+                value={(data.liquidityNeed as number | string | undefined) ?? ''}
+                onChange={(e) =>
+                  updateField(
+                    'liquidityNeed',
+                    e.target.value === '' ? '' : Number(e.target.value),
+                  )
+                }
+              />
+            </div>
+            <p className="text-xs text-muted-foreground">
+              Dollar amount the client expects to withdraw. Cannot exceed account value.
+            </p>
+          </div>
+
+          <div className="space-y-2">
             <Label>Investment time horizon date</Label>
             <Input
               type="date"
