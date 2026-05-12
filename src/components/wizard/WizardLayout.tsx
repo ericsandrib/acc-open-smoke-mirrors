@@ -69,7 +69,7 @@ function WizardAccessoryBar() {
   )
 }
 import { ComposeDialog } from '@/components/dashboard/ComposeDialog'
-import { useWorkflow } from '@/stores/workflowStore'
+import { useChildActionContext, useWorkflow } from '@/stores/workflowStore'
 import { cn } from '@/lib/utils'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import {
@@ -397,6 +397,7 @@ export function WizardLayout() {
 
 function WizardLayoutInner() {
   const { state, dispatch } = useWorkflow()
+  const childActionCtx = useChildActionContext()
   const navigate = useNavigate()
   const variant = useOpenAccountsVariant()
   const { variant: wizardOpenAccountsVariantRaw } = useOpenAccountsVariantControls()
@@ -450,14 +451,13 @@ function WizardLayoutInner() {
     ? state.tasks.find((t) => (t.children ?? []).some((c) => c.id === activeChild.id))
     : undefined
   const isKycChild = activeChild?.childType === 'kyc'
-  const activeKycSubTask = isKycChild && state.activeChildSubTaskIndex != null
-    ? getChildTypeConfig('kyc').subTasks[state.activeChildSubTaskIndex]
-    : undefined
+  const activeChildSubTask = childActionCtx?.currentSubTask
+  const activeKycSubTask = isKycChild ? activeChildSubTask : undefined
   const showKycDocumentsSubTask = activeKycSubTask?.formKey === 'kyc-child-documents'
-  const activeChildSubTask =
-    activeChild != null && state.activeChildSubTaskIndex != null
-      ? getChildTypeConfig(activeChild.childType).subTasks[state.activeChildSubTaskIndex]
-      : undefined
+  const showKycIntakeSubTask =
+    activeKycSubTask?.formKey === 'kyc-child-info' ||
+    activeKycSubTask?.formKey === 'kyc-child-documents'
+  const showKycCipResultsSubTask = activeKycSubTask?.formKey === 'kyc-child-cip-results'
   const childSections = (() => {
     if (!activeChildSubTask || !activeChild) return []
     const sections = taskSections[activeChildSubTask.formKey] ?? []
@@ -730,7 +730,7 @@ function WizardLayoutInner() {
                   <div className="flex flex-1 min-h-0 overflow-hidden min-w-0">
                     <div className="flex-1 flex flex-col overflow-hidden min-w-0">
                       <WizardAccessoryBar />
-                      {showKycDocumentsSubTask ? <ChildActionContent /> : <ChildAmlReviewContent />}
+                      {showKycIntakeSubTask ? <ChildActionContent /> : <ChildAmlReviewContent />}
                       <ChildActionFooter />
                     </div>
                     {variant !== 'v5' &&
@@ -752,7 +752,7 @@ function WizardLayoutInner() {
                   <div className="flex flex-1 min-h-0 overflow-hidden min-w-0">
                     <div className="flex-1 flex flex-col overflow-hidden min-w-0">
                       <WizardAccessoryBar />
-                      {showKycDocumentsSubTask ? <ChildActionContent /> : <ChildHoKycViewContent />}
+                      {showKycIntakeSubTask ? <ChildActionContent /> : <ChildHoKycViewContent />}
                       <ChildActionFooter />
                     </div>
                     {variant !== 'v5' &&
@@ -811,7 +811,7 @@ function WizardLayoutInner() {
                   <WizardAccessoryBar />
                   <div className="relative flex flex-1 min-h-0 overflow-hidden">
                     <div className="flex-1 min-h-0 flex flex-col overflow-hidden min-w-0">
-                      <ChildActionContent />
+                      {showKycCipResultsSubTask ? <ChildHoKycViewContent /> : <ChildActionContent />}
                       <ChildActionFooter />
                     </div>
                     {variant !== 'v5' &&

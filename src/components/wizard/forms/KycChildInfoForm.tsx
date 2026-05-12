@@ -1,5 +1,11 @@
 import { useEffect, useRef, useState, useCallback } from 'react'
-import { useWorkflow, useTaskData, useChildActionContext, useAdvisorFormsEditable } from '@/stores/workflowStore'
+import {
+  getChildReviewState,
+  useWorkflow,
+  useTaskData,
+  useChildActionContext,
+  useAdvisorFormsEditable,
+} from '@/stores/workflowStore'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { SensitiveTaxIdInput } from '@/components/ui/sensitive-tax-id-input'
@@ -528,8 +534,19 @@ export function KycChildInfoForm() {
 
   if (!child) return null
 
+  const reviewState = getChildReviewState(state, child.id)
   const statusLocked = child.status === 'awaiting_review' || child.status === 'complete' || child.status === 'rejected'
-  const isLocked = statusLocked && !advisorFormsEditable
+  const reviewerCanEdit =
+    child.status === 'awaiting_review' &&
+    (
+      (state.demoViewMode === 'aml' && reviewState?.amlReview?.status === 'pending') ||
+      (
+        state.demoViewMode === 'ho-kyc' &&
+        reviewState?.amlReview?.status === 'cleared' &&
+        reviewState?.hoKycReview?.status === 'pending'
+      )
+    )
+  const isLocked = statusLocked && !advisorFormsEditable && !reviewerCanEdit
   const isApproved = child.status === 'complete'
   const str = (key: string) => (data[key] as string) ?? ''
   const allErrors = getKycValidationErrors(data, {

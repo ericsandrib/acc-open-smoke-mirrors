@@ -231,10 +231,10 @@ function StatusActionButton({
       disabled={disabled}
       onClick={onClick}
       className={cn(
-        'h-9 justify-center rounded-lg px-3 text-sm font-medium active:scale-[0.99] transition-transform',
+        'h-8 justify-center rounded-md px-2.5 text-xs font-medium active:scale-[0.99] transition-transform',
         tone === 'primary' && 'border-foreground bg-foreground text-background hover:bg-foreground/90',
-        tone === 'accept' && 'bg-green-600/90 text-white hover:bg-green-700',
-        tone === 'reject' && 'border-red-600 bg-red-600 text-white hover:bg-red-700 hover:text-white',
+        tone === 'accept' && 'border-emerald-700/80 bg-emerald-700 text-white hover:bg-emerald-800',
+        tone === 'reject' && 'border-red-700/80 bg-red-700 text-white hover:bg-red-800 hover:text-white',
         tone === 'secondary' && 'border-border bg-background text-foreground hover:bg-muted',
         className,
       )}
@@ -245,11 +245,11 @@ function StatusActionButton({
 }
 
 function StatusActionGroup({ children }: { children: ReactNode }) {
-  return <div className="space-y-1.5 px-3.5 pb-3">{children}</div>
+  return <div className="space-y-1 px-3 pb-2.5">{children}</div>
 }
 
 function SecondaryActionRow({ children }: { children: ReactNode }) {
-  return <div className="space-y-1.5">{children}</div>
+  return <div className="space-y-1">{children}</div>
 }
 
 function ReviewTextDialog({
@@ -930,7 +930,7 @@ export function ChildActionSidebar() {
 
   return (
     <TooltipProvider delayDuration={300}>
-      <nav className="w-[330px] border-r border-border bg-white overflow-y-auto flex flex-col">
+      <nav className="w-[330px] border-r border-sidebar-border bg-sidebar-background text-sidebar-foreground overflow-y-auto flex flex-col">
         <JourneyHeader
           showChevron={variant !== 'v5'}
           onChevronBack={() => navigate(-1)}
@@ -962,7 +962,7 @@ export function ChildActionSidebar() {
         )}
         <div className="pt-2">
           <div className="mb-1.5 flex h-9 items-center gap-2 px-3">
-            <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-[var(--bg-tertiary)] text-muted-foreground">
+            <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-muted text-muted-foreground">
               <ChildIcon className="h-3.5 w-3.5" aria-hidden />
             </span>
             <h2 className="text-sm font-semibold text-foreground truncate">
@@ -981,8 +981,8 @@ export function ChildActionSidebar() {
                   className={cn(
                     'w-full text-left pl-12 pr-3 py-2.5 rounded-lg text-sm font-medium flex items-center justify-between gap-2 transition-colors',
                     idx === subTaskIndex
-                      ? 'bg-accent/60 text-foreground'
-                      : 'hover:bg-muted/50 text-foreground',
+                      ? 'bg-sidebar-accent text-sidebar-accent-foreground'
+                      : 'text-sidebar-foreground hover:bg-sidebar-accent/70 hover:text-sidebar-accent-foreground',
                   )}
                 >
                   <span
@@ -1019,35 +1019,35 @@ export function ChildActionSidebar() {
             : 'Check the activity timeline for details.'
           return (
             <div className="mt-auto p-2 border-t border-border">
-              <div className="rounded-2xl border border-border bg-card overflow-hidden shadow-sm">
-                <div className="px-3.5 pb-2.5 pt-3.5 flex items-center gap-2.5">
-                  <div className="h-10 w-10 rounded-xl bg-muted flex items-center justify-center shrink-0">
-                    <FileText className="h-4.5 w-4.5 text-foreground/65" />
+              <div className="rounded-xl border border-border/80 bg-card overflow-hidden shadow-sm">
+                <div className="px-3 pb-2 pt-3 flex items-center gap-2">
+                  <div className="h-8 w-8 rounded-lg bg-muted flex items-center justify-center shrink-0">
+                    <FileText className="h-4 w-4 text-foreground/60" />
                   </div>
                   <div className="min-w-0">
-                    <p className="text-[12px] font-medium text-muted-foreground leading-tight">Application Status</p>
-                    <p className="text-[20px] font-semibold leading-tight truncate">{stageLabel}</p>
+                    <p className="text-[11px] font-medium text-muted-foreground leading-none">Application Status</p>
+                    <p className="text-[17px] font-semibold leading-[1.15] truncate">{stageLabel}</p>
                   </div>
                 </div>
-                <div className="px-3.5 pb-3">
-                  <p className="text-[14px] font-normal text-muted-foreground leading-snug">
+                <div className="px-3 pb-2.5">
+                  <p className="text-[12.5px] font-normal text-muted-foreground/85 leading-snug">
                     {statusSentence}
                     <br />
                     {detailSentence}
                   </p>
                 </div>
                 <ChildReviewStatusActions />
-                <div className="border-t border-border bg-black/5 dark:bg-white/5 px-3.5 flex items-center" style={{ minHeight: '54px' }}>
+                <div className="border-t border-border/60 bg-muted/35 px-3 flex items-center" style={{ minHeight: '44px' }}>
                   <button
                     type="button"
                     onClick={() => {
                       setRightPanelTab('activity')
                       setRightPanelCollapsed(false)
                     }}
-                    className="flex items-center gap-2 text-sm font-medium text-foreground/80 hover:text-foreground bg-black/10 dark:bg-white/10 rounded-lg px-3 py-1.5 hover:bg-black/15 dark:hover:bg-white/15 transition-colors active:scale-[0.99]"
+                    className="flex h-7 items-center gap-1.5 rounded-md bg-muted px-2.5 text-xs font-medium text-foreground/70 transition-colors hover:bg-muted/80 hover:text-foreground active:scale-[0.99]"
                   >
                     Activity
-                    <Clock className="h-3.5 w-3.5" />
+                    <Clock className="h-3 w-3" />
                   </button>
                 </div>
               </div>

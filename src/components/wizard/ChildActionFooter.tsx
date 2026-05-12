@@ -9,7 +9,7 @@ import {
   getChildReviewDecision,
 } from '@/stores/workflowStore'
 import { Button } from '@/components/ui/button'
-import { CheckCircle2, ChevronLeft, ChevronRight, Clock, ShieldAlert } from 'lucide-react'
+import { CheckCircle2, ChevronLeft, ChevronRight, ShieldAlert } from 'lucide-react'
 import { getKycValidationErrors, kycChildHasOptionalIdVerification } from './forms/KycChildInfoForm'
 import {
   getAccountOpeningChildSubmissionIssues,
@@ -345,14 +345,6 @@ export function ChildActionFooter() {
                     if (isKyc) return rs?.hoKycReview?.decidedAt ?? state.submittedAt ?? 'N/A'
                     return rs?.principalReview?.decidedAt ?? dec?.decidedAt ?? state.submittedAt ?? 'N/A'
                   })()}
-                </span>
-              </div>
-            ) : child.status === 'awaiting_review' && !showSubmittedNavigation ? (
-              <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
-                <Clock className="h-3.5 w-3.5" />
-                <span>
-                  Submitted for {isKyc ? 'document review' : 'home office review'} at{' '}
-                  {state.submittedAt ?? 'N/A'}
                 </span>
               </div>
             ) : isLast && (child.status === 'in_progress' || child.status === 'not_started') ? (
