@@ -37,7 +37,6 @@ import {
   CheckCircle2,
   XCircle,
   ShieldCheck,
-  ShieldAlert,
   UserPlus,
 } from 'lucide-react'
 import { AddHouseholdMemberSheet } from './AddPartySheet'
@@ -47,7 +46,6 @@ import { buildRequiredEsignFormRows } from '@/utils/buildEsignEnvelopeFormRows'
 import { downloadEnvelopeManifest } from '@/utils/downloadEsignEnvelopeManifest'
 import { getEnvelopeDisplayName } from '@/utils/deriveEnvelopeDisplayName'
 import { EsignEnvelopeDrawer } from '@/components/wizard/forms/EsignEnvelopeDrawer'
-import { getAccountOwnersMissingKyc } from '@/utils/accountOpeningOwnerKyc'
 import { getAccountOpeningChildSubmissionIssues } from '@/utils/accountOpeningChildProgress'
 import {
   getRelevantOpenAccountsTask,
@@ -94,50 +92,6 @@ type ExecutedEsignForm = {
   label: string
   fileName: string
   executedAt: string
-}
-
-function SigningBlockedModal({
-  issues,
-  onAcknowledge,
-}: {
-  issues: string[]
-  onAcknowledge: () => void
-}) {
-  return (
-    <div className="fixed inset-0 z-[70] flex items-center justify-center p-4">
-      <div className="fixed inset-0 bg-black/50" aria-hidden />
-      <div
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby="signing-blocked-title"
-        className="relative z-10 bg-background rounded-lg border border-border shadow-lg max-w-2xl w-full p-6 space-y-4 max-h-[80vh] overflow-y-auto"
-      >
-        <div className="flex items-start gap-3">
-          <div className="rounded-full bg-amber-50 dark:bg-amber-950/50 p-2 shrink-0">
-            <ShieldAlert className="h-5 w-5 text-amber-600" />
-          </div>
-          <div className="space-y-2 min-w-0">
-            <h3 id="signing-blocked-title" className="text-base font-semibold">
-              Cannot simulate signing yet
-            </h3>
-            <p className="text-sm text-muted-foreground">
-              Resolve the issue below before simulating envelope signing.
-            </p>
-          </div>
-        </div>
-        <ul className="list-disc pl-5 space-y-1.5 text-sm text-foreground">
-          {issues.map((issue, idx) => (
-            <li key={`${idx}-${issue}`}>{issue}</li>
-          ))}
-        </ul>
-        <div className="flex justify-end pt-1">
-          <Button type="button" onClick={onAcknowledge}>
-            I understand
-          </Button>
-        </div>
-      </div>
-    </div>
-  )
 }
 
 function EnvelopeKebabMenu({
@@ -280,7 +234,6 @@ export function OpenAccountsForm() {
   const [submitChildConfirmOpen, setSubmitChildConfirmOpen] = useState(false)
   const [submitChildWarnings, setSubmitChildWarnings] = useState<string[]>([])
   const [submitTargetChildId, setSubmitTargetChildId] = useState<string | null>(null)
-  const [signingBlockers, setSigningBlockers] = useState<string[] | null>(null)
   const [netx360Submitted, setNetx360Submitted] = useState(false)
   /** Bumps when the drawer opens so the sheet remounts with fresh local state from `envelopeDraft`. */
   const [envelopeDrawerMountKey, setEnvelopeDrawerMountKey] = useState(0)
@@ -503,22 +456,6 @@ export function OpenAccountsForm() {
   const simulateEnvelopeSigning = (envelopeId: string) => {
     const env = esignEnvelopes.find((e) => e.id === envelopeId)
     if (!env) return
-    const includedAccountIds = Array.from(
-      new Set(env.formSelections.filter((r) => r.included).map((r) => r.accountChildId)),
-    )
-    const ownersMissingKyc = Array.from(
-      new Set(
-        includedAccountIds.flatMap((accountChildId) =>
-          getAccountOwnersMissingKyc(state, accountChildId).names,
-        ),
-      ),
-    )
-    if (ownersMissingKyc.length > 0) {
-      setSigningBlockers([
-        `Cannot simulate envelope signing until KYC is complete for: ${ownersMissingKyc.join(', ')}.`,
-      ])
-      return
-    }
     const now = new Date().toISOString()
 
     updateField(
@@ -1656,12 +1593,6 @@ export function OpenAccountsForm() {
             setSubmitChildWarnings([])
             setSubmitTargetChildId(null)
           }}
-        />
-      )}
-      {signingBlockers && (
-        <SigningBlockedModal
-          issues={signingBlockers}
-          onAcknowledge={() => setSigningBlockers(null)}
         />
       )}
     </div>

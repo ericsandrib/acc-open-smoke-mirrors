@@ -735,9 +735,6 @@ function workflowReducer(state: WorkflowState, action: WorkflowAction): Workflow
     }
 
     case 'GO_NEXT': {
-      const idx = state.flatTaskOrder.indexOf(state.activeTaskId)
-      if (idx >= state.flatTaskOrder.length - 1) return state
-
       const variant = getPersistedOpenAccountsVariant()
       const activeTask = state.tasks.find((t) => t.id === state.activeTaskId)
       if (
@@ -752,6 +749,9 @@ function workflowReducer(state: WorkflowState, action: WorkflowAction): Workflow
           return { ...state, v5NoAnnuityOpenAccountsPage: order[i + 1] }
         }
       }
+
+      const idx = state.flatTaskOrder.indexOf(state.activeTaskId)
+      if (idx >= state.flatTaskOrder.length - 1) return state
 
       const nextId = nextVisibleFlatTaskId(state, state.activeTaskId)
       if (!nextId) return state

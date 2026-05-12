@@ -11,8 +11,18 @@ import { AddHouseholdMemberSheet } from './AddPartySheet'
 import { PartySlotCard } from './PartySlotCard'
 import { cn } from '@/lib/utils'
 
-const sectionCls = 'text-sm font-semibold text-foreground'
+const sectionCls = 'text-base font-semibold leading-snug text-foreground'
+const sectionBodyCls = 'text-[14px] text-muted-foreground mt-2 leading-normal'
 const fieldCls = 'text-xs font-medium text-foreground'
+const SOURCE_OF_FUNDS_OPTIONS = [
+  'Employment income',
+  'Business income',
+  'Investment income',
+  'Retirement income',
+  'Inheritance / gift',
+  'Sale of asset',
+  'Other',
+] as const
 
 interface ValidationError {
   field: string
@@ -70,6 +80,31 @@ export function getKycValidationErrors(
     }
   }
   return errors
+}
+
+function normalizeSourceOfFunds(value: unknown, fallback: string): string {
+  const candidate = typeof value === 'string' && value.trim() ? value.trim() : fallback
+  const exactMatch = SOURCE_OF_FUNDS_OPTIONS.find(
+    (option) => option.toLowerCase() === candidate.toLowerCase(),
+  )
+
+  if (exactMatch) return exactMatch
+
+  const lowerCandidate = candidate.toLowerCase()
+
+  if (lowerCandidate.includes('salary') || lowerCandidate.includes('employment') || lowerCandidate.includes('wage')) {
+    return 'Employment income'
+  }
+
+  if (lowerCandidate.includes('business')) return 'Business income'
+  if (lowerCandidate.includes('investment') || lowerCandidate.includes('dividend') || lowerCandidate.includes('interest')) {
+    return 'Investment income'
+  }
+  if (lowerCandidate.includes('retirement') || lowerCandidate.includes('pension')) return 'Retirement income'
+  if (lowerCandidate.includes('inheritance') || lowerCandidate.includes('gift')) return 'Inheritance / gift'
+  if (lowerCandidate.includes('sale') || lowerCandidate.includes('proceeds')) return 'Sale of asset'
+
+  return 'Other'
 }
 
 function RequiredStar() {
@@ -366,6 +401,17 @@ export function KycChildInfoForm() {
       }
     }
   }, [party, data, updateFields, isEntity])
+
+  useEffect(() => {
+    if (!party || isEntity) return
+
+    const fallback = party.accountOwnerIndividual?.sourceOfFunds ?? 'Employment income'
+    const normalizedSourceOfFunds = normalizeSourceOfFunds(data.sourceOfFunds, fallback)
+
+    if (data.sourceOfFunds !== normalizedSourceOfFunds) {
+      updateField('sourceOfFunds', normalizedSourceOfFunds)
+    }
+  }, [data.sourceOfFunds, isEntity, party, updateField])
 
   useEffect(() => {
     if (!isEntity) return
@@ -696,7 +742,7 @@ export function KycChildInfoForm() {
       : null
 
     return (
-      <div className="space-y-6" ref={topRef}>
+      <div className="space-y-9" ref={topRef}>
         {!isLocked && submitAttempted && allErrors.length > 0 && (
           <ValidationSummary errors={allErrors} position="top" />
         )}
@@ -807,10 +853,6 @@ export function KycChildInfoForm() {
           </div>
         </section>
 
-        <div className="h-5 mt-14 flex items-center">
-          <hr className="border-t border-border w-full" />
-        </div>
-
         <section className="space-y-3">
           <h4 className={sectionCls}>Business Profile</h4>
           <div className="space-y-3">
@@ -852,10 +894,6 @@ export function KycChildInfoForm() {
             </div>
           </div>
         </section>
-
-        <div className="h-5 mt-14 flex items-center">
-          <hr className="border-t border-border w-full" />
-        </div>
 
         <section className="space-y-3">
           <h4 className={sectionCls}>Control Person</h4>
@@ -926,13 +964,9 @@ export function KycChildInfoForm() {
           </div>
         </section>
 
-        <div className="h-5 mt-14 flex items-center">
-          <hr className="border-t border-border w-full" />
-        </div>
-
         <section className="space-y-3">
           <h4 className={sectionCls}>Beneficial Owners</h4>
-          <p className="text-xs text-muted-foreground">Beneficial owners (typically 25%+ ownership)</p>
+          <p className={sectionBodyCls}>Beneficial owners (typically 25%+ ownership)</p>
           <div className="rounded-lg border border-border p-1">
             <div>
               {beneficialOwners.length === 0 ? (
@@ -1248,7 +1282,7 @@ export function KycChildInfoForm() {
   }
 
   return (
-    <div className="space-y-6" ref={topRef}>
+    <div className="space-y-9" ref={topRef}>
       {isLocked && (
         isApproved ? (
           <div className="rounded-md border border-green-200 bg-green-50 dark:border-green-900/60 dark:bg-green-950/40 px-3 py-2.5">
@@ -1277,7 +1311,7 @@ export function KycChildInfoForm() {
 
       <section className="space-y-3">
         <h4 className={sectionCls}>Personal Information</h4>
-        <p className="text-xs text-muted-foreground">Tell us a bit about yourself.</p>
+        <p className={sectionBodyCls}>Tell us a bit about yourself.</p>
         <div className="space-y-3">
           <div className="space-y-1.5" data-field="firstName">
             <Label className={fieldCls}>First name<RequiredStar /></Label>
@@ -1317,14 +1351,10 @@ export function KycChildInfoForm() {
         </div>
       </section>
 
-      <div className="h-5 mt-14 flex items-center">
-        <hr className="border-t border-border w-full" />
-      </div>
-
       {/* Address */}
       <section className="space-y-3">
         <h4 className={sectionCls}>Home Address</h4>
-        <p className="text-xs text-muted-foreground">
+        <p className={sectionBodyCls}>
           Where do you currently live? This must be your primary residence.
         </p>
         <div className="space-y-3">
@@ -1363,13 +1393,9 @@ export function KycChildInfoForm() {
 
       </section>
 
-      <div className="h-5 mt-14 flex items-center">
-        <hr className="border-t border-border w-full" />
-      </div>
-
       <section className="space-y-3">
         <h4 className={sectionCls}>Identity Verification</h4>
-        <p className="text-xs text-muted-foreground">
+        <p className={sectionBodyCls}>
           We use this information to verify your identity securely.
         </p>
         <div className="space-y-3">
@@ -1388,13 +1414,9 @@ export function KycChildInfoForm() {
         </div>
       </section>
 
-      <div className="h-5 mt-14 flex items-center">
-        <hr className="border-t border-border w-full" />
-      </div>
-
       <section className="space-y-3">
         <h4 className={sectionCls}>Financial Profile</h4>
-        <p className="text-xs text-muted-foreground">
+        <p className={sectionBodyCls}>
           Tell us about your current employment and primary source of funds.
         </p>
         <div className="space-y-3">

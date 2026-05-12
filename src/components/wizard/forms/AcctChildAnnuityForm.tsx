@@ -26,6 +26,8 @@ const payoutFrequencies = [
   { value: 'lump-sum', label: 'Lump Sum' },
 ]
 
+const childSectionTitleClass = 'text-base font-semibold leading-snug text-foreground'
+
 export function AcctChildAnnuityForm() {
   const { state } = useWorkflow()
   const taskId = `${state.activeChildActionId}-annuity`
@@ -34,7 +36,7 @@ export function AcctChildAnnuityForm() {
   return (
     <div className="space-y-6">
       <section className="space-y-4">
-        <h3 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
+        <h3 className={childSectionTitleClass}>
           Annuity Details
         </h3>
 
@@ -75,7 +77,7 @@ export function AcctChildAnnuityForm() {
       </section>
 
       <section className="space-y-4">
-        <h3 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
+        <h3 className={childSectionTitleClass}>
           Payout Configuration
         </h3>
 
@@ -123,7 +125,7 @@ export function AcctChildAnnuityForm() {
       </section>
 
       <section className="space-y-4">
-        <h3 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
+        <h3 className={childSectionTitleClass}>
           Beneficiary
         </h3>
 

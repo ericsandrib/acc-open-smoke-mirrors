@@ -38,6 +38,12 @@ export function FundingLineSetupForm() {
   const isVersion3 = variant === 'v3'
   const isVersion4 = variant === 'v4'
   const isCardVariant = isVersion2 || isVersion3 || isVersion4
+  const childSectionTitleClass = isCardVariant
+    ? 'text-sm font-semibold uppercase tracking-wide'
+    : 'text-base font-semibold leading-snug text-foreground'
+  const childSectionBodyClass = isCardVariant
+    ? 'text-sm text-muted-foreground mt-2'
+    : 'text-[14px] text-muted-foreground mt-2 leading-normal'
   const ctx = useChildActionContext()
   const taskId = ctx?.subTaskId ?? ''
   const { data, updateField, updateFields } = useTaskData(taskId || '__no_child__')
@@ -174,12 +180,12 @@ export function FundingLineSetupForm() {
               ),
           )}
         >
-          <h3 className={cn(isCardVariant ? 'text-sm font-semibold uppercase tracking-wide' : 'text-sm font-semibold uppercase tracking-wide text-muted-foreground')}>
-            Funding & asset movement
+          <h3 className={childSectionTitleClass}>
+            Funding & Asset Movement
           </h3>
-          <p className="text-sm text-muted-foreground mt-1">
+          <p className={childSectionBodyClass}>
             Capture how this workflow initiates, edits, cancels, or tracks a money or asset movement—not account
-            feature setup (use Account features & services for that).
+            feature setup (use Account Features & Services for that).
           </p>
         </div>
 
@@ -205,7 +211,7 @@ export function FundingLineSetupForm() {
 
         {isAnnuitiesServicing && (
           <div className="space-y-4 rounded-lg border border-border bg-muted/20 p-4">
-            <h3 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
+            <h3 className={childSectionTitleClass}>
               NetX360 workflow required
             </h3>
             <p className="text-sm text-muted-foreground">
@@ -303,7 +309,7 @@ export function FundingLineSetupForm() {
 
       {!isAnnuitiesServicing && isCheckMovement && (
         <section className="space-y-4 rounded-lg border border-border p-4 bg-muted/20">
-          <h3 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
+          <h3 className={childSectionTitleClass}>
             Check details
           </h3>
           <div className="space-y-2">
@@ -327,10 +333,10 @@ export function FundingLineSetupForm() {
 
       {!isAnnuitiesServicing && fundingSource === 'mutual_fund_periodic_orders' && (
         <section className="space-y-4 rounded-lg border border-border p-4 bg-muted/20">
-          <h3 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
+          <h3 className={childSectionTitleClass}>
             Recurring mutual fund orders
           </h3>
-          <p className="text-sm text-muted-foreground">
+          <p className={childSectionBodyClass}>
             Scheduled investment or liquidation instructions tied to this workflow line.
           </p>
           <div className="space-y-2">
@@ -360,10 +366,10 @@ export function FundingLineSetupForm() {
 
       {!isAnnuitiesServicing && (
       <section className="space-y-4">
-        <h3 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
+        <h3 className={childSectionTitleClass}>
           Standing & periodic instructions
         </h3>
-        <p className="text-xs text-muted-foreground">
+        <p className={childSectionBodyClass}>
           Prerequisite setup for ACH, wires, and recurring movements—use the movement type above when this line is
           primarily about establishing standing or periodic instructions.
         </p>
@@ -389,7 +395,7 @@ export function FundingLineSetupForm() {
 
       {!isAnnuitiesServicing && (
       <section className="space-y-4">
-        <h3 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
+        <h3 className={childSectionTitleClass}>
           Servicing (demo)
         </h3>
         <div className="space-y-2">

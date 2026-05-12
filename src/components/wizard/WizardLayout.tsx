@@ -21,9 +21,6 @@ function toSectionGroups(sections: TaskSection[]): Array<{ key: string; label: s
   )
 }
 import { WizardFooter } from './WizardFooter'
-import { HomeOfficeReviewFooter } from './HomeOfficeReviewFooter'
-import { AmlReviewFooter } from './AmlReviewFooter'
-import { HoKycReviewFooter } from './HoKycReviewFooter'
 import { ChildActionSidebar } from './ChildActionSidebar'
 import { ChildActionContent } from './ChildActionContent'
 import { ChildActionFooter } from './ChildActionFooter'
@@ -734,6 +731,7 @@ function WizardLayoutInner() {
                     <div className="flex-1 flex flex-col overflow-hidden min-w-0">
                       <WizardAccessoryBar />
                       {showKycDocumentsSubTask ? <ChildActionContent /> : <ChildAmlReviewContent />}
+                      <ChildActionFooter />
                     </div>
                     {variant !== 'v5' &&
                       childSections.length > 0 &&
@@ -746,7 +744,6 @@ function WizardLayoutInner() {
                     <ChildActionRightSidebar />
                   </div>
                 </div>
-                <AmlReviewFooter />
               </div>
             ) : isHoKycView && isKycChild ? (
               <div className="flex-1 flex flex-col min-h-0 min-w-0 overflow-hidden">
@@ -756,6 +753,7 @@ function WizardLayoutInner() {
                     <div className="flex-1 flex flex-col overflow-hidden min-w-0">
                       <WizardAccessoryBar />
                       {showKycDocumentsSubTask ? <ChildActionContent /> : <ChildHoKycViewContent />}
+                      <ChildActionFooter />
                     </div>
                     {variant !== 'v5' &&
                       childSections.length > 0 &&
@@ -768,7 +766,6 @@ function WizardLayoutInner() {
                     <ChildActionRightSidebar />
                   </div>
                 </div>
-                <HoKycReviewFooter />
               </div>
             ) : showHomeOfficeAccountLayout ? (
               activeChild?.childType === 'account-opening' ? (
@@ -779,6 +776,7 @@ function WizardLayoutInner() {
                       <div className="flex-1 flex flex-col overflow-hidden min-w-0">
                         <WizardAccessoryBar />
                         <ChildActionContent />
+                        <ChildActionFooter />
                       </div>
                       {variant !== 'v5' &&
                         childSections.length > 0 && (
@@ -790,7 +788,6 @@ function WizardLayoutInner() {
                       <ChildActionRightSidebar />
                     </div>
                   </div>
-                  <HomeOfficeReviewFooter />
                 </div>
               ) : (
                 <div className="flex-1 flex flex-col min-h-0 min-w-0 overflow-hidden">
@@ -800,11 +797,11 @@ function WizardLayoutInner() {
                       <div className="flex-1 flex flex-col overflow-hidden min-w-0">
                         <WizardAccessoryBar />
                         {isHoDocView ? <ChildHoDocumentViewContent /> : <ChildHoPrincipalViewContent />}
+                        <ChildActionFooter />
                       </div>
                       <ChildActionRightSidebar />
                     </div>
                   </div>
-                  <HomeOfficeReviewFooter />
                 </div>
               )
             ) : (

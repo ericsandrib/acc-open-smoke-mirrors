@@ -147,6 +147,7 @@ export function ChildActionFooter() {
     ctx.currentSubTask.suffix === 'account-owners'
   const hideNextForCompletedAnnuityOwners =
     isAnnuityAccountOwnersSubTask && child.status === 'complete'
+  const showParentBackOnFirstTask = isFirst
 
   if (isNestedAccountLineChild) {
     return (
@@ -156,10 +157,10 @@ export function ChildActionFooter() {
       >
         <div className="max-w-[52.5rem] mx-auto w-full flex items-center justify-between">
           <div>
-            {!isFirst && (
+            {(!isFirst || showParentBackOnFirstTask) && (
               <Button
                 variant="outline"
-                onClick={() => dispatch({ type: 'CHILD_GO_BACK' })}
+                onClick={() => dispatch({ type: isFirst ? 'EXIT_CHILD_ACTION' : 'CHILD_GO_BACK' })}
               >
                 <ChevronLeft className="h-4 w-4" />
                 Back
@@ -294,10 +295,9 @@ export function ChildActionFooter() {
     setShowConfirmModal(false)
   }
 
-  const hideNextInAdvisorAfterSubmit =
-    isAdvisorView && child.status === 'awaiting_review' && !advisorFormsEditable
-
   if (isAdvisorView || isAmlView || isHoKycView) {
+    const showSubmittedNavigation = isAdvisorView && child.status === 'awaiting_review' && !advisorFormsEditable
+
     return (
       <>
         <footer
@@ -306,19 +306,32 @@ export function ChildActionFooter() {
         >
           <div className="max-w-[52.5rem] mx-auto w-full flex items-center justify-between">
             <div>
-              {!isFirst && (
-                <Button variant="outline" onClick={() => dispatch({ type: 'CHILD_GO_BACK' })}>
+              {(!isFirst || showSubmittedNavigation || showParentBackOnFirstTask) && (
+                <Button
+                  variant="outline"
+                  onClick={() => dispatch({ type: isFirst ? 'EXIT_CHILD_ACTION' : 'CHILD_GO_BACK' })}
+                >
                   <ChevronLeft className="h-4 w-4" />
                   Back
                 </Button>
               )}
             </div>
             <div className="flex items-center gap-3">
-            {advisorResubmitEligible && isLast ? (
+            {advisorResubmitEligible && isLast && !isKyc ? (
               <Button onClick={handleResubmit}>
                 Submit for Review
               </Button>
-            ) : child.status === 'complete' ? (
+            ) : isKyc && isLast && child.status !== 'complete' ? (
+              <Button variant="outline" onClick={() => dispatch({ type: 'EXIT_CHILD_ACTION' })}>
+                Next
+                <ChevronRight className="h-4 w-4" />
+              </Button>
+            ) : showSubmittedNavigation && isLast ? (
+              <Button variant="outline" onClick={() => dispatch({ type: 'EXIT_CHILD_ACTION' })}>
+                Next
+                <ChevronRight className="h-4 w-4" />
+              </Button>
+            ) : child.status === 'complete' && !isKyc ? (
               <div className="flex items-center gap-1.5 text-sm text-green-700">
                 <CheckCircle2 className="h-3.5 w-3.5" />
                 <span>
@@ -334,7 +347,7 @@ export function ChildActionFooter() {
                   })()}
                 </span>
               </div>
-            ) : child.status === 'awaiting_review' ? (
+            ) : child.status === 'awaiting_review' && !showSubmittedNavigation ? (
               <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
                 <Clock className="h-3.5 w-3.5" />
                 <span>
@@ -354,7 +367,7 @@ export function ChildActionFooter() {
                 </Button>
               )
             ) : null}
-            {!isLast && !hideNextInAdvisorAfterSubmit && !hideNextForCompletedAnnuityOwners && (
+            {!isLast && !hideNextForCompletedAnnuityOwners && (
               <Button variant="outline" onClick={() => dispatch({ type: 'CHILD_GO_NEXT' })}>
                 Next
                 <ChevronRight className="h-4 w-4" />
@@ -406,10 +419,10 @@ export function ChildActionFooter() {
       >
         <div className="max-w-[52.5rem] mx-auto w-full flex items-center justify-between">
           <div>
-            {!isFirst && (
+            {(!isFirst || showParentBackOnFirstTask) && (
               <Button
                 variant="outline"
-                onClick={() => dispatch({ type: 'CHILD_GO_BACK' })}
+                onClick={() => dispatch({ type: isFirst ? 'EXIT_CHILD_ACTION' : 'CHILD_GO_BACK' })}
               >
                 <ChevronLeft className="h-4 w-4" />
                 Back
@@ -434,6 +447,11 @@ export function ChildActionFooter() {
                         'N/A'}
                   </span>
                 </div>
+              ) : isKyc ? (
+                <Button variant="outline" onClick={() => dispatch({ type: 'EXIT_CHILD_ACTION' })}>
+                  Next
+                  <ChevronRight className="h-4 w-4" />
+                </Button>
               ) : (
                 <Button onClick={handleDone}>
                   Submit for Review

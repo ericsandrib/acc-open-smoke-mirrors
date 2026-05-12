@@ -34,6 +34,12 @@ export function FeatureServiceLineSetupForm() {
   const isVersion3 = variant === 'v3'
   const isVersion4 = variant === 'v4'
   const isCardVariant = isVersion2 || isVersion3 || isVersion4
+  const childSectionTitleClass = isCardVariant
+    ? 'text-sm font-semibold uppercase tracking-wide'
+    : 'text-base font-semibold leading-snug text-foreground'
+  const childSectionBodyClass = isCardVariant
+    ? 'text-sm text-muted-foreground mt-2'
+    : 'text-[14px] text-muted-foreground mt-2 leading-normal'
   const ctx = useChildActionContext()
   const taskId = ctx?.subTaskId ?? ''
   const { data, updateField } = useTaskData(taskId || '__no_child__')
@@ -88,10 +94,10 @@ export function FeatureServiceLineSetupForm() {
               ),
           )}
         >
-          <h3 className={cn(isCardVariant ? 'text-sm font-semibold uppercase tracking-wide' : 'text-sm font-semibold uppercase tracking-wide text-muted-foreground')}>
-            Account feature & service
+          <h3 className={childSectionTitleClass}>
+            Account Feature & Service
           </h3>
-          <p className="text-sm text-muted-foreground mt-1">
+          <p className={childSectionBodyClass}>
             Administrative, setup, or lifecycle management—track status, owners, and references for this workflow line.
           </p>
         </div>
@@ -174,7 +180,7 @@ export function FeatureServiceLineSetupForm() {
       </section>
 
       <section className="space-y-4 rounded-lg border border-border p-4 bg-muted/20">
-        <h3 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
+        <h3 className={childSectionTitleClass}>
           Details & routing
         </h3>
         <div className="space-y-2">

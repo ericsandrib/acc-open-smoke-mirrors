@@ -20,7 +20,7 @@ const CHILD_TYPE_CONFIGS: Record<ChildType, ChildTypeConfig> = {
     displayLabel: 'KYC Review',
     subTasks: [
       { suffix: 'info', title: 'Client Information', formKey: 'kyc-child-info' },
-      { suffix: 'documents', title: 'Documents', formKey: 'kyc-child-documents' },
+      { suffix: 'documents', title: 'Supporting Documents', formKey: 'kyc-child-documents' },
     ],
   },
   'account-opening': {
@@ -37,7 +37,7 @@ const CHILD_TYPE_CONFIGS: Record<ChildType, ChildTypeConfig> = {
   'funding-line': {
     childType: 'funding-line',
     idPrefix: 'funding-line-child',
-    displayLabel: 'Funding & asset movement',
+    displayLabel: 'Funding & Asset Movement',
     subTasks: [
       {
         suffix: 'setup',
@@ -49,7 +49,7 @@ const CHILD_TYPE_CONFIGS: Record<ChildType, ChildTypeConfig> = {
   'feature-service-line': {
     childType: 'feature-service-line',
     idPrefix: 'feature-service-line-child',
-    displayLabel: 'Account feature & service',
+    displayLabel: 'Account Feature & Service',
     subTasks: [
       {
         suffix: 'setup',

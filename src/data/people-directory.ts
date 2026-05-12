@@ -84,7 +84,7 @@ const smithJohnDirectoryProfile: AccountOwnerIndividualProfile = {
   annualIncomeRange: '$150,000–$249,999',
   netWorthRange: '$500,000–$999,999',
   liquidNetWorthRange: '$150,000–$249,999',
-  sourceOfFunds: 'Salary, savings, and proceeds from prior home sale (2021)',
+  sourceOfFunds: 'Employment income',
   investmentObjective: 'Growth with income',
   riskTolerance: 'Moderate',
   timeHorizon: '10–15 years',

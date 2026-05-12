@@ -1,5 +1,4 @@
 import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
 import {
   Select,
   SelectContent,
@@ -93,7 +92,7 @@ export function WetSignedFirmUploadsGroup({
     <div className="space-y-3">
       <p className="text-[11px] text-muted-foreground leading-snug">
         Add one row per signed document (for example in-person or mail delivery). Choose the form type and account (if
-        applicable), then upload the file. Notes are optional—for example envelope ID or custodian reference.
+        applicable), then upload the file.
       </p>
 
       {uploads.length === 0 ? (
@@ -109,17 +108,13 @@ export function WetSignedFirmUploadsGroup({
           <table className="w-full text-sm table-fixed">
             <thead>
               <tr className="border-b border-border bg-muted/40">
-                <th className="text-left font-medium text-muted-foreground px-3 py-2 text-xs w-[22%] min-w-0">
+                <th className="text-left font-medium text-muted-foreground px-3 py-2 text-xs w-[34%] min-w-0">
                   Document type
                 </th>
-                <th className="text-left font-medium text-muted-foreground px-3 py-2 text-xs w-[20%] min-w-0">
+                <th className="text-left font-medium text-muted-foreground px-3 py-2 text-xs w-[30%] min-w-0">
                   Account
                 </th>
-                <th className="text-left font-medium text-muted-foreground px-3 py-2 text-xs w-[18%] min-w-0">
-                  Account #
-                </th>
-                <th className="text-left font-medium text-muted-foreground px-3 py-2 text-xs min-w-0">Notes</th>
-                <th className="text-left font-medium text-muted-foreground px-3 py-2 text-xs w-[14%] min-w-0">File</th>
+                <th className="text-left font-medium text-muted-foreground px-3 py-2 text-xs min-w-0">File</th>
                 <th className="w-10 px-1" />
               </tr>
             </thead>
@@ -165,54 +160,27 @@ export function WetSignedFirmUploadsGroup({
                     </Select>
                   </td>
                   <td className="px-3 py-2 align-top min-w-0">
-                    <Input
-                      className="h-8 text-xs"
-                      placeholder="e.g. custodian #"
-                      value={row.accountNumber ?? ''}
-                      onChange={(e) => updateRow(row.id, { accountNumber: e.target.value })}
-                      aria-label="Account number"
-                    />
-                  </td>
-                  <td className="px-3 py-2 align-top min-w-0">
-                    <Input
-                      className="h-8 text-xs"
-                      placeholder="Optional"
-                      value={row.notes ?? ''}
-                      onChange={(e) => updateRow(row.id, { notes: e.target.value })}
-                      aria-label="Notes"
-                    />
-                  </td>
-                  <td className="px-3 py-2 align-top min-w-0">
                     {row.fileName ? (
-                      <div className="flex items-center gap-1 min-w-0">
+                      <div className="flex items-center gap-2 min-w-0">
                         <Paperclip className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
-                        <span className="text-xs truncate min-w-0" title={row.fileName}>
+                        <span className="text-xs text-foreground truncate min-w-0" title={row.fileName}>
                           {row.fileName}
                         </span>
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="sm"
-                          className="h-7 px-1 shrink-0"
-                          onClick={() => pickFile(row.id)}
-                        >
-                          <Upload className="h-3 w-3" />
-                        </Button>
                         <button
                           type="button"
-                          className="text-muted-foreground hover:text-destructive p-1 shrink-0"
+                          className="text-muted-foreground hover:text-destructive shrink-0"
                           aria-label="Clear file"
                           onClick={() => updateRow(row.id, { fileName: '' })}
                         >
-                          <X className="h-3.5 w-3.5" />
+                          <X className="h-3 w-3" />
                         </button>
                       </div>
                     ) : (
                       <Button
                         type="button"
-                        variant="outline"
+                        variant="ghost"
                         size="sm"
-                        className="h-8 text-xs gap-1"
+                        className="h-7 text-xs gap-1.5 text-muted-foreground"
                         onClick={() => pickFile(row.id)}
                       >
                         <Upload className="h-3 w-3" />

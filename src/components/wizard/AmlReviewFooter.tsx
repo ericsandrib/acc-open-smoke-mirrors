@@ -79,7 +79,7 @@ export function AmlReviewFooter() {
             onClick={() => setShowFlagModal(true)}
           >
             <AlertTriangle className="h-4 w-4" />
-            Approve w/ Monitoring
+            Return for Corrections
           </Button>
           <Button
             variant="destructive"
@@ -142,10 +142,10 @@ export function AmlReviewFooter() {
                 <AlertTriangle className="h-5 w-5 text-red-600" />
               </div>
               <div className="space-y-1">
-                <h3 className="text-base font-semibold">Flag for Further Review</h3>
+                <h3 className="text-base font-semibold">Return for Corrections</h3>
                 <p className="text-sm text-muted-foreground">
-                  Flag <span className="font-medium text-foreground">{child?.name}</span> and return
-                  to the advisor for corrections.
+                  Return <span className="font-medium text-foreground">{child?.name}</span> to the
+                  advisor for corrections.
                 </p>
               </div>
             </div>
@@ -155,7 +155,7 @@ export function AmlReviewFooter() {
               <textarea
                 value={findings}
                 onChange={(e) => setFindings(e.target.value)}
-                placeholder="Describe the AML concerns, potential matches, or reasons for flagging..."
+                placeholder="Describe the AML concerns, potential matches, or corrections needed..."
                 className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm min-h-[80px] resize-none focus:outline-none focus:ring-2 focus:ring-ring"
               />
             </div>
@@ -170,7 +170,7 @@ export function AmlReviewFooter() {
                   setFindings('')
                 }}
               >
-                Confirm Flag
+                Confirm Return
               </Button>
             </div>
           </div>

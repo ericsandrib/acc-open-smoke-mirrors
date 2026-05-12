@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useMemo, useState, type ReactNode } from 'react'
 import { useNavigate } from 'react-router-dom'
 import type { Journey } from '@/types/servicing'
 import { useJourneyNavigation } from '@/hooks/useJourneyNavigation'
@@ -16,12 +16,58 @@ import {
   compareFraction,
   journeyStatusOrder,
 } from '@/lib/sort-comparators'
-import { ChevronRight, ChevronDown, GitBranch, Link2 } from 'lucide-react'
+import { ChevronRight, ChevronDown, GitBranch, Link2, ShieldCheck, Briefcase } from 'lucide-react'
 import { childStatusConfig, type ChildDisplayStatus } from '@/utils/childStatusDisplay'
 import { Badge } from '@/components/ui/badge'
 import { cn } from '@/lib/utils'
 
 export type OnboardingJourneyRow = Journey & { totalTasks: number; progressedTasks: number }
+
+const leadingLayoutClass = 'grid grid-cols-[1.25rem_1.25rem_minmax(0,1fr)] items-center gap-2 min-w-0'
+const leadingSlotClass = 'flex h-5 w-5 shrink-0 items-center justify-center'
+const journeyIconClass = 'h-4 w-4 text-foreground/65'
+const rowIconClass = 'h-4 w-4 text-muted-foreground/60'
+const journeyRowClass = '[&>td]:h-14 [&>td]:py-0 [&>td]:align-middle'
+const actionRowClass = '[&>td]:h-14 [&>td]:py-0 [&>td]:align-middle'
+const sectionHeaderRowClass = '[&>td]:h-11 [&>td]:bg-muted/[0.10] [&>td]:py-0 [&>td]:align-middle'
+const childRegionRowClass = '[&>td]:h-14 [&>td]:bg-muted/[0.10] [&>td]:py-0 [&>td]:align-middle hover:[&>td]:bg-muted/[0.18]'
+const parentActionRowClass = '[&>td]:bg-muted/[0.07] hover:[&>td]:bg-muted/[0.16]'
+const journeyExpandButtonClass = 'p-0 h-5 w-5 flex items-center justify-center hover:bg-muted rounded transition-colors shrink-0 text-foreground/70'
+const actionExpandButtonClass = 'p-0 h-5 w-5 flex items-center justify-center hover:bg-muted rounded transition-colors shrink-0 text-muted-foreground/55'
+
+function JourneyLeading({
+  expand,
+  icon,
+  children,
+  className,
+}: {
+  expand?: ReactNode
+  icon?: ReactNode
+  children: ReactNode
+  className?: string
+}) {
+  return (
+    <div className={cn(leadingLayoutClass, className)}>
+      <span className={leadingSlotClass}>{expand}</span>
+      <span className={leadingSlotClass}>{icon}</span>
+      <span className="min-w-0 truncate">{children}</span>
+    </div>
+  )
+}
+
+function childWorkflowIcon(sectionTitle: string) {
+  const normalizedTitle = sectionTitle.toLowerCase()
+
+  if (normalizedTitle.includes('kyc')) {
+    return <ShieldCheck className={rowIconClass} />
+  }
+
+  if (normalizedTitle.includes('account')) {
+    return <Briefcase className={rowIconClass} />
+  }
+
+  return <Link2 className={rowIconClass} />
+}
 
 export function deriveOnboardingJourneyRows(journeys: Journey[]): OnboardingJourneyRow[] {
   return journeys
@@ -58,6 +104,7 @@ export function OnboardingJourneysTable({ rows, visibleColumns, showNestedGroups
   const navigate = useNavigate()
   const { navigateToServicing } = useJourneyNavigation()
   const [expandedJourneyIds, setExpandedJourneyIds] = useState<Set<string>>(new Set())
+  const [collapsedActionIds, setCollapsedActionIds] = useState<Set<string>>(new Set())
   const [expandedGroupIds, setExpandedGroupIds] = useState<Set<string>>(new Set())
   type Row = OnboardingJourneyRow
 
@@ -66,6 +113,10 @@ export function OnboardingJourneysTable({ rows, visibleColumns, showNestedGroups
     if (next.has(id)) next.delete(id)
     else next.add(id)
     setter(next)
+  }
+
+  const toggleActionCollapsed = (id: string) => {
+    toggleExpanded(id, collapsedActionIds, setCollapsedActionIds)
   }
 
   const comparators = useMemo(
@@ -94,7 +145,7 @@ export function OnboardingJourneysTable({ rows, visibleColumns, showNestedGroups
     <DataTable>
       <thead className="bg-muted/60 border-b border-border [&_th_svg]:hidden">
         <tr>
-          {vis('name') && <DataTableHeader size="comfortable" sortable sorted={sorted('name')} onSort={() => onSort('name')} style={{ width: 200 }} className="[&>button]:pl-9 [&>span]:pl-9">Journey</DataTableHeader>}
+          {vis('name') && <DataTableHeader size="comfortable" sortable sorted={sorted('name')} onSort={() => onSort('name')} style={{ width: 200 }} className="[&>button]:pl-[64px] [&>span]:pl-[64px]">Journey</DataTableHeader>}
           {vis('relationshipName') && <DataTableHeader size="comfortable" sortable sorted={sorted('relationshipName')} onSort={() => onSort('relationshipName')}>Relationship</DataTableHeader>}
           {vis('status') && <DataTableHeader size="comfortable" sortable sorted={sorted('status')} onSort={() => onSort('status')}>Status</DataTableHeader>}
           {vis('assignedTo') && <DataTableHeader size="comfortable" sortable sorted={sorted('assignedTo')} onSort={() => onSort('assignedTo')}>Assigned To</DataTableHeader>}
@@ -110,31 +161,32 @@ export function OnboardingJourneysTable({ rows, visibleColumns, showNestedGroups
             /* ── Journey row ─────────────────────────────────── */
             <DataTableRow
               key={row.id}
-              className="cursor-pointer hover:bg-muted/50"
+              className={cn(journeyRowClass, 'cursor-pointer hover:bg-muted/50', isExpanded && '[&>td]:bg-muted/[0.08]')}
               border={false}
             >
               {vis('name') && (
-                <DataTableCell type="primary" className="font-semibold">
-                  <div className="flex items-center gap-2">
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation()
-                        toggleExpanded(row.id, expandedJourneyIds, setExpandedJourneyIds)
-                      }}
-                      className="p-0 h-5 w-5 flex items-center justify-center hover:bg-muted rounded transition-colors shrink-0"
-                      aria-label={isExpanded ? 'Collapse' : 'Expand'}
-                    >
-                      {isExpanded
-                        ? <ChevronDown className="h-4 w-4" />
-                        : <ChevronRight className="h-4 w-4" />}
-                    </button>
-                    <span className="inline-flex h-7 w-7 items-center justify-center rounded-md bg-background/80 text-muted-foreground shrink-0">
-                      <GitBranch className="h-3.5 w-3.5" />
-                    </span>
+                <DataTableCell type="primary" className="font-bold text-foreground">
+                  <JourneyLeading
+                    expand={(
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          toggleExpanded(row.id, expandedJourneyIds, setExpandedJourneyIds)
+                        }}
+                        className={journeyExpandButtonClass}
+                        aria-label={isExpanded ? 'Collapse' : 'Expand'}
+                      >
+                        {isExpanded
+                          ? <ChevronDown className="h-4 w-4" />
+                          : <ChevronRight className="h-4 w-4" />}
+                      </button>
+                    )}
+                    icon={<GitBranch className={journeyIconClass} />}
+                  >
                     <span onClick={() => navigate(`/onboarding/${row.id}`)} className="truncate">
                       {row.name}
                     </span>
-                  </div>
+                  </JourneyLeading>
                 </DataTableCell>
               )}
               {vis('relationshipName') && (
@@ -177,22 +229,43 @@ export function OnboardingJourneysTable({ rows, visibleColumns, showNestedGroups
                     const actionTotal = action.tasks.length
                     const actionDone = action.tasks.filter((t) => t.status !== 'not_started').length
                     const actionPct = actionTotal > 0 ? actionDone / actionTotal : 0
+                    const hasChildRegion = childActions.some((childAction) => {
+                      const grandchildActions = row.actions.filter((a) => a.parentActionId === childAction.id && !a.groupType)
+                      const groupActions = row.actions.filter((a) => a.parentActionId === childAction.id && a.groupType)
+                      return grandchildActions.length > 0 || groupActions.length > 0
+                    })
+                    const isActionExpanded = hasChildRegion && !collapsedActionIds.has(action.id)
                     return [
                       /* ── Action row ──────────────────────────────── */
                       <DataTableRow
                         key={`${row.id}-action-${action.id}`}
-                        className="cursor-pointer hover:bg-muted/50"
+                        className={cn(actionRowClass, 'cursor-pointer hover:bg-muted/50', isActionExpanded && parentActionRowClass)}
                         border={false}
                         onClick={() => navigateToServicing(row, action.id)}
                       >
                         {vis('name') && (
-                          <DataTableCell type="primary" className="pl-8 font-medium text-foreground/90">
-                            <div className="flex items-center gap-2">
-                              <span className="inline-flex h-7 w-7 items-center justify-center rounded-md bg-background/80 text-muted-foreground shrink-0">
-                                <Link2 className="h-3.5 w-3.5" />
-                              </span>
+                          <DataTableCell type="primary" className="font-medium text-foreground/75">
+                            <JourneyLeading
+                              expand={hasChildRegion ? (
+                                <button
+                                  type="button"
+                                  onClick={(e) => {
+                                    e.stopPropagation()
+                                    toggleActionCollapsed(action.id)
+                                  }}
+                                  className={actionExpandButtonClass}
+                                  aria-label={isActionExpanded ? `Collapse ${action.title}` : `Expand ${action.title}`}
+                                  aria-expanded={isActionExpanded}
+                                >
+                                  {isActionExpanded
+                                    ? <ChevronDown className="h-3.5 w-3.5" />
+                                    : <ChevronRight className="h-3.5 w-3.5" />}
+                                </button>
+                              ) : undefined}
+                              icon={<Link2 className={rowIconClass} />}
+                            >
                               <span className="truncate">{action.title}</span>
-                            </div>
+                            </JourneyLeading>
                           </DataTableCell>
                         )}
                         {vis('relationshipName') && <DataTableCell />}
@@ -213,7 +286,8 @@ export function OnboardingJourneysTable({ rows, visibleColumns, showNestedGroups
                         )}
                       </DataTableRow>,
 
-                      ...childActions.flatMap((childAction) => {
+                      ...(isActionExpanded ? [
+                        ...childActions.flatMap((childAction) => {
                         const grandchildActions = row.actions.filter((a) => a.parentActionId === childAction.id && !a.groupType)
                         const groupActions = row.actions.filter((a) => a.parentActionId === childAction.id && a.groupType)
                         if (grandchildActions.length === 0 && groupActions.length === 0) return []
@@ -221,12 +295,19 @@ export function OnboardingJourneysTable({ rows, visibleColumns, showNestedGroups
                           /* ── Section header ────────────────────────── */
                           <tr
                             key={`${row.id}-section-${childAction.id}`}
-                            className=""
+                            className={sectionHeaderRowClass}
                           >
-                            <td colSpan={colCount} className="pt-4 pb-2 pl-10 pr-3">
-                              <span className="text-[11px] font-semibold uppercase tracking-[0.06em] text-muted-foreground/70">
-                                {childAction.title}
-                              </span>
+                            <td
+                              colSpan={colCount}
+                              className="px-1"
+                            >
+                              <div className="flex h-full items-center px-2">
+                                <JourneyLeading>
+                                  <span className="text-[11px] font-semibold uppercase tracking-[0.03em] text-muted-foreground/60">
+                                    {childAction.title}
+                                  </span>
+                                </JourneyLeading>
+                              </div>
                             </td>
                           </tr>,
 
@@ -239,13 +320,15 @@ export function OnboardingJourneysTable({ rows, visibleColumns, showNestedGroups
                             return [
                               <DataTableRow
                                 key={`${row.id}-action-${gc.id}`}
-                                className="cursor-pointer hover:bg-muted/50"
+                                className={cn('cursor-pointer', childRegionRowClass)}
                                 border={false}
                                 onClick={() => navigateToServicing(row, childAction.id, gc.childId)}
                               >
                                 {vis('name') && (
-                                  <DataTableCell type="primary" className="pl-8 text-foreground/75">
-                                    {gc.title}
+                                  <DataTableCell type="primary" className="font-medium text-foreground/70">
+                                    <JourneyLeading icon={childWorkflowIcon(childAction.title)}>
+                                      <span className="truncate">{gc.title}</span>
+                                    </JourneyLeading>
                                   </DataTableCell>
                                 )}
                                 {vis('relationshipName') && <DataTableCell />}
@@ -283,20 +366,20 @@ export function OnboardingJourneysTable({ rows, visibleColumns, showNestedGroups
                                 return [
                                   <DataTableRow
                                     key={`${row.id}-group-${group.id}`}
-                                    className="cursor-pointer hover:bg-muted/50"
+                                    className={cn('cursor-pointer', childRegionRowClass)}
                                     border={false}
                                     onClick={() => toggleExpanded(group.id, expandedGroupIds, setExpandedGroupIds)}
                                   >
                                     {vis('name') && (
-                                      <DataTableCell type="primary" className="pl-8 pt-1 text-[13px]">
-                                        <div className="flex items-center gap-2 font-medium text-foreground/65">
-                                          <span className="h-5 w-5 flex items-center justify-center shrink-0">
-                                            {isGroupExpanded
-                                              ? <ChevronDown className="h-3.5 w-3.5" />
-                                              : <ChevronRight className="h-3.5 w-3.5" />}
-                                          </span>
-                                          {group.title}
-                                        </div>
+                                      <DataTableCell type="primary" className="text-[13px]">
+                                        <JourneyLeading
+                                          expand={isGroupExpanded
+                                            ? <ChevronDown className="h-3.5 w-3.5 text-muted-foreground" />
+                                            : <ChevronRight className="h-3.5 w-3.5 text-muted-foreground" />}
+                                          className="font-medium text-foreground/65"
+                                        >
+                                          <span className="truncate">{group.title}</span>
+                                        </JourneyLeading>
                                       </DataTableCell>
                                     )}
                                     {vis('relationshipName') && <DataTableCell />}
@@ -321,13 +404,15 @@ export function OnboardingJourneysTable({ rows, visibleColumns, showNestedGroups
                                     return (
                                       <DataTableRow
                                         key={`${row.id}-action-${gc2.id}`}
-                                        className="cursor-pointer hover:bg-muted/50"
+                                        className={cn('cursor-pointer', childRegionRowClass)}
                                         border={false}
                                         onClick={() => navigateToServicing(row, childAction.id, gc2.childId)}
                                       >
                                         {vis('name') && (
-                                          <DataTableCell type="primary" className="pl-[60px] text-[13px] text-foreground/65">
-                                            {gc2.title}
+                                          <DataTableCell type="primary" className="text-[13px] text-foreground/65">
+                                            <JourneyLeading icon={<Link2 className={rowIconClass} />}>
+                                              <span className="truncate">{gc2.title}</span>
+                                            </JourneyLeading>
                                           </DataTableCell>
                                         )}
                                         {vis('relationshipName') && <DataTableCell />}
@@ -371,20 +456,20 @@ export function OnboardingJourneysTable({ rows, visibleColumns, showNestedGroups
                             return [
                               <DataTableRow
                                 key={`${row.id}-group-${group.id}`}
-                                className="cursor-pointer hover:bg-muted/50"
+                                className={cn('cursor-pointer', childRegionRowClass)}
                                 border={false}
                                 onClick={() => toggleExpanded(group.id, expandedGroupIds, setExpandedGroupIds)}
                               >
                                 {vis('name') && (
-                                  <DataTableCell type="primary" className="pl-8 pt-1 text-[13px]">
-                                    <div className="flex items-center gap-2 font-medium text-foreground/65">
-                                      <span className="h-5 w-5 flex items-center justify-center shrink-0">
-                                        {isGroupExpanded
-                                          ? <ChevronDown className="h-3.5 w-3.5" />
-                                          : <ChevronRight className="h-3.5 w-3.5" />}
-                                      </span>
-                                      {group.title}
-                                    </div>
+                                  <DataTableCell type="primary" className="text-[13px]">
+                                    <JourneyLeading
+                                      expand={isGroupExpanded
+                                        ? <ChevronDown className="h-3.5 w-3.5 text-muted-foreground" />
+                                        : <ChevronRight className="h-3.5 w-3.5 text-muted-foreground" />}
+                                      className="font-medium text-foreground/65"
+                                    >
+                                      <span className="truncate">{group.title}</span>
+                                    </JourneyLeading>
                                   </DataTableCell>
                                 )}
                                 {vis('relationshipName') && <DataTableCell />}
@@ -408,13 +493,15 @@ export function OnboardingJourneysTable({ rows, visibleColumns, showNestedGroups
                                 return (
                                   <DataTableRow
                                     key={`${row.id}-action-${gc2.id}`}
-                                    className="cursor-pointer hover:bg-muted/50"
+                                    className={cn('cursor-pointer', childRegionRowClass)}
                                     border={false}
                                     onClick={() => navigateToServicing(row, childAction.id, gc2.childId)}
                                   >
                                     {vis('name') && (
-                                      <DataTableCell type="primary" className="pl-8 text-foreground/75">
-                                        {gc2.title}
+                                      <DataTableCell type="primary" className="font-medium text-foreground/70">
+                                        <JourneyLeading icon={childWorkflowIcon(childAction.title)}>
+                                          <span className="truncate">{gc2.title}</span>
+                                        </JourneyLeading>
                                       </DataTableCell>
                                     )}
                                     {vis('relationshipName') && <DataTableCell />}
@@ -445,7 +532,11 @@ export function OnboardingJourneysTable({ rows, visibleColumns, showNestedGroups
                             ]
                           }),
                         ]
-                      }),
+                        }),
+                        <tr key={`${row.id}-action-${action.id}-region-end`} aria-hidden>
+                          <td colSpan={colCount} className="h-1.5 border-b border-border/40 bg-muted/[0.10] p-0" />
+                        </tr>,
+                      ] : []),
                     ]
                   })
               : []),

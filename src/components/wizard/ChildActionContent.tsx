@@ -366,6 +366,9 @@ export function ChildActionContent() {
   const FormComponent = formComponents[currentSubTask.formKey] ?? null
   const description = taskDescriptions[currentSubTask.formKey]
   const hasExplicitSections = Boolean(taskSections[currentSubTask.formKey]?.length)
+  const hideSyntheticOverview =
+    child.childType === 'kyc' &&
+    (currentSubTask.formKey === 'kyc-child-info' || currentSubTask.formKey === 'kyc-child-documents')
   const inReview = child.status === 'awaiting_review'
   const advisorDisabled = isAdvisorView && !advisorFormsEditable
   const childInReviewerPipeline =
@@ -481,9 +484,16 @@ export function ChildActionContent() {
           {getSubTaskDisplayTitle(child.childType, currentSubTask, state.demoViewMode)}
         </h1>
         {description && (
-          <p className="text-base text-muted-foreground mb-6">{description}</p>
+          <p
+            className={cn(
+              'text-[14px] text-muted-foreground leading-normal mb-6',
+              hideHeaderDividerInV2 && useIncreasedHeaderSpacing && '-mt-6',
+            )}
+          >
+            {description}
+          </p>
         )}
-        {!hasExplicitSections ? (
+        {!hasExplicitSections && !hideSyntheticOverview ? (
           <section id="__top__" className="space-y-1.5 scroll-mt-16 mb-6">
             <h3 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">Overview</h3>
           </section>
