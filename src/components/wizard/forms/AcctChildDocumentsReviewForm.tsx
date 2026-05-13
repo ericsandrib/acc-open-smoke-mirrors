@@ -56,6 +56,12 @@ export function AcctChildDocumentsReviewForm() {
   const isVersion3 = variant === 'v3'
   const isVersion4 = variant === 'v4'
   const isCardVariant = isVersion2 || isVersion3 || isVersion4
+  const childSectionTitleClass = isCardVariant
+    ? 'text-sm font-semibold uppercase tracking-wide'
+    : 'text-base font-semibold leading-snug text-foreground'
+  const childSectionBodyClass = isCardVariant
+    ? 'text-sm text-muted-foreground mt-2'
+    : 'text-[14px] text-muted-foreground mt-2 leading-normal'
   const ctx = useChildActionContext()
   const taskId = ctx?.subTaskId ?? ''
   const { data, updateField } = useTaskData(taskId || '__no_child__')
@@ -199,6 +205,7 @@ export function AcctChildDocumentsReviewForm() {
       <section id="acct-docs-forms" className="space-y-4 scroll-mt-16">
         <div
           className={cn(
+            'space-y-6',
             isCardVariant &&
               cn(
                 'rounded-xl p-6 space-y-6 overflow-hidden',
@@ -220,10 +227,10 @@ export function AcctChildDocumentsReviewForm() {
               ),
           )}
         >
-          <h3 className={cn(isCardVariant ? 'text-sm font-semibold uppercase tracking-wide' : 'text-sm font-semibold uppercase tracking-wide text-muted-foreground mb-1')}>
+          <h3 className={childSectionTitleClass}>
             Forms for This Account
           </h3>
-          <p className="text-sm text-muted-foreground mt-2">
+          <p className={childSectionBodyClass}>
             These required forms are generated automatically from this account&apos;s registration type using the same rules
             as the Documents panel and eSign envelope builder.
           </p>
@@ -320,6 +327,7 @@ export function AcctChildDocumentsReviewForm() {
       <section id="acct-docs-client-upload" className="space-y-4 scroll-mt-16">
         <div
           className={cn(
+            'space-y-6',
             isCardVariant &&
               cn(
                 'rounded-xl p-6 space-y-6 overflow-hidden',
@@ -331,19 +339,20 @@ export function AcctChildDocumentsReviewForm() {
         >
           <div
             className={cn(
+              'mb-6',
               isCardVariant &&
                 cn(
-                  '-mx-6 -mt-6 mb-4 px-6 py-4',
+                  '-mx-6 -mt-6 mb-8 px-6 py-4',
                   isVersion2 && 'border-b border-border/60 bg-[#F5F5F4]',
                   isVersion4 && 'border-b border-border/60 bg-[#F5F5F4]',
                   isVersion3 && 'mx-0 mt-0 px-0 pt-0 pb-4 border-b border-border/60',
                 ),
             )}
           >
-            <h3 className={cn(isCardVariant ? 'text-sm font-semibold uppercase tracking-wide' : 'text-sm font-semibold uppercase tracking-wide text-muted-foreground mb-1')}>
-              Supporting Client Documents
+            <h3 className={childSectionTitleClass}>
+              Supporting Documents
             </h3>
-            <p className="text-sm text-muted-foreground mt-2">
+            <p className={childSectionBodyClass}>
               Supporting documents are optional unless requested during review. Firm and custodian-generated forms are handled in Envelopes.
             </p>
           </div>
@@ -403,9 +412,10 @@ export function AcctChildDocumentsReviewForm() {
       <section id="acct-docs-notes" className="space-y-4 scroll-mt-16">
         <div
           className={cn(
+            'space-y-6',
             isCardVariant &&
               cn(
-                'rounded-xl p-6 space-y-4 overflow-hidden',
+                'rounded-xl p-6 space-y-6 overflow-hidden',
                 isVersion2 && 'border border-foreground/30 bg-background',
                 isVersion3 && 'v3-card-inner-strokes border border-foreground/20 bg-[#fafafa]',
                 isVersion4 && 'border border-foreground/30 bg-white',
@@ -413,12 +423,15 @@ export function AcctChildDocumentsReviewForm() {
           )}
         >
           <div>
-            <h3 className={cn(isCardVariant ? 'text-sm font-semibold uppercase tracking-wide' : 'text-sm font-semibold uppercase tracking-wide text-muted-foreground mb-1')}>
+            <h3 className={childSectionTitleClass}>
               Exceptions / notes
             </h3>
+            <p className={childSectionBodyClass}>
+              Add any document exceptions, delivery notes, or review context for this account.
+            </p>
           </div>
           <div className="space-y-2">
-            <Label htmlFor="acct-docs-exceptions-notes">Exceptions / notes</Label>
+            <Label htmlFor="acct-docs-exceptions-notes" className="sr-only">Exceptions / notes</Label>
             <textarea
               id="acct-docs-exceptions-notes"
               className="flex min-h-[88px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm"

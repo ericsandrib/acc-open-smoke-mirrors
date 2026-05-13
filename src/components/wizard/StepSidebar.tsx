@@ -560,7 +560,9 @@ export function StepSidebar() {
           className={cn(
             'w-full text-left pr-3 py-2.5 rounded-lg text-sm font-medium flex items-center justify-between gap-2 transition-colors',
             nestedInV5Group ? 'pl-2' : 'pl-12',
-            isActiveTask ? 'bg-accent/60 text-foreground' : 'hover:bg-muted/50 text-foreground',
+            isActiveTask
+              ? 'bg-sidebar-accent text-sidebar-accent-foreground'
+              : 'text-sidebar-foreground hover:bg-sidebar-accent/70 hover:text-sidebar-accent-foreground',
           )}
         >
           <span className={cn('truncate min-w-0', isActiveTask ? 'font-semibold' : '')}>
@@ -605,7 +607,7 @@ export function StepSidebar() {
     <TooltipProvider delayDuration={300}>
       <nav
         className={cn(
-          'w-[330px] shrink-0 border-r border-border bg-white flex flex-col min-h-0 self-stretch h-full',
+          'w-[330px] shrink-0 border-r border-sidebar-border bg-sidebar-background text-sidebar-foreground flex flex-col min-h-0 self-stretch h-full',
         )}
       >
         <JourneyHeader
@@ -628,7 +630,7 @@ export function StepSidebar() {
             return (
               <div key={action.id} className="mb-5">
                 <div className="mb-1.5 flex h-9 items-center gap-2 px-3">
-                  <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-[var(--bg-tertiary)] text-muted-foreground">
+                  <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-muted text-muted-foreground">
                     <ActionIcon className="h-3.5 w-3.5" aria-hidden />
                   </span>
                   <h3 className="text-sm font-medium text-foreground">{action.title}</h3>

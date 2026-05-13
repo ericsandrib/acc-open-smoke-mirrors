@@ -292,7 +292,7 @@ function CardHeader({
 
 function DropdownButton({ label }: { label: string }) {
   return (
-    <button className="inline-flex items-center gap-1.5 rounded-md border border-border bg-white px-3 py-1.5 text-xs font-medium text-[var(--text-secondary)] hover:bg-[var(--bg-secondary)]">
+    <button className="inline-flex items-center gap-1.5 rounded-md border border-border bg-background px-3 py-1.5 text-xs font-medium text-muted-foreground shadow-sm transition-colors hover:bg-muted hover:text-foreground">
       <svg className="h-3.5 w-3.5" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5">
         <rect x="2" y="2" width="5" height="5" rx="1" />
         <rect x="9" y="2" width="5" height="5" rx="1" />
@@ -315,19 +315,19 @@ export function DashboardContent() {
   );
 
   return (
-    <div className="min-h-full bg-white -m-8">
+    <div className="min-h-full bg-background -m-8">
       <div className="relative mx-auto max-w-[1280px] px-8 py-8">
         {/* Greeting header */}
         <div className="flex items-start justify-between mb-8">
           <div>
-            <h1 className="text-3xl font-light text-[#3d1f1f]">
+            <h1 className="text-3xl font-light text-foreground">
               Good afternoon, Greta
             </h1>
-            <p className="text-lg font-light text-[#6b8e6b] mt-0.5">
+            <p className="text-lg font-light text-muted-foreground mt-0.5">
               Wednesday, April 1
             </p>
           </div>
-          <button className="rounded-md border border-border bg-white px-4 py-2 text-sm font-medium text-[var(--text-primary)] hover:bg-[var(--bg-primary-hover)]">
+          <button className="rounded-md border border-border bg-background px-4 py-2 text-sm font-medium text-foreground shadow-sm transition-colors hover:bg-muted">
             Customize
           </button>
         </div>
@@ -390,14 +390,14 @@ export function DashboardContent() {
             <div className="rounded-xl bg-[var(--bg-secondary)]">
               <CardHeader title="Meetings" count={0}>
                 <div className="flex items-center gap-1">
-                  <button className="rounded-md p-1 hover:bg-[var(--bg-secondary)]">
-                    <ChevronLeft className="h-4 w-4 text-[var(--icon-secondary)]" />
+                  <button className="rounded-md p-1 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground">
+                    <ChevronLeft className="h-4 w-4" />
                   </button>
                   <span className="px-2 text-sm font-medium text-[var(--text-primary)]">
                     Apr 1
                   </span>
-                  <button className="rounded-md p-1 hover:bg-[var(--bg-secondary)]">
-                    <ChevronRight className="h-4 w-4 text-[var(--icon-secondary)]" />
+                  <button className="rounded-md p-1 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground">
+                    <ChevronRight className="h-4 w-4" />
                   </button>
                 </div>
               </CardHeader>

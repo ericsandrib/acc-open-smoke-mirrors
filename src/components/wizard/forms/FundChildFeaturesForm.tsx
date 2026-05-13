@@ -25,6 +25,9 @@ export function FundChildFeaturesForm() {
   const isVersion3 = variant === 'v3'
   const isVersion4 = variant === 'v4'
   const isCardVariant = isVersion2 || isVersion3 || isVersion4
+  const childSectionTitleClass = isCardVariant
+    ? 'text-sm font-semibold uppercase tracking-wide'
+    : 'text-base font-semibold leading-snug text-foreground'
   const ctx = useChildActionContext()
   const [pickerOpen, setPickerOpen] = useState(false)
   const [timelineChild, setTimelineChild] = useState<ChildTask | null>(null)
@@ -92,12 +95,9 @@ export function FundChildFeaturesForm() {
               ),
           )}
         >
-          <div className="flex items-center gap-2">
-            <Plus className="h-4 w-4 text-muted-foreground" aria-hidden />
-            <h3 className={cn(isCardVariant ? 'text-sm font-semibold uppercase tracking-wide' : 'text-sm font-semibold uppercase tracking-wide text-muted-foreground')}>
-              Account features & services
-            </h3>
-          </div>
+          <h3 className={childSectionTitleClass}>
+            Account Features & Services
+          </h3>
           {linesForAccount.length > 0 && (
             <Button variant="secondary" size="sm" type="button" onClick={() => setPickerOpen(true)}>
               <Plus className="h-3 w-3 mr-1" />

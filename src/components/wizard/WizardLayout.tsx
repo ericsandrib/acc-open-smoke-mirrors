@@ -21,9 +21,6 @@ function toSectionGroups(sections: TaskSection[]): Array<{ key: string; label: s
   )
 }
 import { WizardFooter } from './WizardFooter'
-import { HomeOfficeReviewFooter } from './HomeOfficeReviewFooter'
-import { AmlReviewFooter } from './AmlReviewFooter'
-import { HoKycReviewFooter } from './HoKycReviewFooter'
 import { ChildActionSidebar } from './ChildActionSidebar'
 import { ChildActionContent } from './ChildActionContent'
 import { ChildActionFooter } from './ChildActionFooter'
@@ -72,7 +69,7 @@ function WizardAccessoryBar() {
   )
 }
 import { ComposeDialog } from '@/components/dashboard/ComposeDialog'
-import { useWorkflow } from '@/stores/workflowStore'
+import { useChildActionContext, useWorkflow } from '@/stores/workflowStore'
 import { cn } from '@/lib/utils'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import {
@@ -400,6 +397,7 @@ export function WizardLayout() {
 
 function WizardLayoutInner() {
   const { state, dispatch } = useWorkflow()
+  const childActionCtx = useChildActionContext()
   const navigate = useNavigate()
   const variant = useOpenAccountsVariant()
   const { variant: wizardOpenAccountsVariantRaw } = useOpenAccountsVariantControls()
@@ -453,14 +451,13 @@ function WizardLayoutInner() {
     ? state.tasks.find((t) => (t.children ?? []).some((c) => c.id === activeChild.id))
     : undefined
   const isKycChild = activeChild?.childType === 'kyc'
-  const activeKycSubTask = isKycChild && state.activeChildSubTaskIndex != null
-    ? getChildTypeConfig('kyc').subTasks[state.activeChildSubTaskIndex]
-    : undefined
+  const activeChildSubTask = childActionCtx?.currentSubTask
+  const activeKycSubTask = isKycChild ? activeChildSubTask : undefined
   const showKycDocumentsSubTask = activeKycSubTask?.formKey === 'kyc-child-documents'
-  const activeChildSubTask =
-    activeChild != null && state.activeChildSubTaskIndex != null
-      ? getChildTypeConfig(activeChild.childType).subTasks[state.activeChildSubTaskIndex]
-      : undefined
+  const showKycIntakeSubTask =
+    activeKycSubTask?.formKey === 'kyc-child-info' ||
+    activeKycSubTask?.formKey === 'kyc-child-documents'
+  const showKycCipResultsSubTask = activeKycSubTask?.formKey === 'kyc-child-cip-results'
   const childSections = (() => {
     if (!activeChildSubTask || !activeChild) return []
     const sections = taskSections[activeChildSubTask.formKey] ?? []
@@ -733,7 +730,8 @@ function WizardLayoutInner() {
                   <div className="flex flex-1 min-h-0 overflow-hidden min-w-0">
                     <div className="flex-1 flex flex-col overflow-hidden min-w-0">
                       <WizardAccessoryBar />
-                      {showKycDocumentsSubTask ? <ChildActionContent /> : <ChildAmlReviewContent />}
+                      {showKycIntakeSubTask ? <ChildActionContent /> : <ChildAmlReviewContent />}
+                      <ChildActionFooter />
                     </div>
                     {variant !== 'v5' &&
                       childSections.length > 0 &&
@@ -746,7 +744,6 @@ function WizardLayoutInner() {
                     <ChildActionRightSidebar />
                   </div>
                 </div>
-                <AmlReviewFooter />
               </div>
             ) : isHoKycView && isKycChild ? (
               <div className="flex-1 flex flex-col min-h-0 min-w-0 overflow-hidden">
@@ -755,7 +752,8 @@ function WizardLayoutInner() {
                   <div className="flex flex-1 min-h-0 overflow-hidden min-w-0">
                     <div className="flex-1 flex flex-col overflow-hidden min-w-0">
                       <WizardAccessoryBar />
-                      {showKycDocumentsSubTask ? <ChildActionContent /> : <ChildHoKycViewContent />}
+                      {showKycIntakeSubTask ? <ChildActionContent /> : <ChildHoKycViewContent />}
+                      <ChildActionFooter />
                     </div>
                     {variant !== 'v5' &&
                       childSections.length > 0 &&
@@ -768,7 +766,6 @@ function WizardLayoutInner() {
                     <ChildActionRightSidebar />
                   </div>
                 </div>
-                <HoKycReviewFooter />
               </div>
             ) : showHomeOfficeAccountLayout ? (
               activeChild?.childType === 'account-opening' ? (
@@ -779,6 +776,7 @@ function WizardLayoutInner() {
                       <div className="flex-1 flex flex-col overflow-hidden min-w-0">
                         <WizardAccessoryBar />
                         <ChildActionContent />
+                        <ChildActionFooter />
                       </div>
                       {variant !== 'v5' &&
                         childSections.length > 0 && (
@@ -790,7 +788,6 @@ function WizardLayoutInner() {
                       <ChildActionRightSidebar />
                     </div>
                   </div>
-                  <HomeOfficeReviewFooter />
                 </div>
               ) : (
                 <div className="flex-1 flex flex-col min-h-0 min-w-0 overflow-hidden">
@@ -800,11 +797,11 @@ function WizardLayoutInner() {
                       <div className="flex-1 flex flex-col overflow-hidden min-w-0">
                         <WizardAccessoryBar />
                         {isHoDocView ? <ChildHoDocumentViewContent /> : <ChildHoPrincipalViewContent />}
+                        <ChildActionFooter />
                       </div>
                       <ChildActionRightSidebar />
                     </div>
                   </div>
-                  <HomeOfficeReviewFooter />
                 </div>
               )
             ) : (
@@ -814,7 +811,7 @@ function WizardLayoutInner() {
                   <WizardAccessoryBar />
                   <div className="relative flex flex-1 min-h-0 overflow-hidden">
                     <div className="flex-1 min-h-0 flex flex-col overflow-hidden min-w-0">
-                      <ChildActionContent />
+                      {showKycCipResultsSubTask ? <ChildHoKycViewContent /> : <ChildActionContent />}
                       <ChildActionFooter />
                     </div>
                     {variant !== 'v5' &&

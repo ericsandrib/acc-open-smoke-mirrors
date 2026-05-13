@@ -195,7 +195,7 @@ export function ChildAmlReviewContent() {
                 <p className="text-sm font-medium text-emerald-900 dark:text-emerald-100">No risk indicators identified</p>
                 <p className="text-xs text-emerald-800/90 dark:text-emerald-200/80">
                   Screening checks are complete and clear across sanctions, PEP, and adverse media. Review the summary
-                  below and choose Approve, Approve w/ Monitoring, or Escalate.
+                  below and choose Approve, Return for Corrections, or Escalate.
                 </p>
               </div>
             </div>

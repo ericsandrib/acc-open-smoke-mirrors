@@ -80,20 +80,14 @@ export function KycChildDocumentsForm() {
   }
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-6">
       <div id="kyc-docs-overview" className="scroll-mt-16" />
-      <div className="space-y-2">
-        <h3 className="text-base font-semibold">Supporting Documents</h3>
-        <p className="text-sm text-muted-foreground">
-          Supporting documents are optional unless requested during review. Firm and custodian-generated forms are handled in <span className="font-medium text-foreground">Envelopes</span>.
-        </p>
-      </div>
       {advisorResubmitEligible && (
         <div className="rounded-md border border-blue-200 bg-blue-50 dark:border-blue-900/60 dark:bg-blue-950/40 px-3 py-2.5">
           <div className="flex items-center gap-2">
             <AlertTriangle className="h-4 w-4 text-blue-600 dark:text-blue-400 shrink-0" />
             <p className="text-xs font-medium text-blue-900 dark:text-blue-100">
-              A reviewer has returned this submission with feedback. Documents are unlocked — update and resubmit.
+              A reviewer has returned this submission with feedback. Supporting documents are unlocked — update and resubmit.
             </p>
           </div>
         </div>
@@ -103,7 +97,7 @@ export function KycChildDocumentsForm() {
           <div className="flex items-center gap-2">
             <CheckCircle2 className="h-4 w-4 text-green-600 dark:text-green-400 shrink-0" />
             <p className="text-xs font-medium text-green-900 dark:text-green-100">
-              This KYC package has been approved. Documents are read-only.
+              This KYC package has been approved. Supporting documents are read-only.
             </p>
           </div>
         </div>

@@ -21,6 +21,8 @@ const NIGO_REASONS = [
   { value: 'other', label: 'Other' },
 ]
 
+type NigoReasonOption = { value: string; label: string }
+
 interface NigoDialogProps {
   open: boolean
   onClose: () => void
@@ -28,9 +30,19 @@ interface NigoDialogProps {
   onSubmit: (reason: string, feedback?: string) => void
   /** `reject` uses Accept/Reject-style copy for HO Document Team; default keeps NIGO terminology (e.g. Principal). */
   variant?: 'nigo' | 'reject'
+  reasonOptions?: NigoReasonOption[]
+  reasonLabel?: string
 }
 
-export function NigoDialog({ open, onClose, teamLabel, onSubmit, variant = 'nigo' }: NigoDialogProps) {
+export function NigoDialog({
+  open,
+  onClose,
+  teamLabel,
+  onSubmit,
+  variant = 'nigo',
+  reasonOptions = NIGO_REASONS,
+  reasonLabel,
+}: NigoDialogProps) {
   const [reason, setReason] = useState('')
   const [feedback, setFeedback] = useState('')
 
@@ -38,7 +50,7 @@ export function NigoDialog({ open, onClose, teamLabel, onSubmit, variant = 'nigo
 
   const handleSubmit = () => {
     if (!reason) return
-    const label = NIGO_REASONS.find((r) => r.value === reason)?.label ?? reason
+    const label = reasonOptions.find((r) => r.value === reason)?.label ?? reason
     onSubmit(label, feedback.trim() || undefined)
     setReason('')
     setFeedback('')
@@ -71,13 +83,13 @@ export function NigoDialog({ open, onClose, teamLabel, onSubmit, variant = 'nigo
         </div>
 
         <div className="space-y-2">
-          <Label>{variant === 'reject' ? 'Rejection reason' : 'NIGO Reason'}</Label>
+          <Label>{reasonLabel ?? (variant === 'reject' ? 'Rejection reason' : 'NIGO Reason')}</Label>
           <Select value={reason} onValueChange={setReason}>
             <SelectTrigger>
               <SelectValue placeholder="Select a reason..." />
             </SelectTrigger>
             <SelectContent className="z-[70]">
-              {NIGO_REASONS.map((r) => (
+              {reasonOptions.map((r) => (
                 <SelectItem key={r.value} value={r.value}>
                   {r.label}
                 </SelectItem>

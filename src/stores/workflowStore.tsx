@@ -14,7 +14,12 @@ import {
   initialFinancialAccounts,
   seedOpenAccountsAdditionalInstructions,
 } from '@/data/seed'
-import { getChildSubTaskIds, getChildTypeConfig, parseChildSubTaskId } from '@/utils/childTaskRegistry'
+import {
+  getChildSubTaskIds,
+  getChildTypeConfig,
+  getVisibleChildSubTasks,
+  parseChildSubTaskId,
+} from '@/utils/childTaskRegistry'
 import {
   OPEN_ACCOUNTS_FORM_KEY,
   OPEN_ACCOUNTS_WITH_ANNUITY_FORM_KEY,
@@ -738,9 +743,6 @@ function workflowReducer(state: WorkflowState, action: WorkflowAction): Workflow
     }
 
     case 'GO_NEXT': {
-      const idx = state.flatTaskOrder.indexOf(state.activeTaskId)
-      if (idx >= state.flatTaskOrder.length - 1) return state
-
       const variant = getPersistedOpenAccountsVariant()
       const activeTask = state.tasks.find((t) => t.id === state.activeTaskId)
       if (
@@ -755,6 +757,9 @@ function workflowReducer(state: WorkflowState, action: WorkflowAction): Workflow
           return { ...state, v5NoAnnuityOpenAccountsPage: order[i + 1] }
         }
       }
+
+      const idx = state.flatTaskOrder.indexOf(state.activeTaskId)
+      if (idx >= state.flatTaskOrder.length - 1) return state
 
       const nextId = nextVisibleFlatTaskId(state, state.activeTaskId)
       if (!nextId) return state
@@ -870,8 +875,7 @@ function workflowReducer(state: WorkflowState, action: WorkflowAction): Workflow
         .flatMap((t) => t.children ?? [])
         .find((c) => c.id === state.activeChildActionId)
       if (!child) return state
-      const config = getChildTypeConfig(child.childType)
-      const maxIndex = config.subTasks.length - 1
+      const maxIndex = getVisibleChildSubTasks(child.childType, state.demoViewMode, child.status).length - 1
       if (state.activeChildSubTaskIndex >= maxIndex) return state
       const nextIdx = state.activeChildSubTaskIndex + 1
       const prevHwm = state.childHighWaterMark ?? {}
@@ -1547,10 +1551,11 @@ export function useChildActionContext() {
   const parentTask = state.tasks.find((t) =>
     t.children?.some((c) => c.id === child.id)
   )
+  const baseSubTasks = getVisibleChildSubTasks(child.childType, state.demoViewMode, child.status)
   const subTasks =
     child.childType === 'account-opening' && parentTask?.formKey === OPEN_ACCOUNTS_WITH_ANNUITY_FORM_KEY
-      ? baseConfig.subTasks.filter((s) => s.suffix === 'account-owners')
-      : baseConfig.subTasks
+      ? baseSubTasks.filter((s) => s.suffix === 'account-owners')
+      : baseSubTasks
   const config = {
     ...baseConfig,
     subTasks,

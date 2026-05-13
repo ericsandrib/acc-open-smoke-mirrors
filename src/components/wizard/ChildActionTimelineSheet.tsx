@@ -125,6 +125,60 @@ export function getActiveStageLabel(
   return stages[idx].label
 }
 
+function getReviewNotesForStage(
+  stageLabel: string,
+  childType: ChildType,
+  reviewState?: ChildReviewState,
+): Array<{ label: string; value: string }> {
+  if (!reviewState) return []
+
+  if (stageLabel === 'Document Review') {
+    if (childType === 'kyc' && reviewState.hoKycReview?.status === 'changes_requested') {
+      return reviewState.hoKycReview.comments
+        ? [{ label: 'Reviewer comments', value: reviewState.hoKycReview.comments }]
+        : []
+    }
+
+    if (reviewState.documentReview?.status === 'nigo') {
+      return [
+        reviewState.documentReview.nigoReason
+          ? { label: 'Reason', value: reviewState.documentReview.nigoReason }
+          : null,
+        reviewState.documentReview.nigoFeedback
+          ? { label: 'Feedback', value: reviewState.documentReview.nigoFeedback }
+          : null,
+      ].filter((note): note is { label: string; value: string } => Boolean(note))
+    }
+  }
+
+  if (stageLabel === 'Principal Review' && reviewState.principalReview?.status === 'nigo') {
+    return [
+      reviewState.principalReview.nigoReason
+        ? { label: 'Reason', value: reviewState.principalReview.nigoReason }
+        : null,
+      reviewState.principalReview.nigoFeedback
+        ? { label: 'Feedback', value: reviewState.principalReview.nigoFeedback }
+        : null,
+    ].filter((note): note is { label: string; value: string } => Boolean(note))
+  }
+
+  if (stageLabel === 'AML Review') {
+    if (reviewState.amlReview?.status === 'flagged' && reviewState.amlReview.findings) {
+      return [{ label: 'Correction reason', value: reviewState.amlReview.findings }]
+    }
+
+    if (reviewState.amlReview?.status === 'info_requested' && reviewState.amlReview.infoRequestComments) {
+      return [{ label: 'Request', value: reviewState.amlReview.infoRequestComments }]
+    }
+
+    if (reviewState.amlReview?.status === 'escalated' && reviewState.amlReview.reason) {
+      return [{ label: 'Escalation reason', value: reviewState.amlReview.reason }]
+    }
+  }
+
+  return []
+}
+
 export function ChildActionTimeline({
   childType,
   status,
@@ -276,7 +330,11 @@ export function ChildActionTimeline({
             ((childType === 'kyc' && hoKycReview?.status === 'changes_requested') ||
               docReview?.status === 'nigo')) ||
           (stage.label === 'Principal Review' && principalReview?.status === 'nigo') ||
-          (stage.label === 'AML Review' && (amlReview?.status === 'flagged' || amlReview?.status === 'escalated'))
+          (stage.label === 'AML Review' &&
+            (amlReview?.status === 'flagged' ||
+              amlReview?.status === 'info_requested' ||
+              amlReview?.status === 'escalated'))
+        const reviewNotes = getReviewNotesForStage(stage.label, childType, reviewState)
 
         return (
           <div key={stage.label} className="relative flex gap-3">
@@ -328,6 +386,19 @@ export function ChildActionTimeline({
                 <p className={cn('text-xs mt-0.5', isNigoStage ? 'text-destructive/80' : 'text-muted-foreground')}>
                   {timelineDetail}
                 </p>
+              )}
+              {reviewNotes.length > 0 && (
+                <div className="mt-2 space-y-1.5">
+                  {reviewNotes.map((note) => (
+                    <div
+                      key={`${stage.label}-${note.label}`}
+                      className="rounded-md border border-destructive/20 bg-destructive/5 px-2.5 py-2 text-xs"
+                    >
+                      <p className="font-medium text-destructive">{note.label}</p>
+                      <p className="mt-0.5 leading-relaxed text-destructive/80">{note.value}</p>
+                    </div>
+                  ))}
+                </div>
               )}
             </div>
           </div>

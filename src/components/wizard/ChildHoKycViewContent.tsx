@@ -76,7 +76,7 @@ export function ChildHoKycViewContent() {
   const [isEditing, setIsEditing] = useState(false)
   const [draft, setDraft] = useState<Record<string, unknown>>({})
   const rights = (state.taskData[`${childId}-ho-rights`] as Record<string, unknown> | undefined) ?? {}
-  const canEditKycFields = rights.canEditKycFields !== false
+  const canEditKycFields = state.demoViewMode === 'ho-kyc' && rights.canEditKycFields !== false
   const cipReviewUploads =
     ((taskData.cipReviewUploads as Array<{ id: string; fileName: string; uploadedAt: string }> | undefined) ?? [])
 

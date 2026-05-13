@@ -36,6 +36,7 @@ export function EsignDocumentsBundleViewerButton({ items, triggerLabel = 'View a
   )
 
   const current = resolved[selectedIndex] ?? resolved[0]
+  const currentSrc = current ? `${current.href}#toolbar=1&navpanes=0&view=FitH` : ''
 
   if (items.length === 0) return null
 
@@ -92,11 +93,26 @@ export function EsignDocumentsBundleViewerButton({ items, triggerLabel = 'View a
                       Download
                     </a>
                   </div>
-                  <iframe
+                  <object
                     title={current.fileName}
-                    src={current.href}
-                    className="h-full min-h-[min(60vh,520px)] w-full flex-1 border-0 bg-muted"
-                  />
+                    data={currentSrc}
+                    type="application/pdf"
+                    className="h-full min-h-[min(60vh,520px)] w-full flex-1 bg-muted"
+                  >
+                    <div className="flex h-full min-h-[min(60vh,520px)] flex-col items-center justify-center gap-3 bg-muted p-6 text-center">
+                      <p className="text-sm text-muted-foreground">
+                        PDF preview is not available in this browser.
+                      </p>
+                      <a
+                        href={current.href}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="text-sm font-medium text-foreground underline underline-offset-4"
+                      >
+                        Open PDF in a new tab
+                      </a>
+                    </div>
+                  </object>
                 </>
               ) : null}
             </div>

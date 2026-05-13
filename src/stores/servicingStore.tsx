@@ -38,7 +38,7 @@ function deriveLiveJourney(state: WorkflowState): Journey | null {
     }))
 
     // Set parent action for certain actions to create nesting
-    // Both KYC Cases and Accounts are nested under "Account Opening"
+    // Both KYC Reviews and Accounts are nested under "Open Accounts"
     let parentActionId: string | undefined
     if (action.id === 'kyc-child-actions') {
       parentActionId = `${journeyId}-account-opening`
@@ -130,7 +130,37 @@ function deriveLiveJourney(state: WorkflowState): Journey | null {
       }
     }
 
-    return [parentAction, ...childActions, ...groupActions]
+    const childSectionActions: JourneyAction[] =
+      action.id === 'account-opening'
+        ? ([
+            {
+              id: `${journeyId}-kyc-child-actions`,
+              title: 'KYC Reviews',
+              children: childActions.filter((childAction) => childAction.parentActionId === `${journeyId}-kyc-child-actions`),
+            },
+            {
+              id: `${journeyId}-account-opening-child`,
+              title: 'Accounts',
+              children: childActions.filter((childAction) => childAction.parentActionId === `${journeyId}-account-opening-child`),
+            },
+          ] as const)
+            .filter((section) => section.children.length > 0)
+            .map((section): JourneyAction => ({
+              id: section.id,
+              journeyId,
+              title: section.title,
+              status: section.children.every((childAction) => childAction.status === 'complete')
+                ? 'complete'
+                : section.children.some((childAction) => childAction.status !== 'not_started')
+                  ? 'in_progress'
+                  : 'not_started',
+              nickname: `${journeyName} - ${section.title}`,
+              parentActionId: `${journeyId}-account-opening`,
+              tasks: [],
+            }))
+        : []
+
+    return [parentAction, ...childSectionActions, ...childActions, ...groupActions]
   })
 
   const anyStarted = state.tasks.some((t) => t.status !== 'not_started')

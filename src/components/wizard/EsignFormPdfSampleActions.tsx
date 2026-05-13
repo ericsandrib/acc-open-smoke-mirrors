@@ -24,6 +24,7 @@ export function EsignFormPdfSampleActions({ formIdOrDocId, displayLabel, viewMod
   const sample = resolveEsignFormSampleWithFallback(formIdOrDocId, displayLabel)
   const [viewer, setViewer] = useState<{ href: string; title: string } | null>(null)
   const titlePrefix = viewMode === 'signed' ? 'Signed' : 'Preview'
+  const viewerSrc = viewer ? `${viewer.href}#toolbar=1&navpanes=0&view=FitH` : ''
 
   return (
     <>
@@ -57,12 +58,27 @@ export function EsignFormPdfSampleActions({ formIdOrDocId, displayLabel, viewMod
             </DialogTitle>
           </DialogHeader>
           {viewer ? (
-            <iframe
+            <object
               key={viewer.href + viewer.title}
               title={viewer.title}
-              src={viewer.href}
-              className="h-full min-h-[50vh] w-full border-0 bg-muted"
-            />
+              data={viewerSrc}
+              type="application/pdf"
+              className="h-full min-h-[50vh] w-full bg-muted"
+            >
+              <div className="flex h-full min-h-[50vh] flex-col items-center justify-center gap-3 bg-muted p-6 text-center">
+                <p className="text-sm text-muted-foreground">
+                  PDF preview is not available in this browser.
+                </p>
+                <a
+                  href={viewer.href}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="text-sm font-medium text-foreground underline underline-offset-4"
+                >
+                  Open PDF in a new tab
+                </a>
+              </div>
+            </object>
           ) : null}
         </DialogContent>
       </Dialog>

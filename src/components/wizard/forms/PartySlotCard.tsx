@@ -444,85 +444,44 @@ export function PartySlotCard({
             )}
 
           {showKycStatus && !hideDefaultDetails && !isDesignationPreview && (kycDisplayStatus || matchedParty.kycStatus) && matchedParty.type !== 'related_organization' && (
-            <div className="pt-1 border-t border-border/60">
-              <div className="flex flex-wrap items-center gap-2 text-sm">
-                <span className="text-muted-foreground">
-                  KYC status:
-                </span>
-                {kycDisplayStatus && (
-                  <Badge
-                    variant="outline"
-                    className={cn('text-xs', kycDisplayStatus.className)}
-                  >
-                    {kycDisplayStatus.label}
-                  </Badge>
-                )}
-                {matchedParty.kycStatus === 'needs_kyc' && onStartKyc && getPartyKycAction(matchedParty) === 'start' && (
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="h-6 text-xs"
-                    type="button"
-                    onClick={() => onStartKyc(matchedParty.id)}
-                  >
-                    Create KYC review
-                  </Button>
-                )}
-                {matchedParty.kycStatus === 'pending' && onGoToKyc && getPartyKycAction(matchedParty) === 'go' && (
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="h-6 text-xs"
-                    type="button"
-                    onClick={() => onGoToKyc(matchedParty.id)}
-                  >
-                    Go to KYC
-                  </Button>
-                )}
-              </div>
-              {showKycAmlSchedule ? (
-                <div className="mt-4 space-y-1.5 border-t border-border/30 pt-3 text-xs">
-                  <p className="text-xs font-semibold text-foreground">
-                    AML Screening (valid for {AML_KYC_VALIDITY_DAYS} days)
-                  </p>
-                  {amlRenewal ? (
-                    <>
-                      <p className="text-foreground">
-                        <span className="font-medium text-muted-foreground">Last checked:</span>{' '}
-                        <span className="font-normal">{amlRenewal.lastRunFormatted}</span>
-                      </p>
-                      {amlRenewal.isExpired ? (
-                        <p className="text-destructive text-xs font-normal leading-snug">
-                          AML renewal overdue — the {AML_KYC_VALIDITY_DAYS}-day window ended on {amlRenewal.expiryFormatted}. Re-run KYC before opening additional accounts.
-                        </p>
-                      ) : amlRenewal.isDueToday ? (
-                        <p className="text-amber-700 dark:text-amber-500 text-xs font-normal leading-snug">
-                          AML renewal due today — last checked {amlRenewal.lastRunFormatted}.
-                        </p>
-                      ) : (
-                        <p className="text-foreground">
-                          <span className="font-medium text-muted-foreground">KYC (AML) expires in:</span>{' '}
-                          <span className="font-normal">
-                            {amlRenewal.daysRemaining} {amlRenewal.daysRemaining === 1 ? 'day' : 'days'} (on{' '}
-                            {amlRenewal.expiryFormatted})
-                          </span>
-                        </p>
-                      )}
-                    </>
-                  ) : (
-                    <>
-                      <p className="text-foreground">
-                        <span className="font-medium text-muted-foreground">Last checked:</span>{' '}
-                        <span className="font-normal">—</span>
-                      </p>
-                      <p className="text-xs text-muted-foreground font-normal leading-snug">
-                        Recorded when screening is completed. Applies once per new client.
-                      </p>
-                    </>
+            <dl className="grid gap-2 sm:grid-cols-2 text-xs">
+              <div className="space-y-0.5 min-w-0 sm:col-span-2">
+                <dt className="text-muted-foreground font-medium">KYC status</dt>
+                <dd className="flex flex-wrap items-center gap-2 text-foreground">
+                  {kycDisplayStatus && (
+                    <Badge
+                      variant="outline"
+                      className={cn('text-xs', kycDisplayStatus.className)}
+                    >
+                      {kycDisplayStatus.label}
+                    </Badge>
                   )}
-                </div>
+                  {matchedParty.kycStatus === 'needs_kyc' && onStartKyc && getPartyKycAction(matchedParty) === 'start' && (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="h-6 text-xs"
+                      type="button"
+                      onClick={() => onStartKyc(matchedParty.id)}
+                    >
+                      Create KYC review
+                    </Button>
+                  )}
+                </dd>
+              </div>
+
+              {showKycAmlSchedule ? (
+                <>
+                  <div className="space-y-0.5 min-w-0 sm:col-span-2">
+                    <dt className="text-muted-foreground font-medium">AML screening ({AML_KYC_VALIDITY_DAYS}-day validity)</dt>
+                  </div>
+                  <div className="space-y-0.5 min-w-0 sm:col-span-2">
+                    <dt className="text-muted-foreground font-medium">Last checked</dt>
+                    <dd className="text-foreground break-words">{amlRenewal?.lastRunFormatted ?? '—'}</dd>
+                  </div>
+                </>
               ) : null}
-            </div>
+            </dl>
           )}
 
           {footer}

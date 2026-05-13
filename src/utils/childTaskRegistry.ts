@@ -1,4 +1,4 @@
-import type { ChildType, WorkflowState } from '@/types/workflow'
+import type { ChildType, TaskStatus, WorkflowState } from '@/types/workflow'
 
 export interface SubTaskDefinition {
   suffix: string
@@ -20,7 +20,7 @@ const CHILD_TYPE_CONFIGS: Record<ChildType, ChildTypeConfig> = {
     displayLabel: 'KYC Review',
     subTasks: [
       { suffix: 'info', title: 'Client Information', formKey: 'kyc-child-info' },
-      { suffix: 'documents', title: 'Documents', formKey: 'kyc-child-documents' },
+      { suffix: 'documents', title: 'Supporting Documents', formKey: 'kyc-child-documents' },
     ],
   },
   'account-opening': {
@@ -37,7 +37,7 @@ const CHILD_TYPE_CONFIGS: Record<ChildType, ChildTypeConfig> = {
   'funding-line': {
     childType: 'funding-line',
     idPrefix: 'funding-line-child',
-    displayLabel: 'Funding & asset movement',
+    displayLabel: 'Funding & Asset Movement',
     subTasks: [
       {
         suffix: 'setup',
@@ -49,7 +49,7 @@ const CHILD_TYPE_CONFIGS: Record<ChildType, ChildTypeConfig> = {
   'feature-service-line': {
     childType: 'feature-service-line',
     idPrefix: 'feature-service-line-child',
-    displayLabel: 'Account feature & service',
+    displayLabel: 'Account Feature & Service',
     subTasks: [
       {
         suffix: 'setup',
@@ -60,22 +60,50 @@ const CHILD_TYPE_CONFIGS: Record<ChildType, ChildTypeConfig> = {
   },
 }
 
+const KYC_AML_RESULTS_SUBTASK: SubTaskDefinition = {
+  suffix: 'aml-results',
+  title: 'AML Results',
+  formKey: 'kyc-child-aml-results',
+}
+
+const KYC_CIP_RESULTS_SUBTASK: SubTaskDefinition = {
+  suffix: 'cip-results',
+  title: 'CIP Results',
+  formKey: 'kyc-child-cip-results',
+}
+
 export function getChildTypeConfig(childType: ChildType): ChildTypeConfig {
   return CHILD_TYPE_CONFIGS[childType]
 }
 
-/** Sidebar / header label for a sub-task; AML view renames the KYC info step for reviewers. */
-export function getSubTaskDisplayTitle(
+export function getVisibleChildSubTasks(
   childType: ChildType,
-  subTask: SubTaskDefinition,
   demoViewMode: WorkflowState['demoViewMode'],
+  childStatus?: TaskStatus,
+): readonly SubTaskDefinition[] {
+  const subTasks = CHILD_TYPE_CONFIGS[childType].subTasks
+  if (childType === 'kyc' && demoViewMode === 'aml') {
+    return [...subTasks, KYC_AML_RESULTS_SUBTASK]
+  }
+  if (
+    childType === 'kyc' &&
+    (demoViewMode === 'ho-kyc' ||
+      (demoViewMode === 'advisor' &&
+        (childStatus === 'awaiting_review' || childStatus === 'complete' || childStatus === 'rejected')))
+  ) {
+    const [clientInformation, ...remainingSubTasks] = subTasks
+    if (!clientInformation) return [KYC_CIP_RESULTS_SUBTASK]
+    return [clientInformation, KYC_CIP_RESULTS_SUBTASK, ...remainingSubTasks]
+  }
+  return subTasks
+}
+
+/** Stable sidebar / header label for a sub-task across advisor and reviewer views. */
+export function getSubTaskDisplayTitle(
+  _childType: ChildType,
+  subTask: SubTaskDefinition,
+  _demoViewMode: WorkflowState['demoViewMode'],
 ): string {
-  if (childType === 'kyc' && subTask.formKey === 'kyc-child-info' && demoViewMode === 'aml') {
-    return 'AML Team Review'
-  }
-  if (childType === 'kyc' && subTask.formKey === 'kyc-child-info' && demoViewMode === 'ho-kyc') {
-    return 'CIP Results'
-  }
   return subTask.title
 }
 

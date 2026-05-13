@@ -83,6 +83,12 @@ export function AcctChildOwnerInfoForm() {
   const isVersion3 = variant === 'v3'
   const isVersion4 = variant === 'v4'
   const isCardVariant = isVersion2 || isVersion3 || isVersion4
+  const childSectionTitleClass = isCardVariant
+    ? 'text-sm font-semibold uppercase tracking-wide'
+    : 'text-base font-semibold leading-snug text-foreground'
+  const childSectionBodyClass = isCardVariant
+    ? 'text-sm text-muted-foreground mt-2'
+    : 'text-[14px] text-muted-foreground mt-2 leading-normal'
   const ctx = useChildActionContext()
   const taskId = ctx?.subTaskId ?? ''
   const { data, updateField } = useTaskData(taskId || '__no_child__')
@@ -309,6 +315,7 @@ export function AcctChildOwnerInfoForm() {
       <section id="acct-owners" className="space-y-6 scroll-mt-16">
         <div
           className={cn(
+            'space-y-6',
             isCardVariant &&
               cn(
                 'rounded-xl p-6 space-y-8 overflow-hidden',
@@ -320,6 +327,7 @@ export function AcctChildOwnerInfoForm() {
         >
         <div
           className={cn(
+            'mb-6',
             isCardVariant &&
               cn(
                 '-mx-6 -mt-6 mb-8 px-6 py-4',
@@ -330,10 +338,10 @@ export function AcctChildOwnerInfoForm() {
               ),
           )}
         >
-          <h3 className={cn(isCardVariant ? 'text-sm font-semibold uppercase tracking-wide' : 'text-sm font-semibold uppercase tracking-wide text-muted-foreground mb-1')}>
+          <h3 className={childSectionTitleClass}>
             Owners & Participants
           </h3>
-          <p className="text-sm text-muted-foreground mt-2">
+          <p className={childSectionBodyClass}>
             {trustEntityOwnersOnly ? (
               <>
                 Add the trust legal entity for this registration. Search for an existing trust or create one if needed.
@@ -473,10 +481,10 @@ export function AcctChildOwnerInfoForm() {
               ),
           )}
         >
-          <h3 className={cn(isCardVariant ? 'text-sm font-semibold uppercase tracking-wide' : 'text-sm font-semibold uppercase tracking-wide text-muted-foreground mb-1')}>
+          <h3 className={childSectionTitleClass}>
             Beneficiaries
           </h3>
-          <p className="text-sm text-muted-foreground mt-2">
+          <p className={childSectionBodyClass}>
             Add beneficiaries from this client record, the directory, or a manual entry. Open a row to complete
             designation details.
           </p>
@@ -782,10 +790,10 @@ export function AcctChildOwnerInfoForm() {
               ),
           )}
         >
-          <h3 className={cn(isCardVariant ? 'text-sm font-semibold uppercase tracking-wide' : 'text-sm font-semibold uppercase tracking-wide text-muted-foreground mb-1')}>
+          <h3 className={childSectionTitleClass}>
             Account Information
           </h3>
-          <p className="text-sm text-muted-foreground mt-2">
+          <p className={childSectionBodyClass}>
             Define account setup details, servicing metadata, suitability profile, and additional account-level fields.
           </p>
         </div>
@@ -826,10 +834,10 @@ export function AcctChildOwnerInfoForm() {
                   ),
               )}
             >
-              <h3 className={cn(isCardVariant ? 'text-sm font-semibold uppercase tracking-wide' : 'text-sm font-semibold uppercase tracking-wide text-muted-foreground mb-1')}>
+              <h3 className={childSectionTitleClass}>
                 Investment Elections
               </h3>
-              <p className="text-sm text-muted-foreground mt-2">
+              <p className={childSectionBodyClass}>
                 Request margin, options, and related investment elections on this account. Identity and suitability stay
                 on the owners above.
               </p>
