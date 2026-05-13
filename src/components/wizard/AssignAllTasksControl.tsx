@@ -27,11 +27,11 @@ export function AssignAllTasksControl({ className }: AssignAllTasksControlProps)
   return (
     <div
       className={cn(
-        'border-t border-border px-3 py-3 shrink-0 mt-auto bg-background',
+        'w-full min-w-0 border-t border-border px-3 py-3 shrink-0 mt-auto bg-background',
         className,
       )}
     >
-      <div className="inline-flex w-fit max-w-full shrink-0 self-start">
+      <div className="ml-auto w-fit max-w-full shrink-0">
         <Popover
           open={assignAllOpen}
           onOpenChange={(open) => {
@@ -51,7 +51,7 @@ export function AssignAllTasksControl({ className }: AssignAllTasksControlProps)
             </Button>
           </PopoverTrigger>
           <PopoverContent
-            align="start"
+            align="end"
             side="top"
             sideOffset={8}
             className="w-[min(280px,calc(100vw-1.5rem))] p-1 shadow-lg"
