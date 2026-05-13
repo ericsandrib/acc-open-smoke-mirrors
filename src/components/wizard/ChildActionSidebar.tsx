@@ -236,7 +236,8 @@ function StatusActionButton({
       onClick={onClick}
       className={cn(
         'h-8 justify-center rounded-md px-2.5 text-xs font-medium active:scale-[0.99] transition-transform',
-        tone === 'primary' && 'border-foreground bg-foreground text-background hover:bg-foreground/90',
+        tone === 'primary' &&
+          'border-foreground bg-foreground text-background hover:bg-foreground/90 hover:text-background focus-visible:text-background',
         tone === 'accept' && 'border-emerald-700/80 bg-emerald-700 text-white hover:bg-emerald-800',
         tone === 'reject' && 'border-red-700/80 bg-red-700 text-white hover:bg-red-800 hover:text-white',
         tone === 'secondary' && 'border-border bg-background text-foreground hover:bg-muted',
