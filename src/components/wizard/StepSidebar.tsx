@@ -16,8 +16,7 @@ import {
 } from '@/components/wizard/openAccountsVariantContext'
 import { ProgressIcon, pickVariant } from '@/components/wizard/ProgressIcons'
 import type { LucideIcon } from 'lucide-react'
-import { ChevronDown, Users, Wallet, ListChecks } from 'lucide-react'
-import { Circle, Loader, CheckCircle2, Ban, Clock, XCircle } from 'lucide-react'
+import { ChevronDown, Users, Wallet, ListChecks, Circle, Loader, CheckCircle2, Ban, Clock, XCircle } from 'lucide-react'
 import { JourneyHeader } from '@/components/wizard/JourneyHeader'
 
 const ACTION_ICONS: Record<string, LucideIcon> = {
@@ -43,6 +42,7 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
+import { AssignAllTasksControl } from '@/components/wizard/AssignAllTasksControl'
 
 const statusColors: Record<TaskStatus, string> = {
   not_started: 'text-text-tertiary',
@@ -455,7 +455,6 @@ export function StepSidebar() {
   const [exitToOnboardingOpen, setExitToOnboardingOpen] = useState(false)
   /** v5 collapsible task sections in the pizza tracker; default expanded */
   const [v5GroupOpen, setV5GroupOpen] = useState<Record<string, boolean>>({})
-
   const displayActions = useMemo(
     () => buildDisplayActions(state, selectedVariant),
     [state, selectedVariant],
@@ -578,79 +577,110 @@ export function StepSidebar() {
     )
   }
 
+  const overallProgressPct = useMemo(() => {
+    const allDisplayTasks: DisplayTaskNode[] = displayActions.flatMap((a) =>
+      a.taskRows.flatMap((row) => (row.type === 'task' ? [row.task] : row.tasks)),
+    )
+
+    const pcts = allDisplayTasks.map((dt) => {
+      const underlyingTasks = dt.underlyingTaskIds
+        .map((id) => state.tasks.find((t) => t.id === id))
+        .filter((t): t is Task => Boolean(t))
+      const totals = underlyingTasks
+        .map((t) => getTaskFieldProgress(state, t))
+        .reduce(
+          (acc, p) => ({ filled: acc.filled + p.filled, total: acc.total + p.total }),
+          { filled: 0, total: 0 },
+        )
+      if (totals.total <= 0) return null
+      return totals.filled / totals.total
+    })
+
+    const valid = pcts.filter((p): p is number => typeof p === 'number' && Number.isFinite(p))
+    if (valid.length === 0) return 0
+    return (valid.reduce((a, b) => a + b, 0) / valid.length) * 100
+  }, [displayActions, state])
+
   return (
     <TooltipProvider delayDuration={300}>
-      <nav className={cn('w-[330px] border-r border-border overflow-y-auto bg-white')}>
+      <nav
+        className={cn(
+          'w-[330px] shrink-0 border-r border-border bg-white flex flex-col min-h-0 self-stretch h-full',
+        )}
+      >
         <JourneyHeader
           showChevron={variant !== 'v5'}
           onChevronBack={() => navigate(-1)}
           onIconClick={variant === 'v5' ? () => navigate('/onboarding') : undefined}
           iconTooltip={variant === 'v5' ? 'Onboarding' : undefined}
+          metaDateLabel={state.journeyDateLabel}
+          metaAssigneeLabel={state.assignedTo}
+          metaProgressPct={overallProgressPct}
           breadcrumbItems={
             variant === 'v5'
               ? [{ label: 'Home', onClick: () => setExitToOnboardingOpen(true) }]
               : undefined
           }
         />
-        <div className="px-1 pt-2">
-        {displayActions.map((action) => {
-          const ActionIcon = getActionIcon(action.id)
-          return (
-          <div key={action.id} className="mb-5">
-            <div className="mb-1.5 flex h-9 items-center gap-2 px-3">
-              <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-[var(--bg-tertiary)] text-muted-foreground">
-                <ActionIcon className="h-3.5 w-3.5" aria-hidden />
-              </span>
-              <h3 className="text-sm font-medium text-foreground">
-                {action.title}
-              </h3>
-            </div>
-            <ul className="space-y-1">
-              {action.taskRows.map((row) => {
-                if (row.type === 'task') {
-                  return renderTaskNavListItem(row.task, false)
-                }
-                const expanded = isV5GroupOpen(row.id)
-                return (
-                  <li key={row.id} className="space-y-1">
-                    <button
-                      type="button"
-                      onClick={() => toggleV5Group(row.id)}
-                      aria-expanded={expanded}
-                      className={cn(
-                        'flex w-full items-center justify-start rounded-lg py-2 pl-12 pr-3 text-left text-sm font-medium transition-colors hover:bg-muted/50',
-                        sidebarGroupHeaderPrimary
-                          ? 'text-foreground hover:text-foreground'
-                          : 'text-muted-foreground hover:text-muted-foreground',
-                      )}
-                    >
-                      <span className="inline-flex min-w-0 max-w-full items-center gap-1">
-                        <span className="min-w-0 truncate">{row.label}</span>
-                        <ChevronDown
+        <div className="flex-1 min-h-0 overflow-y-auto px-1 pt-2">
+          {displayActions.map((action) => {
+            const ActionIcon = getActionIcon(action.id)
+            return (
+              <div key={action.id} className="mb-5">
+                <div className="mb-1.5 flex h-9 items-center gap-2 px-3">
+                  <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-[var(--bg-tertiary)] text-muted-foreground">
+                    <ActionIcon className="h-3.5 w-3.5" aria-hidden />
+                  </span>
+                  <h3 className="text-sm font-medium text-foreground">{action.title}</h3>
+                </div>
+                <ul className="space-y-1">
+                  {action.taskRows.map((row) => {
+                    if (row.type === 'task') {
+                      return renderTaskNavListItem(row.task, false)
+                    }
+                    const expanded = isV5GroupOpen(row.id)
+                    return (
+                      <li key={row.id} className="space-y-1">
+                        <button
+                          type="button"
+                          onClick={() => toggleV5Group(row.id)}
+                          aria-expanded={expanded}
                           className={cn(
-                            'h-3.5 w-3.5 shrink-0 transition-transform',
+                            'flex w-full items-center justify-start rounded-lg py-2 pl-12 pr-3 text-left text-sm font-medium transition-colors hover:bg-muted/50',
                             sidebarGroupHeaderPrimary
-                              ? 'text-foreground/80'
-                              : 'text-muted-foreground/90',
-                            !expanded && '-rotate-90',
+                              ? 'text-foreground hover:text-foreground'
+                              : 'text-muted-foreground hover:text-muted-foreground',
                           )}
-                          aria-hidden
-                        />
-                      </span>
-                    </button>
-                    {expanded ? (
-                      <ul className="ml-12 mt-1 space-y-1 border-l border-border/70 pl-3">
-                        {row.tasks.map((t) => renderTaskNavListItem(t, true))}
-                      </ul>
-                    ) : null}
-                  </li>
-                )
-              })}
-            </ul>
-          </div>
-          )
-        })}
+                        >
+                          <span className="inline-flex min-w-0 max-w-full items-center gap-1">
+                            <span className="min-w-0 truncate">{row.label}</span>
+                            <ChevronDown
+                              className={cn(
+                                'h-3.5 w-3.5 shrink-0 transition-transform',
+                                sidebarGroupHeaderPrimary
+                                  ? 'text-foreground/80'
+                                  : 'text-muted-foreground/90',
+                                !expanded && '-rotate-90',
+                              )}
+                              aria-hidden
+                            />
+                          </span>
+                        </button>
+                        {expanded ? (
+                          <ul className="ml-12 mt-1 space-y-1 border-l border-border/70 pl-3">
+                            {row.tasks.map((t) => renderTaskNavListItem(t, true))}
+                          </ul>
+                        ) : null}
+                      </li>
+                    )
+                  })}
+                </ul>
+              </div>
+            )
+          })}
         </div>
+
+        <AssignAllTasksControl />
       </nav>
       <Dialog open={exitToOnboardingOpen} onOpenChange={setExitToOnboardingOpen}>
         <DialogContent className="max-w-md !data-[state=closed]:zoom-out-100 !data-[state=open]:zoom-in-100 !data-[state=closed]:slide-out-to-left-0 !data-[state=open]:slide-in-from-left-0 !data-[state=closed]:slide-out-to-top-[50%] !data-[state=open]:slide-in-from-top-[50%]">

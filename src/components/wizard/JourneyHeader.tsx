@@ -1,29 +1,9 @@
 import { useNavigate } from 'react-router-dom'
-import { Briefcase, ChevronLeft, User } from 'lucide-react'
+import { Briefcase, ChevronLeft } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
+import { AssigneeContactHover } from '@/components/wizard/AssigneeContactHover'
 import { useWorkflow } from '@/stores/workflowStore'
-
-function getInitials(name: string): string {
-  const parts = name.trim().split(/\s+/).filter(Boolean)
-  if (parts.length === 0) return ''
-  if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase()
-  return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase()
-}
-
-function OwnerAvatar({ name }: { name?: string }) {
-  const initials = name ? getInitials(name) : ''
-  return (
-    <span
-      className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary text-[10px] font-semibold"
-      role="img"
-      aria-label={name ? `Assigned to ${name}` : 'Unassigned'}
-      title={name ?? 'Unassigned'}
-    >
-      {initials || <User className="h-3 w-3" aria-hidden />}
-    </span>
-  )
-}
 
 /**
  * Top-of-sidebar header that establishes the active journey:
@@ -40,6 +20,9 @@ export function JourneyHeader({
   showChevron = true,
   onIconClick,
   iconTooltip,
+  metaDateLabel,
+  metaAssigneeLabel,
+  metaProgressPct,
 }: {
   backLabel?: string
   onBack?: () => void
@@ -48,11 +31,22 @@ export function JourneyHeader({
   showChevron?: boolean
   onIconClick?: () => void
   iconTooltip?: string
+  metaDateLabel?: string
+  metaAssigneeLabel?: string
+  metaProgressPct?: number
 } = {}) {
   const { state } = useWorkflow()
   const navigate = useNavigate()
   const showsBreadcrumbBack = typeof backLabel === 'string' && backLabel.trim().length > 0
   const hasBreadcrumbItems = Array.isArray(breadcrumbItems) && breadcrumbItems.length > 0
+  const dateLabel =
+    typeof metaDateLabel === 'string' && metaDateLabel.trim().length > 0
+      ? metaDateLabel.trim()
+      : state.journeyDateLabel
+  const assigneeLabel =
+    typeof metaAssigneeLabel === 'string' && metaAssigneeLabel.trim().length > 0
+      ? metaAssigneeLabel.trim()
+      : state.assignedTo
 
   return (
     <div>
@@ -150,7 +144,12 @@ export function JourneyHeader({
           </h2>
           <p className="truncate text-xs text-muted-foreground">Onboarding</p>
         </div>
-        <OwnerAvatar name={state.assignedTo} />
+        {dateLabel ? (
+          <span className="shrink-0 text-xs font-medium tabular-nums text-muted-foreground">
+            {dateLabel}
+          </span>
+        ) : null}
+        <AssigneeContactHover assigneeLabel={assigneeLabel} />
       </div>
     </div>
   )

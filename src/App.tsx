@@ -19,31 +19,33 @@ import { OpenAccountsVariantSwitcher } from '@/components/wizard/OpenAccountsVar
 export default function App() {
   return (
     <ThemeProvider>
-      <AppPasswordGate>
-        <WorkflowProvider>
-          <ServicingProvider>
-            <OpenAccountsVariantAndFocusProvider>
-              <BrowserRouter>
-                <Routes>
-                  <Route path="/" element={<DashboardPage />} />
-                  <Route path="/servicing" element={<ServicingPage />} />
-                  <Route path="/servicing/:journeyId" element={<WizardPage />} />
-                  <Route path="/wizard" element={<Navigate to="/onboarding" replace />} />
-                  <Route path="/workflow" element={<WorkflowPage />} />
-                  <Route path="/onboarding" element={<OnboardingPage />} />
-                  <Route path="/onboarding/:journeyId" element={<OnboardingJourneyDetailPage />} />
-                  <Route path="/settings" element={<SettingsPage />} />
-                  <Route path="/tests" element={<TestsIndexPage />} />
-                  <Route path="/tests/progress-indicator" element={<ProgressIndicatorTestPage />} />
-                  <Route path="*" element={<Navigate to="/" replace />} />
-                </Routes>
-              </BrowserRouter>
-              <OpenAccountsVariantSwitcher />
-            </OpenAccountsVariantAndFocusProvider>
-          </ServicingProvider>
-        </WorkflowProvider>
+      <>
+        <AppPasswordGate>
+          <WorkflowProvider>
+            <ServicingProvider>
+              <OpenAccountsVariantAndFocusProvider>
+                <BrowserRouter>
+                  <Routes>
+                    <Route path="/" element={<DashboardPage />} />
+                    <Route path="/servicing" element={<ServicingPage />} />
+                    <Route path="/servicing/:journeyId" element={<WizardPage />} />
+                    <Route path="/wizard" element={<Navigate to="/onboarding" replace />} />
+                    <Route path="/workflow" element={<WorkflowPage />} />
+                    <Route path="/onboarding" element={<OnboardingPage />} />
+                    <Route path="/onboarding/:journeyId" element={<OnboardingJourneyDetailPage />} />
+                    <Route path="/settings" element={<SettingsPage />} />
+                    <Route path="/tests" element={<TestsIndexPage />} />
+                    <Route path="/tests/progress-indicator" element={<ProgressIndicatorTestPage />} />
+                    <Route path="*" element={<Navigate to="/" replace />} />
+                  </Routes>
+                </BrowserRouter>
+                <OpenAccountsVariantSwitcher />
+              </OpenAccountsVariantAndFocusProvider>
+            </ServicingProvider>
+          </WorkflowProvider>
+        </AppPasswordGate>
         <Toaster />
-      </AppPasswordGate>
+      </>
     </ThemeProvider>
   )
 }

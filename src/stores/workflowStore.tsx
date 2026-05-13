@@ -135,6 +135,7 @@ const initialState: WorkflowState = {
     },
   },
   submittedTaskIds: [],
+  journeyDateLabel: new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
   assignedTo: 'Sarah Chen',
   v5NoAnnuityOpenAccountsPage: null,
   v6IncludeAnnuityAccounts: false,
@@ -723,6 +724,8 @@ function workflowReducer(state: WorkflowState, action: WorkflowAction): Workflow
         },
         journeyName: action.journeyName,
         journeyId: action.journeyId ?? `journey-${Date.now()}`,
+        journeyDateLabel:
+          new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
         assignedTo: assignee,
         journeyOnboardingConfig: action.journeyOnboardingConfig,
         submittedTaskIds: [],

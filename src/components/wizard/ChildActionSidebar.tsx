@@ -1,4 +1,9 @@
-import { useWorkflow, useChildActionContext, getChildReviewState } from '@/stores/workflowStore'
+import {
+  useWorkflow,
+  useChildActionContext,
+  getChildReviewState,
+  useAdvisorResubmitEligible,
+} from '@/stores/workflowStore'
 import { useNavigate } from 'react-router-dom'
 import { useState } from 'react'
 import { cn } from '@/lib/utils'
@@ -9,13 +14,17 @@ import {
   TooltipTrigger,
 } from '@/components/ui/tooltip'
 import { getSubTaskDisplayTitle } from '@/utils/childTaskRegistry'
-import { getAccountOpeningSubTaskProgress } from '@/utils/accountOpeningChildProgress'
+import {
+  getAccountOpeningChildSubmissionIssues,
+  getAccountOpeningSubTaskProgress,
+} from '@/utils/accountOpeningChildProgress'
 import type { LucideIcon } from 'lucide-react'
 import { ChevronLeft, FileText, Clock, ShieldCheck, Wallet, ArrowDownToLine, Cog, ListChecks } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { useWizardRightPanel } from '@/components/wizard/wizardRightPanelContext'
 import { getActiveStageLabel } from '@/components/wizard/ChildActionTimelineSheet'
 import { JourneyHeader } from '@/components/wizard/JourneyHeader'
+import { AssignAllTasksControl } from '@/components/wizard/AssignAllTasksControl'
 import { ProgressIcon, pickVariant } from '@/components/wizard/ProgressIcons'
 import { useOpenAccountsVariant } from '@/components/wizard/openAccountsVariantContext'
 import type { TaskStatus } from '@/types/workflow'
@@ -27,6 +36,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog'
+import { toast } from 'sonner'
 
 const CHILD_TYPE_ICONS: Record<string, LucideIcon> = {
   'account-opening': Wallet,
@@ -128,6 +138,8 @@ export function ChildActionSidebar() {
   const { setCollapsed: setRightPanelCollapsed, setActiveTab: setRightPanelTab } = useWizardRightPanel()
   const variant = useOpenAccountsVariant()
   const [exitToOnboardingOpen, setExitToOnboardingOpen] = useState(false)
+  const [resubmitOpen, setResubmitOpen] = useState(false)
+  const advisorResubmitEligible = useAdvisorResubmitEligible()
 
   if (!ctx) return null
 
@@ -152,7 +164,7 @@ export function ChildActionSidebar() {
 
   return (
     <TooltipProvider delayDuration={300}>
-      <nav className="w-[330px] border-r border-border bg-white overflow-y-auto flex flex-col">
+      <nav className="w-[330px] shrink-0 border-r border-border bg-white flex flex-col min-h-0 self-stretch h-full">
         <JourneyHeader
           showChevron={variant !== 'v5'}
           onChevronBack={() => navigate(-1)}
@@ -182,7 +194,7 @@ export function ChildActionSidebar() {
             </span>
           </div>
         )}
-        <div className="pt-2">
+        <div className="flex-1 min-h-0 overflow-y-auto pt-2">
           <div className="mb-1.5 flex h-9 items-center gap-2 px-3">
             <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-[var(--bg-tertiary)] text-muted-foreground">
               <ChildIcon className="h-3.5 w-3.5" aria-hidden />
@@ -232,12 +244,18 @@ export function ChildActionSidebar() {
 
         {(child.childType === 'account-opening' || child.childType === 'kyc') && (() => {
           const reviewState = getChildReviewState(state, child.id)
-          const stageLabel = getActiveStageLabel(child.status, child.childType, reviewState ?? undefined)
-          const description = stageLabel === 'Draft'
-            ? 'Application is in progress. Complete all sections to submit.'
-            : `Application is in ${stageLabel}. Check the activity timeline for details.`
+          const docIsNigo = reviewState?.documentReview?.status === 'nigo'
+          const stageLabel = docIsNigo
+            ? 'NIGO'
+            : getActiveStageLabel(child.status, child.childType, reviewState ?? undefined)
+          const description = docIsNigo
+            ? 'Review feedback and resubmit for document review.'
+            : stageLabel === 'Draft'
+              ? 'Application is in progress. Complete all sections to submit.'
+              : `Application is in ${stageLabel}. Check the activity timeline for details.`
+          const showResubmit = state.demoViewMode === 'advisor' && docIsNigo && advisorResubmitEligible
           return (
-            <div className="mt-auto p-2 border-t border-border">
+            <div className="shrink-0 p-2 border-t border-border">
               <div className="rounded-xl border border-border bg-card overflow-hidden">
                 <div className="p-3 flex items-center gap-3">
                   <div className="h-10 w-10 rounded-xl bg-muted flex items-center justify-center shrink-0">
@@ -248,10 +266,18 @@ export function ChildActionSidebar() {
                     <p className="text-base font-bold truncate">{stageLabel}</p>
                   </div>
                 </div>
-                <div className="border-t border-border px-4 py-2">
+                <div className="border-t border-border px-4 py-3 space-y-3">
                   <p className="text-sm text-foreground leading-snug">{description}</p>
+                  {showResubmit ? (
+                    <Button type="button" className="w-full" onClick={() => setResubmitOpen(true)}>
+                      Resubmit for Review
+                    </Button>
+                  ) : null}
                 </div>
-                <div className="border-t border-border bg-black/5 dark:bg-white/5 px-3 flex items-center" style={{ minHeight: '64px' }}>
+                <div
+                  className="border-t border-border bg-black/5 dark:bg-white/5 px-3 flex items-center"
+                  style={{ minHeight: '64px' }}
+                >
                   <button
                     type="button"
                     onClick={() => {
@@ -268,7 +294,45 @@ export function ChildActionSidebar() {
             </div>
           )
         })()}
+
+        <AssignAllTasksControl />
       </nav>
+      <Dialog open={resubmitOpen} onOpenChange={setResubmitOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Resubmit for review?</DialogTitle>
+            <DialogDescription>
+              This will resubmit the application to the Document Review Team. Advisor edits will lock until review
+              completes.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button type="button" variant="outline" onClick={() => setResubmitOpen(false)}>
+              Cancel
+            </Button>
+            <Button
+              type="button"
+              onClick={() => {
+                if (child.childType === 'account-opening') {
+                  const issues = getAccountOpeningChildSubmissionIssues(state, child.id)
+                  if (issues.length > 0) {
+                    toast.error('Cannot submit yet', {
+                      description: `Resolve ${issues.length} issue${issues.length === 1 ? '' : 's'} before resubmitting.`,
+                    })
+                    setResubmitOpen(false)
+                    return
+                  }
+                }
+                dispatch({ type: 'SUBMIT_CHILD_FOR_REVIEW' })
+                dispatch({ type: 'SET_DEMO_VIEW', mode: child.childType === 'account-opening' ? 'ho-documents' : 'advisor' })
+                setResubmitOpen(false)
+              }}
+            >
+              Resubmit for Review
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
       <Dialog open={exitToOnboardingOpen} onOpenChange={setExitToOnboardingOpen}>
         <DialogContent className="max-w-md !data-[state=closed]:zoom-out-100 !data-[state=open]:zoom-in-100 !data-[state=closed]:slide-out-to-left-0 !data-[state=open]:slide-in-from-left-0 !data-[state=closed]:slide-out-to-top-[50%] !data-[state=open]:slide-in-from-top-[50%]">
           <DialogHeader>

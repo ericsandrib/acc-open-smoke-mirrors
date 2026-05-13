@@ -208,6 +208,8 @@ export interface WorkflowState {
   taskData: Record<string, Record<string, unknown>>
   journeyName?: string
   journeyId?: string
+  /** Display date for the journey header (e.g. "Oct 8"). */
+  journeyDateLabel?: string
   assignedTo?: string
   /** Optional onboarding journey configuration from the new-journey modal. */
   journeyOnboardingConfig?: JourneyOnboardingConfig

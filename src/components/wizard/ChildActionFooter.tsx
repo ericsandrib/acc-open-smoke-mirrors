@@ -297,6 +297,14 @@ export function ChildActionFooter() {
   const hideNextInAdvisorAfterSubmit =
     isAdvisorView && child.status === 'awaiting_review' && !advisorFormsEditable
 
+  const childReviewState = getChildReviewState(state, child.id)
+  const resubmitShownInApplicationStatusCard =
+    isAdvisorView &&
+    advisorResubmitEligible &&
+    isLast &&
+    childReviewState?.documentReview?.status === 'nigo' &&
+    (child.childType === 'account-opening' || child.childType === 'kyc')
+
   if (isAdvisorView || isAmlView || isHoKycView) {
     return (
       <>
@@ -314,7 +322,7 @@ export function ChildActionFooter() {
               )}
             </div>
             <div className="flex items-center gap-3">
-            {advisorResubmitEligible && isLast ? (
+            {advisorResubmitEligible && isLast && !resubmitShownInApplicationStatusCard ? (
               <Button onClick={handleResubmit}>
                 Submit for Review
               </Button>
