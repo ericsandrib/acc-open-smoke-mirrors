@@ -123,12 +123,7 @@ export function ComposeDialog({ onClose }: ComposeDialogProps) {
     [],
   )
 
-  const canSubmit =
-    actionType === 'client-onboarding' &&
-    relationshipId !== '' &&
-    (hideActionSettings ||
-      openMultipleAccounts === 'yes' ||
-      openMultipleAccounts === 'no')
+  const canSubmit = actionType === 'client-onboarding' && relationshipId !== ''
 
   function handleSnooze() {
     toast.message('Snooze scheduled (demo)', {
@@ -309,50 +304,6 @@ export function ComposeDialog({ onClose }: ComposeDialogProps) {
               </div>
             </section>
 
-            {/* Settings vary by action type — v6: decision lives in the wizard, not here */}
-            {!hideActionSettings ? (
-            <section className="space-y-4">
-              <div>
-                <h3 className="text-sm font-semibold text-foreground">Action settings</h3>
-                <p className="mt-0.5 text-xs text-muted-foreground">
-                  Fields here depend on the action type. Different actions may ask for routing, product details, or other
-                  options.
-                </p>
-              </div>
-              {actionType === 'client-onboarding' && (
-                <div className="space-y-4 rounded-xl border border-border bg-background/80 p-4 shadow-sm sm:p-5">
-                  <div className="space-y-2">
-                    <Label htmlFor="compose-multi-account">
-                      Do you plan to open more than one account for this client?
-                      <RequiredMark />
-                    </Label>
-                    <Select
-                      value={openMultipleAccounts}
-                      onValueChange={(v) => setOpenMultipleAccounts(v as 'yes' | 'no' | '')}
-                    >
-                      <SelectTrigger id="compose-multi-account">
-                        <SelectValue placeholder="Select…" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="yes">Yes</SelectItem>
-                        <SelectItem value="no">No</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                </div>
-              )}
-              {actionType === '' && (
-                <div className="rounded-xl border border-dashed border-border bg-muted/20 px-4 py-8 text-center text-sm text-muted-foreground">
-                  Select an action type to see which settings apply to this journey.
-                </div>
-              )}
-              {actionType !== '' && actionType !== 'client-onboarding' && (
-                <div className="rounded-xl border border-dashed border-border bg-muted/20 px-4 py-8 text-center text-sm text-muted-foreground">
-                  No additional settings for this action type in the demo yet.
-                </div>
-              )}
-            </section>
-            ) : null}
           </div>
         </div>
 

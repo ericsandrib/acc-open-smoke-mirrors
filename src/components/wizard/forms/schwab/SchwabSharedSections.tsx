@@ -14,7 +14,6 @@ import {
   PURPOSE_OF_ACCOUNT_OPTIONS,
 } from './schwabPrimitives'
 import type { useSchwabFormState } from './useSchwabFormState'
-import { Sparkles, FileText } from 'lucide-react'
 
 type FormApi = ReturnType<typeof useSchwabFormState>
 
@@ -116,19 +115,10 @@ export function AccountHolderSection({
   const f = (k: string) => `${prefix}${k}`
   const ownerName =
     ownerSlot != null ? form.selectedOwnerDisplayNames[ownerSlot] : undefined
-  const docFileName = ownerSlot === 0 ? form.idSourceFileName : null
 
   return (
     <SchwabSection number={number} title={label}>
-      {ownerName ? (
-        <div className="flex items-start gap-2 rounded-md border border-emerald-200 bg-emerald-50 dark:border-emerald-900/60 dark:bg-emerald-950/40 px-3 py-2 text-xs text-emerald-900 dark:text-emerald-100">
-          <Sparkles className="h-3.5 w-3.5 mt-0.5 shrink-0" aria-hidden />
-          <div>
-            Pre-filled from <span className="font-medium">{ownerName}</span> in Owners &amp; Participants
-            above. Fields remain editable for this application.
-          </div>
-        </div>
-      ) : ownerSlot != null ? (
+      {!ownerName && ownerSlot != null ? (
         <div className="rounded-md border border-dashed border-border bg-muted/30 px-3 py-2 text-xs text-muted-foreground">
           No owner selected for this slot — pick a household member above to auto-fill these fields.
         </div>
@@ -315,15 +305,6 @@ export function AccountHolderSection({
       <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground pt-2">
         Government-issued identification
       </p>
-      {docFileName ? (
-        <div className="flex items-start gap-2 rounded-md border border-emerald-200 bg-emerald-50 dark:border-emerald-900/60 dark:bg-emerald-950/40 px-3 py-2 text-xs text-emerald-900 dark:text-emerald-100">
-          <FileText className="h-3.5 w-3.5 mt-0.5 shrink-0" aria-hidden />
-          <div>
-            Pre-filled from <span className="font-mono font-medium">{docFileName}</span> uploaded in
-            "1. Gather documents". Confirm or override below.
-          </div>
-        </div>
-      ) : null}
       <SchwabRadioGroup
         label="ID type"
         options={ID_TYPE_OPTIONS}
