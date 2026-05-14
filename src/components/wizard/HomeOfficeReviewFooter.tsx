@@ -61,6 +61,10 @@ export function HomeOfficeReviewFooter() {
       )
     }
 
+    if (amlBlocked) {
+      return null
+    }
+
     return (
       <>
         <footer className="border-t border-border bg-background px-6 py-3 min-h-14 flex items-center justify-center shrink-0 box-border">
@@ -77,7 +81,6 @@ export function HomeOfficeReviewFooter() {
             <Button
               size="sm"
               className="bg-green-600 hover:bg-green-700 text-white"
-              disabled={amlBlocked}
               onClick={() => setShowApproveConfirm(true)}
             >
               <CheckCircle2 className="h-4 w-4" />

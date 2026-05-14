@@ -75,7 +75,7 @@ export function JourneyHeader({
 
   return (
     <div>
-      <div className="flex items-center px-3 pt-6 pb-6">
+      <div className="flex items-center px-2.5 pt-5 pb-5">
         <Button
           type="button"
           variant="link"
@@ -86,7 +86,7 @@ export function JourneyHeader({
         </Button>
       </div>
 
-      <div className="flex h-10 items-center justify-between px-3">
+      <div className="flex h-10 items-center justify-between px-2.5">
         {onIconClick ? (
           <Tooltip>
             <TooltipTrigger asChild>
@@ -115,7 +115,7 @@ export function JourneyHeader({
         )}
       </div>
 
-      <div className="flex min-h-[3.25rem] items-center gap-2 border-b border-border px-3 py-2">
+      <div className="flex min-h-[3.25rem] items-center gap-2 border-b border-border px-2.5 py-2">
         <div className="flex-1 min-w-0">
           <h2 className="truncate text-sm font-semibold text-foreground">
             {state.journeyName ?? 'Client Onboarding'}

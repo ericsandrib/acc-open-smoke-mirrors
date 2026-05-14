@@ -30,7 +30,7 @@ import { ChildHoPrincipalViewContent } from './ChildHoPrincipalViewContent'
 import { ChildHoKycViewContent } from './ChildHoKycViewContent'
 import { ChildAmlReviewContent } from './ChildAmlReviewContent'
 import React, { useState, useRef, useEffect, type ReactNode } from 'react'
-import { Eye, ShieldCheck, ShieldAlert, Building, PanelRight } from 'lucide-react'
+import { PanelRight } from 'lucide-react'
 import { VerticalNav } from '@/components/navigation/vertical-nav'
 import { AccessoryBar } from '@/components/accessory-bar'
 import { useWizardRightPanel } from './wizardRightPanelContext'
@@ -527,9 +527,6 @@ function WizardLayoutInner() {
   const isAnnuityAccountOpeningChild =
     activeChild?.childType === 'account-opening' &&
     activeParentTask?.formKey === OPEN_ACCOUNTS_WITH_ANNUITY_FORM_KEY
-  const childSupportsReviewerDemoTabs =
-    activeChild?.childType === 'kyc' ||
-    (activeChild?.childType === 'account-opening' && !isAnnuityAccountOpeningChild)
 
   const isAdvisorView = viewMode === 'advisor'
   const isHoDocView = viewMode === 'ho-documents'
@@ -542,8 +539,6 @@ function WizardLayoutInner() {
     isHomeOfficeView &&
     (activeChild?.childType !== 'account-opening' || childInReviewerPipeline)
 
-  const showViewToggle =
-    inChildAction && childSupportsReviewerDemoTabs && childInReviewerPipeline
   const getTaskCompletionPct = (taskId: string, formKey: string): number => {
     if (formKey === 'related-parties') {
       const members = state.relatedParties.filter(
@@ -691,85 +686,6 @@ function WizardLayoutInner() {
       <WizardRightPanelProvider>
       <SupportingDocumentPreviewProvider>
       <div className="flex min-h-0 flex-col flex-1 min-w-0">
-        {showViewToggle && (
-          <header className="border-b border-border px-8 py-2 flex items-center justify-end shrink-0">
-            <div className="flex items-center gap-1 rounded-lg border border-border p-0.5">
-              <button
-                type="button"
-                onClick={() => dispatch({ type: 'SET_DEMO_VIEW', mode: 'advisor' })}
-                className={cn(
-                  'flex items-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-medium transition-colors',
-                  isAdvisorView
-                    ? 'bg-primary text-primary-foreground shadow-sm'
-                    : 'text-muted-foreground hover:text-foreground hover:bg-muted/50',
-                )}
-              >
-                <Eye className="h-3.5 w-3.5" />
-                Advisor
-              </button>
-
-              {isKycChild ? (
-                <>
-                  <button
-                    type="button"
-                    onClick={() => dispatch({ type: 'SET_DEMO_VIEW', mode: 'aml' })}
-                    className={cn(
-                      'flex items-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-medium transition-colors',
-                      isAmlView
-                        ? 'bg-primary text-primary-foreground shadow-sm'
-                        : 'text-muted-foreground hover:text-foreground hover:bg-muted/50',
-                    )}
-                  >
-                    <ShieldAlert className="h-3.5 w-3.5" />
-                    AML Team
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => dispatch({ type: 'SET_DEMO_VIEW', mode: 'ho-kyc' })}
-                    className={cn(
-                      'flex items-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-medium transition-colors',
-                      isHoKycView
-                        ? 'bg-primary text-primary-foreground shadow-sm'
-                        : 'text-muted-foreground hover:text-foreground hover:bg-muted/50',
-                    )}
-                  >
-                    <Building className="h-3.5 w-3.5" />
-                    Document Review
-                  </button>
-                </>
-              ) : (
-                <>
-                  <button
-                    type="button"
-                    onClick={() => dispatch({ type: 'SET_DEMO_VIEW', mode: 'ho-documents' })}
-                    className={cn(
-                      'flex items-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-medium transition-colors',
-                      isHoDocView
-                        ? 'bg-primary text-primary-foreground shadow-sm'
-                        : 'text-muted-foreground hover:text-foreground hover:bg-muted/50',
-                    )}
-                  >
-                    <Building className="h-3.5 w-3.5" />
-                    Document Review
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => dispatch({ type: 'SET_DEMO_VIEW', mode: 'ho-principal' })}
-                    className={cn(
-                      'flex items-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-medium transition-colors',
-                      isHoPrincipalView
-                        ? 'bg-primary text-primary-foreground shadow-sm'
-                        : 'text-muted-foreground hover:text-foreground hover:bg-muted/50',
-                    )}
-                  >
-                    <ShieldCheck className="h-3.5 w-3.5" />
-                    Principal Review
-                  </button>
-                </>
-              )}
-            </div>
-          </header>
-        )}
       <div className="flex flex-1 overflow-hidden">
           {inChildAction ? (
             isAmlView && isKycChild ? (

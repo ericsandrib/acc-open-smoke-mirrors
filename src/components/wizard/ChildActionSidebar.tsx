@@ -189,11 +189,11 @@ function SubTaskProgressIndicator({
     <Tooltip>
       <TooltipTrigger asChild>
         <span
-          className="shrink-0 inline-flex items-center justify-center h-4 w-4"
+          className="shrink-0 inline-flex items-center justify-center h-3.5 w-3.5 text-muted-foreground/85"
           role="img"
           aria-label={tooltipText}
         >
-          <ProgressIcon variant={variant} />
+          <ProgressIcon variant={variant} className="h-3.5 w-3.5" />
           <span className="sr-only">{tooltipText}</span>
         </span>
       </TooltipTrigger>
@@ -501,25 +501,25 @@ function ChildReviewStatusActions() {
     }
 
     if (!terminal) {
-      actions = (
-        <StatusActionGroup>
-          {!amlBlocked ? (
+      if (amlBlocked) {
+        actions = null
+      } else {
+        actions = (
+          <StatusActionGroup>
             <StatusActionButton tone="accept" className="w-full" onClick={() => setDialog('ho-kyc-approve')}>
               Approve
             </StatusActionButton>
-          ) : null}
-          <SecondaryActionRow>
-            {!amlBlocked ? (
+            <SecondaryActionRow>
               <StatusActionButton tone="reject" className="w-full" onClick={() => setDialog('ho-kyc-reject')}>
                 Reject
               </StatusActionButton>
-            ) : null}
-            <StatusActionButton tone="secondary" className="w-full" onClick={() => setDialog('ho-kyc-request')}>
-              Request Information
-            </StatusActionButton>
-          </SecondaryActionRow>
-        </StatusActionGroup>
-      )
+              <StatusActionButton tone="secondary" className="w-full" onClick={() => setDialog('ho-kyc-request')}>
+                Request Information
+              </StatusActionButton>
+            </SecondaryActionRow>
+          </StatusActionGroup>
+        )
+      }
     }
   } else if (mode === 'ho-documents') {
     const amlEscalated = amlReview?.status === 'escalated'
@@ -531,25 +531,25 @@ function ChildReviewStatusActions() {
     }
 
     if (!terminal) {
-      actions = (
-        <StatusActionGroup>
-          {!amlBlocked ? (
+      if (amlBlocked) {
+        actions = null
+      } else {
+        actions = (
+          <StatusActionGroup>
             <StatusActionButton tone="accept" className="w-full" onClick={() => setDialog('doc-accept')}>
               Accept
             </StatusActionButton>
-          ) : null}
-          <SecondaryActionRow>
-            {!amlBlocked ? (
+            <SecondaryActionRow>
               <StatusActionButton tone="reject" className="w-full" onClick={() => setShowNigoModal('document')}>
                 Reject
               </StatusActionButton>
-            ) : null}
-            <StatusActionButton tone="secondary" className="w-full" onClick={() => setDialog('doc-request')}>
-              Request Information
-            </StatusActionButton>
-          </SecondaryActionRow>
-        </StatusActionGroup>
-      )
+              <StatusActionButton tone="secondary" className="w-full" onClick={() => setDialog('doc-request')}>
+                Request Information
+              </StatusActionButton>
+            </SecondaryActionRow>
+          </StatusActionGroup>
+        )
+      }
     }
   } else if (mode === 'ho-principal') {
     const docIgo = docReview?.status === 'igo'
@@ -973,22 +973,22 @@ export function ChildActionSidebar() {
           metaAssigneeLabel={state.assignedTo}
           metaProgressPct={journeyProgressPct}
         />
-        <div className="flex-1 min-h-0 overflow-y-auto px-1 pt-2">
-          <div className="flex gap-2 px-3 mb-5">
+        <div className="flex-1 min-h-0 overflow-y-auto pl-1 pr-2 pt-2">
+          <div className="mb-4 flex items-start gap-2.5 px-2.5">
             {/* Match StepSidebar spine: line z-0, opaque icon z-10, flex-1 filler; keep this column above the task column if layers overlap at the gutter. */}
             <div className="relative z-20 flex w-7 shrink-0 flex-col items-center self-stretch">
               <span
                 aria-hidden
                 className="pointer-events-none absolute bottom-0 left-1/2 top-0 z-0 w-px -translate-x-1/2 bg-sidebar-border"
               />
-              <span className="relative z-10 flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-muted text-muted-foreground">
+              <span className="relative z-10 mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-muted text-muted-foreground">
                 <ChildIcon className="h-3.5 w-3.5" aria-hidden />
               </span>
               <div className="min-h-0 w-full flex-1 shrink" aria-hidden />
             </div>
             <div className="min-w-0 flex-1">
-              <div className="mb-1.5 flex h-9 min-h-9 items-center">
-                <h2 className="text-sm font-semibold text-foreground truncate">{child.name}</h2>
+              <div className="mb-1.5 flex min-h-9 items-center">
+                <h2 className="truncate text-sm font-semibold leading-snug text-foreground">{child.name}</h2>
               </div>
 
               <ul className="space-y-1">
@@ -1001,7 +1001,7 @@ export function ChildActionSidebar() {
                         onClick={() => dispatch({ type: 'SET_CHILD_SUB_TASK', index: idx })}
                         aria-current={idx === subTaskIndex ? 'page' : undefined}
                         className={cn(
-                          'w-full text-left pl-4 pr-3 py-2.5 rounded-lg text-sm font-medium flex items-center justify-between gap-2 transition-colors',
+                          'flex w-full min-w-0 items-center gap-1.5 rounded-lg py-2.5 pl-2 pr-1.5 text-left text-sm font-medium transition-colors',
                           idx === subTaskIndex
                             ? 'bg-sidebar-accent text-sidebar-accent-foreground'
                             : 'text-sidebar-foreground hover:bg-sidebar-accent/70 hover:text-sidebar-accent-foreground',
@@ -1009,22 +1009,26 @@ export function ChildActionSidebar() {
                       >
                         <span
                           className={cn(
-                            'flex items-center gap-2 truncate min-w-0',
+                            'flex min-w-0 flex-1 items-center gap-1.5',
                             idx === subTaskIndex ? 'font-semibold' : '',
                           )}
                         >
                           {showSubTaskNumbers && (
-                            <span className="text-[11px] text-muted-foreground w-4 shrink-0">
+                            <span className="w-4 shrink-0 pt-px text-right text-[11px] tabular-nums text-muted-foreground">
                               {idx + 1}.
                             </span>
                           )}
-                          {getSubTaskDisplayTitle(child.childType, subTask, viewMode)}
+                          <span className="min-w-0 flex-1 truncate text-left leading-snug">
+                            {getSubTaskDisplayTitle(child.childType, subTask, viewMode)}
+                          </span>
                         </span>
-                        <SubTaskProgressIndicator
-                          subTaskId={subTaskId}
-                          accountOpeningChildId={child.childType === 'account-opening' ? child.id : undefined}
-                          subTaskSuffix={child.childType === 'account-opening' ? subTask.suffix : undefined}
-                        />
+                        <span className="flex shrink-0 items-center">
+                          <SubTaskProgressIndicator
+                            subTaskId={subTaskId}
+                            accountOpeningChildId={child.childType === 'account-opening' ? child.id : undefined}
+                            subTaskSuffix={child.childType === 'account-opening' ? subTask.suffix : undefined}
+                          />
+                        </span>
                       </button>
                     </li>
                   )

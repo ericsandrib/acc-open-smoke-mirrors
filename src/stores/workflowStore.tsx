@@ -664,7 +664,6 @@ function workflowReducer(state: WorkflowState, action: WorkflowAction): Workflow
 
       const collectDataAction = baseActions.find((a) => a.id === 'collect-client-data')!
 
-      const multipleAccounts = action.journeyOnboardingConfig?.openMultipleAccounts === true
       const hasAnnuity = action.journeyOnboardingConfig?.openAnnuityAccount === true
 
       const mkFresh = (t: Task): Task => ({
@@ -683,8 +682,10 @@ function workflowReducer(state: WorkflowState, action: WorkflowAction): Workflow
       const collect = baseTasks.filter((t) => t.actionId === 'collect-client-data').map(mkFresh)
       const oaSeed = baseTasks.find((t) => t.id === 'open-accounts')!
 
-      if (multipleAccounts && hasAnnuity) {
+      if (hasAnnuity) {
         // Both paths under one Open Accounts action: with-annuity first, then without.
+        // Always create both tasks when annuity is enabled so v5/v6 sidebar split nav
+        // (Account Opening + Account Opening + Annuity Order) can resolve `isSplit`.
         actionsForState = [collectDataAction, { id: 'account-opening', title: 'Open Accounts', order: 2 }]
         const openWith: Task = {
           id: 'open-accounts-annuity',
@@ -700,22 +701,6 @@ function workflowReducer(state: WorkflowState, action: WorkflowAction): Workflow
         }
         const openNo: Task = { ...mkFresh(oaSeed), actionId: 'account-opening', order: 2 }
         tasksForState = [...collect, openWith, openNo]
-        extraTaskData = { 'open-accounts-annuity': { additionalInstructions: seedOpenAccountsAdditionalInstructions } }
-      } else if (!multipleAccounts && hasAnnuity) {
-        actionsForState = [collectDataAction, { id: 'account-opening', title: 'Open Accounts', order: 2 }]
-        const openAnnuity: Task = {
-          id: 'open-accounts-annuity',
-          title: 'Open Accounts',
-          actionId: 'account-opening',
-          status: 'in_progress' as const,
-          assignedTo: assignee,
-          formKey: 'open-accounts-with-annuity',
-          order: 1,
-          unread: true,
-          edited: false,
-          children: [],
-        }
-        tasksForState = [...collect, openAnnuity]
         extraTaskData = { 'open-accounts-annuity': { additionalInstructions: seedOpenAccountsAdditionalInstructions } }
       } else {
         // Multiple accounts, no annuity: standard flow

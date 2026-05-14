@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
-import { GripVertical, Eye, Glasses } from 'lucide-react'
+import { Building, Eye, GripVertical, ShieldAlert, ShieldCheck } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import type { WorkflowState } from '@/types/workflow'
 import { useWorkflow } from '@/stores/workflowStore'
 import {
   DropdownMenu,
@@ -14,6 +15,8 @@ const STORAGE_KEY = 'demo-advisor-reviewer-perspective-card-pos'
 type Position = { right: number; bottom: number }
 
 const DEFAULT_POSITION: Position = { right: 24, bottom: 112 }
+
+type DemoMode = NonNullable<WorkflowState['demoViewMode']>
 
 function readPersistedPosition(): Position {
   if (typeof window === 'undefined') return DEFAULT_POSITION
@@ -30,17 +33,39 @@ function readPersistedPosition(): Position {
   return DEFAULT_POSITION
 }
 
-function defaultReviewerMode(
+function documentReviewDemoMode(
   inChildAction: boolean,
   childType: string | undefined,
-): 'aml' | 'ho-documents' {
-  if (inChildAction && childType === 'kyc') return 'aml'
+): 'ho-documents' | 'ho-kyc' {
+  if (inChildAction && childType === 'kyc') return 'ho-kyc'
   return 'ho-documents'
 }
 
+function currentPerspectiveLabel(mode: DemoMode | undefined): string {
+  const m = mode ?? 'advisor'
+  if (m === 'advisor') return 'Advisor View'
+  if (m === 'aml') return 'AML Team View'
+  if (m === 'ho-principal') return 'Principal Review Team View'
+  return 'Document Review Team View'
+}
+
+function isDocumentReviewMode(mode: DemoMode | undefined): boolean {
+  const m = mode ?? 'advisor'
+  return m === 'ho-documents' || m === 'ho-kyc'
+}
+
+function ModeGlyph({ mode }: { mode: DemoMode | undefined }) {
+  const m = mode ?? 'advisor'
+  const cls = 'h-3.5 w-3.5 shrink-0 text-muted-foreground'
+  if (m === 'advisor') return <Eye className={cls} aria-hidden />
+  if (m === 'aml') return <ShieldAlert className={cls} aria-hidden />
+  if (m === 'ho-principal') return <ShieldCheck className={cls} aria-hidden />
+  return <Building className={cls} aria-hidden />
+}
+
 /**
- * Demo-only: draggable card to switch between advisor and reviewer demo perspectives
- * (journey surface and child drill-in). Does not change production auth.
+ * Demo-only: draggable control to switch advisor vs Home Office / AML demo workspaces.
+ * Does not change production auth.
  */
 export function AdvisorReviewerPerspectiveCard() {
   const { state, dispatch } = useWorkflow()
@@ -52,10 +77,13 @@ export function AdvisorReviewerPerspectiveCard() {
   const activeChild = inChildAction
     ? state.tasks.flatMap((t) => t.children ?? []).find((c) => c.id === state.activeChildActionId)
     : null
+  const childType = activeChild?.childType
 
-  const mode = state.demoViewMode ?? 'advisor'
-  const isAdvisor = mode === 'advisor'
-  const reviewerDefault = defaultReviewerMode(inChildAction, activeChild?.childType)
+  const mode = (state.demoViewMode ?? 'advisor') as DemoMode
+  const label = currentPerspectiveLabel(mode)
+
+  const amlAvailable = inChildAction && childType === 'kyc'
+  const principalUnavailable = inChildAction && childType === 'kyc'
 
   useEffect(() => {
     if (typeof window === 'undefined') return
@@ -125,7 +153,7 @@ export function AdvisorReviewerPerspectiveCard() {
         'select-none',
       )}
       role="region"
-      aria-label="Demo perspective: advisor or reviewer"
+      aria-label="Demo: switch advisor or reviewer workspace"
     >
       <button
         type="button"
@@ -143,36 +171,56 @@ export function AdvisorReviewerPerspectiveCard() {
         <DropdownMenuTrigger asChild>
           <button
             type="button"
-            className="flex items-center gap-2 rounded-full px-2.5 py-1 text-xs font-medium text-foreground hover:bg-muted/70 transition-colors"
+            className="flex max-w-[min(100vw-6rem,16rem)] items-center gap-2 rounded-full px-2.5 py-1 text-xs font-medium text-foreground hover:bg-muted/70 transition-colors"
           >
-            {isAdvisor ? (
-              <Eye className="h-3.5 w-3.5 shrink-0 text-muted-foreground" aria-hidden />
-            ) : (
-              <Glasses className="h-3.5 w-3.5 shrink-0 text-muted-foreground" aria-hidden />
-            )}
-            <span className="font-semibold">Demo:</span>
-            <span className="truncate max-w-[11rem]">{isAdvisor ? 'Advisor View' : 'Reviewer View'}</span>
+            <ModeGlyph mode={mode} />
+            <span className="font-semibold shrink-0">Demo:</span>
+            <span className="truncate text-left">{label}</span>
           </button>
         </DropdownMenuTrigger>
         <DropdownMenuContent
           align="end"
           side="top"
           sideOffset={8}
-          className="z-[200] min-w-[14rem] rounded-lg border border-border bg-background p-1 shadow-lg"
+          className="z-[200] min-w-[17rem] rounded-lg border border-border bg-background p-1 shadow-lg"
         >
           <DropdownMenuItem
             onSelect={() => dispatch({ type: 'SET_DEMO_VIEW', mode: 'advisor' })}
-            className={cn('flex items-center gap-2 text-sm', isAdvisor && 'bg-accent/70')}
+            className={cn('flex items-center gap-2 text-sm', mode === 'advisor' && 'bg-accent/70')}
           >
             <Eye className="h-4 w-4 shrink-0 text-muted-foreground" aria-hidden />
             Advisor View
           </DropdownMenuItem>
           <DropdownMenuItem
-            onSelect={() => dispatch({ type: 'SET_DEMO_VIEW', mode: reviewerDefault })}
-            className={cn('flex items-center gap-2 text-sm', !isAdvisor && 'bg-accent/70')}
+            onSelect={() =>
+              dispatch({ type: 'SET_DEMO_VIEW', mode: documentReviewDemoMode(inChildAction, childType) })
+            }
+            className={cn('flex items-center gap-2 text-sm', isDocumentReviewMode(mode) && 'bg-accent/70')}
           >
-            <Glasses className="h-4 w-4 shrink-0 text-muted-foreground" aria-hidden />
-            Reviewer View
+            <Building className="h-4 w-4 shrink-0 text-muted-foreground" aria-hidden />
+            Document Review Team View
+          </DropdownMenuItem>
+          <DropdownMenuItem
+            disabled={principalUnavailable}
+            title={
+              principalUnavailable
+                ? 'Principal review applies to account opening in this demo.'
+                : undefined
+            }
+            onSelect={() => dispatch({ type: 'SET_DEMO_VIEW', mode: 'ho-principal' })}
+            className={cn('flex items-center gap-2 text-sm', mode === 'ho-principal' && 'bg-accent/70')}
+          >
+            <ShieldCheck className="h-4 w-4 shrink-0 text-muted-foreground" aria-hidden />
+            Principal Review Team View
+          </DropdownMenuItem>
+          <DropdownMenuItem
+            disabled={!amlAvailable}
+            title={!amlAvailable ? 'Open a KYC subject in review to use AML Team view.' : undefined}
+            onSelect={() => dispatch({ type: 'SET_DEMO_VIEW', mode: 'aml' })}
+            className={cn('flex items-center gap-2 text-sm', mode === 'aml' && 'bg-accent/70')}
+          >
+            <ShieldAlert className="h-4 w-4 shrink-0 text-muted-foreground" aria-hidden />
+            AML Team View
           </DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>

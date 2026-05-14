@@ -187,11 +187,11 @@ function TaskProgressIndicator({
     <Tooltip>
       <TooltipTrigger asChild>
         <span
-          className="shrink-0 inline-flex items-center justify-center h-4 w-4"
+          className="shrink-0 inline-flex items-center justify-center h-3.5 w-3.5 text-muted-foreground/85"
           role="img"
           aria-label={tooltipText}
         >
-          <ProgressIcon variant={variant} />
+          <ProgressIcon variant={variant} className="h-3.5 w-3.5" />
           <span className="sr-only">{tooltipText}</span>
         </span>
       </TooltipTrigger>
@@ -640,13 +640,20 @@ export function StepSidebar() {
           }}
           aria-current={isActiveTask ? 'page' : undefined}
           className={cn(
-            'w-full text-left px-3 py-2.5 rounded-lg text-sm font-medium flex items-center justify-between gap-2 transition-colors',
+            // Shared row geometry: same horizontal padding for active/inactive so the progress column
+            // stays on one vertical axis; active state only changes surface color/weight.
+            'grid w-full min-w-0 grid-cols-[minmax(0,1fr)_auto] items-center gap-1.5 rounded-lg py-2.5 pl-2 pr-1.5 text-left text-sm font-medium transition-colors',
             isActiveTask
               ? 'bg-sidebar-accent text-sidebar-accent-foreground'
               : 'text-sidebar-foreground hover:bg-sidebar-accent/70 hover:text-sidebar-accent-foreground',
           )}
         >
-          <span className={cn('truncate min-w-0', isActiveTask ? 'font-semibold' : '')}>
+          <span
+            className={cn(
+              'min-w-0 truncate text-left leading-snug',
+              isActiveTask ? 'font-semibold' : '',
+            )}
+          >
             {getTaskNavLabel(displayTask.label)}
           </span>
           <TaskProgressIndicator
@@ -680,13 +687,13 @@ export function StepSidebar() {
           metaAssigneeLabel={state.assignedTo}
           metaProgressPct={overallProgressPct}
         />
-        <div className="flex-1 min-h-0 overflow-y-auto px-1 pt-2">
+        <div className="flex-1 min-h-0 overflow-y-auto pl-1 pr-2 pt-2">
           {displayActions.map((action, actionIndex) => {
             const ActionIcon = getActionIcon(action.id)
             return (
               <div
                 key={action.id}
-                className="flex gap-2 px-3 mb-5"
+                className="mb-4 flex items-start gap-2.5 px-2.5"
               >
                 {/* One continuous spine per column (top→bottom); icon sits on top with opaque fill so the line reads as unbroken between actions. */}
                 <div className="relative flex w-7 shrink-0 flex-col items-center self-stretch">
@@ -697,14 +704,14 @@ export function StepSidebar() {
                       actionIndex < displayActions.length - 1 ? 'bottom-[-1.25rem]' : 'bottom-0',
                     )}
                   />
-                  <span className="relative z-10 flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-muted text-muted-foreground">
+                  <span className="relative z-10 mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-muted text-muted-foreground">
                     <ActionIcon className="h-3.5 w-3.5" aria-hidden />
                   </span>
                   <div className="min-h-0 w-full flex-1 shrink" aria-hidden />
                 </div>
                 <div className="relative z-[1] min-w-0 flex-1">
-                  <div className="mb-1.5 flex h-9 min-h-9 items-center">
-                    <h3 className="text-sm font-medium text-foreground">{action.title}</h3>
+                  <div className="mb-1.5 flex min-h-9 items-center">
+                    <h3 className="truncate text-sm font-medium leading-snug text-foreground">{action.title}</h3>
                   </div>
                   <ul className="space-y-1">
                       {action.taskRows.map((row) => {
@@ -719,14 +726,14 @@ export function StepSidebar() {
                               onClick={() => toggleV5Group(row.id)}
                               aria-expanded={expanded}
                               className={cn(
-                                'flex w-full items-center justify-start rounded-lg py-2.5 pl-3 pr-3 text-left text-sm font-medium transition-colors hover:bg-muted/50',
+                                'flex min-h-9 w-full items-center justify-start rounded-lg px-2.5 py-2 text-left text-sm font-medium transition-colors hover:bg-muted/50',
                                 sidebarGroupHeaderPrimary
                                   ? 'text-foreground hover:text-foreground'
                                   : 'text-muted-foreground hover:text-muted-foreground',
                               )}
                             >
                               <span className="inline-flex min-w-0 max-w-full items-center gap-1">
-                                <span className="min-w-0 truncate">{row.label}</span>
+                                <span className="min-w-0 truncate leading-snug">{row.label}</span>
                                 <ChevronDown
                                   className={cn(
                                     'h-3.5 w-3.5 shrink-0 transition-transform',
@@ -740,7 +747,7 @@ export function StepSidebar() {
                               </span>
                             </button>
                             {expanded ? (
-                              <ul className="mt-1 space-y-1 ml-3">
+                              <ul className="ml-4 mt-1 space-y-1">
                                 {row.tasks.map((t) => renderTaskNavListItem(t))}
                               </ul>
                             ) : null}
