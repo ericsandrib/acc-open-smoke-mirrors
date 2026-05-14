@@ -700,7 +700,7 @@ function WizardLayoutInner() {
                       {showKycIntakeSubTask ? <ChildActionContent /> : <ChildAmlReviewContent />}
                       <ChildActionFooter />
                     </div>
-                    {variant !== 'v5' &&
+                    {wizardOpenAccountsVariantRaw !== 'v5' &&
                       childSections.length > 0 &&
                       showKycDocumentsSubTask && (
                       <TaskSectionPanel
@@ -722,7 +722,7 @@ function WizardLayoutInner() {
                       {showHoKycClientInfoReviewerShell ? <ChildHoKycViewContent /> : <ChildActionContent />}
                       <ChildActionFooter />
                     </div>
-                    {variant !== 'v5' &&
+                    {wizardOpenAccountsVariantRaw !== 'v5' &&
                       childSections.length > 0 &&
                       showKycDocumentsSubTask && (
                       <TaskSectionPanel
@@ -745,7 +745,7 @@ function WizardLayoutInner() {
                         <ChildActionContent />
                         <ChildActionFooter />
                       </div>
-                      {variant !== 'v5' &&
+                      {wizardOpenAccountsVariantRaw !== 'v5' &&
                         childSections.length > 0 && (
                         <TaskSectionPanel
                           sections={childSections}
@@ -781,7 +781,7 @@ function WizardLayoutInner() {
                       <ChildActionContent />
                       <ChildActionFooter />
                     </div>
-                    {variant !== 'v5' &&
+                    {wizardOpenAccountsVariantRaw !== 'v5' &&
                       childSections.length > 0 && (
                       <TaskSectionPanel
                         sections={childSections}
@@ -810,7 +810,7 @@ function WizardLayoutInner() {
                       <TaskContent />
                       <WizardFooter />
                     </div>
-                    {variant !== 'v5' && sections.length > 0 ? (
+                    {wizardOpenAccountsVariantRaw !== 'v5' && sections.length > 0 ? (
                       (() => {
                         const groups = toSectionGroups(sections)
                         return groups ? (

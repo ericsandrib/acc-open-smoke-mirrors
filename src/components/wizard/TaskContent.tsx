@@ -180,7 +180,7 @@ export function TaskContent() {
   const FormComponent = formKey ? formComponents[formKey] : null
   const hasExplicitSections = Boolean(formKey && taskSections[formKey]?.length)
   const isV5NoAnnuityPagedMain =
-    variant === 'v5' &&
+    selectedVariant === 'v5' &&
     activeTask?.formKey === OPEN_ACCOUNTS_FORM_KEY &&
     state.v5NoAnnuityOpenAccountsPage != null
   const showV6CombinedInstructions =

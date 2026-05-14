@@ -81,7 +81,7 @@ export function TaskSectionPanel({
 
   return (
     <div
-      className="relative shrink-0 w-6 ml-4 mr-4 pt-8 flex flex-col items-center justify-start gap-2 2xl:absolute 2xl:top-0 2xl:right-14 2xl:bottom-0 2xl:w-52 2xl:m-0 2xl:pt-0 2xl:py-8 2xl:items-stretch 2xl:gap-1 2xl:overflow-y-auto 2xl:pointer-events-auto"
+      className="relative shrink-0 w-6 ml-4 mr-4 pt-8 flex flex-col items-center justify-start gap-2 pointer-events-auto 2xl:absolute 2xl:top-0 2xl:right-14 2xl:bottom-0 2xl:w-52 2xl:m-0 2xl:pt-0 2xl:py-8 2xl:items-stretch 2xl:gap-1 2xl:overflow-y-auto"
       onMouseEnter={() => { cancelClose(); setIsHovering(true) }}
       onMouseLeave={scheduleClose}
     >

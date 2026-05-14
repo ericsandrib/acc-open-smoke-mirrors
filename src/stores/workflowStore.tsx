@@ -467,6 +467,10 @@ function workflowReducer(state: WorkflowState, action: WorkflowAction): Workflow
         ...state,
         activeTaskId: redirectedId,
         tasks: newTasks,
+        /** Match {@link GO_TO_TASK}: picking a top-level journey task always exits a child workflow. */
+        activeChildActionId: undefined,
+        activeChildSubTaskIndex: undefined,
+        childActionResume: undefined,
         ...(activatedAnnuityTask ? { v6IncludeAnnuityAccounts: false } : {}),
         v5NoAnnuityOpenAccountsPage: blockedAnnuityNavigation
           ? 'envelopes'
