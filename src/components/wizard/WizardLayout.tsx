@@ -82,6 +82,7 @@ import {
 import {
   WizardRightPanelProvider,
 } from '@/components/wizard/wizardRightPanelContext'
+import { SupportingDocumentPreviewProvider } from '@/components/wizard/supportingDocumentPreviewContext'
 import { getChildTypeConfig, getSubTaskDisplayTitle } from '@/utils/childTaskRegistry'
 import {
   OPEN_ACCOUNTS_FORM_KEY,
@@ -659,6 +660,7 @@ function WizardLayoutInner() {
     <div className="flex h-screen overflow-hidden bg-background">
       <VerticalNav defaultCollapsed onCreateClick={() => setComposeOpen(true)} />
       <WizardRightPanelProvider>
+      <SupportingDocumentPreviewProvider>
       <div className="flex min-h-0 flex-col flex-1 min-w-0">
         {showViewToggle && (
           <header className="border-b border-border px-8 py-2 flex items-center justify-end shrink-0">
@@ -895,6 +897,7 @@ function WizardLayoutInner() {
           })()}
       </div>
       </div>
+      </SupportingDocumentPreviewProvider>
       </WizardRightPanelProvider>
       <AdvisorReviewerPerspectiveCard />
       {composeOpen && <ComposeDialog onClose={() => setComposeOpen(false)} />}

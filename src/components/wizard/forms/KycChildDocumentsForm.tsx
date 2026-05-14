@@ -5,6 +5,7 @@ import {
   useAdvisorFormsEditable,
   useAdvisorResubmitEligible,
 } from '@/stores/workflowStore'
+import { useSupportingDocumentPreview } from '@/components/wizard/supportingDocumentPreviewContext'
 import { useMemo } from 'react'
 import {
   DocumentUploadInstancesTable,
@@ -17,13 +18,16 @@ import {
   type DocumentRequirementWithSubTypes,
 } from '@/utils/registrationDocuments'
 import { defaultSupportingDocumentStatus, nextStatusAfterUpload } from '@/utils/supportingDocuments'
+import { buildSupportingDocumentPreviewKey } from '@/utils/journeySupportingDocuments'
 
 export function KycChildDocumentsForm() {
   const ctx = useChildActionContext()
   const child = ctx?.child ?? null
   const taskId = ctx?.subTaskId ?? ''
-  const { data, updateField } = useTaskData(taskId || '__no_child__')
+  const taskDataOwnerId = taskId || '__no_child__'
+  const { data, updateField } = useTaskData(taskDataOwnerId)
   const { state } = useWorkflow()
+  const { registerPreview, revokePreview } = useSupportingDocumentPreview()
   const advisorFormsEditable = useAdvisorFormsEditable()
   const advisorResubmitEligible = useAdvisorResubmitEligible()
   const childMeta = child ? (state.taskData[child.id] as Record<string, unknown> | undefined) ?? {} : {}
@@ -67,6 +71,8 @@ export function KycChildDocumentsForm() {
     input.onchange = (e) => {
       const file = (e.target as HTMLInputElement).files?.[0]
       if (!file) return
+      const fieldKey = `doc-instances-${docId}`
+      registerPreview(buildSupportingDocumentPreviewKey(taskDataOwnerId, fieldKey, instanceId), file)
       const prior = ((data[`doc-instances-${docId}`] as DocumentUploadInstance[] | undefined) ?? [])
         .find((d) => d.id === instanceId)
       const instances = ((data[`doc-instances-${docId}`] as DocumentUploadInstance[] | undefined) ?? []).map((d) =>
@@ -128,7 +134,12 @@ export function KycChildDocumentsForm() {
                   },
                 ])
               }
-              onRemove={(instanceId) => updateDocInstances(doc.id, instances.filter((i) => i.id !== instanceId))}
+              onRemove={(instanceId) => {
+                revokePreview(
+                  buildSupportingDocumentPreviewKey(taskDataOwnerId, `doc-instances-${doc.id}`, instanceId),
+                )
+                updateDocInstances(doc.id, instances.filter((i) => i.id !== instanceId))
+              }}
               onUpload={(instanceId) => uploadForInstance(doc.id, instanceId)}
               onUpdate={(instanceId, updates) =>
                 updateDocInstances(

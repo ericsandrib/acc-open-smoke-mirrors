@@ -1,5 +1,6 @@
 import { useMemo } from 'react'
 import { useChildActionContext, useTaskData, useWorkflow } from '@/stores/workflowStore'
+import { useSupportingDocumentPreview } from '@/components/wizard/supportingDocumentPreviewContext'
 import { Label } from '@/components/ui/label'
 import { Button } from '@/components/ui/button'
 import { FileText, FolderOpen } from 'lucide-react'
@@ -19,6 +20,7 @@ import {
   type WetSignedFirmUpload,
 } from '@/utils/wetSignedFirmUploads'
 import { findParentTaskForChild } from '@/utils/openAccountsTaskContext'
+import { buildSupportingDocumentPreviewKey } from '@/utils/journeySupportingDocuments'
 import { useOpenAccountsVariant } from '@/components/wizard/openAccountsVariantContext'
 import { cn } from '@/lib/utils'
 import { DocumentUploadInstancesTable } from './DocumentUploadInstancesTable'
@@ -69,6 +71,7 @@ export function AcctChildDocumentsReviewForm() {
     ? findParentTaskForChild(state, ctx.child.id)?.id ?? 'open-accounts'
     : 'open-accounts'
   const { data: openAccountsData, updateField: updateOpenAccountsField } = useTaskData(openAccountsParentId)
+  const { registerPreview, revokePreview } = useSupportingDocumentPreview()
 
   const childMeta = ctx
     ? ((state.taskData[ctx.child.id] as Record<string, unknown> | undefined) ?? undefined)
@@ -151,6 +154,7 @@ export function AcctChildDocumentsReviewForm() {
       const file = (e.target as HTMLInputElement).files?.[0]
       if (file) {
         const key = `doc-instances-${docTypeId}`
+        registerPreview(buildSupportingDocumentPreviewKey(openAccountsParentId, key, instanceId), file)
         const instances = (openAccountsData[key] as DocInstance[] | undefined) ?? []
         const existing = instances.find((i) => i.id === instanceId)
         if (existing) {
@@ -375,6 +379,9 @@ export function AcctChildDocumentsReviewForm() {
               }
 
               const removeInstance = (instanceId: string) => {
+                revokePreview(
+                  buildSupportingDocumentPreviewKey(openAccountsParentId, key, instanceId),
+                )
                 updateOpenAccountsField(
                   key,
                   instances.filter((i) => i.id !== instanceId),

@@ -222,6 +222,28 @@ type DisplayActionNode = {
   taskRows: DisplayTaskRow[]
 }
 
+function isDisplayTaskNodeActive(dt: DisplayTaskNode, state: WorkflowState): boolean {
+  const underlyingTasks = dt.underlyingTaskIds
+    .map((id) => state.tasks.find((t) => t.id === id))
+    .filter((t): t is Task => Boolean(t))
+  const baseTaskActive =
+    underlyingTasks.some((t) => state.activeTaskId === t.id) ||
+    underlyingTasks.some((t) =>
+      (t.children ?? []).some((c) => {
+        if (c.id === state.activeTaskId) return true
+        const parsed = parseChildSubTaskId(state.activeTaskId)
+        return parsed ? c.id === parsed.childId : false
+      }),
+    )
+  if (dt.v6CombinedInstructions) {
+    return baseTaskActive && state.v5NoAnnuityOpenAccountsPage === 'instructions'
+  }
+  if (dt.v5NoAnnuityPage) {
+    return baseTaskActive && state.v5NoAnnuityOpenAccountsPage === dt.v5NoAnnuityPage
+  }
+  return baseTaskActive
+}
+
 /**
  * Build the action/task display structure honoring the demo Account Opening variant.
  *
@@ -543,20 +565,7 @@ export function StepSidebar() {
       underlyingTasks.length > 0 && underlyingTasks.every((t) => t.status === 'canceled')
         ? 'canceled'
         : (underlyingTasks[0]?.status ?? 'not_started')
-    const baseTaskActive =
-      underlyingTasks.some((t) => state.activeTaskId === t.id) ||
-      underlyingTasks.some((t) =>
-        (t.children ?? []).some((c) => {
-          if (c.id === state.activeTaskId) return true
-          const parsed = parseChildSubTaskId(state.activeTaskId)
-          return parsed ? c.id === parsed.childId : false
-        }),
-      )
-    const isActiveTask = displayTask.v6CombinedInstructions
-      ? baseTaskActive && state.v5NoAnnuityOpenAccountsPage === 'instructions'
-      : displayTask.v5NoAnnuityPage
-        ? baseTaskActive && state.v5NoAnnuityOpenAccountsPage === displayTask.v5NoAnnuityPage
-        : baseTaskActive
+    const isActiveTask = isDisplayTaskNodeActive(displayTask, state)
     return (
       <li
         key={displayTask.id}
@@ -621,18 +630,12 @@ export function StepSidebar() {
         )}
       >
         <JourneyHeader
-          showChevron={variant !== 'v5'}
-          onChevronBack={() => navigate(-1)}
+          onExitWorkflow={() => setExitToOnboardingOpen(true)}
           onIconClick={variant === 'v5' ? () => navigate('/onboarding') : undefined}
           iconTooltip={variant === 'v5' ? 'Onboarding' : undefined}
           metaDateLabel={state.journeyDateLabel}
           metaAssigneeLabel={state.assignedTo}
           metaProgressPct={overallProgressPct}
-          breadcrumbItems={
-            variant === 'v5'
-              ? [{ label: 'Home', onClick: () => setExitToOnboardingOpen(true) }]
-              : undefined
-          }
         />
         <div className="flex-1 min-h-0 overflow-y-auto px-1 pt-2">
           {displayActions.map((action, actionIndex) => {
@@ -715,7 +718,7 @@ export function StepSidebar() {
           <DialogHeader>
             <DialogTitle>Exit current workflow?</DialogTitle>
             <DialogDescription>
-              This takes you out of the current workflow and back to the home page.
+              This takes you out of the current journey and back to the servicing queue.
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
@@ -728,7 +731,7 @@ export function StepSidebar() {
               className="hover:opacity-90"
               onClick={() => {
                 setExitToOnboardingOpen(false)
-                navigate('/')
+                navigate('/servicing')
               }}
             >
               Exit workflow

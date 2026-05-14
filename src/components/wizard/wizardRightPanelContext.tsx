@@ -8,6 +8,9 @@ import {
 
 export type WizardRightPanelTab = 'details' | 'activity' | 'comments' | 'documents'
 
+/** Tailwind width class for the journey + child right rails (tabs + content). */
+export const WIZARD_RIGHT_RAIL_WIDTH_CLASS = 'w-[420px]' as const
+
 type WizardRightPanelContextValue = {
   collapsed: boolean
   setCollapsed: (collapsed: boolean) => void

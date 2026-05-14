@@ -6,42 +6,45 @@ import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip
 import { AssigneeContactHover } from '@/components/wizard/AssigneeContactHover'
 import { JourneyProgressRing } from '@/components/wizard/ProgressIcons'
 import { useWorkflow } from '@/stores/workflowStore'
+import { cn } from '@/lib/utils'
+
+export type WorkflowBreadcrumbItem = {
+  label: string
+  onClick?: () => void
+}
 
 /**
- * Top-of-sidebar header that establishes the active journey:
- * back button → 36×36 featured journey icon → journey title.
+ * Top-of-sidebar journey identity: exit control, featured icon, title row,
+ * then optional workflow breadcrumb (parent step only; current child is shown in the title area).
  *
- * Shared between the journey-level StepSidebar and the sub-action
- * ChildActionSidebar so the journey identity persists when drilling in.
+ * Shared between {@link StepSidebar} and {@link ChildActionSidebar}.
  */
 export function JourneyHeader({
-  backLabel,
-  onBack,
-  onChevronBack,
-  breadcrumbItems,
-  showChevron = true,
+  onExitWorkflow,
+  workflowBreadcrumbs,
+  onWorkflowBreadcrumbChevronClick,
+  journeySubtitle = 'Onboarding',
   onIconClick,
   iconTooltip,
   metaDateLabel,
   metaAssigneeLabel,
   metaProgressPct,
 }: {
-  backLabel?: string
-  onBack?: () => void
-  onChevronBack?: () => void
-  breadcrumbItems?: Array<{ label: string; onClick?: () => void }>
-  showChevron?: boolean
+  onExitWorkflow: () => void
+  /** Parent step link(s) under the journey title when drilled into a child (not the current child). */
+  workflowBreadcrumbs?: WorkflowBreadcrumbItem[]
+  /** Leading chevron in the breadcrumb strip (e.g. back to parent or browser back). */
+  onWorkflowBreadcrumbChevronClick?: () => void
+  journeySubtitle?: string
   onIconClick?: () => void
   iconTooltip?: string
   metaDateLabel?: string
   metaAssigneeLabel?: string
   /** 0–100: average pizza-tracker completion across sidebar-visible tasks. */
   metaProgressPct?: number
-} = {}) {
+}) {
   const { state } = useWorkflow()
   const navigate = useNavigate()
-  const showsBreadcrumbBack = typeof backLabel === 'string' && backLabel.trim().length > 0
-  const hasBreadcrumbItems = Array.isArray(breadcrumbItems) && breadcrumbItems.length > 0
   const dateLabel =
     typeof metaDateLabel === 'string' && metaDateLabel.trim().length > 0
       ? metaDateLabel.trim()
@@ -67,68 +70,23 @@ export function JourneyHeader({
       ? Math.round(metaProgressPct)
       : null
 
+  const chevronHandler = onWorkflowBreadcrumbChevronClick ?? (() => navigate(-1))
+  const showWorkflowCrumbs = Array.isArray(workflowBreadcrumbs) && workflowBreadcrumbs.length > 0
+
   return (
     <div>
-      <div className="flex h-14 items-center px-2">
-        {hasBreadcrumbItems ? (
-          <div className="flex h-8 items-center gap-1 text-xs text-muted-foreground min-w-0">
-            {showChevron ? (
-              <Button
-                type="button"
-                variant="ghost"
-                size="icon"
-                className="h-8 w-8 shrink-0 text-muted-foreground"
-                onClick={onChevronBack ?? (() => navigate(-1))}
-                aria-label="Back"
-              >
-                <ChevronLeft className="h-4 w-4" aria-hidden />
-              </Button>
-            ) : null}
-            {breadcrumbItems.map((item, idx) => (
-              <div key={`${item.label}-${idx}`} className="flex items-center min-w-0">
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="sm"
-                  className="h-7 px-1.5 text-xs text-muted-foreground hover:text-foreground"
-                  onClick={item.onClick}
-                >
-                  <span className="truncate">{item.label}</span>
-                </Button>
-                {idx < breadcrumbItems.length - 1 ? (
-                  <span className="mx-0.5 shrink-0 text-muted-foreground/70" aria-hidden>
-                    /
-                  </span>
-                ) : null}
-              </div>
-            ))}
-          </div>
-        ) : showsBreadcrumbBack ? (
-          <Button
-            type="button"
-            variant="ghost"
-            size="sm"
-            className="h-8 px-1.5 text-xs text-muted-foreground"
-            onClick={onBack ?? (() => navigate(-1))}
-            aria-label={`Back to ${backLabel}`}
-          >
-            <ChevronLeft className="h-4 w-4" aria-hidden />
-            <span className="truncate">{backLabel}</span>
-          </Button>
-        ) : (
-          <Button
-            type="button"
-            variant="ghost"
-            size="icon"
-            className="h-10 w-10 text-muted-foreground"
-            onClick={onBack ?? (() => navigate(-1))}
-            aria-label="Back"
-          >
-            <ChevronLeft className="h-4 w-4" aria-hidden />
-          </Button>
-        )}
+      <div className="flex items-center px-3 pt-6 pb-6">
+        <Button
+          type="button"
+          variant="link"
+          className="h-auto p-0 text-xs font-normal text-muted-foreground hover:text-foreground hover:no-underline"
+          onClick={onExitWorkflow}
+        >
+          Exit workflow
+        </Button>
       </div>
-      <div className="flex h-14 items-center px-3">
+
+      <div className="flex h-10 items-center justify-between px-3">
         {onIconClick ? (
           <Tooltip>
             <TooltipTrigger asChild>
@@ -156,12 +114,13 @@ export function JourneyHeader({
           </span>
         )}
       </div>
-      <div className="flex h-14 items-center gap-2 px-3 border-b border-border">
+
+      <div className="flex min-h-[3.25rem] items-center gap-2 border-b border-border px-3 py-2">
         <div className="flex-1 min-w-0">
           <h2 className="truncate text-sm font-semibold text-foreground">
             {state.journeyName ?? 'Client Onboarding'}
           </h2>
-          <p className="truncate text-xs text-muted-foreground">Onboarding</p>
+          <p className="truncate text-xs text-muted-foreground">{journeySubtitle}</p>
         </div>
         {dateLabel ? (
           <Tooltip>
@@ -198,6 +157,46 @@ export function JourneyHeader({
           </Tooltip>
         ) : null}
       </div>
+
+      {showWorkflowCrumbs ? (
+        <div className="flex min-h-9 items-center gap-1 px-2 py-2">
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon"
+            className="h-8 w-8 shrink-0 text-muted-foreground"
+            onClick={chevronHandler}
+            aria-label="Back"
+          >
+            <ChevronLeft className="h-4 w-4" aria-hidden />
+          </Button>
+          <div className="flex min-w-0 flex-1 flex-nowrap items-center gap-x-1 overflow-x-auto text-xs text-muted-foreground">
+            {workflowBreadcrumbs!.map((item, idx) => (
+              <span key={`${idx}-${item.label}`} className="flex shrink-0 items-center gap-x-1">
+                {idx > 0 ? (
+                  <span className="shrink-0 text-muted-foreground/70" aria-hidden>
+                    /
+                  </span>
+                ) : null}
+                {item.onClick ? (
+                  <button
+                    type="button"
+                    onClick={item.onClick}
+                    className={cn(
+                      'max-w-[10rem] truncate text-left font-medium text-muted-foreground',
+                      'hover:text-foreground',
+                    )}
+                  >
+                    {item.label}
+                  </button>
+                ) : (
+                  <span className="max-w-[11rem] truncate font-medium text-foreground/85">{item.label}</span>
+                )}
+              </span>
+            ))}
+          </div>
+        </div>
+      ) : null}
     </div>
   )
 }

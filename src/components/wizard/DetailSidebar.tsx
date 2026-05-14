@@ -1,5 +1,6 @@
+import { useEffect } from 'react'
 import { cn } from '@/lib/utils'
-import { useWizardRightPanel } from '@/components/wizard/wizardRightPanelContext'
+import { useWizardRightPanel, WIZARD_RIGHT_RAIL_WIDTH_CLASS } from '@/components/wizard/wizardRightPanelContext'
 import { JourneySupportingDocumentsPanel } from '@/components/wizard/JourneySupportingDocumentsPanel'
 import { useWorkflow } from '@/stores/workflowStore'
 import { parseChildSubTaskId, getSubTaskDisplayTitle } from '@/utils/childTaskRegistry'
@@ -15,13 +16,23 @@ const JOURNEY_TAB_META: Record<JourneyRailTab, { label: string }> = {
 /**
  * Main-journey right rail: same collapse shell as {@link ChildActionRightSidebar},
  * with Info + Documents text tabs only (Activity/Comments live on the child rail).
+ * Documents tab is reviewer-only (when `demoViewMode` is set and not `advisor`).
  */
 export function DetailSidebar() {
   const { state } = useWorkflow()
   const { collapsed, activeTab, setActiveTab } = useWizardRightPanel()
 
+  const showDocumentsTab =
+    state.demoViewMode != null && state.demoViewMode !== 'advisor'
+
+  useEffect(() => {
+    if (!showDocumentsTab && activeTab === 'documents') {
+      setActiveTab('details')
+    }
+  }, [showDocumentsTab, activeTab, setActiveTab])
+
   const displayTab: JourneyRailTab =
-    activeTab === 'documents' ? 'documents' : 'details'
+    showDocumentsTab && activeTab === 'documents' ? 'documents' : 'details'
 
   const activeTask = state.tasks.find((t) => t.id === state.activeTaskId)
   const activeChild = state.tasks
@@ -45,47 +56,59 @@ export function DetailSidebar() {
       className={cn(
         'shrink-0 overflow-hidden bg-white border-l border-l-transparent flex flex-col min-h-0 h-full',
         'transition-[width,border-color] duration-200 ease-out motion-reduce:transition-none',
-        collapsed ? 'w-0' : 'w-[330px] border-l-border',
+        collapsed ? 'w-0' : cn(WIZARD_RIGHT_RAIL_WIDTH_CLASS, 'border-l-border'),
       )}
       aria-label="Task details"
       aria-hidden={collapsed}
     >
       <div
         className={cn(
-          'flex flex-col w-[330px] min-h-0 h-full transition-opacity duration-150 ease-out motion-reduce:transition-none',
+          'flex flex-col min-h-0 h-full transition-opacity duration-150 ease-out motion-reduce:transition-none',
+          WIZARD_RIGHT_RAIL_WIDTH_CLASS,
           collapsed ? 'opacity-0' : 'opacity-100 delay-200',
         )}
       >
-        <div
-          className="flex h-14 items-center gap-1 border-b border-border px-3 shrink-0"
-          role="tablist"
-          aria-label="Right panel"
-        >
-          {JOURNEY_TAB_ORDER.map((tab) => {
-            const { label } = JOURNEY_TAB_META[tab]
-            const selected = displayTab === tab
-            return (
-              <button
-                key={tab}
-                type="button"
-                role="tab"
-                aria-selected={selected}
-                aria-label={label}
-                onClick={() => setActiveTab(tab)}
-                className={cn(
-                  'px-3 py-1.5 rounded-md text-sm font-medium transition-colors shrink-0',
-                  selected
-                    ? 'bg-muted text-foreground'
-                    : 'text-muted-foreground hover:bg-muted/50 hover:text-foreground',
-                )}
-              >
-                {label}
-              </button>
-            )
-          })}
-        </div>
+        {showDocumentsTab ? (
+          <div
+            className="flex h-14 shrink-0 flex-nowrap items-center gap-1 overflow-x-auto border-b border-border px-3"
+            role="tablist"
+            aria-label="Right panel"
+          >
+            {JOURNEY_TAB_ORDER.map((tab) => {
+              const { label } = JOURNEY_TAB_META[tab]
+              const selected = displayTab === tab
+              return (
+                <button
+                  key={tab}
+                  type="button"
+                  role="tab"
+                  aria-selected={selected}
+                  aria-label={label}
+                  onClick={() => setActiveTab(tab)}
+                  className={cn(
+                    'px-3 py-1.5 rounded-md text-sm font-medium transition-colors shrink-0',
+                    selected
+                      ? 'bg-muted text-foreground'
+                      : 'text-muted-foreground hover:bg-muted/50 hover:text-foreground',
+                  )}
+                >
+                  {label}
+                </button>
+              )
+            })}
+          </div>
+        ) : (
+          <div className="flex h-14 items-center border-b border-border px-3 shrink-0">
+            <h3 className="text-sm font-semibold text-foreground truncate">Info</h3>
+          </div>
+        )}
 
-        <div className="flex-1 min-h-0 overflow-y-auto p-4 text-sm">
+        <div
+          className={cn(
+            'flex flex-1 min-h-0 flex-col text-sm',
+            displayTab === 'documents' ? 'overflow-hidden' : 'overflow-y-auto p-4',
+          )}
+        >
           {displayTab === 'details' && (
             <>
               {activeTask && (
@@ -146,7 +169,11 @@ export function DetailSidebar() {
               )}
             </>
           )}
-          {displayTab === 'documents' && <JourneySupportingDocumentsPanel />}
+          {displayTab === 'documents' && (
+            <div className="flex min-h-0 flex-1 flex-col overflow-hidden px-3 pb-3 pt-2">
+              <JourneySupportingDocumentsPanel />
+            </div>
+          )}
         </div>
       </div>
     </aside>

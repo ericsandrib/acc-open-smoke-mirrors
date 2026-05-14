@@ -20,7 +20,6 @@ import {
 } from '@/utils/accountOpeningChildProgress'
 import type { LucideIcon } from 'lucide-react'
 import {
-  ChevronLeft,
   FileText,
   Clock,
   ShieldCheck,
@@ -948,37 +947,26 @@ export function ChildActionSidebar() {
     <TooltipProvider delayDuration={300}>
       <nav className="w-[330px] shrink-0 border-r border-sidebar-border bg-sidebar-background text-sidebar-foreground flex flex-col min-h-0 self-stretch h-full">
         <JourneyHeader
-          showChevron={variant !== 'v5'}
-          onChevronBack={() => navigate(-1)}
+          onExitWorkflow={() => setExitToOnboardingOpen(true)}
+          workflowBreadcrumbs={
+            variant === 'v5'
+              ? [{ label: v5OpenAccountsLabel, onClick: exitToParentAction }]
+              : [{ label: breadcrumbLabel, onClick: exitToParentAction }]
+          }
+          onWorkflowBreadcrumbChevronClick={exitToParentAction}
+          journeySubtitle={
+            child.childType === 'kyc'
+              ? 'KYC'
+              : child.childType === 'account-opening'
+                ? 'Account opening'
+                : 'Workflow'
+          }
+          onIconClick={variant === 'v5' ? () => navigate('/onboarding') : undefined}
+          iconTooltip={variant === 'v5' ? 'Onboarding' : undefined}
           metaDateLabel={state.journeyDateLabel}
           metaAssigneeLabel={state.assignedTo}
           metaProgressPct={journeyProgressPct}
-          breadcrumbItems={
-            variant === 'v5'
-              ? [
-                  { label: 'Home', onClick: () => setExitToOnboardingOpen(true) },
-                  { label: v5OpenAccountsLabel, onClick: exitToParentAction },
-                ]
-              : undefined
-          }
         />
-        {variant !== 'v5' && (
-          <div className="flex h-9 items-center gap-1 px-2 border-b border-border">
-            <Button
-              type="button"
-              variant="ghost"
-              size="icon"
-              className="h-8 w-8 text-muted-foreground"
-              onClick={exitToParentAction}
-              aria-label={`Back to ${breadcrumbLabel}`}
-            >
-              <ChevronLeft className="h-4 w-4" aria-hidden />
-            </Button>
-            <span className="text-xs text-muted-foreground truncate">
-              {breadcrumbLabel}
-            </span>
-          </div>
-        )}
         <div className="flex-1 min-h-0 overflow-y-auto px-1 pt-2">
           <div className="flex gap-2 px-3 mb-5">
             {/* Match StepSidebar spine: line z-0, opaque icon z-10, flex-1 filler; keep this column above the task column if layers overlap at the gutter. */}
@@ -1150,7 +1138,7 @@ export function ChildActionSidebar() {
           <DialogHeader>
             <DialogTitle>Exit current workflow?</DialogTitle>
             <DialogDescription>
-              This takes you out of the current workflow and back to the home page.
+              This takes you out of the current workflow and back to the servicing queue.
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
@@ -1163,7 +1151,7 @@ export function ChildActionSidebar() {
               className="hover:opacity-90"
               onClick={() => {
                 setExitToOnboardingOpen(false)
-                navigate('/')
+                navigate('/servicing')
               }}
             >
               Exit workflow

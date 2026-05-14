@@ -1,5 +1,6 @@
 import { useState, useMemo, useRef, useEffect } from 'react'
 import { useWorkflow, useTaskData } from '@/stores/workflowStore'
+import { useSupportingDocumentPreview } from '@/components/wizard/supportingDocumentPreviewContext'
 import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -53,6 +54,7 @@ import {
   OPEN_ACCOUNTS_FORM_KEY,
   OPEN_ACCOUNTS_WITH_ANNUITY_FORM_KEY,
 } from '@/utils/openAccountsTaskContext'
+import { buildSupportingDocumentPreviewKey } from '@/utils/journeySupportingDocuments'
 import { useOpenAccountsTaskOverride, useOpenAccountsVariant, useOpenAccountsVariantControls } from '@/components/wizard/openAccountsVariantContext'
 import { mergeFeatureRequests } from '@/types/featureRequests'
 import { getEsignEnvelopeStatus, ESIGN_ENVELOPE_STATUS_LABELS } from '@/utils/esignEnvelopeStatus'
@@ -225,6 +227,7 @@ export function OpenAccountsForm() {
       ? 'Accounts with Annuity'
       : 'Accounts'
   const { data, updateField } = useTaskData(openAccountsTaskId)
+  const { registerPreview, revokePreview } = useSupportingDocumentPreview()
   const [pickerOpen, setPickerOpen] = useState(false)
   const [timelineChild, setTimelineChild] = useState<ChildTask | null>(null)
   const [envelopeDrawerOpen, setEnvelopeDrawerOpen] = useState(false)
@@ -966,6 +969,11 @@ export function OpenAccountsForm() {
                   const file = (e.target as HTMLInputElement).files?.[0]
                   if (file) {
                     const prior = instances.find((i) => i.id === instanceId)
+                    const fieldKey = `doc-instances-${doc.id}`
+                    registerPreview(
+                      buildSupportingDocumentPreviewKey(openAccountsTaskId, fieldKey, instanceId),
+                      file,
+                    )
                     updateInstance(instanceId, {
                       fileName: file.name,
                       status: nextStatusAfterUpload(prior?.status),
@@ -988,6 +996,13 @@ export function OpenAccountsForm() {
               }
 
               const removeInstance = (instanceId: string) => {
+                revokePreview(
+                  buildSupportingDocumentPreviewKey(
+                    openAccountsTaskId,
+                    `doc-instances-${doc.id}`,
+                    instanceId,
+                  ),
+                )
                 updateInstances(instances.filter((i) => i.id !== instanceId))
               }
               const subTypes = getDocSubTypes(doc.id)
