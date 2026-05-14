@@ -210,6 +210,8 @@ export interface WorkflowState {
   journeyId?: string
   /** Display date for the journey header (e.g. "Oct 8"). */
   journeyDateLabel?: string
+  /** ISO timestamp for journey due date (tooltip + header short label source). */
+  journeyDueAt?: string
   assignedTo?: string
   /** Optional onboarding journey configuration from the new-journey modal. */
   journeyOnboardingConfig?: JourneyOnboardingConfig

@@ -5,7 +5,7 @@ import {
   useAdvisorResubmitEligible,
 } from '@/stores/workflowStore'
 import { useNavigate } from 'react-router-dom'
-import { useState, type ReactNode } from 'react'
+import { useMemo, useState, type ReactNode } from 'react'
 import { cn } from '@/lib/utils'
 import {
   Tooltip,
@@ -42,9 +42,13 @@ import {
 import { useWizardRightPanel } from '@/components/wizard/wizardRightPanelContext'
 import { getActiveStageLabel } from '@/components/wizard/ChildActionTimelineSheet'
 import { JourneyHeader } from '@/components/wizard/JourneyHeader'
+import { computeOverallJourneyProgressPct } from '@/components/wizard/StepSidebar'
 import { AssignAllTasksControl } from '@/components/wizard/AssignAllTasksControl'
 import { ProgressIcon, pickVariant } from '@/components/wizard/ProgressIcons'
-import { useOpenAccountsVariant } from '@/components/wizard/openAccountsVariantContext'
+import {
+  useOpenAccountsVariant,
+  useOpenAccountsVariantControls,
+} from '@/components/wizard/openAccountsVariantContext'
 import type { TaskStatus } from '@/types/workflow'
 import { getAccountOwnersMissingKyc } from '@/utils/accountOpeningOwnerKyc'
 import { NigoDialog } from './NigoDialog'
@@ -888,6 +892,11 @@ export function ChildActionSidebar() {
   const ctx = useChildActionContext()
   const { setCollapsed: setRightPanelCollapsed, setActiveTab: setRightPanelTab } = useWizardRightPanel()
   const variant = useOpenAccountsVariant()
+  const { variant: selectedVariant } = useOpenAccountsVariantControls()
+  const journeyProgressPct = useMemo(
+    () => computeOverallJourneyProgressPct(state, selectedVariant),
+    [state, selectedVariant],
+  )
   const [exitToOnboardingOpen, setExitToOnboardingOpen] = useState(false)
   const [resubmitOpen, setResubmitOpen] = useState(false)
   const advisorResubmitEligible = useAdvisorResubmitEligible()
@@ -941,6 +950,9 @@ export function ChildActionSidebar() {
         <JourneyHeader
           showChevron={variant !== 'v5'}
           onChevronBack={() => navigate(-1)}
+          metaDateLabel={state.journeyDateLabel}
+          metaAssigneeLabel={state.assignedTo}
+          metaProgressPct={journeyProgressPct}
           breadcrumbItems={
             variant === 'v5'
               ? [
@@ -967,52 +979,67 @@ export function ChildActionSidebar() {
             </span>
           </div>
         )}
-        <div className="flex-1 min-h-0 overflow-y-auto pt-2">
-          <div className="mb-1.5 flex h-9 items-center gap-2 px-3">
-            <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-muted text-muted-foreground">
-              <ChildIcon className="h-3.5 w-3.5" aria-hidden />
-            </span>
-            <h2 className="text-sm font-semibold text-foreground truncate">
-              {child.name}
-            </h2>
-          </div>
+        <div className="flex-1 min-h-0 overflow-y-auto px-1 pt-2">
+          <div className="flex items-stretch gap-2 px-3 mb-5">
+            {/* Same spine + icon column as StepSidebar pizza tracker */}
+            <div className="relative flex w-7 shrink-0 flex-col items-center self-stretch">
+              <span className="relative z-10 flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-muted text-muted-foreground">
+                <ChildIcon className="h-3.5 w-3.5" aria-hidden />
+              </span>
+              <div className="min-h-0 w-full flex-1 shrink" aria-hidden />
+              <div
+                className="pointer-events-none absolute inset-0 z-[1] flex justify-center"
+                aria-hidden
+              >
+                <div className="h-full w-px bg-border" />
+              </div>
+            </div>
+            <div className="relative z-[1] min-w-0 flex-1">
+              <div className="mb-1.5 flex h-9 min-h-9 items-center">
+                <h2 className="text-sm font-semibold text-foreground truncate">{child.name}</h2>
+              </div>
 
-          <ul className="space-y-1 px-1">
-          {config.subTasks.map((subTask, idx) => {
-            const subTaskId = `${child.id}-${subTask.suffix}`
-            return (
-              <li key={subTask.suffix}>
-                <button
-                  onClick={() => dispatch({ type: 'SET_CHILD_SUB_TASK', index: idx })}
-                  aria-current={idx === subTaskIndex ? 'page' : undefined}
-                  className={cn(
-                    'w-full text-left pl-12 pr-3 py-2.5 rounded-lg text-sm font-medium flex items-center justify-between gap-2 transition-colors',
-                    idx === subTaskIndex
-                      ? 'bg-sidebar-accent text-sidebar-accent-foreground'
-                      : 'text-sidebar-foreground hover:bg-sidebar-accent/70 hover:text-sidebar-accent-foreground',
-                  )}
-                >
-                  <span
-                    className={cn(
-                      'flex items-center gap-2 truncate min-w-0',
-                      idx === subTaskIndex ? 'font-semibold' : '',
-                    )}
-                  >
-                    {showSubTaskNumbers && (
-                      <span className="text-[11px] text-muted-foreground w-4 shrink-0">{idx + 1}.</span>
-                    )}
-                    {getSubTaskDisplayTitle(child.childType, subTask, viewMode)}
-                  </span>
-                  <SubTaskProgressIndicator
-                    subTaskId={subTaskId}
-                    accountOpeningChildId={child.childType === 'account-opening' ? child.id : undefined}
-                    subTaskSuffix={child.childType === 'account-opening' ? subTask.suffix : undefined}
-                  />
-                </button>
-              </li>
-            )
-          })}
-          </ul>
+              <ul className="space-y-1">
+                {config.subTasks.map((subTask, idx) => {
+                  const subTaskId = `${child.id}-${subTask.suffix}`
+                  return (
+                    <li key={subTask.suffix}>
+                      <button
+                        type="button"
+                        onClick={() => dispatch({ type: 'SET_CHILD_SUB_TASK', index: idx })}
+                        aria-current={idx === subTaskIndex ? 'page' : undefined}
+                        className={cn(
+                          'w-full text-left pl-0 pr-3 py-2.5 rounded-lg text-sm font-medium flex items-center justify-between gap-2 transition-colors',
+                          idx === subTaskIndex
+                            ? 'bg-sidebar-accent text-sidebar-accent-foreground'
+                            : 'text-sidebar-foreground hover:bg-sidebar-accent/70 hover:text-sidebar-accent-foreground',
+                        )}
+                      >
+                        <span
+                          className={cn(
+                            'flex items-center gap-2 truncate min-w-0',
+                            idx === subTaskIndex ? 'font-semibold' : '',
+                          )}
+                        >
+                          {showSubTaskNumbers && (
+                            <span className="text-[11px] text-muted-foreground w-4 shrink-0">
+                              {idx + 1}.
+                            </span>
+                          )}
+                          {getSubTaskDisplayTitle(child.childType, subTask, viewMode)}
+                        </span>
+                        <SubTaskProgressIndicator
+                          subTaskId={subTaskId}
+                          accountOpeningChildId={child.childType === 'account-opening' ? child.id : undefined}
+                          subTaskSuffix={child.childType === 'account-opening' ? subTask.suffix : undefined}
+                        />
+                      </button>
+                    </li>
+                  )
+                })}
+              </ul>
+            </div>
+          </div>
         </div>
 
         {(child.childType === 'account-opening' || child.childType === 'kyc') && (() => {

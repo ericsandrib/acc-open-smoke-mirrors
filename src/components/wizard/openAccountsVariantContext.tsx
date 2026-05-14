@@ -25,21 +25,8 @@ const OpenAccountsVariantContext = createContext<{
 } | null>(null)
 
 export function OpenAccountsVariantProvider({ children }: { children: ReactNode }) {
-  const [variant, setVariantState] = useState<OpenAccountsVariant>(() => {
-    if (typeof window === 'undefined') return 'v1'
-    const persisted = window.localStorage.getItem(STORAGE_KEY)
-    if (
-      persisted === 'v1' ||
-      persisted === 'v2' ||
-      persisted === 'v3' ||
-      persisted === 'v4' ||
-      persisted === 'v5' ||
-      persisted === 'v6'
-    ) {
-      return persisted
-    }
-    return 'v1'
-  })
+  /** Product demo is locked to v6; the floating variant switcher is removed. */
+  const [variant, setVariantState] = useState<OpenAccountsVariant>('v6')
 
   useEffect(() => {
     if (typeof window === 'undefined') return
@@ -55,7 +42,7 @@ export function OpenAccountsVariantProvider({ children }: { children: ReactNode 
 
 export function useOpenAccountsVariant(): OpenAccountsVariant {
   const ctx = useContext(OpenAccountsVariantContext)
-  const variant = ctx?.variant ?? 'v1'
+  const variant = ctx?.variant ?? 'v6'
   // v6 intentionally mirrors v5 exactly for now.
   return variant === 'v6' ? 'v5' : variant
 }
@@ -66,7 +53,7 @@ export function useOpenAccountsVariantControls(): {
 } {
   const ctx = useContext(OpenAccountsVariantContext)
   if (!ctx) {
-    return { variant: 'v1', setVariant: () => {} }
+    return { variant: 'v6', setVariant: () => {} }
   }
   return ctx
 }

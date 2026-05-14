@@ -69,6 +69,7 @@ function WizardAccessoryBar() {
   )
 }
 import { ComposeDialog } from '@/components/dashboard/ComposeDialog'
+import { AdvisorReviewerPerspectiveCard } from '@/components/wizard/AdvisorReviewerPerspectiveCard'
 import { useChildActionContext, useWorkflow } from '@/stores/workflowStore'
 import { cn } from '@/lib/utils'
 import { useNavigate, useSearchParams } from 'react-router-dom'
@@ -443,6 +444,23 @@ function WizardLayoutInner() {
       }
     }
   }, [queryTaskId, querySectionId, queryChildId, state.tasks, state.activeTaskId, state.activeChildActionId, dispatch])
+
+  /** Reviewer demo: Client Setup is hidden — if it was active, jump to Account Opening. */
+  useEffect(() => {
+    const mode = state.demoViewMode ?? 'advisor'
+    if (mode === 'advisor' || state.activeChildActionId) return
+    const t = state.tasks.find((x) => x.id === state.activeTaskId)
+    if (!t || t.actionId !== 'collect-client-data') return
+    const fallback = state.tasks
+      .filter(
+        (x) =>
+          x.actionId === 'account-opening' && x.formKey !== 'kyc' && x.id !== 'kyc-review',
+      )
+      .sort((a, b) => a.order - b.order)[0]
+    if (fallback && fallback.id !== state.activeTaskId) {
+      dispatch({ type: 'SET_ACTIVE_TASK', taskId: fallback.id })
+    }
+  }, [state.demoViewMode, state.activeTaskId, state.activeChildActionId, state.tasks, dispatch])
 
   const activeChild = inChildAction
     ? state.tasks.flatMap((t) => t.children ?? []).find((c) => c.id === state.activeChildActionId)
@@ -878,6 +896,7 @@ function WizardLayoutInner() {
       </div>
       </div>
       </WizardRightPanelProvider>
+      <AdvisorReviewerPerspectiveCard />
       {composeOpen && <ComposeDialog onClose={() => setComposeOpen(false)} />}
     </div>
   )

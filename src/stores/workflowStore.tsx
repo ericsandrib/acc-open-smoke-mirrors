@@ -140,7 +140,13 @@ const initialState: WorkflowState = {
     },
   },
   submittedTaskIds: [],
-  journeyDateLabel: new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
+  ...(() => {
+    const journeyDue = new Date(2026, 9, 8)
+    return {
+      journeyDueAt: journeyDue.toISOString(),
+      journeyDateLabel: journeyDue.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
+    }
+  })(),
   assignedTo: 'Sarah Chen',
   v5NoAnnuityOpenAccountsPage: null,
   v6IncludeAnnuityAccounts: false,
@@ -184,11 +190,9 @@ function markTaskEdited(allTasks: Task[], formKey: string): Task[] {
 
 type V5NoAnnuityPage = 'instructions' | 'kyc' | 'documents' | 'envelopes'
 
+/** Account Opening demo is locked to v6; ignore stored variant for workflow behavior. */
 function getPersistedOpenAccountsVariant(): 'v1' | 'v2' | 'v3' | 'v4' | 'v5' | 'v6' {
-  if (typeof window === 'undefined') return 'v1'
-  const v = window.localStorage.getItem('demo-open-accounts-variant')
-  if (v === 'v2' || v === 'v3' || v === 'v4' || v === 'v5' || v === 'v6' || v === 'v1') return v
-  return 'v1'
+  return 'v6'
 }
 
 function isSplitOpenAccountsJourney(state: WorkflowState): boolean {
@@ -729,8 +733,14 @@ function workflowReducer(state: WorkflowState, action: WorkflowAction): Workflow
         },
         journeyName: action.journeyName,
         journeyId: action.journeyId ?? `journey-${Date.now()}`,
-        journeyDateLabel:
-          new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
+        ...(() => {
+          const journeyDue = new Date()
+          journeyDue.setDate(journeyDue.getDate() + 30)
+          return {
+            journeyDueAt: journeyDue.toISOString(),
+            journeyDateLabel: journeyDue.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
+          }
+        })(),
         assignedTo: assignee,
         journeyOnboardingConfig: action.journeyOnboardingConfig,
         submittedTaskIds: [],

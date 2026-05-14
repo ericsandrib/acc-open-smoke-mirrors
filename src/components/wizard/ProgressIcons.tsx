@@ -59,6 +59,22 @@ function PercentArc({ pct }: { pct: number }) {
   )
 }
 
+/** Continuous 0–100% ring for journey-level progress (sidebar header). */
+export function JourneyProgressRing({
+  pct,
+  className,
+}: {
+  pct: number
+  className?: string
+}) {
+  const clamped = Math.max(0, Math.min(100, Number.isFinite(pct) ? pct : 0)) / 100
+  return (
+    <svg viewBox="0 0 16 16" className={cn('h-5 w-5 shrink-0 text-foreground', className)} aria-hidden>
+      <PercentArc pct={clamped} />
+    </svg>
+  )
+}
+
 export function ProgressIcon({
   variant,
   className,

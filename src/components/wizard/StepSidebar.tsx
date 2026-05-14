@@ -90,7 +90,7 @@ export function StatusBadge({ status, className }: { status: TaskStatus; classNa
   )
 }
 
-function getTaskFieldProgress(state: WorkflowState, task: Task): { filled: number; total: number } {
+export function getTaskFieldProgress(state: WorkflowState, task: Task): { filled: number; total: number } {
   switch (task.formKey) {
     case 'related-parties': {
       const members = state.relatedParties.filter(
@@ -233,9 +233,11 @@ type DisplayActionNode = {
  *   Without-annuity side uses navigator rows (Account Setup, KYC Initiation, Supporting Documents, Envelopes)
  *   that all bind to the same underlying task and swap full-page `OpenAccountsForm` content.
  */
-function buildDisplayActions(state: WorkflowState, variant: OpenAccountsVariant): DisplayActionNode[] {
+export function buildDisplayActions(state: WorkflowState, variant: OpenAccountsVariant): DisplayActionNode[] {
+  const hideClientSetupInReviewer = (state.demoViewMode ?? 'advisor') !== 'advisor'
   const visibleActions = state.actions
     .filter((a) => a.id !== 'kyc')
+    .filter((a) => !(hideClientSetupInReviewer && a.id === 'collect-client-data'))
     .sort((a, b) => a.order - b.order)
   const visibleTasks = (action: Action) =>
     state.tasks
@@ -445,6 +447,33 @@ function buildDisplayActions(state: WorkflowState, variant: OpenAccountsVariant)
   return result
 }
 
+/** Average field-completion % across sidebar-visible task rows (matches pizza-tracker weighting). */
+export function computeOverallJourneyProgressPct(
+  state: WorkflowState,
+  variant: OpenAccountsVariant,
+): number {
+  const displayActions = buildDisplayActions(state, variant)
+  const allDisplayTasks: DisplayTaskNode[] = displayActions.flatMap((a) =>
+    a.taskRows.flatMap((row) => (row.type === 'task' ? [row.task] : row.tasks)),
+  )
+  const pcts = allDisplayTasks.map((dt) => {
+    const underlyingTasks = dt.underlyingTaskIds
+      .map((id) => state.tasks.find((t) => t.id === id))
+      .filter((t): t is Task => Boolean(t))
+    const totals = underlyingTasks
+      .map((t) => getTaskFieldProgress(state, t))
+      .reduce(
+        (acc, p) => ({ filled: acc.filled + p.filled, total: acc.total + p.total }),
+        { filled: 0, total: 0 },
+      )
+    if (totals.total <= 0) return null
+    return totals.filled / totals.total
+  })
+  const valid = pcts.filter((p): p is number => typeof p === 'number' && Number.isFinite(p))
+  if (valid.length === 0) return 0
+  return (valid.reduce((a, b) => a + b, 0) / valid.length) * 100
+}
+
 export function StepSidebar() {
   const { state, dispatch } = useWorkflow()
   const navigate = useNavigate()
@@ -470,7 +499,7 @@ export function StepSidebar() {
   }
 
   useEffect(() => {
-    if (variant !== 'v5') return
+    if (selectedVariant !== 'v5' && selectedVariant !== 'v6') return
     setV5GroupOpen((prev) => {
       const next = { ...prev }
       for (const action of displayActions) {
@@ -496,9 +525,9 @@ export function StepSidebar() {
       }
       return next
     })
-  }, [variant, displayActions, state.activeTaskId, state.tasks])
+  }, [selectedVariant, displayActions, state.activeTaskId, state.tasks])
 
-  const renderTaskNavListItem = (displayTask: DisplayTaskNode, nestedInV5Group: boolean) => {
+  const renderTaskNavListItem = (displayTask: DisplayTaskNode, nestedInCollapsibleGroup: boolean) => {
     const underlyingTasks = displayTask.underlyingTaskIds
       .map((id) => state.tasks.find((t) => t.id === id))
       .filter((t): t is Task => Boolean(t))
@@ -559,7 +588,7 @@ export function StepSidebar() {
           aria-current={isActiveTask ? 'page' : undefined}
           className={cn(
             'w-full text-left pr-3 py-2.5 rounded-lg text-sm font-medium flex items-center justify-between gap-2 transition-colors',
-            nestedInV5Group ? 'pl-2' : 'pl-12',
+            nestedInCollapsibleGroup ? 'pl-4' : 'pl-0',
             isActiveTask
               ? 'bg-sidebar-accent text-sidebar-accent-foreground'
               : 'text-sidebar-foreground hover:bg-sidebar-accent/70 hover:text-sidebar-accent-foreground',
@@ -579,29 +608,10 @@ export function StepSidebar() {
     )
   }
 
-  const overallProgressPct = useMemo(() => {
-    const allDisplayTasks: DisplayTaskNode[] = displayActions.flatMap((a) =>
-      a.taskRows.flatMap((row) => (row.type === 'task' ? [row.task] : row.tasks)),
-    )
-
-    const pcts = allDisplayTasks.map((dt) => {
-      const underlyingTasks = dt.underlyingTaskIds
-        .map((id) => state.tasks.find((t) => t.id === id))
-        .filter((t): t is Task => Boolean(t))
-      const totals = underlyingTasks
-        .map((t) => getTaskFieldProgress(state, t))
-        .reduce(
-          (acc, p) => ({ filled: acc.filled + p.filled, total: acc.total + p.total }),
-          { filled: 0, total: 0 },
-        )
-      if (totals.total <= 0) return null
-      return totals.filled / totals.total
-    })
-
-    const valid = pcts.filter((p): p is number => typeof p === 'number' && Number.isFinite(p))
-    if (valid.length === 0) return 0
-    return (valid.reduce((a, b) => a + b, 0) / valid.length) * 100
-  }, [displayActions, state])
+  const overallProgressPct = useMemo(
+    () => computeOverallJourneyProgressPct(state, selectedVariant),
+    [state, selectedVariant],
+  )
 
   return (
     <TooltipProvider delayDuration={300}>
@@ -625,58 +635,74 @@ export function StepSidebar() {
           }
         />
         <div className="flex-1 min-h-0 overflow-y-auto px-1 pt-2">
-          {displayActions.map((action) => {
+          {displayActions.map((action, actionIndex) => {
             const ActionIcon = getActionIcon(action.id)
             return (
-              <div key={action.id} className="mb-5">
-                <div className="mb-1.5 flex h-9 items-center gap-2 px-3">
-                  <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-muted text-muted-foreground">
+              <div
+                key={action.id}
+                className="flex gap-2 px-3 mb-5"
+              >
+                {/* One continuous spine per column (top→bottom); icon sits on top with opaque fill so the line reads as unbroken between actions. */}
+                <div className="relative flex w-7 shrink-0 flex-col items-center self-stretch">
+                  <span
+                    aria-hidden
+                    className={cn(
+                      'pointer-events-none absolute left-1/2 top-0 z-0 w-px -translate-x-1/2 bg-border/70',
+                      actionIndex < displayActions.length - 1 ? 'bottom-[-1.25rem]' : 'bottom-0',
+                    )}
+                  />
+                  <span className="relative z-10 flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-muted text-muted-foreground">
                     <ActionIcon className="h-3.5 w-3.5" aria-hidden />
                   </span>
-                  <h3 className="text-sm font-medium text-foreground">{action.title}</h3>
+                  <div className="min-h-0 w-full flex-1 shrink" aria-hidden />
                 </div>
-                <ul className="space-y-1">
-                  {action.taskRows.map((row) => {
-                    if (row.type === 'task') {
-                      return renderTaskNavListItem(row.task, false)
-                    }
-                    const expanded = isV5GroupOpen(row.id)
-                    return (
-                      <li key={row.id} className="space-y-1">
-                        <button
-                          type="button"
-                          onClick={() => toggleV5Group(row.id)}
-                          aria-expanded={expanded}
-                          className={cn(
-                            'flex w-full items-center justify-start rounded-lg py-2 pl-12 pr-3 text-left text-sm font-medium transition-colors hover:bg-muted/50',
-                            sidebarGroupHeaderPrimary
-                              ? 'text-foreground hover:text-foreground'
-                              : 'text-muted-foreground hover:text-muted-foreground',
-                          )}
-                        >
-                          <span className="inline-flex min-w-0 max-w-full items-center gap-1">
-                            <span className="min-w-0 truncate">{row.label}</span>
-                            <ChevronDown
+                <div className="relative z-[1] min-w-0 flex-1">
+                  <div className="mb-1.5 flex h-9 min-h-9 items-center">
+                    <h3 className="text-sm font-medium text-foreground">{action.title}</h3>
+                  </div>
+                  <ul className="space-y-1">
+                      {action.taskRows.map((row) => {
+                        if (row.type === 'task') {
+                          return renderTaskNavListItem(row.task, false)
+                        }
+                        const expanded = isV5GroupOpen(row.id)
+                        return (
+                          <li key={row.id} className="space-y-1">
+                            <button
+                              type="button"
+                              onClick={() => toggleV5Group(row.id)}
+                              aria-expanded={expanded}
                               className={cn(
-                                'h-3.5 w-3.5 shrink-0 transition-transform',
+                                'flex w-full items-center justify-start rounded-lg py-2 pr-3 text-left text-sm font-medium transition-colors hover:bg-muted/50',
                                 sidebarGroupHeaderPrimary
-                                  ? 'text-foreground/80'
-                                  : 'text-muted-foreground/90',
-                                !expanded && '-rotate-90',
+                                  ? 'text-foreground hover:text-foreground'
+                                  : 'text-muted-foreground hover:text-muted-foreground',
                               )}
-                              aria-hidden
-                            />
-                          </span>
-                        </button>
-                        {expanded ? (
-                          <ul className="ml-12 mt-1 space-y-1 border-l border-border/70 pl-3">
-                            {row.tasks.map((t) => renderTaskNavListItem(t, true))}
-                          </ul>
-                        ) : null}
-                      </li>
-                    )
-                  })}
-                </ul>
+                            >
+                              <span className="inline-flex min-w-0 max-w-full items-center gap-1">
+                                <span className="min-w-0 truncate">{row.label}</span>
+                                <ChevronDown
+                                  className={cn(
+                                    'h-3.5 w-3.5 shrink-0 transition-transform',
+                                    sidebarGroupHeaderPrimary
+                                      ? 'text-foreground/80'
+                                      : 'text-muted-foreground/90',
+                                    !expanded && '-rotate-90',
+                                  )}
+                                  aria-hidden
+                                />
+                              </span>
+                            </button>
+                            {expanded ? (
+                              <ul className="mt-1 space-y-1">
+                                {row.tasks.map((t) => renderTaskNavListItem(t, true))}
+                              </ul>
+                            ) : null}
+                          </li>
+                        )
+                      })}
+                    </ul>
+                  </div>
               </div>
             )
           })}
