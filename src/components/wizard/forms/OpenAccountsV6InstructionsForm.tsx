@@ -6,7 +6,7 @@ import { OpenAccountsForm } from './OpenAccountsForm'
 
 /**
  * V6 “Account Setup” page: no-annuity open-accounts surface only.
- * The annuity Yes/No control and with-annuity setup live under the “Annuity Accounts Setup” task.
+ * The annuity Yes/No control and with-annuity setup live under the “Account Opening + Annuity Order” task.
  */
 export function OpenAccountsV6InstructionsForm() {
   const { state } = useWorkflow()

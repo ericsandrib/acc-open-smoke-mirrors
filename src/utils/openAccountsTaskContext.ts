@@ -6,6 +6,12 @@ export const OPEN_ACCOUNTS_FORM_KEY = 'open-accounts' as const
 /** Split journey only: second branch uses a distinct form key for external KYC/eSign behavior. */
 export const OPEN_ACCOUNTS_WITH_ANNUITY_FORM_KEY = 'open-accounts-with-annuity' as const
 
+/** v5/v6 sidebar: collapsible group for the in-app (no-annuity) open-accounts path. */
+export const OPEN_ACCOUNTS_NAV_NO_ANNUITY_GROUP_LABEL = 'Account Opening' as const
+
+/** v5/v6 sidebar + split journey headings: with-annuity / annuity-order branch. */
+export const OPEN_ACCOUNTS_NAV_ANNUITY_ORDER_ROW_LABEL = 'Account Opening + Annuity Order' as const
+
 const OPEN_ACCOUNTS_FORM_KEYS: readonly string[] = [
   OPEN_ACCOUNTS_FORM_KEY,
   OPEN_ACCOUNTS_WITH_ANNUITY_FORM_KEY,

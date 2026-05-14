@@ -272,10 +272,13 @@ function workflowReducer(state: WorkflowState, action: WorkflowAction): Workflow
       const newTasks = state.tasks.map((t) =>
         t.id === redirectedId ? { ...t, unread: false } : t
       )
+      const activatedAnnuityTask =
+        state.tasks.find((t) => t.id === redirectedId)?.formKey === OPEN_ACCOUNTS_WITH_ANNUITY_FORM_KEY
       return {
         ...state,
         activeTaskId: redirectedId,
         tasks: newTasks,
+        ...(activatedAnnuityTask ? { v6IncludeAnnuityAccounts: false } : {}),
         v5NoAnnuityOpenAccountsPage: blockedAnnuityNavigation
           ? 'envelopes'
           : nextV5NoAnnuityPageForActiveTask(state, redirectedId),
@@ -309,6 +312,8 @@ function workflowReducer(state: WorkflowState, action: WorkflowAction): Workflow
       const goToTasks = state.tasks.map((t) =>
         t.id === redirectedId ? { ...t, unread: false } : t
       )
+      const activatedAnnuityTask =
+        state.tasks.find((t) => t.id === redirectedId)?.formKey === OPEN_ACCOUNTS_WITH_ANNUITY_FORM_KEY
       return {
         ...state,
         activeTaskId: redirectedId,
@@ -316,6 +321,7 @@ function workflowReducer(state: WorkflowState, action: WorkflowAction): Workflow
         activeChildActionId: undefined,
         activeChildSubTaskIndex: undefined,
         childActionResume: undefined,
+        ...(activatedAnnuityTask ? { v6IncludeAnnuityAccounts: false } : {}),
         v5NoAnnuityOpenAccountsPage: blockedAnnuityNavigation
           ? 'envelopes'
           : nextV5NoAnnuityPageForActiveTask(state, redirectedId),

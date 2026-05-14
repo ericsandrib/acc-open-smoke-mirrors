@@ -86,6 +86,8 @@ import { SupportingDocumentPreviewProvider } from '@/components/wizard/supportin
 import { getChildTypeConfig, getSubTaskDisplayTitle } from '@/utils/childTaskRegistry'
 import {
   OPEN_ACCOUNTS_FORM_KEY,
+  OPEN_ACCOUNTS_NAV_ANNUITY_ORDER_ROW_LABEL,
+  OPEN_ACCOUNTS_NAV_NO_ANNUITY_GROUP_LABEL,
   OPEN_ACCOUNTS_WITH_ANNUITY_FORM_KEY,
 } from '@/utils/openAccountsTaskContext'
 import { getDefaultJourneyEntryTaskId, getReviewerOpenAccountsLandingTask } from '@/utils/journeyEntryTask'
@@ -459,6 +461,37 @@ function WizardLayoutInner() {
     }
   }, [state.demoViewMode, state.activeTaskId, state.activeChildActionId, state.tasks, dispatch])
 
+  /** Reviewer demo: advisor-only open-accounts steps are hidden from nav — clear invalid task or sub-page. */
+  useEffect(() => {
+    const mode = state.demoViewMode ?? 'advisor'
+    if (mode === 'advisor' || state.activeChildActionId) return
+
+    const task = state.tasks.find((x) => x.id === state.activeTaskId)
+    if (!task) return
+
+    if (task.formKey === OPEN_ACCOUNTS_WITH_ANNUITY_FORM_KEY) {
+      const fallback = getReviewerOpenAccountsLandingTask(state.tasks)
+      if (fallback?.id && fallback.id !== state.activeTaskId) {
+        dispatch({ type: 'SET_ACTIVE_TASK', taskId: fallback.id })
+      }
+      return
+    }
+
+    if (task.formKey === OPEN_ACCOUNTS_FORM_KEY && task.actionId === 'account-opening') {
+      const page = state.v5NoAnnuityOpenAccountsPage
+      if (page === 'documents' || page === 'envelopes') {
+        dispatch({ type: 'SET_V5_NO_ANNUITY_OPEN_ACCOUNTS_PAGE', page: 'instructions' })
+      }
+    }
+  }, [
+    state.demoViewMode,
+    state.activeTaskId,
+    state.activeChildActionId,
+    state.tasks,
+    state.v5NoAnnuityOpenAccountsPage,
+    dispatch,
+  ])
+
   const activeChild = inChildAction
     ? state.tasks.flatMap((t) => t.children ?? []).find((c) => c.id === state.activeChildActionId)
     : null
@@ -602,8 +635,8 @@ function WizardLayoutInner() {
   const getTaskBreadcrumbLabel = (task: Task | undefined) => {
     if (!task) return undefined
     if (isSplitJourney) {
-      if (task.formKey === OPEN_ACCOUNTS_FORM_KEY) return 'Non-Annuity Accounts'
-      if (task.formKey === OPEN_ACCOUNTS_WITH_ANNUITY_FORM_KEY) return 'Annuity Accounts'
+      if (task.formKey === OPEN_ACCOUNTS_FORM_KEY) return OPEN_ACCOUNTS_NAV_NO_ANNUITY_GROUP_LABEL
+      if (task.formKey === OPEN_ACCOUNTS_WITH_ANNUITY_FORM_KEY) return OPEN_ACCOUNTS_NAV_ANNUITY_ORDER_ROW_LABEL
     }
     return task.title
   }

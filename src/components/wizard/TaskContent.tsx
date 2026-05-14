@@ -8,6 +8,8 @@ import { useOpenAccountsVariant, useOpenAccountsVariantControls } from './openAc
 import {
   isOpenAccountsFormKey,
   OPEN_ACCOUNTS_FORM_KEY,
+  OPEN_ACCOUNTS_NAV_ANNUITY_ORDER_ROW_LABEL,
+  OPEN_ACCOUNTS_NAV_NO_ANNUITY_GROUP_LABEL,
   OPEN_ACCOUNTS_WITH_ANNUITY_FORM_KEY,
 } from '@/utils/openAccountsTaskContext'
 import { OpenAccountsV6InstructionsForm } from './forms/OpenAccountsV6InstructionsForm'
@@ -96,9 +98,9 @@ export function TaskContent() {
   const splitV1Title =
     variant !== 'v5' && isSplitJourney && activeTask
       ? activeTask.formKey === OPEN_ACCOUNTS_FORM_KEY
-        ? 'Non-Annuity Accounts'
+        ? OPEN_ACCOUNTS_NAV_NO_ANNUITY_GROUP_LABEL
         : activeTask.formKey === OPEN_ACCOUNTS_WITH_ANNUITY_FORM_KEY
-          ? 'Annuity Accounts'
+          ? OPEN_ACCOUNTS_NAV_ANNUITY_ORDER_ROW_LABEL
           : null
       : null
 
@@ -116,11 +118,9 @@ export function TaskContent() {
       : null
   const v5WithAnnuityTaskTitle =
     variant === 'v5' && activeTask?.formKey === OPEN_ACCOUNTS_WITH_ANNUITY_FORM_KEY
-      ? selectedVariant === 'v6'
-        ? 'Annuity Accounts'
-        : selectedVariant === 'v5'
-          ? 'Accounts'
-          : 'Account Instructions'
+      ? selectedVariant === 'v6' || selectedVariant === 'v5'
+        ? OPEN_ACCOUNTS_NAV_ANNUITY_ORDER_ROW_LABEL
+        : 'Account Instructions'
       : null
   const v5NoAnnuityTaskDescription =
     variant === 'v5' && activeTask?.formKey === OPEN_ACCOUNTS_FORM_KEY
@@ -151,14 +151,14 @@ export function TaskContent() {
   const sectionName = contextTask
     ? selectedVariant === 'v6' && isSplitJourney
       ? contextTask.formKey === OPEN_ACCOUNTS_FORM_KEY
-        ? 'Non-Annuity Accounts'
+        ? OPEN_ACCOUNTS_NAV_NO_ANNUITY_GROUP_LABEL
         : contextTask.formKey === OPEN_ACCOUNTS_WITH_ANNUITY_FORM_KEY
-          ? 'Annuity Accounts'
+          ? OPEN_ACCOUNTS_NAV_ANNUITY_ORDER_ROW_LABEL
           : contextTask.title
       : isSplitJourney && contextTask.formKey === OPEN_ACCOUNTS_FORM_KEY
-      ? 'Non-Annuity Accounts'
+      ? OPEN_ACCOUNTS_NAV_NO_ANNUITY_GROUP_LABEL
       : isSplitJourney && contextTask.formKey === OPEN_ACCOUNTS_WITH_ANNUITY_FORM_KEY
-          ? 'Annuity Accounts'
+          ? OPEN_ACCOUNTS_NAV_ANNUITY_ORDER_ROW_LABEL
           : contextTask.title
     : null
   const v6OpenAccountsGroupContext =

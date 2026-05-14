@@ -8,6 +8,8 @@ import { parseChildSubTaskId } from '@/utils/childTaskRegistry'
 import {
   isOpenAccountsFormKey,
   OPEN_ACCOUNTS_FORM_KEY,
+  OPEN_ACCOUNTS_NAV_ANNUITY_ORDER_ROW_LABEL,
+  OPEN_ACCOUNTS_NAV_NO_ANNUITY_GROUP_LABEL,
   OPEN_ACCOUNTS_WITH_ANNUITY_FORM_KEY,
 } from '@/utils/openAccountsTaskContext'
 import {
@@ -223,6 +225,17 @@ type DisplayActionNode = {
   taskRows: DisplayTaskRow[]
 }
 
+/** Advisor-only rows in the no-annuity open-accounts sub-nav (v5/v6 grouped list and non-split v5 list). */
+function filterAdvisorOnlyOpenAccountsNavNodes(
+  nodes: DisplayTaskNode[],
+  isAdvisorDemoView: boolean,
+): DisplayTaskNode[] {
+  if (isAdvisorDemoView) return nodes
+  return nodes.filter(
+    (n) => n.v5NoAnnuityPage !== 'documents' && n.v5NoAnnuityPage !== 'envelopes',
+  )
+}
+
 function isDisplayTaskNodeActive(dt: DisplayTaskNode, state: WorkflowState): boolean {
   const underlyingTasks = dt.underlyingTaskIds
     .map((id) => state.tasks.find((t) => t.id === id))
@@ -251,13 +264,16 @@ function isDisplayTaskNodeActive(dt: DisplayTaskNode, state: WorkflowState): boo
  * - In a non-split journey (only one of the two open-accounts form keys) the structure is unchanged.
  * - In v1 split: one Account Opening action with two tasks; rows are labeled by annuity path.
  * - In v2/v3/v4 split: keep both open-accounts tasks visible (renamed labels on each row).
- * - In v5 split: collapsible “Non-Annuity Accounts” first, then a flat “Annuity Accounts” task row (sibling to that group).
- * - In v6 split: optional flat “Annuity Accounts Setup” row after non-annuity (when annuity path is enabled).
+ * - In v5 split: collapsible “Account Opening” first, then a flat “Account Opening + Annuity Order” task row (sibling to that group).
+ * - In v6 split: optional flat annuity-order row after the Account Opening group (when annuity path is enabled).
  *   Without-annuity side uses navigator rows (Account Setup, KYC Initiation, Supporting Documents, Envelopes)
  *   that all bind to the same underlying task and swap full-page `OpenAccountsForm` content.
+ * - In reviewer demo (`demoViewMode` other than `advisor`): Supporting Documents, Envelopes, and any
+ *   Annuity-order path rows are omitted from the sidebar (advisor-only).
  */
 export function buildDisplayActions(state: WorkflowState, variant: OpenAccountsVariant): DisplayActionNode[] {
   const hideClientSetupInReviewer = (state.demoViewMode ?? 'advisor') !== 'advisor'
+  const isAdvisorDemoView = (state.demoViewMode ?? 'advisor') === 'advisor'
   const visibleActions = state.actions
     .filter((a) => a.id !== 'kyc')
     .filter((a) => !(hideClientSetupInReviewer && a.id === 'collect-client-data'))
@@ -288,45 +304,46 @@ export function buildDisplayActions(state: WorkflowState, variant: OpenAccountsV
       title: action.title,
       taskRows:
         variant === 'v5' && action.id === 'account-opening' && noAnnuityOnlyTaskId
-          ? [
-              {
-                type: 'task',
-                task: {
+          ? (() => {
+              const v5NoSplitRows: DisplayTaskNode[] = [
+                {
                   id: 'v5-noann-account-instructions',
                   label: 'Accounts',
                   underlyingTaskIds: [noAnnuityOnlyTaskId],
                   v5NoAnnuityPage: 'instructions',
                 },
-              },
-              {
-                type: 'task',
-                task: {
+                {
                   id: 'v5-noann-kyc-verification',
                   label: 'KYC',
                   underlyingTaskIds: [noAnnuityOnlyTaskId],
                   v5NoAnnuityPage: 'kyc',
                 },
-              },
-              {
-                type: 'task',
-                task: {
+                {
                   id: 'v5-noann-supporting-documents',
                   label: 'Supporting Documents',
                   underlyingTaskIds: [noAnnuityOnlyTaskId],
                   v5NoAnnuityPage: 'documents',
                 },
-              },
-              {
-                type: 'task',
-                task: {
+                {
                   id: 'v5-noann-envelopes',
                   label: 'Envelopes',
                   underlyingTaskIds: [noAnnuityOnlyTaskId],
                   v5NoAnnuityPage: 'envelopes',
                 },
-              },
-            ]
-          : visibleTasks(action).map((t) => toTaskRow(t, t.title)),
+              ]
+              return filterAdvisorOnlyOpenAccountsNavNodes(v5NoSplitRows, isAdvisorDemoView).map((task) => ({
+                type: 'task' as const,
+                task,
+              }))
+            })()
+          : visibleTasks(action)
+              .filter(
+                (t) =>
+                  action.id !== 'account-opening' ||
+                  isAdvisorDemoView ||
+                  t.formKey !== OPEN_ACCOUNTS_WITH_ANNUITY_FORM_KEY,
+              )
+              .map((t) => toTaskRow(t, t.title)),
     }))
   }
 
@@ -344,7 +361,7 @@ export function buildDisplayActions(state: WorkflowState, variant: OpenAccountsV
     noAnnuityTasks.find((t) => t.formKey === OPEN_ACCOUNTS_FORM_KEY)?.id ??
     noAnnuityTasks[0]?.id
 
-  /** Sibling “file” row(s) next to the Non-Annuity “folder”; not a collapsible group. */
+  /** Sibling “file” row(s) next to the Account Opening group header; not a collapsible group. */
   const v5AnnuitySiblingRows: DisplayTaskRow[] =
     withAnnuityTasks.length === 0
       ? []
@@ -354,7 +371,7 @@ export function buildDisplayActions(state: WorkflowState, variant: OpenAccountsV
               type: 'task',
               task: {
                 id: 'v5-annuity-accounts-setup',
-                label: 'Annuity Accounts',
+                label: OPEN_ACCOUNTS_NAV_ANNUITY_ORDER_ROW_LABEL,
                 underlyingTaskIds: [withAnnuityTasks[0].id],
               },
             },
@@ -362,78 +379,84 @@ export function buildDisplayActions(state: WorkflowState, variant: OpenAccountsV
         : withAnnuityTasks.map((t) =>
             toTaskRow(
               t,
-              t.formKey === OPEN_ACCOUNTS_WITH_ANNUITY_FORM_KEY ? 'Annuity Accounts' : t.title,
+              t.formKey === OPEN_ACCOUNTS_WITH_ANNUITY_FORM_KEY
+                ? OPEN_ACCOUNTS_NAV_ANNUITY_ORDER_ROW_LABEL
+                : t.title,
             ),
           )
+
+  const v5NonAnnuityGroupTasks: DisplayTaskNode[] =
+    noAnnuityOpenAccountsTaskId != null
+      ? [
+          {
+            id: 'v5-noann-account-instructions',
+            label: 'Accounts',
+            underlyingTaskIds: [noAnnuityOpenAccountsTaskId],
+            v5NoAnnuityPage: 'instructions',
+          },
+          {
+            id: 'v5-noann-kyc-verification',
+            label: 'KYC',
+            underlyingTaskIds: [noAnnuityOpenAccountsTaskId],
+            v5NoAnnuityPage: 'kyc',
+          },
+          {
+            id: 'v5-noann-supporting-documents',
+            label: 'Supporting Documents',
+            underlyingTaskIds: [noAnnuityOpenAccountsTaskId],
+            v5NoAnnuityPage: 'documents',
+          },
+          {
+            id: 'v5-noann-envelopes',
+            label: 'Envelopes',
+            underlyingTaskIds: [noAnnuityOpenAccountsTaskId],
+            v5NoAnnuityPage: 'envelopes',
+          },
+        ]
+      : []
 
   const v5WithoutAnnuityGroup: DisplayTaskRow = {
     type: 'group',
     id: 'v5-accounts-without-annuity',
-    label: 'Non-Annuity Accounts',
-    tasks:
-      noAnnuityOpenAccountsTaskId != null
-        ? [
-            {
-              id: 'v5-noann-account-instructions',
-              label: 'Accounts',
-              underlyingTaskIds: [noAnnuityOpenAccountsTaskId],
-              v5NoAnnuityPage: 'instructions',
-            },
-            {
-              id: 'v5-noann-kyc-verification',
-              label: 'KYC',
-              underlyingTaskIds: [noAnnuityOpenAccountsTaskId],
-              v5NoAnnuityPage: 'kyc',
-            },
-            {
-              id: 'v5-noann-supporting-documents',
-              label: 'Supporting Documents',
-              underlyingTaskIds: [noAnnuityOpenAccountsTaskId],
-              v5NoAnnuityPage: 'documents',
-            },
-            {
-              id: 'v5-noann-envelopes',
-              label: 'Envelopes',
-              underlyingTaskIds: [noAnnuityOpenAccountsTaskId],
-              v5NoAnnuityPage: 'envelopes',
-            },
-          ]
-        : [],
+    label: OPEN_ACCOUNTS_NAV_NO_ANNUITY_GROUP_LABEL,
+    tasks: filterAdvisorOnlyOpenAccountsNavNodes(v5NonAnnuityGroupTasks, isAdvisorDemoView),
   }
+
+  const v6NonAnnuityGroupTasks: DisplayTaskNode[] =
+    noAnnuityOpenAccountsTaskId != null
+      ? [
+          {
+            id: 'v6-account-instructions',
+            label: 'Accounts',
+            underlyingTaskIds: [noAnnuityOpenAccountsTaskId],
+            v6CombinedInstructions: true,
+          },
+          {
+            id: 'v5-noann-kyc-verification',
+            label: 'KYC',
+            underlyingTaskIds: [noAnnuityOpenAccountsTaskId],
+            v5NoAnnuityPage: 'kyc',
+          },
+          {
+            id: 'v5-noann-supporting-documents',
+            label: 'Supporting Documents',
+            underlyingTaskIds: [noAnnuityOpenAccountsTaskId],
+            v5NoAnnuityPage: 'documents',
+          },
+          {
+            id: 'v5-noann-envelopes',
+            label: 'Envelopes',
+            underlyingTaskIds: [noAnnuityOpenAccountsTaskId],
+            v5NoAnnuityPage: 'envelopes',
+          },
+        ]
+      : []
 
   const v6WithoutAnnuityGroup: DisplayTaskRow = {
     type: 'group',
     id: 'v6-accounts-without-annuity',
-    label: 'Non-Annuity Accounts',
-    tasks:
-      noAnnuityOpenAccountsTaskId != null
-        ? [
-            {
-              id: 'v6-account-instructions',
-              label: 'Accounts',
-              underlyingTaskIds: [noAnnuityOpenAccountsTaskId],
-              v6CombinedInstructions: true,
-            },
-            {
-              id: 'v5-noann-kyc-verification',
-              label: 'KYC',
-              underlyingTaskIds: [noAnnuityOpenAccountsTaskId],
-              v5NoAnnuityPage: 'kyc',
-            },
-            {
-              id: 'v5-noann-supporting-documents',
-              label: 'Supporting Documents',
-              underlyingTaskIds: [noAnnuityOpenAccountsTaskId],
-              v5NoAnnuityPage: 'documents',
-            },
-            {
-              id: 'v5-noann-envelopes',
-              label: 'Envelopes',
-              underlyingTaskIds: [noAnnuityOpenAccountsTaskId],
-              v5NoAnnuityPage: 'envelopes',
-            },
-          ]
-        : [],
+    label: OPEN_ACCOUNTS_NAV_NO_ANNUITY_GROUP_LABEL,
+    tasks: filterAdvisorOnlyOpenAccountsNavNodes(v6NonAnnuityGroupTasks, isAdvisorDemoView),
   }
 
   const accountOpeningGroup: DisplayActionNode = {
@@ -441,17 +464,17 @@ export function buildDisplayActions(state: WorkflowState, variant: OpenAccountsV
     title: 'Open Accounts',
     taskRows:
       variant === 'v5'
-        ? [v5WithoutAnnuityGroup, ...v5AnnuitySiblingRows]
+        ? [v5WithoutAnnuityGroup, ...(isAdvisorDemoView ? v5AnnuitySiblingRows : [])]
         : variant === 'v6'
           ? [
               v6WithoutAnnuityGroup,
-              ...(withAnnuityTasks[0]?.id
+              ...(isAdvisorDemoView && withAnnuityTasks[0]?.id
                 ? [
                     {
                       type: 'task' as const,
                       task: {
                         id: 'v6-annuity-accounts-setup',
-                        label: 'Annuity Accounts',
+                        label: OPEN_ACCOUNTS_NAV_ANNUITY_ORDER_ROW_LABEL,
                         underlyingTaskIds: [withAnnuityTasks[0].id],
                       },
                     },
@@ -459,8 +482,10 @@ export function buildDisplayActions(state: WorkflowState, variant: OpenAccountsV
                 : []),
             ]
         : [
-            ...withAnnuityTasks.map((t) => toTaskRow(t, 'Annuity Accounts')),
-            ...noAnnuityTasks.map((t) => toTaskRow(t, 'Non-Annuity Accounts')),
+            ...(isAdvisorDemoView
+              ? withAnnuityTasks.map((t) => toTaskRow(t, OPEN_ACCOUNTS_NAV_ANNUITY_ORDER_ROW_LABEL))
+              : []),
+            ...noAnnuityTasks.map((t) => toTaskRow(t, OPEN_ACCOUNTS_NAV_NO_ANNUITY_GROUP_LABEL)),
           ],
   }
 

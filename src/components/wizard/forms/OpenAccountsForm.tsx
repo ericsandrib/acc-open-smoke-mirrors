@@ -221,11 +221,8 @@ export function OpenAccountsForm() {
     state.tasks.some((t) => t.formKey === OPEN_ACCOUNTS_WITH_ANNUITY_FORM_KEY)
   const showV6AnnuityDecisionAboveCard =
     wizardOpenAccountsVariant === 'v6' && isV6SplitJourney && isV6WithAnnuitySetup
-  const accountsSectionTitle = isV6WithoutAnnuityInstructions
-    ? 'Accounts without Annuity'
-    : isV6WithAnnuitySetup
-      ? 'Accounts with Annuity'
-      : 'Accounts'
+  const accountsSectionTitle =
+    isV6WithoutAnnuityInstructions || isV6WithAnnuitySetup ? 'New Accounts' : 'Accounts'
   const { data, updateField } = useTaskData(openAccountsTaskId)
   const { registerPreview, revokePreview } = useSupportingDocumentPreview()
   const [pickerOpen, setPickerOpen] = useState(false)
@@ -679,35 +676,16 @@ export function OpenAccountsForm() {
   }
 
   const v6AnnuityDecisionIsYes = state.v6IncludeAnnuityAccounts === true
-
-  if (showV6AnnuityDecisionAboveCard && !v6AnnuityDecisionIsYes) {
-    return (
-      <div className={openAccountsVariant === 'v5' || openAccountsVariant === 'v6' ? 'space-y-10' : 'space-y-7'}>
-        <div className="scroll-mt-16" id={sectionId('oa-v6-annuity-decision')}>
-          <SegmentedControl
-            label="Will this client open annuity accounts?"
-            value="no"
-            selectedStyle="neutral"
-            options={[
-              { value: 'no', label: 'No' },
-              { value: 'yes', label: 'Yes' },
-            ]}
-            onValueChange={(v) =>
-              dispatch({ type: 'SET_V6_INCLUDE_ANNUITY_ACCOUNTS', include: v === 'yes' })
-            }
-            className="max-w-xl"
-          />
-        </div>
-      </div>
-    )
-  }
+  /** v6 split annuity task: hide main form until the annuity-order question is answered Yes. */
+  const showFieldsBelowV6AnnuityGate =
+    !showV6AnnuityDecisionAboveCard || v6AnnuityDecisionIsYes
 
   return (
     <div className={openAccountsVariant === 'v5' || openAccountsVariant === 'v6' ? 'space-y-10' : 'space-y-7'}>
       {showV6AnnuityDecisionAboveCard ? (
         <div className="scroll-mt-16" id={sectionId('oa-v6-annuity-decision')}>
           <SegmentedControl
-            label="Will this client open annuity accounts?"
+            label="Will there be an annuity order included with account opening?"
             value={v6AnnuityDecisionIsYes ? 'yes' : 'no'}
             selectedStyle="neutral"
             options={[
@@ -721,7 +699,7 @@ export function OpenAccountsForm() {
           />
         </div>
       ) : null}
-      {showV5Instructions || showV5Documents ? (
+      {showFieldsBelowV6AnnuityGate && (showV5Instructions || showV5Documents) ? (
       <div
         className={cn(
           (openAccountsVariant === 'v5' || openAccountsVariant === 'v6') && 'space-y-10',
