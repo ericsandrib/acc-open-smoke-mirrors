@@ -3,19 +3,18 @@ import { useWizardRightPanel } from '@/components/wizard/wizardRightPanelContext
 import { JourneySupportingDocumentsPanel } from '@/components/wizard/JourneySupportingDocumentsPanel'
 import { useWorkflow } from '@/stores/workflowStore'
 import { parseChildSubTaskId, getSubTaskDisplayTitle } from '@/utils/childTaskRegistry'
-import { FileText, Info } from 'lucide-react'
 
 const JOURNEY_TAB_ORDER = ['details', 'documents'] as const
 type JourneyRailTab = (typeof JOURNEY_TAB_ORDER)[number]
 
-const JOURNEY_TAB_META: Record<JourneyRailTab, { label: string; Icon: typeof Info }> = {
-  details: { label: 'Details', Icon: Info },
-  documents: { label: 'Documents', Icon: FileText },
+const JOURNEY_TAB_META: Record<JourneyRailTab, { label: string }> = {
+  details: { label: 'Info' },
+  documents: { label: 'Documents' },
 }
 
 /**
  * Main-journey right rail: same collapse shell as {@link ChildActionRightSidebar},
- * with Details + Documents only (Activity/Comments live on the child rail).
+ * with Info + Documents text tabs only (Activity/Comments live on the child rail).
  */
 export function DetailSidebar() {
   const { state } = useWorkflow()
@@ -58,12 +57,12 @@ export function DetailSidebar() {
         )}
       >
         <div
-          className="flex h-14 items-center justify-center gap-0.5 border-b border-border px-2 shrink-0"
+          className="flex h-14 items-center gap-1 border-b border-border px-3 shrink-0"
           role="tablist"
           aria-label="Right panel"
         >
           {JOURNEY_TAB_ORDER.map((tab) => {
-            const { label, Icon } = JOURNEY_TAB_META[tab]
+            const { label } = JOURNEY_TAB_META[tab]
             const selected = displayTab === tab
             return (
               <button
@@ -72,16 +71,15 @@ export function DetailSidebar() {
                 role="tab"
                 aria-selected={selected}
                 aria-label={label}
-                title={label}
                 onClick={() => setActiveTab(tab)}
                 className={cn(
-                  'flex h-9 w-9 shrink-0 items-center justify-center rounded-md transition-colors',
+                  'px-3 py-1.5 rounded-md text-sm font-medium transition-colors shrink-0',
                   selected
                     ? 'bg-muted text-foreground'
                     : 'text-muted-foreground hover:bg-muted/50 hover:text-foreground',
                 )}
               >
-                <Icon className="h-4 w-4" aria-hidden />
+                {label}
               </button>
             )
           })}

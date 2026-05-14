@@ -6,18 +6,14 @@ import {
 } from '@/components/wizard/wizardRightPanelContext'
 import { ChildActionTimeline } from '@/components/wizard/ChildActionTimelineSheet'
 import { JourneySupportingDocumentsPanel } from '@/components/wizard/JourneySupportingDocumentsPanel'
-import { Activity, FileText, Info, MessageSquare } from 'lucide-react'
 
 const TAB_ORDER: WizardRightPanelTab[] = ['details', 'activity', 'comments', 'documents']
 
-const TAB_META: Record<
-  WizardRightPanelTab,
-  { label: string; Icon: typeof Info }
-> = {
-  details: { label: 'Details', Icon: Info },
-  activity: { label: 'Activity', Icon: Activity },
-  comments: { label: 'Comments', Icon: MessageSquare },
-  documents: { label: 'Documents', Icon: FileText },
+const TAB_META: Record<WizardRightPanelTab, { label: string }> = {
+  details: { label: 'Info' },
+  activity: { label: 'Activity' },
+  comments: { label: 'Comments' },
+  documents: { label: 'Documents' },
 }
 
 /**
@@ -53,12 +49,12 @@ export function ChildActionRightSidebar() {
         )}
       >
         <div
-          className="flex h-14 items-center justify-center gap-0.5 border-b border-border px-2 shrink-0"
+          className="flex h-14 items-center gap-1 border-b border-border px-3 shrink-0 flex-wrap"
           role="tablist"
           aria-label="Right panel"
         >
           {TAB_ORDER.map((tab) => {
-            const { label, Icon } = TAB_META[tab]
+            const { label } = TAB_META[tab]
             const selected = activeTab === tab
             return (
               <button
@@ -67,16 +63,15 @@ export function ChildActionRightSidebar() {
                 role="tab"
                 aria-selected={selected}
                 aria-label={label}
-                title={label}
                 onClick={() => setActiveTab(tab)}
                 className={cn(
-                  'flex h-9 w-9 shrink-0 items-center justify-center rounded-md transition-colors',
+                  'px-3 py-1.5 rounded-md text-sm font-medium transition-colors shrink-0',
                   selected
                     ? 'bg-muted text-foreground'
                     : 'text-muted-foreground hover:bg-muted/50 hover:text-foreground',
                 )}
               >
-                <Icon className="h-4 w-4" aria-hidden />
+                {label}
               </button>
             )
           })}
