@@ -19,6 +19,47 @@ const DEFAULT_POSITION: Position = { right: 24, bottom: 112 }
 
 type DemoMode = NonNullable<WorkflowState['demoViewMode']>
 
+/** Subtle shell + icon hues so each demo workspace is recognizable at a glance. */
+const PERSPECTIVE_ACCENT: Record<
+  DemoMode,
+  { shell: string; icon: string; menuSelected: string }
+> = {
+  advisor: {
+    shell:
+      'border-slate-400/40 bg-slate-500/[0.06] shadow-slate-900/[0.04] dark:border-slate-500/35 dark:bg-slate-400/[0.07] dark:shadow-black/20',
+    icon: 'text-slate-600 dark:text-slate-300',
+    menuSelected: 'border-l-slate-500/70 bg-slate-500/[0.08] dark:border-l-slate-400/60 dark:bg-slate-400/[0.10]',
+  },
+  'ho-documents': {
+    shell:
+      'border-teal-500/30 bg-teal-500/[0.05] shadow-teal-900/[0.04] dark:border-teal-400/28 dark:bg-teal-400/[0.06] dark:shadow-black/20',
+    icon: 'text-teal-700/90 dark:text-teal-300/90',
+    menuSelected: 'border-l-teal-600/65 bg-teal-500/[0.08] dark:border-l-teal-400/55 dark:bg-teal-400/[0.10]',
+  },
+  'ho-kyc': {
+    shell:
+      'border-teal-500/30 bg-teal-500/[0.05] shadow-teal-900/[0.04] dark:border-teal-400/28 dark:bg-teal-400/[0.06] dark:shadow-black/20',
+    icon: 'text-teal-700/90 dark:text-teal-300/90',
+    menuSelected: 'border-l-teal-600/65 bg-teal-500/[0.08] dark:border-l-teal-400/55 dark:bg-teal-400/[0.10]',
+  },
+  'ho-principal': {
+    shell:
+      'border-violet-500/32 bg-violet-500/[0.055] shadow-violet-900/[0.05] dark:border-violet-400/30 dark:bg-violet-400/[0.07] dark:shadow-black/20',
+    icon: 'text-violet-700/90 dark:text-violet-300/90',
+    menuSelected: 'border-l-violet-600/65 bg-violet-500/[0.09] dark:border-l-violet-400/55 dark:bg-violet-400/[0.11]',
+  },
+  aml: {
+    shell:
+      'border-rose-500/30 bg-rose-500/[0.045] shadow-rose-900/[0.04] dark:border-rose-400/28 dark:bg-rose-400/[0.06] dark:shadow-black/20',
+    icon: 'text-rose-700/90 dark:text-rose-300/90',
+    menuSelected: 'border-l-rose-600/65 bg-rose-500/[0.08] dark:border-l-rose-400/55 dark:bg-rose-400/[0.10]',
+  },
+}
+
+function accentForMode(mode: DemoMode | undefined) {
+  return PERSPECTIVE_ACCENT[(mode ?? 'advisor') as DemoMode]
+}
+
 function readPersistedPosition(): Position {
   if (typeof window === 'undefined') return DEFAULT_POSITION
   try {
@@ -57,11 +98,11 @@ function isDocumentReviewMode(mode: DemoMode | undefined): boolean {
 
 function ModeGlyph({ mode }: { mode: DemoMode | undefined }) {
   const m = mode ?? 'advisor'
-  const cls = 'h-3.5 w-3.5 shrink-0 text-muted-foreground'
-  if (m === 'advisor') return <Eye className={cls} aria-hidden />
-  if (m === 'aml') return <ShieldAlert className={cls} aria-hidden />
-  if (m === 'ho-principal') return <ShieldCheck className={cls} aria-hidden />
-  return <Building className={cls} aria-hidden />
+  const iconCls = cn('h-3.5 w-3.5 shrink-0', accentForMode(m).icon)
+  if (m === 'advisor') return <Eye className={iconCls} aria-hidden />
+  if (m === 'aml') return <ShieldAlert className={iconCls} aria-hidden />
+  if (m === 'ho-principal') return <ShieldCheck className={iconCls} aria-hidden />
+  return <Building className={iconCls} aria-hidden />
 }
 
 /**
@@ -82,6 +123,7 @@ export function AdvisorReviewerPerspectiveCard() {
   const childType = activeChild?.childType
 
   const mode = (state.demoViewMode ?? 'advisor') as DemoMode
+  const accent = accentForMode(mode)
   const label = currentPerspectiveLabel(mode)
 
   const onOnboardingListOrDetail =
@@ -154,11 +196,12 @@ export function AdvisorReviewerPerspectiveCard() {
       ref={cardRef}
       style={{ right: position.right, bottom: position.bottom }}
       className={cn(
-        'fixed z-50 flex items-center gap-1.5 rounded-full border border-border bg-background/95 px-1.5 py-1 shadow-lg backdrop-blur',
+        'fixed z-50 flex items-center gap-1.5 rounded-full border px-1.5 py-1 shadow-lg backdrop-blur',
         'select-none',
+        accent.shell,
       )}
       role="region"
-      aria-label="Demo: switch advisor or reviewer workspace"
+      aria-label="Switch advisor or reviewer workspace"
     >
       <button
         type="button"
@@ -179,8 +222,7 @@ export function AdvisorReviewerPerspectiveCard() {
             className="flex max-w-[min(100vw-6rem,16rem)] items-center gap-2 rounded-full px-2.5 py-1 text-xs font-medium text-foreground hover:bg-muted/70 transition-colors"
           >
             <ModeGlyph mode={mode} />
-            <span className="font-semibold shrink-0">Demo:</span>
-            <span className="truncate text-left">{label}</span>
+            <span className="truncate text-left font-medium">{label}</span>
           </button>
         </DropdownMenuTrigger>
         <DropdownMenuContent
@@ -191,18 +233,24 @@ export function AdvisorReviewerPerspectiveCard() {
         >
           <DropdownMenuItem
             onSelect={() => dispatch({ type: 'SET_DEMO_VIEW', mode: 'advisor' })}
-            className={cn('flex items-center gap-2 text-sm', mode === 'advisor' && 'bg-accent/70')}
+            className={cn(
+              'flex items-center gap-2 border-l-2 border-l-transparent pl-2 text-sm',
+              mode === 'advisor' && PERSPECTIVE_ACCENT.advisor.menuSelected,
+            )}
           >
-            <Eye className="h-4 w-4 shrink-0 text-muted-foreground" aria-hidden />
+            <Eye className={cn('h-4 w-4 shrink-0', PERSPECTIVE_ACCENT.advisor.icon)} aria-hidden />
             Advisor View
           </DropdownMenuItem>
           <DropdownMenuItem
             onSelect={() =>
               dispatch({ type: 'SET_DEMO_VIEW', mode: documentReviewDemoMode(inChildAction, childType) })
             }
-            className={cn('flex items-center gap-2 text-sm', isDocumentReviewMode(mode) && 'bg-accent/70')}
+            className={cn(
+              'flex items-center gap-2 border-l-2 border-l-transparent pl-2 text-sm',
+              isDocumentReviewMode(mode) && PERSPECTIVE_ACCENT['ho-documents'].menuSelected,
+            )}
           >
-            <Building className="h-4 w-4 shrink-0 text-muted-foreground" aria-hidden />
+            <Building className={cn('h-4 w-4 shrink-0', PERSPECTIVE_ACCENT['ho-documents'].icon)} aria-hidden />
             Document Review Team View
           </DropdownMenuItem>
           <DropdownMenuItem
@@ -213,9 +261,12 @@ export function AdvisorReviewerPerspectiveCard() {
                 : undefined
             }
             onSelect={() => dispatch({ type: 'SET_DEMO_VIEW', mode: 'ho-principal' })}
-            className={cn('flex items-center gap-2 text-sm', mode === 'ho-principal' && 'bg-accent/70')}
+            className={cn(
+              'flex items-center gap-2 border-l-2 border-l-transparent pl-2 text-sm',
+              mode === 'ho-principal' && PERSPECTIVE_ACCENT['ho-principal'].menuSelected,
+            )}
           >
-            <ShieldCheck className="h-4 w-4 shrink-0 text-muted-foreground" aria-hidden />
+            <ShieldCheck className={cn('h-4 w-4 shrink-0', PERSPECTIVE_ACCENT['ho-principal'].icon)} aria-hidden />
             Principal Review Team View
           </DropdownMenuItem>
           <DropdownMenuItem
@@ -226,9 +277,12 @@ export function AdvisorReviewerPerspectiveCard() {
                 : undefined
             }
             onSelect={() => dispatch({ type: 'SET_DEMO_VIEW', mode: 'aml' })}
-            className={cn('flex items-center gap-2 text-sm', mode === 'aml' && 'bg-accent/70')}
+            className={cn(
+              'flex items-center gap-2 border-l-2 border-l-transparent pl-2 text-sm',
+              mode === 'aml' && PERSPECTIVE_ACCENT.aml.menuSelected,
+            )}
           >
-            <ShieldAlert className="h-4 w-4 shrink-0 text-muted-foreground" aria-hidden />
+            <ShieldAlert className={cn('h-4 w-4 shrink-0', PERSPECTIVE_ACCENT.aml.icon)} aria-hidden />
             AML Team View
           </DropdownMenuItem>
         </DropdownMenuContent>
