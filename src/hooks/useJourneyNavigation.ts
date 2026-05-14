@@ -5,6 +5,7 @@ import { useWorkflow } from '@/stores/workflowStore'
 import { relationships } from '@/data/relationships'
 import { seededJourneys } from '@/data/servicingSeed'
 import type { Journey } from '@/types/servicing'
+import { getDefaultJourneyEntryTaskId } from '@/utils/journeyEntryTask'
 
 const normalize = (v: string) => v.toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim()
 
@@ -28,11 +29,12 @@ function findTemplateRelationship(relationshipName: string) {
 
 export function useJourneyNavigation() {
   const { currentLiveJourney, saveCurrentJourney } = useServicing()
-  const { dispatch } = useWorkflow()
+  const { dispatch, state } = useWorkflow()
   const navigate = useNavigate()
   const seededJourneyIds = useMemo(() => new Set(seededJourneys.map((j) => j.id)), [])
 
   const navigateToServicing = (row: Journey, actionId?: string, childId?: string) => {
+    let reinitializedFromTemplate = false
     if (seededJourneyIds.has(row.id)) {
       const relationship = findTemplateRelationship(row.relationshipName)
       if (relationship) {
@@ -61,7 +63,19 @@ export function useJourneyNavigation() {
             openAnnuityAccount: false,
           },
         })
+        reinitializedFromTemplate = true
       }
+    }
+
+    /**
+     * Opening the journey root (no action/child drill-in): leave any child workflow still in
+     * memory from before navigating away (e.g. live journey without template re-init, or seeded
+     * journey when relationship template did not match). INITIALIZE_FROM_RELATIONSHIP already
+     * clears child; GO_TO_TASK covers the other paths.
+     */
+    if (!actionId && !childId && !reinitializedFromTemplate && state.journeyId === row.id) {
+      const entry = getDefaultJourneyEntryTaskId(state)
+      if (entry) dispatch({ type: 'GO_TO_TASK', taskId: entry })
     }
 
     let taskId: string | undefined

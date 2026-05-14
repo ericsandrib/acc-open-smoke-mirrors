@@ -4,6 +4,7 @@ import {
   getChildReviewState,
   useAdvisorResubmitEligible,
 } from '@/stores/workflowStore'
+import { useServicing } from '@/stores/servicingStore'
 import { useNavigate } from 'react-router-dom'
 import { useMemo, useState, type ReactNode } from 'react'
 import { cn } from '@/lib/utils'
@@ -887,7 +888,12 @@ function ChildReviewStatusActions() {
 
 export function ChildActionSidebar() {
   const { state, dispatch } = useWorkflow()
+  const { journeys } = useServicing()
   const navigate = useNavigate()
+  const workflowExitPath = useMemo(() => {
+    const j = journeys.find((x) => x.id === state.journeyId)
+    return j?.category === 'Onboarding' ? '/onboarding' : '/servicing'
+  }, [journeys, state.journeyId])
   const ctx = useChildActionContext()
   const { setCollapsed: setRightPanelCollapsed, setActiveTab: setRightPanelTab } = useWizardRightPanel()
   const variant = useOpenAccountsVariant()
@@ -995,7 +1001,7 @@ export function ChildActionSidebar() {
                         onClick={() => dispatch({ type: 'SET_CHILD_SUB_TASK', index: idx })}
                         aria-current={idx === subTaskIndex ? 'page' : undefined}
                         className={cn(
-                          'w-full text-left pl-0 pr-3 py-2.5 rounded-lg text-sm font-medium flex items-center justify-between gap-2 transition-colors',
+                          'w-full text-left pl-4 pr-3 py-2.5 rounded-lg text-sm font-medium flex items-center justify-between gap-2 transition-colors',
                           idx === subTaskIndex
                             ? 'bg-sidebar-accent text-sidebar-accent-foreground'
                             : 'text-sidebar-foreground hover:bg-sidebar-accent/70 hover:text-sidebar-accent-foreground',
@@ -1138,7 +1144,9 @@ export function ChildActionSidebar() {
           <DialogHeader>
             <DialogTitle>Exit current workflow?</DialogTitle>
             <DialogDescription>
-              This takes you out of the current workflow and back to the servicing queue.
+              {workflowExitPath === '/onboarding'
+                ? 'This takes you out of the current workflow and back to the onboarding list.'
+                : 'This takes you out of the current workflow and back to the servicing queue.'}
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
@@ -1151,7 +1159,7 @@ export function ChildActionSidebar() {
               className="hover:opacity-90"
               onClick={() => {
                 setExitToOnboardingOpen(false)
-                navigate('/servicing')
+                navigate(workflowExitPath)
               }}
             >
               Exit workflow

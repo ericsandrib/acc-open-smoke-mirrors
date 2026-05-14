@@ -1,5 +1,4 @@
 import { useMemo, useState, type ReactNode } from 'react'
-import { useNavigate } from 'react-router-dom'
 import type { Journey } from '@/types/servicing'
 import { useJourneyNavigation } from '@/hooks/useJourneyNavigation'
 import {
@@ -101,7 +100,6 @@ function ProgressBar({ value, className }: { value: number; className?: string }
 }
 
 export function OnboardingJourneysTable({ rows, visibleColumns, showNestedGroups = false }: OnboardingJourneysTableProps) {
-  const navigate = useNavigate()
   const { navigateToServicing } = useJourneyNavigation()
   const [expandedJourneyIds, setExpandedJourneyIds] = useState<Set<string>>(new Set())
   const [collapsedActionIds, setCollapsedActionIds] = useState<Set<string>>(new Set())
@@ -183,34 +181,34 @@ export function OnboardingJourneysTable({ rows, visibleColumns, showNestedGroups
                     )}
                     icon={<GitBranch className={journeyIconClass} />}
                   >
-                    <span onClick={() => navigate(`/onboarding/${row.id}`)} className="truncate">
+                    <span onClick={() => navigateToServicing(row)} className="truncate">
                       {row.name}
                     </span>
                   </JourneyLeading>
                 </DataTableCell>
               )}
               {vis('relationshipName') && (
-                <DataTableCell onClick={() => navigate(`/onboarding/${row.id}`)}>
+                <DataTableCell onClick={() => navigateToServicing(row)}>
                   {row.relationshipName}
                 </DataTableCell>
               )}
               {vis('status') && (
-                <DataTableCell type="badge" onClick={() => navigate(`/onboarding/${row.id}`)}>
+                <DataTableCell type="badge" onClick={() => navigateToServicing(row)}>
                   <StatusBadge status={row.status} />
                 </DataTableCell>
               )}
               {vis('assignedTo') && (
-                <DataTableCell onClick={() => navigate(`/onboarding/${row.id}`)}>
+                <DataTableCell onClick={() => navigateToServicing(row)}>
                   {row.assignedTo}
                 </DataTableCell>
               )}
               {vis('createdAt') && (
-                <DataTableCell onClick={() => navigate(`/onboarding/${row.id}`)}>
+                <DataTableCell onClick={() => navigateToServicing(row)}>
                   {row.createdAt}
                 </DataTableCell>
               )}
               {vis('progress') && (
-                <DataTableCell type="secondary" onClick={() => navigate(`/onboarding/${row.id}`)}>
+                <DataTableCell type="secondary" onClick={() => navigateToServicing(row)}>
                   <div className="flex items-center justify-start gap-2">
                     <span className="font-medium text-foreground">
                       {row.progressedTasks}/{row.totalTasks}

@@ -24,6 +24,7 @@ import {
   OPEN_ACCOUNTS_FORM_KEY,
   OPEN_ACCOUNTS_WITH_ANNUITY_FORM_KEY,
 } from '@/utils/openAccountsTaskContext'
+import { resolveJourneyEntryTaskIdAfterInit } from '@/utils/journeyEntryTask'
 import { generateAccountOpenIdentifiers } from '@/utils/accountOpenIdentifiers'
 import { mergeFeatureRequests } from '@/types/featureRequests'
 
@@ -719,12 +720,18 @@ function workflowReducer(state: WorkflowState, action: WorkflowAction): Workflow
       const newOrder = computeFlatTaskOrder(tasksForState, actionsForState)
       const openAccountsDataShell = { additionalInstructions: seedOpenAccountsAdditionalInstructions }
       const hasStandardOpenAccounts = tasksForState.some((t) => t.id === 'open-accounts')
+      const entryTaskId = resolveJourneyEntryTaskIdAfterInit(
+        tasksForState,
+        state.demoViewMode,
+        tasksForState[0].id,
+      )
       return {
         actions: actionsForState,
         tasks: tasksForState,
         relatedParties: structuredClone(action.relatedParties),
         financialAccounts: structuredClone(action.financialAccounts),
-        activeTaskId: tasksForState[0].id,
+        activeTaskId: entryTaskId,
+        demoViewMode: state.demoViewMode,
         flatTaskOrder: newOrder,
         taskData: {
           'client-info': structuredClone(action.clientInfo),

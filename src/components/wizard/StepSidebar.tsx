@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useWorkflow } from '@/stores/workflowStore'
+import { useServicing } from '@/stores/servicingStore'
 import type { Action, TaskStatus, Task, WorkflowState } from '@/types/workflow'
 import { cn } from '@/lib/utils'
 import { parseChildSubTaskId } from '@/utils/childTaskRegistry'
@@ -250,7 +251,7 @@ function isDisplayTaskNodeActive(dt: DisplayTaskNode, state: WorkflowState): boo
  * - In a non-split journey (only one of the two open-accounts form keys) the structure is unchanged.
  * - In v1 split: one Account Opening action with two tasks; rows are labeled by annuity path.
  * - In v2/v3/v4 split: keep both open-accounts tasks visible (renamed labels on each row).
- * - In v5 split: collapsible “Non-Annuity Accounts” first, then “Annuity Accounts”.
+ * - In v5 split: collapsible “Non-Annuity Accounts” first, then a flat “Annuity Accounts” task row (sibling to that group).
  * - In v6 split: optional flat “Annuity Accounts Setup” row after non-annuity (when annuity path is enabled).
  *   Without-annuity side uses navigator rows (Account Setup, KYC Initiation, Supporting Documents, Envelopes)
  *   that all bind to the same underlying task and swap full-page `OpenAccountsForm` content.
@@ -343,16 +344,27 @@ export function buildDisplayActions(state: WorkflowState, variant: OpenAccountsV
     noAnnuityTasks.find((t) => t.formKey === OPEN_ACCOUNTS_FORM_KEY)?.id ??
     noAnnuityTasks[0]?.id
 
-  const v5WithAnnuityGroup: DisplayTaskRow = {
-    type: 'group',
-    id: 'v5-accounts-with-annuity',
-    label: 'Annuity Accounts',
-    tasks: withAnnuityTasks.map((t) => ({
-      id: t.id,
-      label: t.formKey === OPEN_ACCOUNTS_WITH_ANNUITY_FORM_KEY ? 'Accounts' : t.title,
-      underlyingTaskIds: [t.id],
-    })),
-  }
+  /** Sibling “file” row(s) next to the Non-Annuity “folder”; not a collapsible group. */
+  const v5AnnuitySiblingRows: DisplayTaskRow[] =
+    withAnnuityTasks.length === 0
+      ? []
+      : withAnnuityTasks.length === 1 && withAnnuityTasks[0]
+        ? [
+            {
+              type: 'task',
+              task: {
+                id: 'v5-annuity-accounts-setup',
+                label: 'Annuity Accounts',
+                underlyingTaskIds: [withAnnuityTasks[0].id],
+              },
+            },
+          ]
+        : withAnnuityTasks.map((t) =>
+            toTaskRow(
+              t,
+              t.formKey === OPEN_ACCOUNTS_WITH_ANNUITY_FORM_KEY ? 'Annuity Accounts' : t.title,
+            ),
+          )
 
   const v5WithoutAnnuityGroup: DisplayTaskRow = {
     type: 'group',
@@ -429,7 +441,7 @@ export function buildDisplayActions(state: WorkflowState, variant: OpenAccountsV
     title: 'Open Accounts',
     taskRows:
       variant === 'v5'
-        ? [v5WithoutAnnuityGroup, v5WithAnnuityGroup]
+        ? [v5WithoutAnnuityGroup, ...v5AnnuitySiblingRows]
         : variant === 'v6'
           ? [
               v6WithoutAnnuityGroup,
@@ -498,7 +510,12 @@ export function computeOverallJourneyProgressPct(
 
 export function StepSidebar() {
   const { state, dispatch } = useWorkflow()
+  const { journeys } = useServicing()
   const navigate = useNavigate()
+  const workflowExitPath = useMemo(() => {
+    const j = journeys.find((x) => x.id === state.journeyId)
+    return j?.category === 'Onboarding' ? '/onboarding' : '/servicing'
+  }, [journeys, state.journeyId])
   const variant = useOpenAccountsVariant()
   const { variant: selectedVariant } = useOpenAccountsVariantControls()
   const sidebarGroupHeaderPrimary =
@@ -549,7 +566,7 @@ export function StepSidebar() {
     })
   }, [selectedVariant, displayActions, state.activeTaskId, state.tasks])
 
-  const renderTaskNavListItem = (displayTask: DisplayTaskNode, nestedInCollapsibleGroup: boolean) => {
+  const renderTaskNavListItem = (displayTask: DisplayTaskNode) => {
     const underlyingTasks = displayTask.underlyingTaskIds
       .map((id) => state.tasks.find((t) => t.id === id))
       .filter((t): t is Task => Boolean(t))
@@ -570,8 +587,10 @@ export function StepSidebar() {
       <li
         key={displayTask.id}
         className={cn(
-          displayTask.id === 'v6-annuity-accounts-setup' &&
-            'motion-safe:animate-in motion-safe:fade-in motion-safe:zoom-in-[0.99] motion-safe:duration-300',
+          displayTask.id === 'v6-annuity-accounts-setup' ||
+            displayTask.id === 'v5-annuity-accounts-setup'
+            ? 'motion-safe:animate-in motion-safe:fade-in motion-safe:zoom-in-[0.99] motion-safe:duration-300'
+            : undefined,
         )}
       >
         <button
@@ -596,8 +615,7 @@ export function StepSidebar() {
           }}
           aria-current={isActiveTask ? 'page' : undefined}
           className={cn(
-            'w-full text-left pr-3 py-2.5 rounded-lg text-sm font-medium flex items-center justify-between gap-2 transition-colors',
-            nestedInCollapsibleGroup ? 'pl-4' : 'pl-0',
+            'w-full text-left px-3 py-2.5 rounded-lg text-sm font-medium flex items-center justify-between gap-2 transition-colors',
             isActiveTask
               ? 'bg-sidebar-accent text-sidebar-accent-foreground'
               : 'text-sidebar-foreground hover:bg-sidebar-accent/70 hover:text-sidebar-accent-foreground',
@@ -666,7 +684,7 @@ export function StepSidebar() {
                   <ul className="space-y-1">
                       {action.taskRows.map((row) => {
                         if (row.type === 'task') {
-                          return renderTaskNavListItem(row.task, false)
+                          return renderTaskNavListItem(row.task)
                         }
                         const expanded = isV5GroupOpen(row.id)
                         return (
@@ -676,7 +694,7 @@ export function StepSidebar() {
                               onClick={() => toggleV5Group(row.id)}
                               aria-expanded={expanded}
                               className={cn(
-                                'flex w-full items-center justify-start rounded-lg py-2 pr-3 text-left text-sm font-medium transition-colors hover:bg-muted/50',
+                                'flex w-full items-center justify-start rounded-lg py-2.5 pl-3 pr-3 text-left text-sm font-medium transition-colors hover:bg-muted/50',
                                 sidebarGroupHeaderPrimary
                                   ? 'text-foreground hover:text-foreground'
                                   : 'text-muted-foreground hover:text-muted-foreground',
@@ -697,8 +715,8 @@ export function StepSidebar() {
                               </span>
                             </button>
                             {expanded ? (
-                              <ul className="mt-1 space-y-1">
-                                {row.tasks.map((t) => renderTaskNavListItem(t, true))}
+                              <ul className="mt-1 space-y-1 ml-3">
+                                {row.tasks.map((t) => renderTaskNavListItem(t))}
                               </ul>
                             ) : null}
                           </li>
@@ -718,7 +736,9 @@ export function StepSidebar() {
           <DialogHeader>
             <DialogTitle>Exit current workflow?</DialogTitle>
             <DialogDescription>
-              This takes you out of the current journey and back to the servicing queue.
+              {workflowExitPath === '/onboarding'
+                ? 'This takes you out of the current journey and back to the onboarding list.'
+                : 'This takes you out of the current journey and back to the servicing queue.'}
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
@@ -731,7 +751,7 @@ export function StepSidebar() {
               className="hover:opacity-90"
               onClick={() => {
                 setExitToOnboardingOpen(false)
-                navigate('/servicing')
+                navigate(workflowExitPath)
               }}
             >
               Exit workflow

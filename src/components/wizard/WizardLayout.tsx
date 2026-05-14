@@ -88,6 +88,7 @@ import {
   OPEN_ACCOUNTS_FORM_KEY,
   OPEN_ACCOUNTS_WITH_ANNUITY_FORM_KEY,
 } from '@/utils/openAccountsTaskContext'
+import { getDefaultJourneyEntryTaskId, getReviewerOpenAccountsLandingTask } from '@/utils/journeyEntryTask'
 import type { Task } from '@/types/workflow'
 import {
   useOpenAccountsVariant,
@@ -446,18 +447,13 @@ function WizardLayoutInner() {
     }
   }, [queryTaskId, querySectionId, queryChildId, state.tasks, state.activeTaskId, state.activeChildActionId, dispatch])
 
-  /** Reviewer demo: Client Setup is hidden — if it was active, jump to Account Opening. */
+  /** Reviewer demo: Client Setup is hidden — if it was active, jump to Open Accounts (non-annuity path when split). */
   useEffect(() => {
     const mode = state.demoViewMode ?? 'advisor'
     if (mode === 'advisor' || state.activeChildActionId) return
     const t = state.tasks.find((x) => x.id === state.activeTaskId)
     if (!t || t.actionId !== 'collect-client-data') return
-    const fallback = state.tasks
-      .filter(
-        (x) =>
-          x.actionId === 'account-opening' && x.formKey !== 'kyc' && x.id !== 'kyc-review',
-      )
-      .sort((a, b) => a.order - b.order)[0]
+    const fallback = getReviewerOpenAccountsLandingTask(state.tasks)
     if (fallback && fallback.id !== state.activeTaskId) {
       dispatch({ type: 'SET_ACTIVE_TASK', taskId: fallback.id })
     }
@@ -644,9 +640,9 @@ function WizardLayoutInner() {
       return { id: action.id, title: action.title, pct }
     })
   const goToJourneyStart = () => {
-    const firstTaskId = state.flatTaskOrder[0]
-    if (!firstTaskId) return
-    dispatch({ type: 'GO_TO_TASK', taskId: firstTaskId })
+    const entryId = getDefaultJourneyEntryTaskId(state)
+    if (!entryId) return
+    dispatch({ type: 'GO_TO_TASK', taskId: entryId })
     navigate('/onboarding')
   }
   const navigateToParentAction = (actionId: string) => {
