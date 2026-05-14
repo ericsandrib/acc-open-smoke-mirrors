@@ -6,7 +6,7 @@ import {
   type ReactNode,
 } from 'react'
 
-export type WizardRightPanelTab = 'details' | 'activity' | 'comments'
+export type WizardRightPanelTab = 'details' | 'activity' | 'comments' | 'documents'
 
 type WizardRightPanelContextValue = {
   collapsed: boolean

@@ -980,21 +980,19 @@ export function ChildActionSidebar() {
           </div>
         )}
         <div className="flex-1 min-h-0 overflow-y-auto px-1 pt-2">
-          <div className="flex items-stretch gap-2 px-3 mb-5">
-            {/* Same spine + icon column as StepSidebar pizza tracker */}
-            <div className="relative flex w-7 shrink-0 flex-col items-center self-stretch">
+          <div className="flex gap-2 px-3 mb-5">
+            {/* Match StepSidebar spine: line z-0, opaque icon z-10, flex-1 filler; keep this column above the task column if layers overlap at the gutter. */}
+            <div className="relative z-20 flex w-7 shrink-0 flex-col items-center self-stretch">
+              <span
+                aria-hidden
+                className="pointer-events-none absolute bottom-0 left-1/2 top-0 z-0 w-px -translate-x-1/2 bg-sidebar-border"
+              />
               <span className="relative z-10 flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-muted text-muted-foreground">
                 <ChildIcon className="h-3.5 w-3.5" aria-hidden />
               </span>
               <div className="min-h-0 w-full flex-1 shrink" aria-hidden />
-              <div
-                className="pointer-events-none absolute inset-0 z-[1] flex justify-center"
-                aria-hidden
-              >
-                <div className="h-full w-px bg-border" />
-              </div>
             </div>
-            <div className="relative z-[1] min-w-0 flex-1">
+            <div className="min-w-0 flex-1">
               <div className="mb-1.5 flex h-9 min-h-9 items-center">
                 <h2 className="text-sm font-semibold text-foreground truncate">{child.name}</h2>
               </div>
