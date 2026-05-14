@@ -66,12 +66,6 @@ const KYC_AML_RESULTS_SUBTASK: SubTaskDefinition = {
   formKey: 'kyc-child-aml-results',
 }
 
-const KYC_CIP_RESULTS_SUBTASK: SubTaskDefinition = {
-  suffix: 'cip-results',
-  title: 'CIP Results',
-  formKey: 'kyc-child-cip-results',
-}
-
 export function getChildTypeConfig(childType: ChildType): ChildTypeConfig {
   return CHILD_TYPE_CONFIGS[childType]
 }
@@ -79,21 +73,11 @@ export function getChildTypeConfig(childType: ChildType): ChildTypeConfig {
 export function getVisibleChildSubTasks(
   childType: ChildType,
   demoViewMode: WorkflowState['demoViewMode'],
-  childStatus?: TaskStatus,
+  _childStatus?: TaskStatus,
 ): readonly SubTaskDefinition[] {
   const subTasks = CHILD_TYPE_CONFIGS[childType].subTasks
   if (childType === 'kyc' && demoViewMode === 'aml') {
     return [...subTasks, KYC_AML_RESULTS_SUBTASK]
-  }
-  if (
-    childType === 'kyc' &&
-    (demoViewMode === 'ho-kyc' ||
-      (demoViewMode === 'advisor' &&
-        (childStatus === 'awaiting_review' || childStatus === 'complete' || childStatus === 'rejected')))
-  ) {
-    const [clientInformation, ...remainingSubTasks] = subTasks
-    if (!clientInformation) return [KYC_CIP_RESULTS_SUBTASK]
-    return [clientInformation, KYC_CIP_RESULTS_SUBTASK, ...remainingSubTasks]
   }
   return subTasks
 }
@@ -109,6 +93,9 @@ export function getSubTaskDisplayTitle(
 
 /** Sub-step index for a child type + form key (e.g. switching siblings on the same step). */
 export function getSubTaskIndexByFormKey(childType: ChildType, formKey: string): number {
+  if (childType === 'kyc' && formKey === 'kyc-child-cip-results') {
+    return CHILD_TYPE_CONFIGS.kyc.subTasks.findIndex((s) => s.formKey === 'kyc-child-info')
+  }
   const idx = CHILD_TYPE_CONFIGS[childType].subTasks.findIndex((s) => s.formKey === formKey)
   return idx >= 0 ? idx : 0
 }
@@ -138,6 +125,15 @@ export function parseChildSubTaskId(
       }
     }
   }
+  // Legacy: "CIP Results" was a separate KYC sub-step; verification now lives on Client Information.
+  if (id.endsWith('-cip-results')) {
+    const childId = id.slice(0, -'-cip-results'.length)
+    if (childId.startsWith(`${CHILD_TYPE_CONFIGS.kyc.idPrefix}-`)) {
+      const config = CHILD_TYPE_CONFIGS.kyc
+      const sub = config.subTasks.find((s) => s.suffix === 'info')
+      if (sub) return { childId, suffix: sub.suffix, childType: 'kyc', config }
+    }
+  }
   return null
 }
 
@@ -145,6 +141,9 @@ export function getSubTaskByFormKey(formKey: string): SubTaskDefinition | null {
   for (const config of Object.values(CHILD_TYPE_CONFIGS)) {
     const found = config.subTasks.find((s) => s.formKey === formKey)
     if (found) return found
+  }
+  if (formKey === 'kyc-child-cip-results') {
+    return CHILD_TYPE_CONFIGS.kyc.subTasks.find((s) => s.formKey === 'kyc-child-info') ?? null
   }
   return null
 }

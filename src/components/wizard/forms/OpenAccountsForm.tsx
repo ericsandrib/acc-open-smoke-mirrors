@@ -1219,7 +1219,7 @@ export function OpenAccountsForm() {
         <div className="mb-4">
           <h3 className={subsectionTitleClass}>KYC Reviews</h3>
           <p className={subsectionBodyClass}>
-            Track and complete KYC reviews, including CIP and AML screening.
+            Track and complete client information and identity verification for each subject.
           </p>
         </div>
         <div>

@@ -1,55 +1,118 @@
-import { useState } from 'react'
-import { useWorkflow, useChildActionContext, getChildReviewState } from '@/stores/workflowStore'
+import { useCallback, useState } from 'react'
+import {
+  useWorkflow,
+  useChildActionContext,
+  getChildReviewState,
+  getChildReviewDecision,
+} from '@/stores/workflowStore'
+import type { TaskStatus } from '@/types/workflow'
 import { Button } from '@/components/ui/button'
+import { Badge } from '@/components/ui/badge'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion'
 import {
   ShieldAlert,
   CheckCircle2,
-  FileText,
   User,
   MapPin,
-  Landmark,
-  AlertTriangle,
+  Briefcase,
+  Scale,
+  FolderOpen,
   Pencil,
   Save,
   X,
 } from 'lucide-react'
+import { cn } from '@/lib/utils'
 
 function ReviewRow({ label, value }: { label: string; value?: string | null }) {
-  if (!value) return null
+  if (value == null || value === '') return null
   return (
-    <div className="flex items-start justify-between py-2">
-      <span className="text-sm text-muted-foreground">{label}</span>
-      <span className="text-sm font-medium text-right max-w-[60%]">{value}</span>
+    <div className="flex items-start justify-between gap-4 py-2 border-b border-border/60 last:border-0">
+      <span className="text-sm text-muted-foreground shrink-0">{label}</span>
+      <span className="text-sm font-medium text-right max-w-[65%]">{value}</span>
     </div>
   )
 }
 
-function AccordionSection({
-  value,
-  title,
-  icon: Icon,
-  children,
-}: {
-  value: string
-  title: string
-  icon: React.ComponentType<{ className?: string }>
-  children: React.ReactNode
-}) {
+function formatLastChecked(iso: string | undefined): string | null {
+  if (!iso) return null
+  const d = new Date(iso)
+  if (Number.isNaN(d.getTime())) return null
+  return d.toLocaleString('en-US', {
+    month: 'short',
+    day: 'numeric',
+    year: 'numeric',
+    hour: 'numeric',
+    minute: '2-digit',
+  })
+}
+
+function cipDetailLabel(v: 'pass' | 'fail' | 'pending' | undefined): string {
+  if (v === 'pass') return 'Passed'
+  if (v === 'fail') return 'Needs attention'
+  return 'Pending'
+}
+
+function VerificationRunControl({ childId, childStatus }: { childId: string; childStatus: TaskStatus }) {
+  const { state, dispatch } = useWorkflow()
+  const reviewState = getChildReviewState(state, childId)
+  const decision = getChildReviewDecision(state, childId)
+  const cip = reviewState?.cipStatus
+  const hoApproved = reviewState?.hoKycReview?.status === 'approved'
+  const packageCompleteApproved = childStatus === 'complete' && decision?.outcome === 'approved'
+  const packageUnavailable = hoApproved || packageCompleteApproved
+
+  const hasRun = Boolean(reviewState?.kycVerificationLastCheckedAt)
+  const [phase, setPhase] = useState<'idle' | 'loading' | 'success'>('idle')
+
+  const canRun =
+    !packageUnavailable &&
+    phase === 'idle' &&
+    childStatus !== 'canceled' &&
+    childStatus !== 'blocked'
+
+  const handleRun = useCallback(() => {
+    if (!canRun) return
+    setPhase('loading')
+    window.setTimeout(() => {
+      dispatch({ type: 'RUN_ADVISOR_KYC_VERIFICATION', childId })
+      setPhase('success')
+      window.setTimeout(() => setPhase('idle'), 2200)
+    }, 850)
+  }, [canRun, childId, dispatch])
+
+  const label =
+    phase === 'loading'
+      ? 'Running identity check…'
+      : phase === 'success'
+        ? 'Identity check complete'
+        : hasRun || cip?.overallStatus === 'pass' || cip?.overallStatus === 'fail'
+          ? 'Rerun identity check'
+          : 'Run identity check'
+
+  const disabled =
+    packageUnavailable || phase === 'loading' || phase === 'success' || childStatus === 'canceled' || childStatus === 'blocked'
+
+  if (packageUnavailable) {
+    return (
+      <p className="text-xs text-muted-foreground max-w-xs text-right">
+        This KYC package has been approved. Verification cannot be rerun.
+      </p>
+    )
+  }
+
   return (
-    <AccordionItem value={value} className="rounded-lg border border-border overflow-hidden bg-background">
-      <AccordionTrigger className="px-4 py-3 hover:no-underline bg-muted/30 border-b border-border data-[state=open]:border-b">
-        <span className="flex items-center gap-2 text-sm font-semibold">
-          <Icon className="h-4 w-4 text-muted-foreground" />
-          {title}
-        </span>
-      </AccordionTrigger>
-      <AccordionContent className="px-4 pt-2 pb-4">
-        {children}
-      </AccordionContent>
-    </AccordionItem>
+    <Button
+      type="button"
+      variant="secondary"
+      size="sm"
+      className={cn('shrink-0', phase === 'success' && 'border-green-600/40 bg-green-50 text-green-900 dark:bg-green-950/40 dark:text-green-100')}
+      disabled={disabled}
+      onClick={handleRun}
+    >
+      {label}
+    </Button>
   )
 }
 
@@ -58,8 +121,6 @@ export function ChildHoKycViewContent() {
   const ctx = useChildActionContext()
   const child = ctx?.child
   const childId = child?.id ?? ''
-  const activeSubTaskFormKey = ctx?.currentSubTask?.formKey
-  const documentsOnlyView = activeSubTaskFormKey === 'kyc-child-documents'
   const reviewState = getChildReviewState(state, childId)
   const amlReview = reviewState?.amlReview
   const cipStatus = reviewState?.cipStatus
@@ -78,7 +139,7 @@ export function ChildHoKycViewContent() {
   const rights = (state.taskData[`${childId}-ho-rights`] as Record<string, unknown> | undefined) ?? {}
   const canEditKycFields = state.demoViewMode === 'ho-kyc' && rights.canEditKycFields !== false
   const cipReviewUploads =
-    ((taskData.cipReviewUploads as Array<{ id: string; fileName: string; uploadedAt: string }> | undefined) ?? [])
+    (taskData.cipReviewUploads as Array<{ id: string; fileName: string; uploadedAt: string }> | undefined) ?? []
 
   const startEdit = () => {
     setDraft({ ...(taskData as Record<string, unknown>) })
@@ -140,29 +201,88 @@ export function ChildHoKycViewContent() {
     hoKycReview?.status === 'approved'
       ? 'Approved'
       : hoKycReview?.status === 'changes_requested'
-        ? 'Changes Requested'
-        : 'Pending Review'
+        ? 'Changes requested'
+        : 'Pending review'
   const cipStatusLabel =
     cipStatus?.overallStatus === 'pass'
       ? 'Passed'
       : cipStatus?.overallStatus === 'fail'
-        ? 'Failed'
+        ? 'Needs attention'
         : 'Pending'
+
+  const lastCheckedDisplay =
+    formatLastChecked(reviewState?.kycVerificationLastCheckedAt) ??
+    reviewState?.kycPreAmlTimeline?.idVerificationAt ??
+    '—'
+
+  const confidenceLabel =
+    cipStatus?.overallStatus === 'pass' ? 'High' : cipStatus?.overallStatus === 'fail' ? 'Low' : 'Medium'
+
+  const overall = cipStatus?.overallStatus
+  const outcomeBullets =
+    overall === 'fail'
+      ? [
+          'Information could not be fully verified against trusted sources.',
+          'Review submitted identity and address before approving or requesting changes.',
+        ]
+      : overall === 'pass'
+        ? [
+            'Identity successfully verified.',
+            'SSN, date of birth, and address matched.',
+            'Automated screening completed with no blocking identity issues (demo).',
+          ]
+        : ['Verification is in progress or awaiting sufficient data.', 'Run a KYC check when intake is ready.']
+
+  const supportingDocReferences: { label: string; name: string }[] = []
+  for (const u of cipReviewUploads) {
+    supportingDocReferences.push({ label: 'Reviewer upload', name: u.fileName })
+  }
+  for (const key of Object.keys(taskData)) {
+    if (!key.startsWith('doc-instances-')) continue
+    const raw = taskData[key]
+    if (!Array.isArray(raw)) continue
+    const docType = key.replace('doc-instances-', '')
+    for (let i = 0; i < raw.length; i++) {
+      const inst = raw[i] as { fileName?: string; id?: string }
+      const name = inst.fileName?.trim() || 'No file name'
+      supportingDocReferences.push({ label: docType, name })
+    }
+  }
+
+  const headerBadgeVariant =
+    hoKycReview?.status === 'approved'
+      ? ('success' as const)
+      : hoKycReview?.status === 'changes_requested'
+        ? ('warning' as const)
+        : ('neutral' as const)
+
+  const amlStatusLabel =
+    amlReview?.status === 'cleared'
+      ? 'Cleared'
+      : amlReview?.status === 'flagged'
+        ? 'Flagged'
+        : amlReview?.status === 'info_requested'
+          ? 'Information requested'
+          : amlReview?.status === 'escalated'
+            ? 'Escalated'
+            : amlReview?.status === 'pending'
+              ? 'In progress'
+              : '—'
 
   if (!ctx || !child) return null
 
   return (
     <main className="flex-1 overflow-y-auto overscroll-contain p-8">
-      <div className="max-w-[52.5rem] mx-auto space-y-6">
-        {/* Status Banners */}
+      <div className="max-w-[52.5rem] mx-auto space-y-8">
         {hoKycReview?.status === 'approved' && (
-          <div className="rounded-lg border border-green-200 bg-green-50 px-4 py-3">
+          <div className="rounded-lg border border-green-200 bg-green-50 px-4 py-3 dark:border-green-900/50 dark:bg-green-950/30">
             <div className="flex items-start gap-3">
               <CheckCircle2 className="h-5 w-5 text-green-600 mt-0.5 shrink-0" />
               <div className="space-y-0.5">
-                <p className="text-sm font-medium text-green-900">KYC Approved</p>
-                <p className="text-xs text-green-800/80">
-                  This {isEntity ? 'legal entity' : 'individual'}'s KYC has been approved by Document Review. Approved at {hoKycReview.decidedAt}.
+                <p className="text-sm font-medium text-green-900 dark:text-green-100">KYC approved</p>
+                <p className="text-xs text-green-800/80 dark:text-green-200/70">
+                  This {isEntity ? 'legal entity' : 'individual'}&apos;s KYC has been approved by Document Review.
+                  Approved at {hoKycReview.decidedAt}.
                 </p>
               </div>
             </div>
@@ -170,13 +290,14 @@ export function ChildHoKycViewContent() {
         )}
 
         {amlReview?.status === 'cleared' && hoKycReview?.status !== 'approved' && (
-          <div className="rounded-lg border border-green-200 bg-green-50 px-4 py-3">
+          <div className="rounded-lg border border-green-200 bg-green-50 px-4 py-3 dark:border-green-900/50 dark:bg-green-950/30">
             <div className="flex items-start gap-3">
               <CheckCircle2 className="h-5 w-5 text-green-600 mt-0.5 shrink-0" />
               <div className="space-y-0.5">
-                <p className="text-sm font-medium text-green-900">AML Cleared — Ready for Approval</p>
-                <p className="text-xs text-green-800/80">
-                  The AML team has cleared this {isEntity ? 'legal entity' : 'individual'}. You may now approve the KYC review.
+                <p className="text-sm font-medium text-green-900 dark:text-green-100">AML cleared — ready for approval</p>
+                <p className="text-xs text-green-800/80 dark:text-green-200/70">
+                  The AML team has cleared this {isEntity ? 'legal entity' : 'individual'}. You may now approve the KYC
+                  review.
                 </p>
               </div>
             </div>
@@ -184,22 +305,22 @@ export function ChildHoKycViewContent() {
         )}
 
         {amlBlocked && (
-          <div className="rounded-lg border border-amber-200 bg-amber-50 px-4 py-3">
+          <div className="rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 dark:border-amber-900/50 dark:bg-amber-950/30">
             <div className="flex items-start gap-3">
               <ShieldAlert className="h-5 w-5 text-amber-600 mt-0.5 shrink-0" />
               <div className="space-y-0.5">
-                <p className="text-sm font-medium text-amber-900">Pending AML Review</p>
-                <p className="text-xs text-amber-800/80">
+                <p className="text-sm font-medium text-amber-900 dark:text-amber-100">Pending AML review</p>
+                <p className="text-xs text-amber-800/80 dark:text-amber-200/70">
                   {amlReview?.status === 'flagged'
                     ? `The AML team has flagged this ${isEntity ? 'legal entity' : 'individual'}. KYC approval is blocked until AML review is resolved.`
                     : amlReview?.status === 'info_requested'
-                    ? 'The AML team has requested additional information. Please provide the requested details.'
-                    : 'AML screening is in progress. KYC approval is blocked until AML review is complete.'}
+                      ? 'The AML team has requested additional information. Please provide the requested details.'
+                      : 'AML screening is in progress. KYC approval is blocked until AML review is complete.'}
                 </p>
                 {amlReview?.status === 'info_requested' && amlReview.infoRequestComments && (
-                  <div className="mt-2 rounded-md bg-amber-100/60 px-3 py-2">
-                    <p className="text-xs text-amber-900">
-                      <span className="font-semibold">AML Team Request:</span> {amlReview.infoRequestComments}
+                  <div className="mt-2 rounded-md bg-amber-100/60 dark:bg-amber-900/30 px-3 py-2">
+                    <p className="text-xs text-amber-900 dark:text-amber-100">
+                      <span className="font-semibold">AML team request:</span> {amlReview.infoRequestComments}
                     </p>
                   </div>
                 )}
@@ -208,130 +329,165 @@ export function ChildHoKycViewContent() {
           </div>
         )}
 
-        {/* Header */}
-        <div>
-          <h1 className="text-4xl font-semibold text-foreground">{fullName}</h1>
-          <p className="text-sm text-muted-foreground mt-1">
-            {documentsOnlyView
-              ? (isEntity
-                ? 'Review supporting KYB documentation for this subject'
-                : 'Review supporting KYC documentation for this subject')
-              : (isEntity
-                ? 'Review advisor-submitted KYB/KYC legal entity data'
-                : 'Review advisor-submitted KYC data and CIP verification results')}
-          </p>
-          {canEditKycFields && !documentsOnlyView ? (
-            <div className="mt-3 flex items-center gap-2">
-              {!isEditing ? (
-                <Button type="button" variant="outline" size="sm" className="gap-1.5" onClick={startEdit}>
-                  <Pencil className="h-3.5 w-3.5" />
-                  Edit KYC fields
-                </Button>
-              ) : (
-                <>
-                  <Button type="button" size="sm" className="gap-1.5" onClick={saveEdit}>
-                    <Save className="h-3.5 w-3.5" />
-                    Save updates
-                  </Button>
-                  <Button type="button" variant="outline" size="sm" className="gap-1.5" onClick={cancelEdit}>
-                    <X className="h-3.5 w-3.5" />
-                    Cancel
-                  </Button>
-                </>
-              )}
-            </div>
-          ) : null}
+        <div className="flex flex-wrap items-end justify-between gap-4">
+          <div className="min-w-0 space-y-1">
+            <h1 className="text-3xl sm:text-4xl font-semibold tracking-tight text-foreground">{fullName}</h1>
+            <p className="text-sm text-muted-foreground max-w-2xl">
+              {isEntity
+                ? 'Review advisor-submitted legal entity data below, then review system verification and AML outcomes.'
+                : 'Review advisor-submitted client data in KYC Information, then review verification and home office outcomes.'}
+            </p>
+          </div>
+          <Badge variant={headerBadgeVariant} className="shrink-0">
+            {reviewStatusLabel}
+          </Badge>
         </div>
 
-        {!documentsOnlyView ? (
-          <div className="space-y-4">
-            <section className="rounded-lg border border-border bg-muted/20 p-4 space-y-2">
-              <h3 className="text-sm font-semibold">Case Overview</h3>
-              <ReviewRow label="CIP Status" value={cipStatusLabel} />
-              <ReviewRow label="Review Status" value={reviewStatusLabel} />
-              <ReviewRow label="Submission Date" value={String(submissionDate)} />
-              <ReviewRow
-                label="Verification Confidence"
-                value={cipStatus?.overallStatus === 'pass' ? 'High' : cipStatus?.overallStatus === 'fail' ? 'Low' : 'Medium'}
-              />
-            </section>
-
-            <section className="rounded-lg border border-border p-4 space-y-2">
-              <h3 className="text-sm font-semibold">Verification Summary</h3>
-              <p className="text-sm">Identity successfully verified</p>
-              <p className="text-sm">SSN, date of birth, and address matched</p>
-              <p className="text-sm">No mismatches detected</p>
-            </section>
-
-            <section className="rounded-lg border border-border p-4 space-y-2">
-              <h3 className="text-sm font-semibold">Verification Method</h3>
-              <p className="text-sm">Identity verified using trusted data sources</p>
-              <p className="text-sm">Verification based on SSN, name, date of birth, and address</p>
-            </section>
-
+        {/* Section A — submitted / editable data */}
+        <section className="rounded-xl border border-border bg-background shadow-sm">
+          <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border px-4 py-3 sm:px-5">
+            <h2 className="text-lg font-semibold text-foreground">KYC Information</h2>
+            {canEditKycFields ? (
+              <div className="flex flex-wrap items-center gap-2">
+                {!isEditing ? (
+                  <Button type="button" variant="outline" size="sm" className="gap-1.5" onClick={startEdit}>
+                    <Pencil className="h-3.5 w-3.5" />
+                    Edit information
+                  </Button>
+                ) : (
+                  <>
+                    <Button type="button" size="sm" className="gap-1.5" onClick={saveEdit}>
+                      <Save className="h-3.5 w-3.5" />
+                      Save updates
+                    </Button>
+                    <Button type="button" variant="outline" size="sm" className="gap-1.5" onClick={cancelEdit}>
+                      <X className="h-3.5 w-3.5" />
+                      Cancel
+                    </Button>
+                  </>
+                )}
+              </div>
+            ) : null}
+          </div>
+          <div className="p-4 sm:p-5">
             <Accordion type="multiple" defaultValue={['identity', 'address']} className="space-y-3">
-              <AccordionItem value="identity" className="rounded-lg border border-border overflow-hidden bg-background">
-                <AccordionTrigger className="px-4 py-3 hover:no-underline bg-muted/30 border-b border-border data-[state=open]:border-b">
+              <AccordionItem value="identity" className="rounded-lg border border-border overflow-hidden bg-card">
+                <AccordionTrigger className="px-4 py-3 hover:no-underline bg-muted/40 border-b border-border data-[state=open]:border-b">
                   <span className="flex items-center gap-2 text-sm font-semibold">
                     <User className="h-4 w-4 text-muted-foreground" />
                     Identity
                   </span>
                 </AccordionTrigger>
-                <AccordionContent className="px-4 pt-2 pb-4">
+                <AccordionContent className="px-4 pt-3 pb-4">
                   {isEditing ? (
                     <div className="space-y-3">
                       {isEntity ? (
                         <>
                           <div className="space-y-1">
-                            <Label className="text-xs">Legal Name</Label>
+                            <Label className="text-xs">Legal name</Label>
                             <Input value={editVal('legalName')} onChange={(e) => setEditVal('legalName', e.target.value)} />
                           </div>
-                          <div className="space-y-1">
-                            <Label className="text-xs">Tax ID / EIN</Label>
-                            <Input value={editVal('taxId')} onChange={(e) => setEditVal('taxId', e.target.value)} />
+                          <div className="grid gap-3 sm:grid-cols-2">
+                            <div className="space-y-1">
+                              <Label className="text-xs">Entity type</Label>
+                              <Input value={editVal('entityType')} onChange={(e) => setEditVal('entityType', e.target.value)} />
+                            </div>
+                            <div className="space-y-1">
+                              <Label className="text-xs">Tax ID / EIN</Label>
+                              <Input value={editVal('taxId')} onChange={(e) => setEditVal('taxId', e.target.value)} />
+                            </div>
+                          </div>
+                          <div className="grid gap-3 sm:grid-cols-2">
+                            <div className="space-y-1">
+                              <Label className="text-xs">Jurisdiction</Label>
+                              <Input value={editVal('jurisdiction')} onChange={(e) => setEditVal('jurisdiction', e.target.value)} />
+                            </div>
+                            <div className="space-y-1">
+                              <Label className="text-xs">Contact person</Label>
+                              <Input value={editVal('contactPerson')} onChange={(e) => setEditVal('contactPerson', e.target.value)} />
+                            </div>
+                          </div>
+                          <div className="grid gap-3 sm:grid-cols-2">
+                            <div className="space-y-1">
+                              <Label className="text-xs">Email</Label>
+                              <Input value={editVal('email')} onChange={(e) => setEditVal('email', e.target.value)} />
+                            </div>
+                            <div className="space-y-1">
+                              <Label className="text-xs">Phone</Label>
+                              <Input value={editVal('phone')} onChange={(e) => setEditVal('phone', e.target.value)} />
+                            </div>
                           </div>
                         </>
                       ) : (
                         <>
                           <div className="grid gap-3 sm:grid-cols-2">
                             <div className="space-y-1">
-                              <Label className="text-xs">First Name</Label>
+                              <Label className="text-xs">First name</Label>
                               <Input value={editVal('firstName')} onChange={(e) => setEditVal('firstName', e.target.value)} />
                             </div>
                             <div className="space-y-1">
-                              <Label className="text-xs">Last Name</Label>
+                              <Label className="text-xs">Last name</Label>
                               <Input value={editVal('lastName')} onChange={(e) => setEditVal('lastName', e.target.value)} />
                             </div>
                           </div>
                           <div className="space-y-1">
-                            <Label className="text-xs">Date of Birth</Label>
+                            <Label className="text-xs">Date of birth</Label>
                             <Input type="date" value={editVal('dob')} onChange={(e) => setEditVal('dob', e.target.value)} />
                           </div>
                           <div className="space-y-1">
                             <Label className="text-xs">SSN / Tax ID</Label>
                             <Input value={editVal('taxId')} onChange={(e) => setEditVal('taxId', e.target.value)} />
                           </div>
+                          <div className="grid gap-3 sm:grid-cols-2">
+                            <div className="space-y-1">
+                              <Label className="text-xs">Email</Label>
+                              <Input value={editVal('email')} onChange={(e) => setEditVal('email', e.target.value)} />
+                            </div>
+                            <div className="space-y-1">
+                              <Label className="text-xs">Phone</Label>
+                              <Input value={editVal('phone')} onChange={(e) => setEditVal('phone', e.target.value)} />
+                            </div>
+                          </div>
                         </>
                       )}
                     </div>
                   ) : (
-                    <>
-                      <ReviewRow label="Full Name" value={fullName} />
-                      <ReviewRow label="Date of Birth" value={dob || 'Not provided'} />
-                      <ReviewRow label="SSN / Tax ID" value={maskedTaxId} />
-                    </>
+                    <div className="space-y-0">
+                      <ReviewRow label="Full name" value={fullName} />
+                      {!isEntity && (
+                        <>
+                          <ReviewRow label="Date of birth" value={dob || 'Not provided'} />
+                          <ReviewRow label="SSN / Tax ID" value={maskedTaxId} />
+                          <ReviewRow label="Relationship" value={party?.relationship} />
+                          <ReviewRow label="ID type" value={idType || 'Not provided'} />
+                          <ReviewRow label="ID number" value={idNumber ? `****${idNumber.slice(-4)}` : 'Not provided'} />
+                          <ReviewRow label="Issuing state" value={idState || 'Not provided'} />
+                          <ReviewRow label="ID expiration" value={idExpiration || 'Not provided'} />
+                        </>
+                      )}
+                      {isEntity && (
+                        <>
+                          <ReviewRow label="Entity type" value={entityType || 'Not provided'} />
+                          <ReviewRow label="Tax ID / EIN" value={ssn ? `**-***${ssn.slice(-4)}` : 'Not provided'} />
+                          <ReviewRow label="Jurisdiction" value={jurisdiction || 'Not provided'} />
+                          <ReviewRow label="Contact person" value={contactPerson || 'Not provided'} />
+                          <ReviewRow label="Email" value={email || 'Not provided'} />
+                          <ReviewRow label="Phone" value={phone || 'Not provided'} />
+                        </>
+                      )}
+                    </div>
                   )}
                 </AccordionContent>
               </AccordionItem>
 
-              <AccordionItem value="address" className="rounded-lg border border-border overflow-hidden bg-background">
-                <AccordionTrigger className="px-4 py-3 hover:no-underline bg-muted/30 border-b border-border data-[state=open]:border-b">
+              <AccordionItem value="address" className="rounded-lg border border-border overflow-hidden bg-card">
+                <AccordionTrigger className="px-4 py-3 hover:no-underline bg-muted/40 border-b border-border data-[state=open]:border-b">
                   <span className="flex items-center gap-2 text-sm font-semibold">
                     <MapPin className="h-4 w-4 text-muted-foreground" />
                     Address
                   </span>
                 </AccordionTrigger>
-                <AccordionContent className="px-4 pt-2 pb-4">
+                <AccordionContent className="px-4 pt-3 pb-4">
                   {isEditing ? (
                     <div className="space-y-3">
                       <div className="space-y-1">
@@ -339,7 +495,7 @@ export function ChildHoKycViewContent() {
                         <Input value={editVal('legalStreet')} onChange={(e) => setEditVal('legalStreet', e.target.value)} />
                       </div>
                       <div className="space-y-1">
-                        <Label className="text-xs">Apt / Unit</Label>
+                        <Label className="text-xs">Apt / unit</Label>
                         <Input value={editVal('legalApt')} onChange={(e) => setEditVal('legalApt', e.target.value)} />
                       </div>
                       <div className="grid gap-3 sm:grid-cols-2">
@@ -364,219 +520,225 @@ export function ChildHoKycViewContent() {
                       </div>
                     </div>
                   ) : (
-                    <>
-                      <p className="text-sm">
-                        {legalStreet
-                          ? `${legalStreet}${(taskData.legalApt as string) ? `, ${(taskData.legalApt as string)}` : ''}`
-                          : 'Not provided'}
-                      </p>
-                      <p className="text-sm">
-                        {[legalCity, legalState, legalZip].filter(Boolean).join(', ') || 'Not provided'}
-                      </p>
-                      <p className="text-sm">{legalCountry || 'Not provided'}</p>
-                    </>
+                    <div className="space-y-0">
+                      <ReviewRow label="Street" value={legalStreet || 'Not provided'} />
+                      <ReviewRow label="Apt / unit" value={((taskData.legalApt as string) || '').trim() || 'Not provided'} />
+                      <ReviewRow label="City" value={legalCity || 'Not provided'} />
+                      <ReviewRow label="State" value={legalState || 'Not provided'} />
+                      <ReviewRow label="ZIP / Postal code" value={legalZip || 'Not provided'} />
+                      <ReviewRow label="Country" value={legalCountry || 'Not provided'} />
+                    </div>
                   )}
                 </AccordionContent>
               </AccordionItem>
 
-              <AccordionItem value="risk" className="rounded-lg border border-border overflow-hidden bg-background">
-                <AccordionTrigger className="px-4 py-3 hover:no-underline bg-muted/30 border-b border-border data-[state=open]:border-b">
+              <AccordionItem value="employment" className="rounded-lg border border-border overflow-hidden bg-card">
+                <AccordionTrigger className="px-4 py-3 hover:no-underline bg-muted/40 border-b border-border data-[state=open]:border-b">
                   <span className="flex items-center gap-2 text-sm font-semibold">
-                    <Landmark className="h-4 w-4 text-muted-foreground" />
-                    Risk Signals
+                    <Briefcase className="h-4 w-4 text-muted-foreground" />
+                    {isEntity ? 'Business profile' : 'Employment'}
                   </span>
                 </AccordionTrigger>
-                <AccordionContent className="px-4 pt-2 pb-4">
-                  <ReviewRow label="Employment" value={employmentStatus || 'Not provided'} />
-                  <div className="py-2">
-                    <p className="text-sm text-muted-foreground">Source of Funds</p>
-                    <ul className="mt-1 space-y-1">
-                      {(sourceOfFundsItems.length > 0 ? sourceOfFundsItems : ['Not provided']).map((item) => (
-                        <li key={item} className="text-sm">- {item}</li>
-                      ))}
-                    </ul>
-                  </div>
+                <AccordionContent className="px-4 pt-3 pb-4">
+                  {isEditing ? (
+                    isEntity ? (
+                      <div className="grid gap-3 sm:grid-cols-2">
+                        <div className="space-y-1 sm:col-span-2">
+                          <Label className="text-xs">Industry</Label>
+                          <Input value={editVal('bizIndustry')} onChange={(e) => setEditVal('bizIndustry', e.target.value)} />
+                        </div>
+                        <div className="space-y-1 sm:col-span-2">
+                          <Label className="text-xs">Annual revenue range</Label>
+                          <Input value={editVal('annualRevenueRange')} onChange={(e) => setEditVal('annualRevenueRange', e.target.value)} />
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="space-y-3">
+                        <div className="space-y-1">
+                          <Label className="text-xs">Employment status</Label>
+                          <Input value={editVal('employmentStatus')} onChange={(e) => setEditVal('employmentStatus', e.target.value)} />
+                        </div>
+                        <div className="space-y-1">
+                          <Label className="text-xs">Employer</Label>
+                          <Input value={editVal('employerName')} onChange={(e) => setEditVal('employerName', e.target.value)} />
+                        </div>
+                        <div className="grid gap-3 sm:grid-cols-2">
+                          <div className="space-y-1">
+                            <Label className="text-xs">Occupation</Label>
+                            <Input value={editVal('occupation')} onChange={(e) => setEditVal('occupation', e.target.value)} />
+                          </div>
+                          <div className="space-y-1">
+                            <Label className="text-xs">Industry</Label>
+                            <Input value={editVal('industry')} onChange={(e) => setEditVal('industry', e.target.value)} />
+                          </div>
+                        </div>
+                      </div>
+                    )
+                  ) : isEntity ? (
+                    <div className="space-y-0">
+                      <ReviewRow label="Industry" value={(taskData.bizIndustry as string) || industry || 'Not provided'} />
+                      <ReviewRow label="Annual revenue range" value={annualRevenueRange || 'Not provided'} />
+                    </div>
+                  ) : (
+                    <div className="space-y-0">
+                      <ReviewRow label="Employment status" value={employmentStatus || 'Not provided'} />
+                      <ReviewRow label="Employer" value={employerName || 'Not provided'} />
+                      <ReviewRow label="Occupation" value={occupation || 'Not provided'} />
+                      <ReviewRow label="Industry" value={industry || 'Not provided'} />
+                    </div>
+                  )}
                 </AccordionContent>
               </AccordionItem>
 
-              <AccordionItem value="flags" className="rounded-lg border border-border overflow-hidden bg-background">
-                <AccordionTrigger className="px-4 py-3 hover:no-underline bg-muted/30 border-b border-border data-[state=open]:border-b">
+              <AccordionItem value="suitability" className="rounded-lg border border-border overflow-hidden bg-card">
+                <AccordionTrigger className="px-4 py-3 hover:no-underline bg-muted/40 border-b border-border data-[state=open]:border-b">
                   <span className="flex items-center gap-2 text-sm font-semibold">
-                    <AlertTriangle className="h-4 w-4 text-muted-foreground" />
-                    Flags & Issues
+                    <Scale className="h-4 w-4 text-muted-foreground" />
+                    Suitability
                   </span>
                 </AccordionTrigger>
-                <AccordionContent className="px-4 pt-2 pb-4">
-                  <p className="text-sm">{amlBlocked ? 'Review required before approval' : 'No issues identified'}</p>
-                </AccordionContent>
-              </AccordionItem>
-            </Accordion>
-
-            <Accordion type="multiple" defaultValue={['activity']} className="space-y-3">
-              <AccordionItem value="activity" className="rounded-lg border border-border overflow-hidden bg-background">
-                <AccordionTrigger className="px-4 py-3 hover:no-underline bg-muted/30 border-b border-border data-[state=open]:border-b">
-                  <span className="flex items-center gap-2 text-sm font-semibold">
-                    <FileText className="h-4 w-4 text-muted-foreground" />
-                    Activity & System Notes
-                  </span>
-                </AccordionTrigger>
-                <AccordionContent className="px-4 pt-2 pb-4">
-                  <ReviewRow label="CIP verification result" value={cipStatusLabel} />
-                  <ReviewRow label="Screening batch ID" value="AML-2025-18492" />
-                  <ReviewRow label="Last verification timestamp" value={String(verificationTimestamp)} />
-                  {cipReviewUploads.length > 0 && (
-                    <div className="pt-2">
-                      <p className="text-sm text-muted-foreground mb-1">Reviewer uploads</p>
-                      <ul className="space-y-1">
-                        {cipReviewUploads.map((u) => (
-                          <li key={u.id} className="text-sm">{u.fileName}</li>
+                <AccordionContent className="px-4 pt-3 pb-4">
+                  {isEditing ? (
+                    <div className="space-y-1">
+                      <Label className="text-xs">Source of funds</Label>
+                      <Input value={editVal('sourceOfFunds')} onChange={(e) => setEditVal('sourceOfFunds', e.target.value)} />
+                    </div>
+                  ) : (
+                    <div className="py-2">
+                      <p className="text-sm text-muted-foreground">Source of funds</p>
+                      <ul className="mt-1 space-y-1">
+                        {(sourceOfFundsItems.length > 0 ? sourceOfFundsItems : ['Not provided']).map((item) => (
+                          <li key={item} className="text-sm text-foreground">
+                            {item}
+                          </li>
                         ))}
                       </ul>
                     </div>
                   )}
                 </AccordionContent>
               </AccordionItem>
+
+              {supportingDocReferences.length > 0 && (
+                <AccordionItem value="supporting-docs" className="rounded-lg border border-border overflow-hidden bg-card">
+                  <AccordionTrigger className="px-4 py-3 hover:no-underline bg-muted/40 border-b border-border data-[state=open]:border-b">
+                    <span className="flex items-center gap-2 text-sm font-semibold">
+                      <FolderOpen className="h-4 w-4 text-muted-foreground" />
+                      Supporting documents
+                    </span>
+                  </AccordionTrigger>
+                  <AccordionContent className="px-4 pt-3 pb-4">
+                    <ul className="space-y-2 text-sm">
+                      {supportingDocReferences.map((r, i) => (
+                        <li key={`${r.label}-${r.name}-${i}`} className="flex justify-between gap-4 border-b border-border/50 pb-2 last:border-0 last:pb-0">
+                          <span className="text-muted-foreground">{r.label}</span>
+                          <span className="font-medium text-right">{r.name}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </AccordionContent>
+                </AccordionItem>
+              )}
             </Accordion>
           </div>
-        ) : (
-          <Accordion type="multiple" defaultValue={[]} className="space-y-3">
-          <AccordionSection value={isEntity ? 'entity' : 'personal'} title={isEntity ? 'Legal Entity Information' : 'Personal Information'} icon={FileText}>
-            {isEditing ? (
-              <div className="space-y-3 py-2">
-                {isEntity ? (
-                  <>
-                    <div className="space-y-1"><Label className="text-xs">Legal name</Label><Input value={editVal('legalName')} onChange={(e) => setEditVal('legalName', e.target.value)} /></div>
-                    <div className="grid gap-3 sm:grid-cols-2">
-                      <div className="space-y-1"><Label className="text-xs">Entity type</Label><Input value={editVal('entityType')} onChange={(e) => setEditVal('entityType', e.target.value)} /></div>
-                      <div className="space-y-1"><Label className="text-xs">Tax ID / EIN</Label><Input value={editVal('taxId')} onChange={(e) => setEditVal('taxId', e.target.value)} /></div>
-                    </div>
-                    <div className="grid gap-3 sm:grid-cols-2">
-                      <div className="space-y-1"><Label className="text-xs">Jurisdiction</Label><Input value={editVal('jurisdiction')} onChange={(e) => setEditVal('jurisdiction', e.target.value)} /></div>
-                      <div className="space-y-1"><Label className="text-xs">Contact person</Label><Input value={editVal('contactPerson')} onChange={(e) => setEditVal('contactPerson', e.target.value)} /></div>
-                    </div>
-                  </>
-                ) : (
-                  <>
-                    <div className="grid gap-3 sm:grid-cols-2">
-                      <div className="space-y-1"><Label className="text-xs">First name</Label><Input value={editVal('firstName')} onChange={(e) => setEditVal('firstName', e.target.value)} /></div>
-                      <div className="space-y-1"><Label className="text-xs">Last name</Label><Input value={editVal('lastName')} onChange={(e) => setEditVal('lastName', e.target.value)} /></div>
-                    </div>
-                    <div className="grid gap-3 sm:grid-cols-2">
-                      <div className="space-y-1"><Label className="text-xs">Date of birth</Label><Input type="date" value={editVal('dob')} onChange={(e) => setEditVal('dob', e.target.value)} /></div>
-                      <div className="space-y-1"><Label className="text-xs">SSN / Tax ID</Label><Input value={editVal('taxId')} onChange={(e) => setEditVal('taxId', e.target.value)} /></div>
-                    </div>
-                  </>
-                )}
-                <div className="grid gap-3 sm:grid-cols-2">
-                  <div className="space-y-1"><Label className="text-xs">Email</Label><Input value={editVal('email')} onChange={(e) => setEditVal('email', e.target.value)} /></div>
-                  <div className="space-y-1"><Label className="text-xs">Phone</Label><Input value={editVal('phone')} onChange={(e) => setEditVal('phone', e.target.value)} /></div>
-                </div>
+        </section>
+
+        {/* Section B — read-only verification & review */}
+        <section className="rounded-xl border border-border bg-muted/25">
+          <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border px-4 py-3 sm:px-5 bg-muted/40">
+            <h2 className="text-lg font-semibold text-foreground">Verification results</h2>
+            <VerificationRunControl childId={childId} childStatus={child.status} />
+          </div>
+
+          <div className="p-4 sm:p-5 space-y-8">
+            <div>
+              <h3 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-2">Status summary</h3>
+              <div className="rounded-lg border border-border/80 bg-background/80 px-3 sm:px-4">
+                <ReviewRow label="KYC status" value={cipStatusLabel} />
+                <ReviewRow label="Review status" value={reviewStatusLabel} />
+                <ReviewRow label="Submission date" value={String(submissionDate)} />
+                <ReviewRow label="Last checked" value={lastCheckedDisplay} />
+                <ReviewRow label="Verification confidence" value={confidenceLabel} />
               </div>
-            ) : (
-              <>
-                <ReviewRow label={isEntity ? 'Legal Name' : 'Full Name'} value={fullName} />
-                {isEntity ? (
-                  <>
-                    <ReviewRow label="Entity Type" value={entityType || 'Not provided'} />
-                    <ReviewRow label="Tax ID / EIN" value={ssn ? `**-***${ssn.slice(-4)}` : 'Not provided'} />
-                    <ReviewRow label="Jurisdiction" value={jurisdiction || 'Not provided'} />
-                    <ReviewRow label="Contact Person" value={contactPerson || 'Not provided'} />
-                  </>
-                ) : (
-                  <>
-                    <ReviewRow label="Date of Birth" value={dob} />
-                    <ReviewRow label="SSN / Tax ID" value={ssn ? `***-**-${ssn.slice(-4)}` : 'Not provided'} />
-                  </>
+            </div>
+
+            <div>
+              <h3 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-2">Verification outcome</h3>
+              <div className="rounded-lg border border-border/80 bg-background/80 px-4 py-3">
+                <ul className="list-disc pl-4 space-y-1.5 text-sm text-foreground">
+                  {outcomeBullets.map((line) => (
+                    <li key={line}>{line}</li>
+                  ))}
+                </ul>
+              </div>
+            </div>
+
+            <div>
+              <h3 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-2">Verification method</h3>
+              <div className="rounded-lg border border-border/80 bg-background/80 px-4 py-3 space-y-1.5 text-sm text-foreground">
+                <p>Verified using trusted data providers.</p>
+                <p>Verification based on SSN, date of birth, and address on file.</p>
+              </div>
+            </div>
+
+            <div>
+              <h3 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-2">AML / CIP</h3>
+              <div className="rounded-lg border border-border/80 bg-background/80 px-3 sm:px-4">
+                <ReviewRow label="AML status" value={amlStatusLabel} />
+                {amlReview?.findings ? <ReviewRow label="AML findings" value={amlReview.findings} /> : null}
+                <ReviewRow label="Identity verification (CIP)" value={cipDetailLabel(cipStatus?.idVerification)} />
+                <ReviewRow label="Address match" value={cipDetailLabel(cipStatus?.addressMatch)} />
+                <ReviewRow label="Date of birth match" value={cipDetailLabel(cipStatus?.dobMatch)} />
+              </div>
+            </div>
+
+            <div>
+              <h3 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-2">Risk signals</h3>
+              <div className="rounded-lg border border-border/80 bg-background/80 px-4 py-3 text-sm text-foreground space-y-1">
+                <p>Sanctions screening: No matches (demo).</p>
+                <p>PEP screening: Not elevated (demo).</p>
+                <p>Negative media: No high-risk hits (demo).</p>
+              </div>
+            </div>
+
+            <div>
+              <h3 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-2">Flags &amp; issues</h3>
+              <div className="rounded-lg border border-border/80 bg-background/80 px-4 py-3 text-sm">
+                <p className={amlBlocked ? 'text-amber-900 dark:text-amber-100' : 'text-foreground'}>
+                  {amlBlocked ? 'AML review must be cleared before final approval.' : 'No blocking flags on this subject (demo).'}
+                </p>
+                {(reviewState?.validationErrors?.length ?? 0) > 0 && (
+                  <ul className="mt-2 list-disc pl-4 space-y-1 text-muted-foreground">
+                    {(reviewState?.validationErrors ?? []).map((e, i) => (
+                      <li key={i}>{e}</li>
+                    ))}
+                  </ul>
                 )}
-                <ReviewRow label="Email" value={email} />
-                <ReviewRow label="Phone" value={phone} />
-              </>
-            )}
-            {!isEntity && <ReviewRow label="Relationship" value={party?.relationship} />}
-          </AccordionSection>
-          
+              </div>
+            </div>
 
-          {!isEntity && (
-            <AccordionSection value="address" title="Address" icon={FileText}>
-              {isEditing ? (
-                <div className="space-y-3 py-2">
-                  <div className="space-y-1">
-                    <Label className="text-xs">Street</Label>
-                    <Input value={editVal('legalStreet')} onChange={(e) => setEditVal('legalStreet', e.target.value)} />
-                  </div>
-                  <div className="space-y-1">
-                    <Label className="text-xs">Apt / Unit</Label>
-                    <Input value={editVal('legalApt')} onChange={(e) => setEditVal('legalApt', e.target.value)} />
-                  </div>
-                  <div className="grid gap-3 sm:grid-cols-2">
-                    <div className="space-y-1">
-                      <Label className="text-xs">City</Label>
-                      <Input value={editVal('legalCity')} onChange={(e) => setEditVal('legalCity', e.target.value)} />
-                    </div>
-                    <div className="space-y-1">
-                      <Label className="text-xs">State</Label>
-                      <Input value={editVal('legalState')} onChange={(e) => setEditVal('legalState', e.target.value)} />
-                    </div>
-                  </div>
-                  <div className="grid gap-3 sm:grid-cols-2">
-                    <div className="space-y-1">
-                      <Label className="text-xs">ZIP / Postal code</Label>
-                      <Input value={editVal('legalZip')} onChange={(e) => setEditVal('legalZip', e.target.value)} />
-                    </div>
-                    <div className="space-y-1">
-                      <Label className="text-xs">Country</Label>
-                      <Input value={editVal('legalCountry')} onChange={(e) => setEditVal('legalCountry', e.target.value)} />
-                    </div>
-                  </div>
-                </div>
-              ) : (
-                <>
-                  <ReviewRow label="Street" value={legalStreet || 'Not provided'} />
-                  <ReviewRow label="Apt / Unit" value={((taskData.legalApt as string) || '').trim() || 'Not provided'} />
-                  <ReviewRow label="City" value={legalCity || 'Not provided'} />
-                  <ReviewRow label="State" value={legalState || 'Not provided'} />
-                  <ReviewRow label="ZIP / Postal code" value={legalZip || 'Not provided'} />
-                  <ReviewRow label="Country" value={legalCountry || 'Not provided'} />
-                </>
-              )}
-            </AccordionSection>
-          )}
+            <div>
+              <h3 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-2">System notes</h3>
+              <div className="rounded-lg border border-border/80 bg-background/80 px-3 sm:px-4">
+                <ReviewRow label="Screening batch ID" value="AML-2025-18492" />
+                <ReviewRow label="Last verification timestamp" value={String(verificationTimestamp)} />
+                {reviewState?.kycVerificationResultSummary ? (
+                  <ReviewRow label="Latest check summary" value={reviewState.kycVerificationResultSummary} />
+                ) : null}
+              </div>
+            </div>
 
-          {!isEntity && (
-            <AccordionSection value="id-verification" title="ID Verification" icon={FileText}>
-            <ReviewRow label="ID Type" value={idType || 'Not provided'} />
-            <ReviewRow label="ID Number" value={idNumber ? `****${idNumber.slice(-4)}` : 'Not provided'} />
-            <ReviewRow label="Issuing State" value={idState || 'Not provided'} />
-            <ReviewRow label="Expiration" value={idExpiration || 'Not provided'} />
-            </AccordionSection>
-          )}
-
-          <AccordionSection value={isEntity ? 'business' : 'employment'} title={isEntity ? 'Business Profile' : 'Employment'} icon={FileText}>
-            {isEntity ? (
-              <>
-                <ReviewRow label="Industry" value={industry || 'Not provided'} />
-                <ReviewRow label="Annual Revenue Range" value={annualRevenueRange || 'Not provided'} />
-                <ReviewRow label="Source of Funds" value={sourceOfFunds || 'Not provided'} />
-              </>
-            ) : (
-              <>
-                <ReviewRow label="Status" value={employmentStatus || 'Not provided'} />
-                <ReviewRow label="Employer" value={employerName || 'Not provided'} />
-                <ReviewRow label="Occupation" value={occupation || 'Not provided'} />
-                <ReviewRow label="Industry" value={industry || 'Not provided'} />
-              </>
-            )}
-          </AccordionSection>
-          
-
-          {!isEntity && (
-            <AccordionSection value="source-of-funds" title="Source of Funds" icon={FileText}>
-              <ReviewRow label="Primary Source" value={sourceOfFunds || 'Not provided'} />
-            </AccordionSection>
-          )}
-
-        </Accordion>
-        )}
+            <div>
+              <h3 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-2">Reviewer notes</h3>
+              <div className="rounded-lg border border-border/80 bg-background/80 px-4 py-3 text-sm text-foreground">
+                {hoKycReview?.comments ? (
+                  <p>{hoKycReview.comments}</p>
+                ) : (
+                  <p className="text-muted-foreground">No reviewer comments recorded.</p>
+                )}
+              </div>
+            </div>
+          </div>
+        </section>
       </div>
     </main>
   )

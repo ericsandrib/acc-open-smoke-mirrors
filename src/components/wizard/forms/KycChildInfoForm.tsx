@@ -15,6 +15,7 @@ import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from '
 import { Lock, AlertTriangle, CheckCircle2, Plus, Trash2 } from 'lucide-react'
 import { AddHouseholdMemberSheet } from './AddPartySheet'
 import { PartySlotCard } from './PartySlotCard'
+import { IdentityVerificationSection } from './IdentityVerificationSection'
 import { cn } from '@/lib/utils'
 
 const sectionCls = 'text-base font-semibold leading-snug text-foreground'
@@ -1064,6 +1065,8 @@ export function KycChildInfoForm() {
           </div>
         </section>
 
+        <IdentityVerificationSection childId={child.id} childStatus={child.status} />
+
         <Sheet
           open={editingBeneficialOwnerIndex !== null}
           onOpenChange={(open) => {
@@ -1370,7 +1373,7 @@ export function KycChildInfoForm() {
 
       {/* Address */}
       <section className="space-y-3">
-        <h4 className={sectionCls}>Home Address</h4>
+        <h4 className={sectionCls}>Address</h4>
         <p className={sectionBodyCls}>
           Where do you currently live? This must be your primary residence.
         </p>
@@ -1411,9 +1414,9 @@ export function KycChildInfoForm() {
       </section>
 
       <section className="space-y-3">
-        <h4 className={sectionCls}>Identity Verification</h4>
+        <h4 className={sectionCls}>Government ID &amp; tax ID</h4>
         <p className={sectionBodyCls}>
-          We use this information to verify your identity securely.
+          We use this information for identity verification.
         </p>
         <div className="space-y-3">
           <div className="space-y-1.5" data-field="taxId">
@@ -1489,6 +1492,16 @@ export function KycChildInfoForm() {
           </div>
         </div>
       </section>
+
+      <section className="space-y-3">
+        <h4 className={sectionCls}>Supporting documents</h4>
+        <p className={sectionBodyCls}>
+          Upload supporting files from the <span className="font-medium text-foreground">Supporting Documents</span>{' '}
+          step in the left navigation when needed.
+        </p>
+      </section>
+
+      <IdentityVerificationSection childId={child.id} childStatus={child.status} />
 
     </div>
   )

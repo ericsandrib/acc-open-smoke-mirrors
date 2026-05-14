@@ -27,6 +27,28 @@ import {
 import { resolveJourneyEntryTaskIdAfterInit } from '@/utils/journeyEntryTask'
 import { generateAccountOpenIdentifiers } from '@/utils/accountOpenIdentifiers'
 import { mergeFeatureRequests } from '@/types/featureRequests'
+import {
+  advisorIdentitySimPassDisplay,
+  getAdvisorIdentitySimDisplay,
+} from '@/utils/advisorIdentityVerificationSimDisplay'
+
+/** Dev-only simulation keys must not be persisted with workflow localStorage. */
+function stripAdvisorIdentityDemoSimulationForStorage(state: WorkflowState): WorkflowState {
+  const reviews = state.childReviewsByChildId
+  if (!reviews) return state
+  let touched = false
+  const nextReviews = { ...reviews }
+  for (const key of Object.keys(nextReviews)) {
+    const rev = nextReviews[key]
+    if (rev?.demoAdvisorIdentitySimulation != null) {
+      touched = true
+      const copy = { ...rev }
+      delete copy.demoAdvisorIdentitySimulation
+      nextReviews[key] = copy
+    }
+  }
+  return touched ? { ...state, childReviewsByChildId: nextReviews } : state
+}
 
 export function getChildReviewState(state: WorkflowState, childId: string | undefined): ChildReviewState | undefined {
   if (!childId) return undefined
@@ -203,7 +225,7 @@ function isSplitOpenAccountsJourney(state: WorkflowState): boolean {
   )
 }
 
-function shouldSkipAnnuityTaskInV6Split(_state: WorkflowState, _taskId: string): boolean {
+function shouldSkipAnnuityTaskInV6Split(): boolean {
   return false
 }
 
@@ -212,7 +234,7 @@ function nextVisibleFlatTaskId(state: WorkflowState, fromTaskId: string): string
   if (idx < 0) return null
   for (let i = idx + 1; i < state.flatTaskOrder.length; i++) {
     const id = state.flatTaskOrder[i]
-    if (!shouldSkipAnnuityTaskInV6Split(state, id)) return id
+    if (!shouldSkipAnnuityTaskInV6Split()) return id
   }
   return null
 }
@@ -222,7 +244,7 @@ function prevVisibleFlatTaskId(state: WorkflowState, fromTaskId: string): string
   if (idx <= 0) return null
   for (let i = idx - 1; i >= 0; i--) {
     const id = state.flatTaskOrder[i]
-    if (!shouldSkipAnnuityTaskInV6Split(state, id)) return id
+    if (!shouldSkipAnnuityTaskInV6Split()) return id
   }
   return null
 }
@@ -233,7 +255,7 @@ export function getNextVisibleFlatTaskId(state: WorkflowState): string | null {
 }
 
 function redirectActiveIfV6AnnuityHidden(state: WorkflowState, taskId: string): string {
-  if (!shouldSkipAnnuityTaskInV6Split(state, taskId)) return taskId
+  if (!shouldSkipAnnuityTaskInV6Split()) return taskId
   const noAnnuity = state.tasks.find((t) => t.formKey === OPEN_ACCOUNTS_FORM_KEY)
   return noAnnuity?.id ?? taskId
 }
@@ -1076,6 +1098,107 @@ function workflowReducer(state: WorkflowState, action: WorkflowAction): Workflow
       }
     }
 
+    case 'RUN_ADVISOR_KYC_VERIFICATION': {
+      const cid = action.childId
+      const info = (state.taskData[`${cid}-info`] as Record<string, unknown> | undefined) ?? {}
+      const root = (state.taskData[cid] as Record<string, unknown> | undefined) ?? {}
+      const subjectIsEntity = root.kycSubjectType === 'entity'
+      const s = (k: string) => (typeof info[k] === 'string' ? (info[k] as string).trim() : '')
+
+      const nameOk = subjectIsEntity ? Boolean(s('legalName')) : Boolean(s('firstName') && s('lastName'))
+      const tinOk = Boolean(s('taxId'))
+      const dobOk = subjectIsEntity ? true : Boolean(s('dob'))
+      const addrOk = subjectIsEntity
+        ? Boolean(s('registeredStreet') || s('principalStreet'))
+        : Boolean(s('legalStreet'))
+
+      const pass = nameOk && tinOk && dobOk && addrOk
+
+      const idVerification: 'pass' | 'fail' | 'pending' = nameOk && tinOk ? 'pass' : 'fail'
+      const addressMatch: 'pass' | 'fail' | 'pending' = addrOk ? 'pass' : 'fail'
+      const dobMatch: 'pass' | 'fail' | 'pending' = subjectIsEntity ? 'pass' : dobOk ? 'pass' : 'fail'
+
+      const nowIso = new Date().toISOString()
+      const cipStatus: NonNullable<ChildReviewState['cipStatus']> = pass
+        ? {
+            idVerification: 'pass',
+            addressMatch: 'pass',
+            dobMatch: 'pass',
+            overallStatus: 'pass',
+          }
+        : {
+            idVerification,
+            addressMatch,
+            dobMatch,
+            overallStatus: 'fail',
+          }
+      const kycVerificationResultSummary = pass
+        ? 'Identity successfully verified.'
+        : 'Some details need attention before identity can be verified.'
+      const prev = state.childReviewsByChildId?.[cid] ?? {}
+      return {
+        ...state,
+        childReviewsByChildId: {
+          ...state.childReviewsByChildId,
+          [cid]: {
+            ...prev,
+            demoAdvisorIdentitySimulation: undefined,
+            cipStatus,
+            kycVerificationLastCheckedAt: nowIso,
+            kycVerificationResultSummary,
+          },
+        },
+      }
+    }
+
+    case 'SIMULATE_ADVISOR_IDENTITY_VERIFICATION': {
+      if (import.meta.env.PROD) return state
+      const cid = action.childId
+      const prev = state.childReviewsByChildId?.[cid] ?? {}
+      const nowIso = new Date().toISOString()
+
+      if (action.preset === 'reset') {
+        const pass = advisorIdentitySimPassDisplay()
+        return {
+          ...state,
+          childReviewsByChildId: {
+            ...state.childReviewsByChildId,
+            [cid]: {
+              ...prev,
+              demoAdvisorIdentitySimulation: undefined,
+              cipStatus: pass.cipStatus,
+              kycVerificationLastCheckedAt: nowIso,
+              kycVerificationResultSummary: pass.resultSummary ?? undefined,
+            },
+          },
+        }
+      }
+
+      const root = (state.taskData[cid] as Record<string, unknown> | undefined) ?? {}
+      const subjectIsEntity = root.kycSubjectType === 'entity'
+      const overlay = getAdvisorIdentitySimDisplay(action.preset, subjectIsEntity)
+      const kycVerificationResultSummary =
+        overlay.cipStatus.overallStatus === 'pass'
+          ? 'Identity successfully verified.'
+          : overlay.cipStatus.overallStatus === 'pending'
+            ? 'Verification is still in progress.'
+            : 'Some details need attention before identity can be verified.'
+
+      return {
+        ...state,
+        childReviewsByChildId: {
+          ...state.childReviewsByChildId,
+          [cid]: {
+            ...prev,
+            demoAdvisorIdentitySimulation: action.preset,
+            cipStatus: overlay.cipStatus,
+            kycVerificationLastCheckedAt: nowIso,
+            kycVerificationResultSummary,
+          },
+        },
+      }
+    }
+
     case 'SUBMIT_CHILD_FOR_REVIEW': {
       if (!state.activeChildActionId) return state
       const cid = state.activeChildActionId
@@ -1084,6 +1207,7 @@ function workflowReducer(state: WorkflowState, action: WorkflowAction): Workflow
         .find((c) => c.id === cid)
       const isKycChild = submittedChild?.childType === 'kyc'
       const isAccountOpeningChild = submittedChild?.childType === 'account-opening'
+      const existingKycReview = isKycChild ? state.childReviewsByChildId?.[cid] : undefined
       const updTasks = state.tasks.map((t) => {
         if (!t.children) return t
         return {
@@ -1093,18 +1217,25 @@ function workflowReducer(state: WorkflowState, action: WorkflowAction): Workflow
           ),
         }
       })
+      const defaultKycCip: NonNullable<ChildReviewState['cipStatus']> = {
+        idVerification: 'pass' as const,
+        addressMatch: 'pass' as const,
+        dobMatch: 'pass' as const,
+        overallStatus: 'pass' as const,
+      }
       const initialForChild: ChildReviewState = isKycChild
         ? {
             amlReview: { status: 'pending' as const },
-            cipStatus: {
-              idVerification: 'pass' as const,
-              addressMatch: 'pass' as const,
-              dobMatch: 'pass' as const,
-              overallStatus: 'pass' as const,
-            },
+            cipStatus: existingKycReview?.cipStatus ?? defaultKycCip,
             hoKycReview: { status: 'pending' as const },
             validationErrors: [],
             kycPreAmlTimeline: buildKycPreAmlTimeline(),
+            ...(existingKycReview?.kycVerificationLastCheckedAt
+              ? {
+                  kycVerificationLastCheckedAt: existingKycReview.kycVerificationLastCheckedAt,
+                  kycVerificationResultSummary: existingKycReview.kycVerificationResultSummary,
+                }
+              : {}),
           }
         : isAccountOpeningChild
           ? {
@@ -1509,7 +1640,8 @@ export function WorkflowProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     if (typeof window === 'undefined') return
-    window.localStorage.setItem(WORKFLOW_STORAGE_KEY, JSON.stringify(state))
+    const storable = stripAdvisorIdentityDemoSimulationForStorage(state)
+    window.localStorage.setItem(WORKFLOW_STORAGE_KEY, JSON.stringify(storable))
   }, [state])
 
   return (

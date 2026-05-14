@@ -162,6 +162,20 @@ export interface ReviewState {
   rejectionFeedback?: string
 }
 
+/**
+ * Dev-only: presenter-selected identity card scenario. Does not modify client {@link WorkflowState.taskData}.
+ * Stripped before workflow localStorage persistence.
+ */
+export type AdvisorIdentityDemoSimulation =
+  | 'address_mismatch'
+  | 'dob_mismatch'
+  | 'name_mismatch'
+  | 'tin_mismatch'
+  | 'unable_to_verify'
+  | 'verification_pending'
+
+export type SimulateAdvisorIdentityPreset = AdvisorIdentityDemoSimulation | 'reset'
+
 /** Review / compliance state for one child workflow (KYC vs account opening are isolated per child id). */
 export interface ChildReviewState {
   documentReview?: { status: 'pending' | 'igo' | 'nigo'; decidedAt?: string; nigoReason?: string; nigoFeedback?: string }
@@ -175,6 +189,12 @@ export interface ChildReviewState {
     dobMatch: 'pass' | 'fail' | 'pending'
     overallStatus: 'pass' | 'fail' | 'pending'
   }
+  /** Dev-only: see {@link AdvisorIdentityDemoSimulation}. */
+  demoAdvisorIdentitySimulation?: AdvisorIdentityDemoSimulation
+  /** ISO timestamp of last advisor-triggered KYC/CIP check (demo). */
+  kycVerificationLastCheckedAt?: string
+  /** Advisor-facing summary line from the last check. */
+  kycVerificationResultSummary?: string
   hoKycReview?: { status: 'pending' | 'approved' | 'changes_requested'; decidedAt?: string; comments?: string }
   principalKycReview?: { status: 'pending' | 'approved' | 'rejected'; decidedAt?: string; reason?: string }
   validationErrors?: string[]
@@ -301,6 +321,13 @@ export type WorkflowAction =
   | { type: 'ACCEPT_REVIEW' }
   | { type: 'REJECT_REVIEW'; reason: string; feedback?: string }
   | { type: 'SUBMIT_CHILD_FOR_REVIEW' }
+  /** Demo: advisor runs KYC/CIP screening from Client Information; updates {@link ChildReviewState.cipStatus}. */
+  | { type: 'RUN_ADVISOR_KYC_VERIFICATION'; childId: string }
+  /**
+   * Dev-only: set advisor identity verification card to a canned scenario for demos (no {@link WorkflowState.taskData} changes).
+   * No-op in production builds. Not persisted to localStorage.
+   */
+  | { type: 'SIMULATE_ADVISOR_IDENTITY_VERIFICATION'; childId: string; preset: SimulateAdvisorIdentityPreset }
   | { type: 'ACCEPT_CHILD_REVIEW' }
   | { type: 'REJECT_CHILD_REVIEW'; reason: string; feedback?: string }
   | { type: 'SET_DEMO_VIEW'; mode: 'advisor' | 'ho-documents' | 'ho-principal' | 'ho-kyc' | 'aml' }

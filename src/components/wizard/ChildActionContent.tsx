@@ -186,8 +186,9 @@ function AdvisorViewBanner() {
 
     if (isKyc) {
       if (amlReview?.status === 'flagged') {
-        teamLabel = 'AML Team'
-        detail = 'The AML team has flagged this individual for further investigation. Please review their findings and resubmit.'
+        teamLabel = 'Compliance review'
+        detail =
+          'This submission was flagged during compliance screening. Please review the notes and resubmit when ready.'
         if (amlReview.findings) {
           feedbackBlock = (
             <div className="mt-2 rounded-md bg-red-100/60 dark:bg-red-900/30 px-3 py-2">
@@ -198,8 +199,8 @@ function AdvisorViewBanner() {
           )
         }
       } else if (amlReview?.status === 'info_requested') {
-        teamLabel = 'AML Team'
-        detail = 'The AML team has requested additional information. Please provide the requested details and resubmit.'
+        teamLabel = 'Compliance review'
+        detail = 'Additional information was requested before this submission can continue. Please respond and resubmit.'
         if (amlReview.infoRequestComments) {
           feedbackBlock = (
             <div className="mt-2 rounded-md bg-red-100/60 dark:bg-red-900/30 px-3 py-2">
@@ -272,9 +273,9 @@ function AdvisorViewBanner() {
           <div className="flex items-start gap-3">
             <CheckCircle2 className="h-5 w-5 text-green-600 dark:text-green-400 mt-0.5 shrink-0" />
             <div className="space-y-0.5">
-              <p className="text-sm font-medium text-green-900 dark:text-green-100">Cleared by AML Team</p>
+              <p className="text-sm font-medium text-green-900 dark:text-green-100">Compliance screening cleared</p>
               <p className="text-xs text-green-800/80 dark:text-green-200/70">
-                This individual has been cleared by the AML team. No sanctions or watchlist concerns found. Cleared at {decision.decidedAt}.
+                Required screening steps for this submission are complete. Cleared at {decision.decidedAt}.
               </p>
             </div>
           </div>
@@ -319,8 +320,8 @@ function AdvisorViewBanner() {
 
   const progressParts: string[] = []
   if (isKyc) {
-    if (amlReview?.status === 'pending') progressParts.push('AML Screening: In Progress')
-    else if (amlReview?.status === 'cleared') progressParts.push('AML Screening: Cleared')
+    if (amlReview?.status === 'pending') progressParts.push('Compliance screening: In progress')
+    else if (amlReview?.status === 'cleared') progressParts.push('Compliance screening: Cleared')
     if (hoKycReview?.status === 'pending') progressParts.push('Document Review: Pending')
   } else {
     if (docReview?.status === 'igo') progressParts.push('Document Review: Accepted')

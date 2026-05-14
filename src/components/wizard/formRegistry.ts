@@ -36,7 +36,7 @@ export const taskDescriptions: Partial<Record<string, string>> = {
   'kyc':
     'Review household members and select who requires identity verification.',
   'kyc-child-info':
-    'Collect and verify KYC/KYB data for this subject (individual or legal entity).',
+    'Collect client profile data and run identity (CIP) verification for this subject.',
   'kyc-child-documents':
     'Supporting documents are optional unless requested during review.',
   'open-accounts':

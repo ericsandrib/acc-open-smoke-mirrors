@@ -505,7 +505,6 @@ function WizardLayoutInner() {
   const showKycIntakeSubTask =
     activeKycSubTask?.formKey === 'kyc-child-info' ||
     activeKycSubTask?.formKey === 'kyc-child-documents'
-  const showKycCipResultsSubTask = activeKycSubTask?.formKey === 'kyc-child-cip-results'
   const childSections = (() => {
     if (!activeChildSubTask || !activeChild) return []
     const sections = taskSections[activeChildSubTask.formKey] ?? []
@@ -534,6 +533,9 @@ function WizardLayoutInner() {
   const isHoKycView = viewMode === 'ho-kyc'
   const isAmlView = viewMode === 'aml'
   const isHomeOfficeView = isHoDocView || isHoPrincipalView
+  /** Client Information in ho-kyc mode uses the dedicated reviewer shell (formerly the separate CIP step). */
+  const showHoKycClientInfoReviewerShell =
+    isHoKycView && isKycChild && activeKycSubTask?.formKey === 'kyc-child-info'
   /** Stale `ho-documents` / `ho-principal` after KYC must not put a draft account child into HO reviewer layout. */
   const showHomeOfficeAccountLayout =
     isHomeOfficeView &&
@@ -717,7 +719,7 @@ function WizardLayoutInner() {
                   <div className="flex flex-1 min-h-0 overflow-hidden min-w-0">
                     <div className="flex-1 flex flex-col overflow-hidden min-w-0">
                       <WizardAccessoryBar />
-                      {showKycIntakeSubTask ? <ChildActionContent /> : <ChildHoKycViewContent />}
+                      {showHoKycClientInfoReviewerShell ? <ChildHoKycViewContent /> : <ChildActionContent />}
                       <ChildActionFooter />
                     </div>
                     {variant !== 'v5' &&
@@ -776,7 +778,7 @@ function WizardLayoutInner() {
                   <WizardAccessoryBar />
                   <div className="relative flex flex-1 min-h-0 overflow-hidden">
                     <div className="flex-1 min-h-0 flex flex-col overflow-hidden min-w-0">
-                      {showKycCipResultsSubTask ? <ChildHoKycViewContent /> : <ChildActionContent />}
+                      <ChildActionContent />
                       <ChildActionFooter />
                     </div>
                     {variant !== 'v5' &&
