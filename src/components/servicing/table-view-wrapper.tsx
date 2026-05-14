@@ -2,7 +2,13 @@ import { useState, useCallback, type ReactNode } from 'react'
 import { useViewManager } from '@/hooks/useViewManager'
 import type { ColumnDef, ViewPreset } from '@/types/view-preset'
 import { ViewTabs } from './view-tabs'
-import { TableControls, type QuickSortDirection, type QuickSortKey, type RelationshipScope } from './table-controls'
+import {
+  TableControls,
+  type OnboardingActionsGroupBy,
+  type QuickSortDirection,
+  type QuickSortKey,
+  type RelationshipScope,
+} from './table-controls'
 import { FilterSidebar } from './filter-sidebar'
 import { ColumnSettingsPopover } from './column-settings-popover'
 import { SearchX } from 'lucide-react'
@@ -15,7 +21,14 @@ interface TableViewWrapperProps<T> {
   allRows: T[]
   defaultRelationshipScope?: RelationshipScope
   pinRowId?: string
-  children: (props: { rows: T[]; visibleColumns: string[] }) => ReactNode
+  /** Enables “Group by” in the toolbar (Onboarding → Actions). */
+  showGroupBy?: boolean
+  children: (props: {
+    rows: T[]
+    visibleColumns: string[]
+    activeViewId: string
+    groupBy?: OnboardingActionsGroupBy
+  }) => ReactNode
 }
 
 export function TableViewWrapper<T>({
@@ -25,6 +38,7 @@ export function TableViewWrapper<T>({
   allRows,
   defaultRelationshipScope = 'my',
   pinRowId,
+  showGroupBy = false,
   children,
 }: TableViewWrapperProps<T>) {
   const vm = useViewManager<T>(tableId, presets, columns)
@@ -32,6 +46,7 @@ export function TableViewWrapper<T>({
   const [relationshipScope, setRelationshipScope] = useState<RelationshipScope>(defaultRelationshipScope)
   const [quickSortKey, setQuickSortKey] = useState<QuickSortKey>('created_at')
   const [quickSortDirection, setQuickSortDirection] = useState<QuickSortDirection>('desc')
+  const [groupBy, setGroupBy] = useState<OnboardingActionsGroupBy>('none')
 
   const scopedRows = allRows.filter((row) => {
     if (relationshipScope === 'all') return true
@@ -116,6 +131,9 @@ export function TableViewWrapper<T>({
             setQuickSortKey(key)
             setQuickSortDirection(direction)
           }}
+          {...(showGroupBy
+            ? { showGroupBy: true as const, groupBy, onGroupByChange: setGroupBy }
+            : {})}
         />
         <ColumnSettingsPopover
           columns={columns}
@@ -133,7 +151,12 @@ export function TableViewWrapper<T>({
           </Button>
         </div>
       ) : (
-        children({ rows: withPinnedRow, visibleColumns: vm.visibleColumns })
+        children({
+          rows: withPinnedRow,
+          visibleColumns: vm.visibleColumns,
+          activeViewId: vm.activeViewId,
+          ...(showGroupBy ? { groupBy } : {}),
+        })
       )}
 
       {/* Sidebar renders via portal — DOM goes to AppShell level */}

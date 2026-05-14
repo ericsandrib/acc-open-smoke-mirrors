@@ -5,26 +5,50 @@ import { useWorkflow } from '@/stores/workflowStore'
 import { relationships } from '@/data/relationships'
 import { seededJourneys } from '@/data/servicingSeed'
 import type { Journey } from '@/types/servicing'
+import type { FinancialAccount, RelatedParty } from '@/types/workflow'
 import { getDefaultJourneyEntryTaskId } from '@/utils/journeyEntryTask'
 
 const normalize = (v: string) => v.toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim()
 
-function findTemplateRelationship(relationshipName: string) {
-  const target = normalize(relationshipName)
+/** Household name on the seeded journey row must match a relationship `name` (normalized). */
+function findExactRelationshipForSeededJourney(relationshipName: string) {
+  const target = normalize(relationshipName.trim())
   if (!target) return undefined
-  const exact = relationships.find((r) => normalize(r.name) === target)
-  if (exact) return exact
-  const includes = relationships.find((r) => {
-    const candidate = normalize(r.name)
-    return candidate.includes(target) || target.includes(candidate)
-  })
-  if (includes) return includes
-  const tokens = new Set(target.split(' ').filter(Boolean))
-  return relationships.find((r) =>
-    normalize(r.name)
-      .split(' ')
-      .some((t) => tokens.has(t)),
-  )
+  return relationships.find((r) => normalize(r.name) === target)
+}
+
+function buildSyntheticInitFromSeededJourney(row: Journey) {
+  const label = (row.relationshipName ?? '').trim() || row.name
+  const parts = label.split(/[\s,/]+/).filter(Boolean)
+  const firstName = parts[0] ?? 'Client'
+  const lastName = parts.length > 1 ? parts.slice(1).join(' ') : 'Household'
+  const partyId = `seeded-primary-${row.id}`
+  const party: RelatedParty = {
+    id: partyId,
+    name: label,
+    firstName,
+    lastName,
+    type: 'household_member',
+    role: 'Client',
+    isPrimary: true,
+    email: 'household@example.com',
+    phone: '',
+    dob: '',
+    kycStatus: 'needs_kyc',
+    clientId: `CLN-${row.id.replace(/[^a-zA-Z0-9]/g, '').slice(-10).toUpperCase() || 'SEED'}`,
+  }
+  return {
+    relatedParties: [party],
+    financialAccounts: [] as FinancialAccount[],
+    clientInfo: {
+      firstName,
+      lastName,
+      email: party.email ?? '',
+      phone: '',
+      dob: '',
+      clientType: 'individual',
+    },
+  }
 }
 
 export function useJourneyNavigation() {
@@ -36,35 +60,42 @@ export function useJourneyNavigation() {
   const navigateToServicing = (row: Journey, actionId?: string, childId?: string) => {
     let reinitializedFromTemplate = false
     if (seededJourneyIds.has(row.id)) {
-      const relationship = findTemplateRelationship(row.relationshipName)
-      if (relationship) {
-        if (currentLiveJourney && !seededJourneyIds.has(currentLiveJourney.id)) {
-          saveCurrentJourney(currentLiveJourney)
-        }
-        dispatch({
-          type: 'INITIALIZE_FROM_RELATIONSHIP',
-          relatedParties: relationship.relatedParties,
-          financialAccounts: relationship.financialAccounts,
-          clientInfo: {
-            firstName: relationship.primaryContact.firstName,
-            lastName: relationship.primaryContact.lastName,
-            email: relationship.primaryContact.email,
-            phone: relationship.primaryContact.phone,
-            dob: relationship.primaryContact.dob ?? '',
-            clientType: relationship.primaryContact.clientType ?? '',
-          },
-          journeyName: row.name,
-          journeyId: row.id,
-          assignedTo: row.assignedTo,
-          journeyOnboardingConfig: {
-            office: '',
-            investmentProfessionalId: '',
-            openMultipleAccounts: false,
-            openAnnuityAccount: false,
-          },
-        })
-        reinitializedFromTemplate = true
+      if (currentLiveJourney && !seededJourneyIds.has(currentLiveJourney.id)) {
+        saveCurrentJourney(currentLiveJourney)
       }
+      const exactRel = findExactRelationshipForSeededJourney(row.relationshipName)
+      const init = exactRel
+        ? {
+            relatedParties: exactRel.relatedParties,
+            financialAccounts: exactRel.financialAccounts,
+            clientInfo: {
+              firstName: exactRel.primaryContact.firstName,
+              lastName: exactRel.primaryContact.lastName,
+              email: exactRel.primaryContact.email,
+              phone: exactRel.primaryContact.phone,
+              dob: exactRel.primaryContact.dob ?? '',
+              clientType: exactRel.primaryContact.clientType ?? '',
+            },
+          }
+        : buildSyntheticInitFromSeededJourney(row)
+
+      dispatch({
+        type: 'INITIALIZE_FROM_RELATIONSHIP',
+        relatedParties: init.relatedParties,
+        financialAccounts: init.financialAccounts,
+        clientInfo: init.clientInfo,
+        journeyName: row.name,
+        journeyId: row.id,
+        assignedTo: row.assignedTo,
+        /** Split Open Accounts (non-annuity + annuity) so the wizard sidebar matches the full v6 demo. */
+        journeyOnboardingConfig: {
+          office: '',
+          investmentProfessionalId: '',
+          openMultipleAccounts: true,
+          openAnnuityAccount: true,
+        },
+      })
+      reinitializedFromTemplate = true
     }
 
     /**

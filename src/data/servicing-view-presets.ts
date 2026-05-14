@@ -61,10 +61,14 @@ export const journeyPresets: ViewPreset[] = [
 // ── Action columns ──────────────────────────────────────────────────
 export const actionColumns: ColumnDef[] = [
   { key: 'nickname', label: 'Action Nickname', alwaysVisible: true },
+  { key: 'reviewQueueItemType', label: 'Type', filterable: 'multi-select' },
   { key: 'title', label: 'Action Type', filterable: 'multi-select' },
   { key: 'journeyName', label: 'Journey', filterable: 'text' },
   { key: 'relationshipName', label: 'Relationship', filterable: 'text' },
   { key: 'status', label: 'Status', filterable: 'multi-select' },
+  { key: 'stateModelStatus', label: 'Review Status', filterable: 'multi-select' },
+  /** RBAC/ABAC routing lane for reviewer demo queues (not shown by default). */
+  { key: 'reviewerQueueLane', label: 'Work queue', filterable: 'multi-select' },
   { key: 'assignedTo', label: 'Assigned To', filterable: 'multi-select' },
   { key: 'tasksComplete', label: 'Tasks Complete' },
 ]
@@ -109,6 +113,89 @@ export const actionPresets: ViewPreset[] = [
     visibleColumns: allActionCols,
   },
 ]
+
+/** Prefix for reviewer “work queue” presets (grouped nested table UI). */
+export const REVIEWER_WORK_QUEUE_PRESET_PREFIX = 'actions-reviewer-queue'
+
+export function isReviewerWorkQueuePresetId(viewId: string): boolean {
+  return viewId.startsWith(REVIEWER_WORK_QUEUE_PRESET_PREFIX)
+}
+
+/** @deprecated Use {@link isReviewerWorkQueuePresetId} */
+export const DOCUMENT_REVIEW_ACTION_PRESET_ID = `${REVIEWER_WORK_QUEUE_PRESET_PREFIX}-documents`
+
+export type ReviewerQueueLane = 'aml' | 'documents' | 'principal' | 'ho-kyc' | 'none'
+
+/** Demo perspective from workflow store (`demoViewMode`). */
+type DemoViewModeForActions = 'advisor' | 'ho-documents' | 'ho-principal' | 'ho-kyc' | 'aml' | undefined
+
+/** Map pipeline display status → reviewer lane (matches demo team views). */
+export function reviewerQueueLaneForDisplayStatus(displayStatus: string | undefined): ReviewerQueueLane {
+  if (!displayStatus) return 'none'
+  switch (displayStatus) {
+    case 'aml_review':
+    case 'rejected_aml':
+      return 'aml'
+    case 'document_review':
+    case 'nigo_document':
+    case 'nigo':
+    case 'awaiting_review':
+    case 'awaiting_documents':
+    case 'escalation_hold':
+      return 'documents'
+    case 'ho_kyc_review':
+      return 'ho-kyc'
+    case 'principal_review':
+    case 'nigo_principal':
+      return 'principal'
+    default:
+      return 'none'
+  }
+}
+
+function reviewerLaneForDemoMode(mode: DemoViewModeForActions): ReviewerQueueLane {
+  switch (mode) {
+    case 'aml':
+      return 'aml'
+    case 'ho-principal':
+      return 'principal'
+    case 'ho-kyc':
+      return 'ho-kyc'
+    case 'ho-documents':
+    default:
+      return 'documents'
+  }
+}
+
+function reviewerQueuePreset(lane: ReviewerQueueLane): ViewPreset {
+  const names: Record<ReviewerQueueLane, string> = {
+    aml: 'Needs Review',
+    documents: 'Needs Review',
+    principal: 'Needs Review',
+    'ho-kyc': 'KYC Review',
+    none: 'Queue',
+  }
+  const visible = allActionCols.filter((k) => k !== 'status' && k !== 'reviewerQueueLane')
+  return {
+    id: `${REVIEWER_WORK_QUEUE_PRESET_PREFIX}-${lane}`,
+    name: names[lane],
+    category: 'pinned',
+    isDefault: true,
+    filters: [{ column: 'reviewerQueueLane', operator: 'equals', value: lane }],
+    visibleColumns: visible,
+  }
+}
+
+/** Reviewer: default tab matches `demoViewMode` team lane; advisor sees no work-queue presets. */
+export function actionPresetsForDemoView(mode: DemoViewModeForActions): ViewPreset[] {
+  if ((mode ?? 'advisor') === 'advisor') {
+    return actionPresets.filter((p) => !isReviewerWorkQueuePresetId(p.id))
+  }
+  const lane = reviewerLaneForDemoMode(mode)
+  const queuePreset = reviewerQueuePreset(lane)
+  const rest = actionPresets.filter((p) => !isReviewerWorkQueuePresetId(p.id)).map((p) => ({ ...p, isDefault: false }))
+  return [queuePreset, ...rest]
+}
 
 // ── Task columns ────────────────────────────────────────────────────
 export const taskColumns: ColumnDef[] = [

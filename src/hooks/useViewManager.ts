@@ -53,9 +53,17 @@ export function useViewManager<T>(
 ) {
   const stored = useMemo(() => loadState(tableId), [tableId])
   const defaultPreset = presets.find((p) => p.isDefault) ?? presets[0]
-  const initialId = stored?.activeViewId ?? defaultPreset.id
+  const fallbackViewId = defaultPreset?.id ?? ''
 
-  const [activeViewId, setActiveViewIdRaw] = useState(initialId)
+  const [activeViewId, setActiveViewIdRaw] = useState(() => {
+    const fromStore = stored?.activeViewId
+    const id =
+      fromStore && presets.some((p) => p.id === fromStore) ? fromStore : fallbackViewId
+    if (fromStore && id !== fromStore) {
+      persistState(tableId, { activeViewId: id })
+    }
+    return id
+  })
   const [filterOverrides, setFilterOverrides] = useState<ViewFilter[] | null>(
     stored?.filterOverrides ?? null,
   )

@@ -143,8 +143,18 @@ export function OnboardingJourneysTable({ rows, visibleColumns, showNestedGroups
     <DataTable>
       <thead className="bg-muted/60 border-b border-border [&_th_svg]:hidden">
         <tr>
-          {vis('name') && <DataTableHeader size="comfortable" sortable sorted={sorted('name')} onSort={() => onSort('name')} style={{ width: 200 }} className="[&>button]:pl-[64px] [&>span]:pl-[64px]">Journey</DataTableHeader>}
-          {vis('relationshipName') && <DataTableHeader size="comfortable" sortable sorted={sorted('relationshipName')} onSort={() => onSort('relationshipName')}>Relationship</DataTableHeader>}
+          {vis('name') && <DataTableHeader size="comfortable" sortable sorted={sorted('name')} onSort={() => onSort('name')} style={{ minWidth: 240 }} className="[&>button]:pl-[64px] [&>span]:pl-[64px]">Journey</DataTableHeader>}
+          {vis('relationshipName') && (
+            <DataTableHeader
+              size="comfortable"
+              sortable
+              sorted={sorted('relationshipName')}
+              onSort={() => onSort('relationshipName')}
+              style={{ minWidth: 200, maxWidth: 240 }}
+            >
+              Relationship
+            </DataTableHeader>
+          )}
           {vis('status') && <DataTableHeader size="comfortable" sortable sorted={sorted('status')} onSort={() => onSort('status')}>Status</DataTableHeader>}
           {vis('assignedTo') && <DataTableHeader size="comfortable" sortable sorted={sorted('assignedTo')} onSort={() => onSort('assignedTo')}>Assigned To</DataTableHeader>}
           {vis('createdAt') && <DataTableHeader size="comfortable" sortable sorted={sorted('createdAt')} onSort={() => onSort('createdAt')}>Created</DataTableHeader>}
@@ -163,7 +173,7 @@ export function OnboardingJourneysTable({ rows, visibleColumns, showNestedGroups
               border={false}
             >
               {vis('name') && (
-                <DataTableCell type="primary" className="font-bold text-foreground">
+                <DataTableCell type="primary" className="min-w-0 font-bold text-foreground">
                   <JourneyLeading
                     expand={(
                       <button
@@ -188,8 +198,10 @@ export function OnboardingJourneysTable({ rows, visibleColumns, showNestedGroups
                 </DataTableCell>
               )}
               {vis('relationshipName') && (
-                <DataTableCell onClick={() => navigateToServicing(row)}>
-                  {row.relationshipName}
+                <DataTableCell className="max-w-[15rem] min-w-0" onClick={() => navigateToServicing(row)}>
+                  <span className="block truncate" title={row.relationshipName}>
+                    {row.relationshipName}
+                  </span>
                 </DataTableCell>
               )}
               {vis('status') && (

@@ -6,7 +6,7 @@ import {
 } from '@/stores/workflowStore'
 import { useServicing } from '@/stores/servicingStore'
 import { useNavigate } from 'react-router-dom'
-import { useMemo, useState, type ReactNode } from 'react'
+import { useCallback, useMemo, useState, type ReactNode } from 'react'
 import { cn } from '@/lib/utils'
 import {
   Tooltip,
@@ -41,7 +41,7 @@ import {
 } from '@/components/ui/select'
 import { useWizardRightPanel } from '@/components/wizard/wizardRightPanelContext'
 import { getActiveStageLabel } from '@/components/wizard/ChildActionTimelineSheet'
-import { JourneyHeader } from '@/components/wizard/JourneyHeader'
+import { JourneyHeader, type WorkflowBreadcrumbItem } from '@/components/wizard/JourneyHeader'
 import { computeOverallJourneyProgressPct } from '@/components/wizard/StepSidebar'
 import { AssignAllTasksControl } from '@/components/wizard/AssignAllTasksControl'
 import { ProgressIcon, pickVariant } from '@/components/wizard/ProgressIcons'
@@ -116,10 +116,6 @@ function formatStructuredReviewText(reason: string, details: string): string {
 
 function getReasonLabel(options: ReviewReasonOption[], value: string): string {
   return options.find((reason) => reason.value === value)?.label ?? ''
-}
-
-function getChildIcon(childType: string): LucideIcon {
-  return CHILD_TYPE_ICONS[childType] ?? ListChecks
 }
 
 /**
@@ -906,33 +902,32 @@ export function ChildActionSidebar() {
   const [resubmitOpen, setResubmitOpen] = useState(false)
   const advisorResubmitEligible = useAdvisorResubmitEligible()
 
-  if (!ctx) return null
+  const parentTask = useMemo(() => {
+    const id = state.activeChildActionId
+    if (!id) return undefined
+    return state.tasks.find((t) => (t.children ?? []).some((c) => c.id === id))
+  }, [state.activeChildActionId, state.tasks])
 
-  const { child, config, subTaskIndex } = ctx
-  /** Match top-level nav style: no numeric prefixes for drill-in child flows. */
-  const showSubTaskNumbers =
-    child.childType !== 'account-opening' &&
-    child.childType !== 'kyc' &&
-    child.childType !== 'funding-line' &&
-    child.childType !== 'feature-service-line'
-  const viewMode = state.demoViewMode
+  const activeChildForNav = useMemo(() => {
+    const id = state.activeChildActionId
+    if (!id) return undefined
+    return state.tasks.flatMap((t) => t.children ?? []).find((c) => c.id === id)
+  }, [state.activeChildActionId, state.tasks])
 
-  const parentTask = state.tasks.find((t) =>
-    (t.children ?? []).some((c) => c.id === child.id),
-  )
   const parentAction = parentTask
     ? state.actions.find((a) => a.id === parentTask.actionId)
     : undefined
   const breadcrumbLabel = parentAction?.title ?? parentTask?.title ?? 'Back'
   const v5OpenAccountsLabel = parentAction?.title ?? parentTask?.title ?? 'Open Accounts'
-  const ChildIcon = getChildIcon(child.childType)
-  const parentSectionId =
-    child.childType === 'account-opening'
-      ? 'oa-accounts'
-      : child.childType === 'kyc' && parentTask?.formKey === 'open-accounts'
-        ? 'oa-kyc'
-        : undefined
-  const exitToParentAction = () => {
+
+  const parentSectionId = useMemo(() => {
+    if (!activeChildForNav) return undefined
+    if (activeChildForNav.childType === 'account-opening') return 'oa-accounts'
+    if (activeChildForNav.childType === 'kyc' && parentTask?.formKey === 'open-accounts') return 'oa-kyc'
+    return undefined
+  }, [activeChildForNav, parentTask?.formKey])
+
+  const exitToParentAction = useCallback(() => {
     if (!parentTask) {
       dispatch({ type: 'EXIT_CHILD_ACTION' })
       navigate(`/servicing/${state.journeyId}`, { replace: true })
@@ -947,18 +942,54 @@ export function ChildActionSidebar() {
       dispatch({ type: 'FOCUS_PARENT_TASK_SECTION', sectionId: parentSectionId })
     }
     navigate(`/servicing/${state.journeyId}?${params.toString()}`, { replace: true })
-  }
+  }, [dispatch, navigate, parentSectionId, parentTask, state.journeyId])
+
+  const viewMode = state.demoViewMode
+
+  const workflowBreadcrumbs = useMemo((): WorkflowBreadcrumbItem[] => {
+    const topLabel = variant === 'v5' ? v5OpenAccountsLabel : breadcrumbLabel
+    const crumbs: WorkflowBreadcrumbItem[] = [{ label: topLabel, onClick: exitToParentAction }]
+    const resume = state.childActionResume
+    if (!resume) return crumbs
+
+    const accountChild = state.tasks
+      .flatMap((t) => t.children ?? [])
+      .find((c) => c.id === resume.accountChildId)
+    if (!accountChild?.name) return crumbs
+
+    const exitToAccountFromNestedLine = () => {
+      dispatch({ type: 'EXIT_CHILD_ACTION' })
+    }
+
+    crumbs.push({ label: accountChild.name, onClick: exitToAccountFromNestedLine })
+    return crumbs
+  }, [
+    breadcrumbLabel,
+    dispatch,
+    exitToParentAction,
+    state.childActionResume,
+    state.tasks,
+    variant,
+    v5OpenAccountsLabel,
+  ])
+
+  if (!ctx) return null
+
+  const { child, config, subTaskIndex } = ctx
+  /** Match top-level nav style: no numeric prefixes for drill-in child flows. */
+  const showSubTaskNumbers =
+    child.childType !== 'account-opening' &&
+    child.childType !== 'kyc' &&
+    child.childType !== 'funding-line' &&
+    child.childType !== 'feature-service-line'
+  const ChildIcon = CHILD_TYPE_ICONS[child.childType] ?? ListChecks
 
   return (
     <TooltipProvider delayDuration={300}>
       <nav className="w-[330px] shrink-0 border-r border-sidebar-border bg-sidebar-background text-sidebar-foreground flex flex-col min-h-0 self-stretch h-full">
         <JourneyHeader
           onExitWorkflow={() => setExitToOnboardingOpen(true)}
-          workflowBreadcrumbs={
-            variant === 'v5'
-              ? [{ label: v5OpenAccountsLabel, onClick: exitToParentAction }]
-              : [{ label: breadcrumbLabel, onClick: exitToParentAction }]
-          }
+          workflowBreadcrumbs={workflowBreadcrumbs}
           onWorkflowBreadcrumbChevronClick={exitToParentAction}
           journeySubtitle={
             child.childType === 'kyc'

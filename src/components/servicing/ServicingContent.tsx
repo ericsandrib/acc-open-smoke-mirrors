@@ -2,25 +2,33 @@ import { useMemo } from 'react'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { PageTitle } from '@/components/page-title'
 import { useServicing } from '@/stores/servicingStore'
+import { useWorkflow } from '@/stores/workflowStore'
 import { JourneysTable, deriveJourneyRows } from './JourneysTable'
 import { ActionsTable, deriveActionRows } from './ActionsTable'
+import { DocumentReviewActionsTable } from './DocumentReviewActionsTable'
 import { TasksTable, deriveTaskRows } from './TasksTable'
 import { TableViewWrapper } from './table-view-wrapper'
 import {
   journeyColumns,
   journeyPresets,
   actionColumns,
-  actionPresets,
+  actionPresetsForDemoView,
+  isReviewerWorkQueuePresetId,
   taskColumns,
   taskPresets,
 } from '@/data/servicing-view-presets'
 
 export function ServicingContent() {
   const { journeys } = useServicing()
+  const { state } = useWorkflow()
 
   const journeyRows = useMemo(() => deriveJourneyRows(journeys), [journeys])
   const actionRows = useMemo(() => deriveActionRows(journeys), [journeys])
   const taskRows = useMemo(() => deriveTaskRows(journeys), [journeys])
+  const actionPresets = useMemo(() => actionPresetsForDemoView(state.demoViewMode), [state.demoViewMode])
+  const reviewerPersistMode = state.demoViewMode ?? 'ho-documents'
+  const actionsTablePersistKey =
+    (state.demoViewMode ?? 'advisor') === 'advisor' ? 'advisor' : `reviewer-${reviewerPersistMode}`
 
   return (
     <div className="max-w-6xl mx-auto">
@@ -45,10 +53,19 @@ export function ServicingContent() {
           </TableViewWrapper>
         </TabsContent>
         <TabsContent value="actions">
-          <TableViewWrapper tableId="actions" presets={actionPresets} columns={actionColumns} allRows={actionRows}>
-            {({ rows, visibleColumns }) => (
-              <ActionsTable rows={rows} visibleColumns={visibleColumns} />
-            )}
+          <TableViewWrapper
+            key={`actions-${actionsTablePersistKey}`}
+            tableId={`actions-${actionsTablePersistKey}`}
+            presets={actionPresets}
+            columns={actionColumns}
+            allRows={actionRows}
+          >
+            {({ rows, visibleColumns, activeViewId }) =>
+              activeViewId && isReviewerWorkQueuePresetId(activeViewId) ? (
+                <DocumentReviewActionsTable rows={rows} visibleColumns={visibleColumns} journeys={journeys} />
+              ) : (
+                <ActionsTable rows={rows} visibleColumns={visibleColumns} />
+              )}
           </TableViewWrapper>
         </TabsContent>
         <TabsContent value="tasks">

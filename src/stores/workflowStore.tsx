@@ -4,8 +4,11 @@ import type {
   WorkflowState,
   WorkflowAction,
   Task,
+  ChildTask,
   ChildReviewState,
   ChildType,
+  RelatedParty,
+  TaskStatus,
 } from '@/types/workflow'
 import {
   actions,
@@ -14,6 +17,8 @@ import {
   initialFinancialAccounts,
   seedOpenAccountsAdditionalInstructions,
 } from '@/data/seed'
+import { seededJourneys } from '@/data/servicingSeed'
+import type { JourneyAction, JourneyStatus } from '@/types/servicing'
 import {
   getChildSubTaskIds,
   getChildTypeConfig,
@@ -262,6 +267,168 @@ function redirectActiveIfV6AnnuityHidden(state: WorkflowState, taskId: string): 
 
 function normalizeV6AnnuityActiveTask(state: WorkflowState): WorkflowState {
   return state
+}
+
+function journeyStatusToTaskStatus(s: JourneyStatus): TaskStatus {
+  switch (s) {
+    case 'cancelled':
+      return 'canceled'
+    case 'complete':
+    case 'in_progress':
+    case 'not_started':
+    case 'awaiting_review':
+    case 'rejected':
+      return s
+    default:
+      return 'in_progress'
+  }
+}
+
+function findServicingGrandchildren(journeyId: string | undefined): JourneyAction[] {
+  if (!journeyId) return []
+  const j = seededJourneys.find((x) => x.id === journeyId)
+  if (!j) return []
+  return j.actions.filter(
+    (a) =>
+      Boolean(a.childId) &&
+      Boolean(a.parentActionId) &&
+      (a.parentActionId!.endsWith('-kyc-child-actions') ||
+        a.parentActionId!.endsWith('-account-opening-child')),
+  )
+}
+
+/**
+ * Queue/table opens use {@link INITIALIZE_FROM_RELATIONSHIP}, which previously cleared all task
+ * `children` and defaulted to a non–split Open Accounts shape — so the wizard showed a single task
+ * with no nested KYC / account lines. Seed a minimal demo tree so the full sidebar + Open Accounts
+ * hub match the default persisted demo.
+ *
+ * When the journey exists in {@link seededJourneys} with nested servicing actions that carry
+ * {@link JourneyAction.childId}, those ids are copied into workflow children so `?childId=` deep
+ * links from the Document Review table resolve via {@link ENTER_CHILD_ACTION}.
+ */
+function seedDemoOpenAccountsChildrenForRelationshipInit(
+  tasks: Task[],
+  relatedParties: RelatedParty[],
+  journeyId?: string,
+): { tasks: Task[]; taskDataPatch: Record<string, Record<string, unknown>> } {
+  const primary =
+    relatedParties.find((p) => p.isPrimary) ??
+    relatedParties.find((p) => p.type === 'household_member') ??
+    relatedParties[0]
+  const primaryName =
+    primary?.name?.trim() ||
+    primary?.organizationName?.trim() ||
+    [primary?.firstName, primary?.lastName].filter(Boolean).join(' ').trim() ||
+    'Household member'
+  const partyId = primary?.id ?? 'member-1'
+  const kycSubjectType = primary?.type === 'related_organization' ? 'entity' : 'individual'
+
+  const slug = (journeyId ?? 'seed').replace(/[^a-zA-Z0-9]+/g, '-')
+  const kycCfg = getChildTypeConfig('kyc')
+  const acctCfg = getChildTypeConfig('account-opening')
+  const taskDataPatch: Record<string, Record<string, unknown>> = {}
+
+  const servicingGrandchildren = findServicingGrandchildren(journeyId)
+
+  const buildNonAnnuityChildren = (): ChildTask[] => {
+    if (servicingGrandchildren.length > 0) {
+      for (const a of servicingGrandchildren) {
+        const cid = a.childId!
+        const isKyc = a.parentActionId!.endsWith('-kyc-child-actions')
+        if (isKyc) {
+          taskDataPatch[cid] = {
+            kycSubjectPartyId: partyId,
+            kycSubjectType,
+          }
+        } else {
+          const gen = generateAccountOpenIdentifiers(a.title, cid)
+          taskDataPatch[cid] = {
+            accountNumber: gen.accountNumber,
+            shortName: gen.shortName,
+            featureRequests: mergeFeatureRequests(undefined),
+          }
+        }
+      }
+      return servicingGrandchildren.map((a) => {
+        const isKyc = a.parentActionId!.endsWith('-kyc-child-actions')
+        const cfg = getChildTypeConfig(isKyc ? 'kyc' : 'account-opening')
+        return {
+          id: a.childId!,
+          name: a.title,
+          status: journeyStatusToTaskStatus(a.status),
+          formKey: cfg.idPrefix,
+          childType: isKyc ? 'kyc' : 'account-opening',
+        }
+      })
+    }
+
+    const kycChildId = `${kycCfg.idPrefix}-rel-${slug}`
+    const acctChildId = `${acctCfg.idPrefix}-rel-${slug}`
+    taskDataPatch[kycChildId] = {
+      kycSubjectPartyId: partyId,
+      kycSubjectType,
+    }
+    const gen = generateAccountOpenIdentifiers('Non-annuity brokerage account', acctChildId)
+    taskDataPatch[acctChildId] = {
+      accountNumber: gen.accountNumber,
+      shortName: gen.shortName,
+      featureRequests: mergeFeatureRequests(undefined),
+    }
+    return [
+      {
+        id: kycChildId,
+        name: `${primaryName} — KYC`,
+        status: 'not_started' as const,
+        formKey: kycCfg.idPrefix,
+        childType: 'kyc' as const,
+      },
+      {
+        id: acctChildId,
+        name: 'Non-annuity brokerage account',
+        status: 'not_started' as const,
+        formKey: acctCfg.idPrefix,
+        childType: 'account-opening' as const,
+      },
+    ]
+  }
+
+  const nonAnnuityChildren = buildNonAnnuityChildren()
+
+  const next = tasks.map((t) => {
+    if (t.formKey === OPEN_ACCOUNTS_FORM_KEY) {
+      return {
+        ...t,
+        children: nonAnnuityChildren,
+      }
+    }
+    if (t.formKey === OPEN_ACCOUNTS_WITH_ANNUITY_FORM_KEY) {
+      const existing = t.children ?? []
+      if (existing.some((c) => c.childType === 'account-opening')) return t
+      const acctChildId = `${acctCfg.idPrefix}-annuity-rel-${slug}`
+      const gen = generateAccountOpenIdentifiers('Annuity contract account', acctChildId)
+      taskDataPatch[acctChildId] = {
+        accountNumber: gen.accountNumber,
+        shortName: gen.shortName,
+        featureRequests: mergeFeatureRequests(undefined),
+      }
+      return {
+        ...t,
+        children: [
+          {
+            id: acctChildId,
+            name: 'Annuity contract account',
+            status: 'not_started' as const,
+            formKey: acctCfg.idPrefix,
+            childType: 'account-opening' as const,
+          },
+        ],
+      }
+    }
+    return t
+  })
+
+  return { tasks: next, taskDataPatch }
 }
 
 function nextV5NoAnnuityPageForActiveTask(
@@ -730,6 +897,13 @@ function workflowReducer(state: WorkflowState, action: WorkflowAction): Workflow
         tasksForState = baseTasks.map(mkFresh)
       }
 
+      const seeded = seedDemoOpenAccountsChildrenForRelationshipInit(
+        tasksForState,
+        action.relatedParties,
+        action.journeyId,
+      )
+      tasksForState = seeded.tasks
+
       const newOrder = computeFlatTaskOrder(tasksForState, actionsForState)
       const openAccountsDataShell = { additionalInstructions: seedOpenAccountsAdditionalInstructions }
       const hasStandardOpenAccounts = tasksForState.some((t) => t.id === 'open-accounts')
@@ -750,6 +924,7 @@ function workflowReducer(state: WorkflowState, action: WorkflowAction): Workflow
           'client-info': structuredClone(action.clientInfo),
           ...(hasStandardOpenAccounts ? { 'open-accounts': openAccountsDataShell } : {}),
           ...extraTaskData,
+          ...seeded.taskDataPatch,
         },
         journeyName: action.journeyName,
         journeyId: action.journeyId ?? `journey-${Date.now()}`,

@@ -1,5 +1,7 @@
 import { useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { useServicing } from '@/stores/servicingStore'
+import { useJourneyNavigation } from '@/hooks/useJourneyNavigation'
 import {
   DataTable,
   DataTableHeader,
@@ -57,6 +59,8 @@ interface TasksTableProps {
 
 export function TasksTable({ rows, visibleColumns }: TasksTableProps) {
   const navigate = useNavigate()
+  const { journeys } = useServicing()
+  const { navigateToServicing } = useJourneyNavigation()
 
   const comparators = useMemo(
     () => ({
@@ -85,15 +89,43 @@ export function TasksTable({ rows, visibleColumns }: TasksTableProps) {
           {vis('title') && <DataTableHeader size="comfortable" sortable sorted={sorted('title')} onSort={() => onSort('title')} style={{ width: 200 }}>Task</DataTableHeader>}
           {vis('nickname') && <DataTableHeader size="comfortable" sortable sorted={sorted('nickname')} onSort={() => onSort('nickname')}>Action Nickname</DataTableHeader>}
           {vis('actionTitle') && <DataTableHeader size="comfortable" sortable sorted={sorted('actionTitle')} onSort={() => onSort('actionTitle')}>Action Type</DataTableHeader>}
-          {vis('journeyName') && <DataTableHeader size="comfortable" sortable sorted={sorted('journeyName')} onSort={() => onSort('journeyName')}>Journey</DataTableHeader>}
-          {vis('relationshipName') && <DataTableHeader size="comfortable" sortable sorted={sorted('relationshipName')} onSort={() => onSort('relationshipName')}>Relationship</DataTableHeader>}
+          {vis('journeyName') && (
+            <DataTableHeader
+              size="comfortable"
+              sortable
+              sorted={sorted('journeyName')}
+              onSort={() => onSort('journeyName')}
+              style={{ minWidth: 240 }}
+            >
+              Journey
+            </DataTableHeader>
+          )}
+          {vis('relationshipName') && (
+            <DataTableHeader
+              size="comfortable"
+              sortable
+              sorted={sorted('relationshipName')}
+              onSort={() => onSort('relationshipName')}
+              style={{ minWidth: 200, maxWidth: 240 }}
+            >
+              Relationship
+            </DataTableHeader>
+          )}
           {vis('status') && <DataTableHeader size="comfortable" sortable sorted={sorted('status')} onSort={() => onSort('status')}>Status</DataTableHeader>}
           {vis('assignedTo') && <DataTableHeader size="comfortable" sortable sorted={sorted('assignedTo')} onSort={() => onSort('assignedTo')}>Assigned To</DataTableHeader>}
         </tr>
       </thead>
       <tbody className="[&>tr:nth-child(even)]:bg-muted/30">
         {sortedRows.map((row) => (
-          <DataTableRow key={row.id} className="cursor-pointer" onClick={() => navigate(`/servicing/${row.journeyId}`)}>
+          <DataTableRow
+            key={row.id}
+            className="cursor-pointer"
+            onClick={() => {
+              const journey = journeys.find((j) => j.id === row.journeyId)
+              if (journey) navigateToServicing(journey)
+              else navigate(`/servicing/${row.journeyId}`)
+            }}
+          >
             {vis('title') && (
               <DataTableCell type="primary" className="font-medium">
                 {row.isSubTask ? (
@@ -105,8 +137,18 @@ export function TasksTable({ rows, visibleColumns }: TasksTableProps) {
             )}
             {vis('nickname') && <DataTableCell>{row.nickname}</DataTableCell>}
             {vis('actionTitle') && <DataTableCell>{row.actionTitle}</DataTableCell>}
-            {vis('journeyName') && <DataTableCell>{row.journeyName}</DataTableCell>}
-            {vis('relationshipName') && <DataTableCell>{row.relationshipName}</DataTableCell>}
+            {vis('journeyName') && (
+              <DataTableCell className="min-w-0">
+                <span className="block truncate">{row.journeyName}</span>
+              </DataTableCell>
+            )}
+            {vis('relationshipName') && (
+              <DataTableCell className="max-w-[15rem] min-w-0">
+                <span className="block truncate" title={row.relationshipName}>
+                  {row.relationshipName}
+                </span>
+              </DataTableCell>
+            )}
             {vis('status') && <DataTableCell type="badge"><StatusBadge status={row.status} /></DataTableCell>}
             {vis('assignedTo') && <DataTableCell>{row.assignedTo}</DataTableCell>}
           </DataTableRow>

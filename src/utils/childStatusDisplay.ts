@@ -16,54 +16,58 @@ export type ChildDisplayStatus =
   | 'canceled'
   | 'complete'
 
+/** In-app routing assigns work to team views (RBAC/ABAC); pills stay a single queue label. */
+const NEED_REVIEW_PILL =
+  'bg-violet-50 text-violet-700 border-violet-200 dark:bg-violet-950/40 dark:text-violet-200 dark:border-violet-800'
+
 export const childStatusConfig: Record<ChildDisplayStatus, { label: string; className: string }> = {
   draft: {
     label: 'Draft',
     className: 'bg-muted text-muted-foreground border-border',
   },
   awaiting_review: {
-    label: 'Awaiting Review',
-    className: 'bg-violet-50 text-violet-700 border-violet-200',
+    label: 'Need Review',
+    className: NEED_REVIEW_PILL,
   },
   aml_review: {
-    label: 'AML Review',
-    className: 'bg-amber-50 text-amber-700 border-amber-200',
+    label: 'Need Review',
+    className: NEED_REVIEW_PILL,
   },
   document_review: {
-    label: 'Document Review',
-    className: 'bg-violet-50 text-violet-700 border-violet-200',
+    label: 'Need Review',
+    className: NEED_REVIEW_PILL,
   },
   ho_kyc_review: {
-    label: 'Document Review',
-    className: 'bg-violet-50 text-violet-700 border-violet-200',
+    label: 'Need Review',
+    className: NEED_REVIEW_PILL,
   },
   escalation_hold: {
-    label: 'Escalation / Hold',
-    className: 'bg-amber-50 text-amber-700 border-amber-200',
+    label: 'Need Review',
+    className: NEED_REVIEW_PILL,
   },
   principal_review: {
-    label: 'Principal Review',
-    className: 'bg-indigo-50 text-indigo-700 border-indigo-200',
+    label: 'Need Review',
+    className: NEED_REVIEW_PILL,
   },
   nigo: {
-    label: 'NIGO',
-    className: 'bg-red-50 text-red-700 border-red-200',
+    label: 'Need Review',
+    className: NEED_REVIEW_PILL,
   },
   nigo_document: {
-    label: 'NIGO - Document Review',
-    className: 'bg-red-50 text-red-700 border-red-200',
+    label: 'Need Review',
+    className: NEED_REVIEW_PILL,
   },
   nigo_principal: {
-    label: 'NIGO - Principal',
-    className: 'bg-red-50 text-red-700 border-red-200',
+    label: 'Need Review',
+    className: NEED_REVIEW_PILL,
   },
   rejected_aml: {
-    label: 'Rejected - AML Review',
-    className: 'bg-red-50 text-red-700 border-red-200',
+    label: 'Need Review',
+    className: NEED_REVIEW_PILL,
   },
   awaiting_documents: {
-    label: 'Awaiting Documents',
-    className: 'bg-yellow-50 text-yellow-700 border-yellow-200',
+    label: 'Need Review',
+    className: NEED_REVIEW_PILL,
   },
   canceled: {
     label: 'Canceled',

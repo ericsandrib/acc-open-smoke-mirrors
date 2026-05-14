@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
+import { useLocation } from 'react-router-dom'
 import { Building, Eye, GripVertical, ShieldAlert, ShieldCheck } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import type { WorkflowState } from '@/types/workflow'
@@ -69,6 +70,7 @@ function ModeGlyph({ mode }: { mode: DemoMode | undefined }) {
  */
 export function AdvisorReviewerPerspectiveCard() {
   const { state, dispatch } = useWorkflow()
+  const location = useLocation()
   const [position, setPosition] = useState<Position>(readPersistedPosition)
   const draggingRef = useRef<{ pointerId: number; offsetX: number; offsetY: number } | null>(null)
   const cardRef = useRef<HTMLDivElement | null>(null)
@@ -82,7 +84,10 @@ export function AdvisorReviewerPerspectiveCard() {
   const mode = (state.demoViewMode ?? 'advisor') as DemoMode
   const label = currentPerspectiveLabel(mode)
 
-  const amlAvailable = inChildAction && childType === 'kyc'
+  const onOnboardingListOrDetail =
+    location.pathname === '/onboarding' || location.pathname.startsWith('/onboarding/')
+
+  const amlAvailable = (inChildAction && childType === 'kyc') || onOnboardingListOrDetail
   const principalUnavailable = inChildAction && childType === 'kyc'
 
   useEffect(() => {
@@ -215,7 +220,11 @@ export function AdvisorReviewerPerspectiveCard() {
           </DropdownMenuItem>
           <DropdownMenuItem
             disabled={!amlAvailable}
-            title={!amlAvailable ? 'Open a KYC subject in review to use AML Team view.' : undefined}
+            title={
+              !amlAvailable
+                ? 'Open a KYC subject in review, or go to the Onboarding page, to use AML Team view.'
+                : undefined
+            }
             onSelect={() => dispatch({ type: 'SET_DEMO_VIEW', mode: 'aml' })}
             className={cn('flex items-center gap-2 text-sm', mode === 'aml' && 'bg-accent/70')}
           >

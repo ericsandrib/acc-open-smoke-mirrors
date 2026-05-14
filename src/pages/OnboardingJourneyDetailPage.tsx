@@ -17,6 +17,7 @@ import {
   DataTableRow,
   DataTableCell,
 } from '@/components/ui/data-table'
+import { AdvisorReviewerPerspectiveCard } from '@/components/wizard/AdvisorReviewerPerspectiveCard'
 
 function ProgressBar({ value, className }: { value: number; className?: string }) {
   const pct = Math.max(0, Math.min(100, Math.round(value * 100)))
@@ -52,14 +53,17 @@ export function OnboardingJourneyDetailPage() {
 
   if (!row) {
     return (
-      <AppShell>
-        <div className="max-w-6xl mx-auto">
-          <p className="text-muted-foreground">Journey not found.</p>
-          <Link to="/onboarding" className="text-sm text-primary underline mt-2 inline-block">
-            Back to Onboarding
-          </Link>
-        </div>
-      </AppShell>
+      <>
+        <AppShell>
+          <div className="max-w-6xl mx-auto">
+            <p className="text-muted-foreground">Journey not found.</p>
+            <Link to="/onboarding" className="text-sm text-primary underline mt-2 inline-block">
+              Back to Onboarding
+            </Link>
+          </div>
+        </AppShell>
+        <AdvisorReviewerPerspectiveCard />
+      </>
     )
   }
 
@@ -68,8 +72,9 @@ export function OnboardingJourneyDetailPage() {
   const journeyPct = row.totalTasks > 0 ? row.progressedTasks / row.totalTasks : 0
 
   return (
-    <AppShell>
-      <div className="max-w-6xl mx-auto">
+    <>
+      <AppShell>
+        <div className="max-w-6xl mx-auto">
         <div className="mb-1">
           <nav className="flex items-center gap-1.5 text-sm text-muted-foreground mb-2">
             <Link to="/onboarding" className="hover:text-foreground transition-colors">
@@ -343,7 +348,9 @@ export function OnboardingJourneyDetailPage() {
               })}
           </tbody>
         </DataTable>
-      </div>
-    </AppShell>
+        </div>
+      </AppShell>
+      <AdvisorReviewerPerspectiveCard />
+    </>
   )
 }

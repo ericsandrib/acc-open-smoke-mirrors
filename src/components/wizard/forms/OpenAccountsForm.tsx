@@ -54,6 +54,7 @@ import {
   OPEN_ACCOUNTS_FORM_KEY,
   OPEN_ACCOUNTS_WITH_ANNUITY_FORM_KEY,
 } from '@/utils/openAccountsTaskContext'
+import { formatOpenAccountsChildRowLabel } from '@/utils/openAccountsChildRowLabel'
 import { buildSupportingDocumentPreviewKey } from '@/utils/journeySupportingDocuments'
 import { useOpenAccountsTaskOverride, useOpenAccountsVariant, useOpenAccountsVariantControls } from '@/components/wizard/openAccountsVariantContext'
 import { mergeFeatureRequests } from '@/types/featureRequests'
@@ -764,13 +765,7 @@ export function OpenAccountsForm() {
             {topLevelChildren.map((child) => {
               const annuities = getAnnuities(child.name)
               const childMeta = state.taskData[child.id] as Record<string, unknown> | undefined
-              const accountNumber =
-                typeof childMeta?.accountNumber === 'string' && childMeta.accountNumber.trim()
-                  ? childMeta.accountNumber.trim()
-                  : undefined
-              const acctDigits = (accountNumber ?? '').replace(/\D/g, '')
-              const last4 = acctDigits.length ? acctDigits.slice(-4) : ''
-              const rowLabel = last4 ? `${child.name} ...${last4}` : child.name
+              const rowLabel = formatOpenAccountsChildRowLabel(child.name, childMeta)
               return (
                 <div key={child.id}>
                   {/* Account row */}

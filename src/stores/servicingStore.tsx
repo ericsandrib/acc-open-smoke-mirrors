@@ -6,6 +6,7 @@ import { useWorkflow } from './workflowStore'
 import { getActionStatus } from '@/utils/getActionStatus'
 import { getChildTypeConfig } from '@/utils/childTaskRegistry'
 import { deriveChildDisplayStatus } from '@/utils/childStatusDisplay'
+import { formatOpenAccountsChildRowLabel } from '@/utils/openAccountsChildRowLabel'
 
 /** Map workflow task status to servicing journey action status (spelling + blocked). */
 function toJourneyActionStatus(s: TaskStatus): JourneyStatus {
@@ -94,13 +95,18 @@ function deriveLiveJourney(state: WorkflowState): Journey | null {
         }
         const reviewState = state.childReviewsByChildId?.[c.id]
         const displayStatus = deriveChildDisplayStatus(c.status, reviewState)
+        const taskMeta = state.taskData[c.id] as Record<string, unknown> | undefined
+        const nickname =
+          c.childType === 'account-opening'
+            ? formatOpenAccountsChildRowLabel(c.name, taskMeta)
+            : `${journeyName} - ${childConfig.displayLabel}: ${c.name}`
         return {
           id: `${journeyId}-${action.id}-${c.id}`,
           journeyId,
           title: c.name,
           status: toJourneyActionStatus(c.status),
           displayStatus,
-          nickname: `${journeyName} - ${childConfig.displayLabel}: ${c.name}`,
+          nickname,
           parentActionId: childParentActionId,
           childId: c.id,
           tasks: childTasks,

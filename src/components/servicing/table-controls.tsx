@@ -20,6 +20,9 @@ export type RelationshipScope = 'my' | 'all'
 export type QuickSortKey = 'ready_to_begin' | 'created_at' | 'assigned_to'
 export type QuickSortDirection = 'asc' | 'desc'
 
+/** Onboarding Actions “Group by” toolbar (one column at a time). */
+export type OnboardingActionsGroupBy = 'none' | 'parentJourneyId'
+
 interface TableControlsProps {
   filterCount: number
   isDirty: boolean
@@ -31,6 +34,10 @@ interface TableControlsProps {
   quickSortKey: QuickSortKey
   quickSortDirection: QuickSortDirection
   onQuickSortChange: (next: { key: QuickSortKey; direction: QuickSortDirection }) => void
+  /** When set, shows “Group by” after Filter (e.g. Onboarding → Actions). */
+  showGroupBy?: boolean
+  groupBy?: OnboardingActionsGroupBy
+  onGroupByChange?: (value: OnboardingActionsGroupBy) => void
 }
 
 export function TableControls({
@@ -44,6 +51,9 @@ export function TableControls({
   quickSortKey,
   quickSortDirection,
   onQuickSortChange,
+  showGroupBy,
+  groupBy = 'none',
+  onGroupByChange,
 }: TableControlsProps) {
   const sortLabel =
     quickSortKey === 'ready_to_begin'
@@ -124,6 +134,27 @@ export function TableControls({
             </span>
           )}
         </Button>
+
+        {showGroupBy && onGroupByChange ? (
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="ghost" size="sm" className="gap-1.5">
+                Group by
+                <ChevronDown className="h-3.5 w-3.5" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="start">
+              <DropdownMenuItem onSelect={() => onGroupByChange('none')}>
+                {groupBy === 'none' ? <Check className="h-3.5 w-3.5 mr-1" /> : <span className="w-4 mr-1" />}
+                None
+              </DropdownMenuItem>
+              <DropdownMenuItem onSelect={() => onGroupByChange('parentJourneyId')}>
+                {groupBy === 'parentJourneyId' ? <Check className="h-3.5 w-3.5 mr-1" /> : <span className="w-4 mr-1" />}
+                Parent onboarding journey
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        ) : null}
       </div>
 
       <div className={cn('flex items-center gap-1 transition-opacity', isDirty ? 'opacity-100' : 'opacity-0 pointer-events-none')}>

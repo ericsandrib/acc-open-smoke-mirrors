@@ -77,8 +77,21 @@ function CardBody({ profile }: { profile: NonNullable<ReturnType<typeof resolveJ
   )
 }
 
-function AvatarGlyph({ name }: { name?: string }) {
+function AvatarGlyph({ name, unassigned }: { name?: string; unassigned?: boolean }) {
   const initials = name ? getAssigneeInitials(name) : ''
+  if (unassigned) {
+    return (
+      <span
+        className={cn(
+          'flex h-6 w-6 shrink-0 items-center justify-center rounded-full',
+          'border-2 border-dashed border-muted-foreground/50 bg-muted/15',
+        )}
+        aria-hidden
+      >
+        <User className="h-3 w-3 text-muted-foreground" />
+      </span>
+    )
+  }
   return (
     <span
       className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-primary/10 text-[10px] font-semibold text-primary"
@@ -104,7 +117,7 @@ export function AssigneeContactHover({ assigneeLabel }: { assigneeLabel?: string
         aria-label={trimmed && trimmed !== 'Unassigned' ? `Assigned to ${trimmed}` : 'Unassigned'}
         title={trimmed && trimmed !== 'Unassigned' ? trimmed : 'Unassigned'}
       >
-        <AvatarGlyph name={undefined} />
+        <AvatarGlyph unassigned />
       </span>
     )
   }

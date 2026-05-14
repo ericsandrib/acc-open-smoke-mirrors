@@ -23,8 +23,10 @@ export function compareFraction<T>(
 export const journeyStatusOrder: Record<string, number> = {
   not_started: 0,
   in_progress: 1,
-  complete: 2,
-  cancelled: 3,
+  awaiting_review: 2,
+  rejected: 3,
+  complete: 4,
+  cancelled: 5,
 }
 
 export const taskStatusOrder: Record<string, number> = {

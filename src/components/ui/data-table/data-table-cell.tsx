@@ -8,6 +8,7 @@ interface DataTableCellProps {
   className?: string;
   style?: React.CSSProperties;
   onClick?: () => void | Promise<void>;
+  colSpan?: number;
 }
 
 const alignClasses = {
@@ -38,9 +39,11 @@ export function DataTableCell({
   className,
   style,
   onClick,
+  colSpan,
 }: DataTableCellProps) {
   return (
     <td
+      colSpan={colSpan}
       className={cn(
         "px-1 text-sm leading-5 whitespace-nowrap",
         size === "default" ? "h-12 pt-2 pb-2" : "h-14 pt-2.5 pb-2.5",

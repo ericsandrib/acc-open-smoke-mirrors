@@ -1,6 +1,182 @@
-import type { Journey, JourneyCategory } from '@/types/servicing'
+import type { Journey, JourneyAction, JourneyCategory, JourneyTask } from '@/types/servicing'
 import type { TaskStatus } from '@/types/workflow'
 import { actions, tasks } from './seed'
+import { generateAccountOpenIdentifiers } from '@/utils/accountOpenIdentifiers'
+import { formatOpenAccountsChildRowLabel } from '@/utils/openAccountsChildRowLabel'
+
+/** Synthetic nested “Open Accounts” branch for the Document Review queue (matches live journey id patterns). */
+type HoDemoKycLine = {
+  section: 'kyc'
+  title: string
+  nickname: string
+  lineKey: string
+  childId: string
+  displayStatus: string
+}
+
+type HoDemoAccountLine = {
+  section: 'accounts'
+  title: string
+  lineKey: string
+  childId: string
+  displayStatus: string
+}
+
+type HoDemoLine = HoDemoKycLine | HoDemoAccountLine
+
+function buildDocumentReviewDemoJourney(
+  id: string,
+  name: string,
+  relationshipName: string,
+  assignedTo: string,
+  createdBy: string,
+  createdAt: string,
+  lines: HoDemoLine[],
+): Journey {
+  const collectTasks: JourneyTask[] = [
+    {
+      id: `${id}-related-parties`,
+      actionId: `${id}-collect-client-data`,
+      journeyId: id,
+      title: 'Client Info',
+      status: 'complete',
+      assignedTo,
+      nickname: `${name} - Client Setup`,
+    },
+    {
+      id: `${id}-existing-accounts`,
+      actionId: `${id}-collect-client-data`,
+      journeyId: id,
+      title: 'Existing Accounts',
+      status: 'complete',
+      assignedTo,
+      nickname: `${name} - Client Setup`,
+    },
+  ]
+
+  const openAccountsTask: JourneyTask = {
+    id: `${id}-open-accounts`,
+    actionId: `${id}-account-opening`,
+    journeyId: id,
+    title: 'Open Accounts',
+    status: 'awaiting_review',
+    assignedTo,
+    nickname: `${name} - Open Accounts`,
+  }
+
+  const collectAction: JourneyAction = {
+    id: `${id}-collect-client-data`,
+    journeyId: id,
+    title: 'Client Setup',
+    nickname: `${name} - Client Setup`,
+    status: 'complete',
+    tasks: collectTasks,
+  }
+
+  const accountOpeningAction: JourneyAction = {
+    id: `${id}-account-opening`,
+    journeyId: id,
+    title: 'Open Accounts',
+    nickname: `${name} - Open Accounts`,
+    status: 'awaiting_review',
+    tasks: [openAccountsTask],
+  }
+
+  const kycSectionId = `${id}-kyc-child-actions`
+  const acctSectionId = `${id}-account-opening-child`
+  const kycLines = lines.filter((l) => l.section === 'kyc')
+  const accountLines = lines.filter((l) => l.section === 'accounts')
+
+  const grandkids: JourneyAction[] = []
+
+  for (const l of kycLines) {
+    const actionId = `${id}-account-opening-${l.lineKey}`
+    grandkids.push({
+      id: actionId,
+      journeyId: id,
+      title: l.title,
+      nickname: l.nickname,
+      status: 'awaiting_review',
+      displayStatus: l.displayStatus,
+      parentActionId: kycSectionId,
+      childId: l.childId,
+      tasks: [
+        {
+          id: `${actionId}-doc`,
+          actionId,
+          journeyId: id,
+          title: 'Supporting documents',
+          status: 'awaiting_review',
+          assignedTo,
+          nickname: l.nickname,
+        },
+      ],
+    })
+  }
+
+  for (const l of accountLines) {
+    const actionId = `${id}-account-opening-${l.lineKey}`
+    const { accountNumber } = generateAccountOpenIdentifiers(l.title, l.childId)
+    const workflowListLabel = formatOpenAccountsChildRowLabel(l.title, { accountNumber })
+    grandkids.push({
+      id: actionId,
+      journeyId: id,
+      title: l.title,
+      nickname: workflowListLabel,
+      status: 'awaiting_review',
+      displayStatus: l.displayStatus,
+      parentActionId: acctSectionId,
+      childId: l.childId,
+      tasks: [
+        {
+          id: `${actionId}-acct`,
+          actionId,
+          journeyId: id,
+          title: 'Account setup',
+          status: 'awaiting_review',
+          assignedTo,
+          nickname: workflowListLabel,
+        },
+      ],
+    })
+  }
+
+  const sectionActions: JourneyAction[] = []
+  if (kycLines.length > 0) {
+    sectionActions.push({
+      id: kycSectionId,
+      journeyId: id,
+      title: 'KYC Reviews',
+      nickname: `${name} - KYC Reviews`,
+      status: 'in_progress',
+      parentActionId: `${id}-account-opening`,
+      tasks: [],
+    })
+  }
+  if (accountLines.length > 0) {
+    sectionActions.push({
+      id: acctSectionId,
+      journeyId: id,
+      title: 'Accounts',
+      nickname: `${name} - Accounts`,
+      status: 'in_progress',
+      parentActionId: `${id}-account-opening`,
+      tasks: [],
+    })
+  }
+
+  return {
+    id,
+    name,
+    category: 'Onboarding',
+    relationshipName,
+    assignedTo,
+    createdBy,
+    createdAt,
+    status: 'in_progress',
+    actions: [collectAction, accountOpeningAction, ...sectionActions, ...grandkids],
+  }
+}
 
 function buildJourney(
   id: string,
@@ -27,8 +203,12 @@ function buildJourney(
 
     const allComplete = actionTasks.every((t) => t.status === 'complete')
     const anyBlocked = actionTasks.some((t) => t.status === 'blocked')
+    const anyAwaitingReview = actionTasks.some((t) => t.status === 'awaiting_review')
     const anyStarted = actionTasks.some(
-      (t) => t.status === 'in_progress' || t.status === 'complete',
+      (t) =>
+        t.status === 'in_progress' ||
+        t.status === 'complete' ||
+        t.status === 'awaiting_review',
     )
 
     // Set parent action for certain actions to create nesting
@@ -46,12 +226,14 @@ function buildJourney(
       title: action.title,
       nickname: `${name} - ${action.title}`,
       status: allComplete
-        ? 'complete' as const
-        : anyBlocked
-          ? 'in_progress' as const
-          : anyStarted
-            ? 'in_progress' as const
-            : 'not_started' as const,
+        ? ('complete' as const)
+        : anyAwaitingReview
+          ? ('awaiting_review' as const)
+          : anyBlocked
+            ? ('in_progress' as const)
+            : anyStarted
+              ? ('in_progress' as const)
+              : ('not_started' as const),
       tasks: actionTasks,
       parentActionId,
     }
@@ -113,7 +295,8 @@ export const seededJourneys: Journey[] = [
     'existing-accounts': 'complete',
     'related-parties': 'complete',
     'kyc-review': 'complete',
-    'open-accounts': 'in_progress',
+    /** Submitted for Home Office review — surfaces on the “Document Review” actions tab. */
+    'open-accounts': 'awaiting_review',
   }),
   buildJourney('journey-nakamura-onboarding', 'Nakamura Client Onboarding', 'Onboarding', 'Kenji Nakamura', 'Diana Torres', 'Alice Chen', '2026-03-10', {
     'existing-accounts': 'in_progress',
@@ -133,6 +316,83 @@ export const seededJourneys: Journey[] = [
     'kyc-review': 'not_started',
     'open-accounts': 'not_started',
   }),
+
+  // Document Review queue demos — nested child workflows (KYC / Accounts) in reviewer pipeline
+  buildDocumentReviewDemoJourney(
+    'journey-ho-demo-rivera',
+    'Rivera / Kim household onboarding',
+    'Rivera / Kim household',
+    'Alice Chen',
+    'Carol Williams',
+    '2026-04-02',
+    [
+      {
+        section: 'kyc',
+        title: 'Sofia Rivera — KYC',
+        nickname: 'Rivera / Kim — Sofia Rivera KYC',
+        lineKey: 'line-rivera-kyc',
+        childId: 'ho-demo-child-rivera-kyc',
+        displayStatus: 'document_review',
+      },
+      {
+        section: 'accounts',
+        title: 'Joint brokerage — Rivera / Kim',
+        lineKey: 'line-rivera-joint',
+        childId: 'ho-demo-child-rivera-joint',
+        displayStatus: 'aml_review',
+      },
+    ],
+  ),
+  buildDocumentReviewDemoJourney(
+    'journey-ho-demo-okonkwo',
+    'Okonkwo Family Trust onboarding',
+    'Okonkwo Family Trust',
+    'Bob Martinez',
+    'Alice Chen',
+    '2026-04-04',
+    [
+      {
+        section: 'kyc',
+        title: 'Chidi Okonkwo — trust KYC',
+        nickname: 'Okonkwo Trust — Chidi Okonkwo KYC',
+        lineKey: 'line-okonkwo-chidi',
+        childId: 'ho-demo-child-okonkwo-chidi',
+        displayStatus: 'ho_kyc_review',
+      },
+      {
+        section: 'kyc',
+        title: 'Ifeoma Okonkwo — trust KYC',
+        nickname: 'Okonkwo Trust — Ifeoma Okonkwo KYC',
+        lineKey: 'line-okonkwo-ifeoma',
+        childId: 'ho-demo-child-okonkwo-ifeoma',
+        displayStatus: 'principal_review',
+      },
+    ],
+  ),
+  buildDocumentReviewDemoJourney(
+    'journey-ho-demo-falk',
+    'Falk succession onboarding',
+    'Falk Business Succession LLC',
+    'Diana Torres',
+    'Edward Kim',
+    '2026-04-06',
+    [
+      {
+        section: 'accounts',
+        title: 'Rollover IRA',
+        lineKey: 'line-falk-ira',
+        childId: 'ho-demo-child-falk-ira',
+        displayStatus: 'awaiting_review',
+      },
+      {
+        section: 'accounts',
+        title: 'Operating cash',
+        lineKey: 'line-falk-cash',
+        childId: 'ho-demo-child-falk-cash',
+        displayStatus: 'nigo_document',
+      },
+    ],
+  ),
 
   // Account Transfer journeys
   buildJourney('journey-patel', 'Patel IRA Transfer', 'Account Transfer', 'Raj Patel', 'Alice Chen', 'Alice Chen', '2026-03-01', {
