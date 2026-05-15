@@ -3,7 +3,7 @@ import { toast } from 'sonner'
 import { useWorkflow, useChildActionContext, getChildReviewState } from '@/stores/workflowStore'
 import { Button } from '@/components/ui/button'
 import { Label } from '@/components/ui/label'
-import { CheckCircle2, MessageSquare, ShieldAlert } from 'lucide-react'
+import { CheckCircle2, MessageSquare, ShieldAlert, XCircle } from 'lucide-react'
 
 export function HoKycReviewFooter() {
   const { state, dispatch } = useWorkflow()
@@ -44,6 +44,18 @@ export function HoKycReviewFooter() {
         <div className="flex items-center gap-2 text-sm">
           <ShieldAlert className="h-4 w-4 text-red-600" />
           <span className="text-red-700 font-medium">SAR Escalated — Cannot approve</span>
+        </div>
+      </footer>
+    )
+  }
+
+  if (hoKycReview?.status === 'changes_requested') {
+    return (
+      <footer className="border-t border-border bg-background px-6 py-3 min-h-14 flex items-center justify-center shrink-0 box-border">
+        <div className="flex items-center gap-2 text-sm">
+          <XCircle className="h-4 w-4 text-destructive" />
+          <span className="text-destructive font-medium">Changes requested — Returned to advisor</span>
+          <span className="text-muted-foreground ml-1">at {hoKycReview.decidedAt}</span>
         </div>
       </footer>
     )

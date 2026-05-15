@@ -12,70 +12,94 @@ export type ChildDisplayStatus =
   | 'nigo_document'
   | 'nigo_principal'
   | 'rejected_aml'
+  | 'clarification_required'
   | 'awaiting_documents'
   | 'canceled'
   | 'complete'
 
-/** In-app routing assigns work to team views (RBAC/ABAC); pills stay a single queue label. */
-const NEED_REVIEW_PILL =
+/** Styling for in-review pipeline stages (servicing tables + wizard child badges). */
+const REVIEW_PIPELINE_PILL =
   'bg-violet-50 text-violet-700 border-violet-200 dark:bg-violet-950/40 dark:text-violet-200 dark:border-violet-800'
 
-export const childStatusConfig: Record<ChildDisplayStatus, { label: string; className: string }> = {
+/** AML rejection — same pill shape as pipeline; red hue (not violet). */
+const AML_REJECTION_PILL =
+  'bg-red-50/40 text-red-800 border-red-200 dark:bg-red-950/25 dark:text-red-200 dark:border-red-800'
+
+/** Parent rollup “Needs attention” — amber light fill (not violet pipeline). */
+export const NEEDS_ATTENTION_PILL =
+  'border-amber-200 bg-amber-50 text-amber-800 dark:border-amber-800 dark:bg-amber-950/40 dark:text-amber-200'
+
+/** Awaiting documents — neutral grey (not violet pipeline). */
+export const AWAITING_DOCUMENTS_PILL =
+  'border-gray-200 bg-gray-100 text-gray-700 dark:border-gray-700 dark:bg-gray-900/50 dark:text-gray-300'
+
+export const childStatusConfig: Record<
+  ChildDisplayStatus,
+  { label: string; className: string; pillVariant?: 'draft' | 'completed' | 'declined' }
+> = {
   draft: {
     label: 'Draft',
-    className: 'bg-muted text-muted-foreground border-border',
+    className: 'border-gray-200 bg-gray-50 text-gray-600',
+    pillVariant: 'draft',
   },
   awaiting_review: {
-    label: 'Need Review',
-    className: NEED_REVIEW_PILL,
+    label: 'Awaiting Review',
+    className: REVIEW_PIPELINE_PILL,
   },
   aml_review: {
-    label: 'Need Review',
-    className: NEED_REVIEW_PILL,
+    label: 'AML Review',
+    className: REVIEW_PIPELINE_PILL,
   },
   document_review: {
-    label: 'Need Review',
-    className: NEED_REVIEW_PILL,
+    label: 'Document Review',
+    className: REVIEW_PIPELINE_PILL,
   },
   ho_kyc_review: {
-    label: 'Need Review',
-    className: NEED_REVIEW_PILL,
+    label: 'Document Review',
+    className: REVIEW_PIPELINE_PILL,
   },
   escalation_hold: {
-    label: 'Need Review',
-    className: NEED_REVIEW_PILL,
+    label: 'Escalation Hold',
+    className: REVIEW_PIPELINE_PILL,
   },
   principal_review: {
-    label: 'Need Review',
-    className: NEED_REVIEW_PILL,
+    label: 'Principal Review',
+    className: REVIEW_PIPELINE_PILL,
   },
   nigo: {
-    label: 'Need Review',
-    className: NEED_REVIEW_PILL,
+    label: 'Clarification / Document Required',
+    className: REVIEW_PIPELINE_PILL,
   },
   nigo_document: {
-    label: 'Need Review',
-    className: NEED_REVIEW_PILL,
+    label: 'Clarification / Document Required',
+    className: REVIEW_PIPELINE_PILL,
   },
   nigo_principal: {
-    label: 'Need Review',
-    className: NEED_REVIEW_PILL,
+    label: 'Clarification / Document Required',
+    className: REVIEW_PIPELINE_PILL,
   },
   rejected_aml: {
-    label: 'Need Review',
-    className: NEED_REVIEW_PILL,
+    label: 'AML Rejection',
+    className: 'border-red-200 bg-red-50 text-red-700',
+    pillVariant: 'declined',
+  },
+  clarification_required: {
+    label: 'Clarification / Document Required',
+    className: REVIEW_PIPELINE_PILL,
   },
   awaiting_documents: {
-    label: 'Need Review',
-    className: NEED_REVIEW_PILL,
+    label: 'Awaiting Documents',
+    className: AWAITING_DOCUMENTS_PILL,
   },
   canceled: {
-    label: 'Canceled',
-    className: 'bg-muted text-muted-foreground border-border',
+    label: 'Declined',
+    className: 'border-red-200 bg-red-50 text-red-700',
+    pillVariant: 'declined',
   },
   complete: {
-    label: 'Complete',
-    className: 'bg-green-50 text-green-700 border-green-200',
+    label: 'Completed',
+    className: 'border-gray-200 bg-gray-100 text-gray-800',
+    pillVariant: 'completed',
   },
 }
 
@@ -96,9 +120,11 @@ export function deriveChildDisplayStatus(
     const docReview = reviewState.documentReview
     const principalReview = reviewState.principalReview
     const amlReview = reviewState.amlReview
-    if (amlReview?.status === 'escalated' || amlReview?.status === 'flagged') return 'rejected_aml'
-    if (principalReview?.status === 'nigo') return 'nigo_principal'
-    if (docReview?.status === 'nigo') return 'nigo_document'
+    if (isKycAwaitingAdvisorClarification(reviewState)) {
+      return 'clarification_required'
+    }
+    if (amlReview?.status === 'escalated') return 'rejected_aml'
+    if (isAccountOpeningAwaitingClarification(reviewState)) return 'clarification_required'
     return 'nigo'
   }
 
@@ -125,8 +151,63 @@ export function deriveChildDisplayStatus(
     return 'awaiting_review'
   }
 
-  if (rawStatus === 'in_progress') return 'draft'
-  if (rawStatus === 'not_started') return 'draft'
+  if (rawStatus === 'in_progress' || rawStatus === 'not_started') {
+    if (isChildAwaitingAdvisorClarification(reviewState)) {
+      return 'clarification_required'
+    }
+    return 'draft'
+  }
 
   return 'draft'
+}
+
+/** KYC returned to the advisor after AML requested clarification or documents. */
+export function isKycAwaitingAmlClarification(
+  reviewState?: ChildReviewState,
+): boolean {
+  return (
+    reviewState?.amlReview?.status === 'flagged' ||
+    reviewState?.amlReview?.status === 'info_requested'
+  )
+}
+
+/** KYC returned to the advisor for clarification (AML or Document Review team). */
+export function isKycAwaitingAdvisorClarification(
+  reviewState?: ChildReviewState,
+): boolean {
+  return (
+    isKycAwaitingAmlClarification(reviewState) ||
+    reviewState?.hoKycReview?.status === 'changes_requested'
+  )
+}
+
+/** Account opening returned after document or principal review NIGO. */
+export function isAccountOpeningAwaitingClarification(
+  reviewState?: ChildReviewState,
+): boolean {
+  return (
+    reviewState?.documentReview?.status === 'nigo' ||
+    reviewState?.principalReview?.status === 'nigo'
+  )
+}
+
+/** KYC or account opening returned to the advisor for clarification or documents. */
+export function isChildAwaitingAdvisorClarification(
+  reviewState?: ChildReviewState,
+): boolean {
+  return (
+    isKycAwaitingAdvisorClarification(reviewState) ||
+    isAccountOpeningAwaitingClarification(reviewState)
+  )
+}
+
+/** True while the KYC package is in the AML review queue (intake fields read-only). */
+export function isKycChildInAmlReview(
+  rawStatus: string,
+  reviewState?: ChildReviewState,
+): boolean {
+  return (
+    rawStatus === 'awaiting_review' &&
+    reviewState?.amlReview?.status === 'pending'
+  )
 }

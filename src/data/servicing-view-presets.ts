@@ -60,13 +60,14 @@ export const journeyPresets: ViewPreset[] = [
 
 // ── Action columns ──────────────────────────────────────────────────
 export const actionColumns: ColumnDef[] = [
-  { key: 'nickname', label: 'Action Nickname', alwaysVisible: true },
+  { key: 'nickname', label: 'Action', alwaysVisible: true },
   { key: 'reviewQueueItemType', label: 'Type', filterable: 'multi-select' },
   { key: 'title', label: 'Action Type', filterable: 'multi-select' },
   { key: 'journeyName', label: 'Journey', filterable: 'text' },
   { key: 'relationshipName', label: 'Relationship', filterable: 'text' },
   { key: 'status', label: 'Status', filterable: 'multi-select' },
-  { key: 'stateModelStatus', label: 'Review Status', filterable: 'multi-select' },
+  /** Child rows: exact review state. Parent journey rows: aggregate workflow summary chips. */
+  { key: 'stateModelStatus', label: 'Status', filterable: 'multi-select' },
   /** RBAC/ABAC routing lane for reviewer demo queues (not shown by default). */
   { key: 'reviewerQueueLane', label: 'Work queue', filterable: 'multi-select' },
   { key: 'assignedTo', label: 'Assigned To', filterable: 'multi-select' },
@@ -74,6 +75,14 @@ export const actionColumns: ColumnDef[] = [
 ]
 
 const allActionCols = actionColumns.map((c) => c.key)
+
+/**
+ * Action columns shown in nested journey-grouped Actions (reviewer queues + advisor “Group by journey”).
+ * Matches {@link reviewerQueuePreset} shells: no raw Status, Action Type, or internal work-queue column.
+ */
+export const actionVisibleColumnsJourneyGroupedShell = allActionCols.filter(
+  (k) => k !== 'status' && k !== 'reviewerQueueLane' && k !== 'title',
+)
 
 export const actionPresets: ViewPreset[] = [
   {
@@ -88,14 +97,14 @@ export const actionPresets: ViewPreset[] = [
     id: 'actions-in-progress',
     name: 'In Progress',
     category: 'pinned',
-    filters: [{ column: 'status', operator: 'equals', value: 'in_progress' }],
+    filters: [{ column: 'listTab', operator: 'equals', value: 'in_progress' }],
     visibleColumns: allActionCols,
   },
   {
     id: 'actions-completed',
     name: 'Completed',
     category: 'pinned',
-    filters: [{ column: 'status', operator: 'equals', value: 'complete' }],
+    filters: [{ column: 'listTab', operator: 'equals', value: 'complete' }],
     visibleColumns: allActionCols,
   },
   {
@@ -136,6 +145,7 @@ export function reviewerQueueLaneForDisplayStatus(displayStatus: string | undefi
     case 'aml_review':
     case 'rejected_aml':
       return 'aml'
+    case 'clarification_required':
     case 'document_review':
     case 'nigo_document':
     case 'nigo':
@@ -160,30 +170,58 @@ function reviewerLaneForDemoMode(mode: DemoViewModeForActions): ReviewerQueueLan
     case 'ho-principal':
       return 'principal'
     case 'ho-kyc':
-      return 'ho-kyc'
     case 'ho-documents':
     default:
+      /** KYC HO review and account document review share the Document Review actions queue. */
       return 'documents'
   }
 }
 
-function reviewerQueuePreset(lane: ReviewerQueueLane): ViewPreset {
+function reviewerQueuePreset(
+  lane: ReviewerQueueLane,
+  opts?: { documentTeamIncludesAmlPipeline?: boolean; kycChildWorkflowsOnly?: boolean },
+): ViewPreset {
   const names: Record<ReviewerQueueLane, string> = {
-    aml: 'Needs Review',
-    documents: 'Needs Review',
-    principal: 'Needs Review',
-    'ho-kyc': 'KYC Review',
+    aml: 'AML Review',
+    documents: 'Document Review',
+    principal: 'Principal Review',
+    'ho-kyc': 'Document Review',
     none: 'Queue',
   }
-  const visible = allActionCols.filter((k) => k !== 'status' && k !== 'reviewerQueueLane')
+  const visible = [...actionVisibleColumnsJourneyGroupedShell]
+  /** Document Review team triages KYC HO review, account documents, and AML-stage child workflows. */
+  const filters =
+    lane === 'documents' && opts?.documentTeamIncludesAmlPipeline
+      ? [{ column: 'reviewerQueueLane', operator: 'includes' as const, value: ['documents', 'aml', 'ho-kyc'] }]
+      : [{ column: 'reviewerQueueLane', operator: 'equals' as const, value: lane }]
+  if (opts?.kycChildWorkflowsOnly) {
+    filters.push({ column: 'reviewQueueItemType', operator: 'equals', value: 'KYC' })
+  }
   return {
     id: `${REVIEWER_WORK_QUEUE_PRESET_PREFIX}-${lane}`,
     name: names[lane],
     category: 'pinned',
     isDefault: true,
-    filters: [{ column: 'reviewerQueueLane', operator: 'equals', value: lane }],
+    filters,
     visibleColumns: visible,
   }
+}
+
+/**
+ * Keep the user's tab when reviewer presets change (e.g. Document Review ↔ Principal).
+ * Status tabs (All / In Progress / …) pass through; work-queue tabs map to the new team's queue.
+ */
+export function reconcileActiveViewIdForPresets(
+  activeViewId: string,
+  presets: ViewPreset[],
+): string {
+  if (presets.some((p) => p.id === activeViewId)) return activeViewId
+  if (isReviewerWorkQueuePresetId(activeViewId)) {
+    const queue = presets.find((p) => isReviewerWorkQueuePresetId(p.id))
+    if (queue) return queue.id
+  }
+  const defaultPreset = presets.find((p) => p.isDefault) ?? presets[0]
+  return defaultPreset?.id ?? activeViewId
 }
 
 /** Reviewer: default tab matches `demoViewMode` team lane; advisor sees no work-queue presets. */
@@ -192,7 +230,12 @@ export function actionPresetsForDemoView(mode: DemoViewModeForActions): ViewPres
     return actionPresets.filter((p) => !isReviewerWorkQueuePresetId(p.id))
   }
   const lane = reviewerLaneForDemoMode(mode)
-  const queuePreset = reviewerQueuePreset(lane)
+  const queuePreset =
+    lane === 'documents'
+      ? reviewerQueuePreset(lane, { documentTeamIncludesAmlPipeline: true })
+      : lane === 'aml'
+        ? reviewerQueuePreset(lane, { kycChildWorkflowsOnly: true })
+        : reviewerQueuePreset(lane)
   const rest = actionPresets.filter((p) => !isReviewerWorkQueuePresetId(p.id)).map((p) => ({ ...p, isDefault: false }))
   return [queuePreset, ...rest]
 }
@@ -200,7 +243,7 @@ export function actionPresetsForDemoView(mode: DemoViewModeForActions): ViewPres
 // ── Task columns ────────────────────────────────────────────────────
 export const taskColumns: ColumnDef[] = [
   { key: 'title', label: 'Task', alwaysVisible: true },
-  { key: 'nickname', label: 'Action Nickname' },
+  { key: 'nickname', label: 'Action' },
   { key: 'actionTitle', label: 'Action Type', filterable: 'multi-select' },
   { key: 'journeyName', label: 'Journey', filterable: 'text' },
   { key: 'relationshipName', label: 'Relationship', filterable: 'text' },

@@ -3,7 +3,7 @@ import type { AdvisorIdentityDemoSimulation, ChildReviewState } from '@/types/wo
 type Cip = NonNullable<ChildReviewState['cipStatus']>
 
 export type AdvisorIdentitySimDisplay = {
-  statusLabel: 'Passed' | 'Needs attention' | 'Pending verification' | 'Unable to verify'
+  statusLabel: 'Passed' | 'Needs Attention' | 'Pending Verification' | 'Unable to Verify'
   issues: string[]
   actions: string[]
   cipStatus: Cip
@@ -37,7 +37,7 @@ export function getAdvisorIdentitySimDisplay(
   switch (sim) {
     case 'address_mismatch':
       return {
-        statusLabel: 'Needs attention',
+        statusLabel: 'Needs Attention',
         issues: [
           subjectIsEntity
             ? 'Registered or principal address does not match trusted records.'
@@ -60,7 +60,7 @@ export function getAdvisorIdentitySimDisplay(
       }
     case 'dob_mismatch':
       return {
-        statusLabel: 'Needs attention',
+        statusLabel: 'Needs Attention',
         issues: [
           subjectIsEntity
             ? 'Key date information could not be verified.'
@@ -81,7 +81,7 @@ export function getAdvisorIdentitySimDisplay(
       }
     case 'name_mismatch':
       return {
-        statusLabel: 'Needs attention',
+        statusLabel: 'Needs Attention',
         issues: [
           subjectIsEntity
             ? 'Legal entity name does not match trusted records.'
@@ -104,7 +104,7 @@ export function getAdvisorIdentitySimDisplay(
       }
     case 'tin_mismatch':
       return {
-        statusLabel: 'Needs attention',
+        statusLabel: 'Needs Attention',
         issues: ['SSN or tax ID does not match trusted records.'],
         actions: ['Confirm the SSN or tax ID with the client using official documentation.', rerun],
         cipStatus: {
@@ -118,7 +118,7 @@ export function getAdvisorIdentitySimDisplay(
       }
     case 'unable_to_verify':
       return {
-        statusLabel: 'Unable to verify',
+        statusLabel: 'Unable to Verify',
         issues: ['Unable to verify identity with the details on file.'],
         actions: [
           'Review name, address, and tax ID with the client.',
@@ -136,7 +136,7 @@ export function getAdvisorIdentitySimDisplay(
       }
     case 'verification_pending':
       return {
-        statusLabel: 'Pending verification',
+        statusLabel: 'Pending Verification',
         issues: [],
         actions: [],
         cipStatus: pendingAll,

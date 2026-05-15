@@ -11,6 +11,9 @@ const ThemeContext = createContext<{
   setBrandTheme: (theme: BrandTheme) => void
   showNestedGroups: boolean
   setShowNestedGroups: (show: boolean) => void
+  /** When true, onboarding Journeys tab hides KYC/Accounts section headers and child workflow rows. */
+  hideOnboardingJourneyChildWorkflows: boolean
+  setHideOnboardingJourneyChildWorkflows: (hide: boolean) => void
   /** @deprecated Use colorScheme instead */
   theme: ColorScheme
   /** @deprecated Use toggleColorScheme instead */
@@ -33,10 +36,18 @@ function getInitialShowNestedGroups(): boolean {
   return localStorage.getItem('show-nested-groups') === 'true'
 }
 
+function getInitialHideOnboardingJourneyChildWorkflows(): boolean {
+  const stored = localStorage.getItem('hide-onboarding-journey-child-workflows')
+  if (stored === null) return true
+  return stored === 'true'
+}
+
 export function ThemeProvider({ children }: { children: ReactNode }) {
   const [colorScheme, setColorScheme] = useState<ColorScheme>(getInitialColorScheme)
   const [brandTheme, setBrandThemeState] = useState<BrandTheme>(getInitialBrandTheme)
   const [showNestedGroups, setShowNestedGroupsState] = useState<boolean>(getInitialShowNestedGroups)
+  const [hideOnboardingJourneyChildWorkflows, setHideOnboardingJourneyChildWorkflowsState] =
+    useState<boolean>(getInitialHideOnboardingJourneyChildWorkflows)
 
   useEffect(() => {
     document.documentElement.classList.toggle('dark', colorScheme === 'dark')
@@ -52,10 +63,19 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
     localStorage.setItem('show-nested-groups', String(showNestedGroups))
   }, [showNestedGroups])
 
+  useEffect(() => {
+    localStorage.setItem(
+      'hide-onboarding-journey-child-workflows',
+      String(hideOnboardingJourneyChildWorkflows),
+    )
+  }, [hideOnboardingJourneyChildWorkflows])
+
   const toggleColorScheme = () => setColorScheme((t) => (t === 'light' ? 'dark' : 'light'))
 
   const setBrandTheme = (theme: BrandTheme) => setBrandThemeState(theme)
   const setShowNestedGroups = (show: boolean) => setShowNestedGroupsState(show)
+  const setHideOnboardingJourneyChildWorkflows = (hide: boolean) =>
+    setHideOnboardingJourneyChildWorkflowsState(hide)
 
   return (
     <ThemeContext.Provider value={{
@@ -66,6 +86,8 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
       setBrandTheme,
       showNestedGroups,
       setShowNestedGroups,
+      hideOnboardingJourneyChildWorkflows,
+      setHideOnboardingJourneyChildWorkflows,
       // backwards compat aliases
       theme: colorScheme,
       toggleTheme: toggleColorScheme,

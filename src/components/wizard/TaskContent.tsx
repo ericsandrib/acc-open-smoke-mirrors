@@ -1,6 +1,6 @@
 import { useEffect } from 'react'
 import { useWorkflow } from '@/stores/workflowStore'
-import { formComponents, taskSections } from './formRegistry'
+import { formComponents } from './formRegistry'
 import { parseChildSubTaskId, getSubTaskDisplayTitle } from '@/utils/childTaskRegistry'
 import { Clock, AlertTriangle } from 'lucide-react'
 import { cn } from '@/lib/utils'
@@ -178,7 +178,6 @@ export function TaskContent() {
     variant === 'v2' || variant === 'v3' || variant === 'v4' || variant === 'v5'
 
   const FormComponent = formKey ? formComponents[formKey] : null
-  const hasExplicitSections = Boolean(formKey && taskSections[formKey]?.length)
   const isV5NoAnnuityPagedMain =
     selectedVariant === 'v5' &&
     activeTask?.formKey === OPEN_ACCOUNTS_FORM_KEY &&
@@ -239,12 +238,6 @@ export function TaskContent() {
           <p className="text-[14px] text-muted-foreground leading-normal -mt-6 mb-6">
             {v5NoAnnuityTaskDescription}
           </p>
-        ) : null}
-        {showCombinedOpenAccounts ? null : isV5NoAnnuityPagedMain ? null : !hasExplicitSections &&
-          !isOpenAccountsFormKey(formKey) ? (
-          <section id="__top__" className="space-y-1.5 scroll-mt-16 mb-6">
-            <h3 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">Overview</h3>
-          </section>
         ) : null}
         {showV6AnnuityAccountsSetup && activeTask ? (
           <div

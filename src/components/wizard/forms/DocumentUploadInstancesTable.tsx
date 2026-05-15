@@ -1,5 +1,4 @@
 import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
 import { Combobox } from '@/components/ui/combobox'
 import {
   Select,
@@ -9,7 +8,7 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { Paperclip, Plus, Trash2, Upload, X } from 'lucide-react'
-import { CUSTOM_DOCUMENT_SUBTYPE_VALUE, type SupportingDocumentStatus } from '@/utils/supportingDocuments'
+import type { SupportingDocumentStatus } from '@/utils/supportingDocuments'
 
 export type DocumentUploadInstance = {
   id: string
@@ -17,7 +16,7 @@ export type DocumentUploadInstance = {
   assignedTo: string
   fileName?: string
   subType?: string
-  /** Required when {@link subType} is {@link CUSTOM_DOCUMENT_SUBTYPE_VALUE}. */
+  /** Legacy persisted; no longer collected in the UI when subType is Other / Custom. */
   customSubTypeLabel?: string
   status?: SupportingDocumentStatus
   /** Reviewer / team that requested the document (when status is requested_by_review). */
@@ -111,7 +110,7 @@ export function DocumentUploadInstancesTable({
                             onValueChange={(v) =>
                               onUpdate(inst.id, {
                                 subType: v,
-                                ...(v !== CUSTOM_DOCUMENT_SUBTYPE_VALUE ? { customSubTypeLabel: undefined } : {}),
+                                customSubTypeLabel: undefined,
                               })
                             }
                             placeholder="Search or select type…"
@@ -120,16 +119,6 @@ export function DocumentUploadInstancesTable({
                             inputClassName="h-8 text-xs"
                             disabled={disabled}
                           />
-                          {inst.subType === CUSTOM_DOCUMENT_SUBTYPE_VALUE ? (
-                            <Input
-                              className="h-8 text-xs"
-                              placeholder="Document type name"
-                              value={inst.customSubTypeLabel ?? ''}
-                              onChange={(e) => onUpdate(inst.id, { customSubTypeLabel: e.target.value })}
-                              disabled={disabled}
-                              required
-                            />
-                          ) : null}
                           {inst.requestedBy || inst.status === 'requested_by_review' ? (
                             <p className="text-[10px] text-muted-foreground leading-snug">
                               Requested during review

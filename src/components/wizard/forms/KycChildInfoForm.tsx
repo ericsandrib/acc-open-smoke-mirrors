@@ -5,6 +5,7 @@ import {
   useTaskData,
   useChildActionContext,
   useAdvisorFormsEditable,
+  useHoKycFormsEditable,
 } from '@/stores/workflowStore'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -12,11 +13,12 @@ import { SensitiveTaxIdInput } from '@/components/ui/sensitive-tax-id-input'
 import { Label } from '@/components/ui/label'
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui/select'
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from '@/components/ui/sheet'
-import { Lock, AlertTriangle, CheckCircle2, Plus, Trash2 } from 'lucide-react'
+import { AlertTriangle, CheckCircle2, Plus, Trash2 } from 'lucide-react'
 import { AddHouseholdMemberSheet } from './AddPartySheet'
 import { PartySlotCard } from './PartySlotCard'
 import { IdentityVerificationSection } from './IdentityVerificationSection'
 import { cn } from '@/lib/utils'
+import { isKycChildInAmlReview } from '@/utils/childStatusDisplay'
 
 const sectionCls = 'text-base font-semibold leading-snug text-foreground'
 const sectionBodyCls = 'text-[14px] text-muted-foreground mt-2 leading-normal'
@@ -532,23 +534,14 @@ export function KycChildInfoForm() {
   }, [])
 
   const advisorFormsEditable = useAdvisorFormsEditable()
+  const hoKycFormsEditable = useHoKycFormsEditable()
 
   if (!child) return null
 
   const reviewState = getChildReviewState(state, child.id)
+  const inAmlReview = isKycChildInAmlReview(child.status, reviewState)
   const statusLocked = child.status === 'awaiting_review' || child.status === 'complete' || child.status === 'rejected'
-  const reviewerCanEdit =
-    child.status === 'awaiting_review' &&
-    (
-      (state.demoViewMode === 'aml' && reviewState?.amlReview?.status === 'pending') ||
-      (
-        state.demoViewMode === 'ho-kyc' &&
-        reviewState?.amlReview?.status === 'cleared' &&
-        reviewState?.hoKycReview?.status === 'pending'
-      )
-    )
-  const isLocked = statusLocked && !advisorFormsEditable && !reviewerCanEdit
-  const isApproved = child.status === 'complete'
+  const isLocked = inAmlReview || (statusLocked && !advisorFormsEditable && !hoKycFormsEditable)
   const str = (key: string) => (data[key] as string) ?? ''
   const allErrors = getKycValidationErrors(data, {
     subjectType: isEntity ? 'entity' : 'individual',
@@ -1303,27 +1296,6 @@ export function KycChildInfoForm() {
 
   return (
     <div className="space-y-9" ref={topRef}>
-      {isLocked && (
-        isApproved ? (
-          <div className="rounded-md border border-green-200 bg-green-50 dark:border-green-900/60 dark:bg-green-950/40 px-3 py-2.5">
-            <div className="flex items-center gap-2">
-              <CheckCircle2 className="h-4 w-4 text-green-600 dark:text-green-400 shrink-0" />
-              <p className="text-xs font-medium text-green-900 dark:text-green-100">
-                This KYC package has been approved. Fields are read-only.
-              </p>
-            </div>
-          </div>
-        ) : (
-          <div className="rounded-md border border-amber-200 bg-amber-50 dark:border-amber-900/60 dark:bg-amber-950/40 px-3 py-2.5">
-            <div className="flex items-center gap-2">
-              <Lock className="h-4 w-4 text-amber-600 dark:text-amber-400 shrink-0" />
-              <p className="text-xs font-medium text-amber-900 dark:text-amber-100">
-                This submission is under review. Fields are locked and cannot be edited.
-              </p>
-            </div>
-          </div>
-        )
-      )}
 
       {!isLocked && submitAttempted && allErrors.length > 0 && (
         <ValidationSummary errors={allErrors} position="top" />
@@ -1491,14 +1463,6 @@ export function KycChildInfoForm() {
             {showError('sourceOfFunds') && <InlineError message={errorMap.get('sourceOfFunds')!} />}
           </div>
         </div>
-      </section>
-
-      <section className="space-y-3">
-        <h4 className={sectionCls}>Supporting documents</h4>
-        <p className={sectionBodyCls}>
-          Upload supporting files from the <span className="font-medium text-foreground">Supporting Documents</span>{' '}
-          step in the left navigation when needed.
-        </p>
       </section>
 
       <IdentityVerificationSection childId={child.id} childStatus={child.status} />

@@ -14,29 +14,44 @@ import {
   journeyPresets,
   actionColumns,
   actionPresetsForDemoView,
+  actionVisibleColumnsJourneyGroupedShell,
   isReviewerWorkQueuePresetId,
   taskColumns,
   taskPresets,
 } from '@/data/servicing-view-presets'
 
 export function OnboardingContent() {
-  const { onboardingJourneys, currentLiveJourney } = useServicing()
+  const { onboardingJourneys, currentLiveJourney, lastCreatedJourneyId } = useServicing()
   const { state } = useWorkflow()
 
-  const { showNestedGroups } = useTheme()
+  const pinRowId = useMemo(() => {
+    if (onboardingJourneys.some((j) => j.id === lastCreatedJourneyId)) {
+      return lastCreatedJourneyId
+    }
+    return currentLiveJourney?.id
+  }, [onboardingJourneys, lastCreatedJourneyId, currentLiveJourney?.id])
+
+  const { showNestedGroups, hideOnboardingJourneyChildWorkflows } = useTheme()
   const journeyRows = useMemo(() => deriveOnboardingJourneyRows(onboardingJourneys), [onboardingJourneys])
   const actionRows = useMemo(() => deriveActionRows(onboardingJourneys), [onboardingJourneys])
   const taskRows = useMemo(() => deriveTaskRows(onboardingJourneys), [onboardingJourneys])
   const actionPresets = useMemo(() => actionPresetsForDemoView(state.demoViewMode), [state.demoViewMode])
-  const reviewerPersistMode = state.demoViewMode ?? 'ho-documents'
+  /** One persist bucket for all reviewer teams so switching views keeps the selected tab. */
   const actionsTablePersistKey =
-    (state.demoViewMode ?? 'advisor') === 'advisor' ? 'advisor' : `reviewer-${reviewerPersistMode}`
+    (state.demoViewMode ?? 'advisor') === 'advisor' ? 'advisor' : 'reviewer'
+  /** Advisor + reviewer: Actions defaults to journey grouping (toggle to flat list in toolbar). */
+  const defaultActionsGroupBy = 'parentJourneyId' as const
   const isAdvisor = actionsTablePersistKey === 'advisor'
   const defaultOnboardingTab = isAdvisor ? 'journeys' : 'actions'
 
   return (
     <div className="max-w-6xl mx-auto">
-      <Tabs key={actionsTablePersistKey} defaultValue={defaultOnboardingTab}>
+      {/*
+        Do not key Tabs by demo view: remounting resets the tab to defaultValue and jumps Journeys ↔ Actions
+        when switching advisor vs reviewer teams. defaultValue only applies on first mount (e.g. route to
+        /onboarding); all teams can use every tab after that.
+      */}
+      <Tabs defaultValue={defaultOnboardingTab}>
         <div className="flex items-center justify-between mb-6">
           <PageTitle
             title="Onboarding"
@@ -56,34 +71,62 @@ export function OnboardingContent() {
             columns={journeyColumns}
             allRows={journeyRows}
             defaultRelationshipScope="all"
-            pinRowId={currentLiveJourney?.id}
+            pinRowId={pinRowId}
           >
             {({ rows, visibleColumns }) => (
-              <OnboardingJourneysTable rows={rows} visibleColumns={visibleColumns} showNestedGroups={showNestedGroups} />
+              <OnboardingJourneysTable
+                rows={rows}
+                visibleColumns={visibleColumns}
+                showNestedGroups={showNestedGroups}
+                hideChildWorkflows={hideOnboardingJourneyChildWorkflows}
+              />
             )}
           </TableViewWrapper>
         </TabsContent>
         <TabsContent value="actions">
           <TableViewWrapper
-            key={`onboarding-actions-${actionsTablePersistKey}`}
             tableId={`onboarding-actions-${actionsTablePersistKey}`}
             presets={actionPresets}
             columns={actionColumns}
             allRows={actionRows}
             defaultRelationshipScope="all"
             showGroupBy
+            defaultGroupBy={defaultActionsGroupBy}
           >
-            {({ rows, visibleColumns, activeViewId, groupBy }) =>
-              activeViewId && isReviewerWorkQueuePresetId(activeViewId) ? (
-                <DocumentReviewActionsTable
-                  rows={rows}
-                  visibleColumns={visibleColumns}
-                  journeys={onboardingJourneys}
-                  groupBy={groupBy}
-                />
-              ) : (
-                <ActionsTable rows={rows} visibleColumns={visibleColumns} groupBy={groupBy} />
-              )}
+            {({ rows, visibleColumns, activeViewId, groupBy }) => {
+              const reviewerQueue = Boolean(activeViewId && isReviewerWorkQueuePresetId(activeViewId))
+              const advisorJourneyGrouped = isAdvisor && groupBy === 'parentJourneyId'
+
+              /** Reviewer status tabs (All / In Progress / Completed): flat child-workflow rows, no journey headers. */
+              if (!isAdvisor) {
+                const flatStatusTab = !reviewerQueue
+                const reviewerRows = flatStatusTab
+                  ? rows.filter((r) => r.isChildWorkflow && r.childId)
+                  : rows
+                return (
+                  <DocumentReviewActionsTable
+                    rows={reviewerRows}
+                    visibleColumns={visibleColumns}
+                    journeys={onboardingJourneys}
+                    groupBy={flatStatusTab ? 'none' : (groupBy ?? 'parentJourneyId')}
+                    nestRowMode="pipeline"
+                  />
+                )
+              }
+
+              if (advisorJourneyGrouped) {
+                return (
+                  <DocumentReviewActionsTable
+                    rows={rows}
+                    visibleColumns={actionVisibleColumnsJourneyGroupedShell}
+                    journeys={onboardingJourneys}
+                    groupBy={groupBy}
+                    nestRowMode="allChildWorkflows"
+                  />
+                )
+              }
+              return <ActionsTable rows={rows} visibleColumns={visibleColumns} groupBy={groupBy} />
+            }}
           </TableViewWrapper>
         </TabsContent>
         <TabsContent value="tasks">

@@ -10,6 +10,7 @@ export function AmlReviewFooter() {
   const [showFlagModal, setShowFlagModal] = useState(false)
   const [showSarConfirm, setShowSarConfirm] = useState(false)
   const [findings, setFindings] = useState('')
+  const [approvalReason, setApprovalReason] = useState('')
   const [sarReason, setSarReason] = useState('')
 
   const reviewState = getChildReviewState(state, state.activeChildActionId)
@@ -103,8 +104,14 @@ export function AmlReviewFooter() {
 
       {showClearConfirm && (
         <div className="fixed inset-0 z-[60] flex items-center justify-center">
-          <div className="fixed inset-0 bg-black/50" onClick={() => setShowClearConfirm(false)} />
-          <div className="relative z-10 bg-background rounded-lg border border-border shadow-lg max-w-sm w-full mx-4 p-6 space-y-4">
+          <div
+            className="fixed inset-0 bg-black/50"
+            onClick={() => {
+              setShowClearConfirm(false)
+              setApprovalReason('')
+            }}
+          />
+          <div className="relative z-10 bg-background rounded-lg border border-border shadow-lg max-w-md w-full mx-4 p-6 space-y-4">
             <div className="flex items-start gap-3">
               <div className="rounded-full bg-green-50 p-2 shrink-0">
                 <CheckCircle2 className="h-5 w-5 text-green-600" />
@@ -117,13 +124,36 @@ export function AmlReviewFooter() {
                 </p>
               </div>
             </div>
+
+            <div className="space-y-2">
+              <Label className="text-sm">Approval reason</Label>
+              <textarea
+                value={approvalReason}
+                onChange={(e) => setApprovalReason(e.target.value)}
+                placeholder="Summarize the screening outcome and rationale for approval..."
+                className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm min-h-[80px] resize-none focus:outline-none focus:ring-2 focus:ring-ring"
+              />
+            </div>
+
             <div className="flex items-center justify-end gap-3 pt-1">
-              <Button variant="outline" onClick={() => setShowClearConfirm(false)}>Cancel</Button>
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setShowClearConfirm(false)
+                  setApprovalReason('')
+                }}
+              >
+                Cancel
+              </Button>
               <Button
                 className="bg-green-600 hover:bg-green-700 text-white"
                 onClick={() => {
-                  dispatch({ type: 'AML_REVIEW_CLEAR' })
+                  dispatch({
+                    type: 'AML_REVIEW_CLEAR',
+                    approvalReason: approvalReason.trim() || undefined,
+                  })
                   setShowClearConfirm(false)
+                  setApprovalReason('')
                 }}
               >
                 Confirm Approval

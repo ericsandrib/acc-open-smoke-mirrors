@@ -3,6 +3,9 @@ import { ExistingAccountsForm } from './forms/ExistingAccountsForm'
 import { KycForm } from './forms/KycForm'
 import { KycChildInfoForm } from './forms/KycChildInfoForm'
 import { KycChildDocumentsForm } from './forms/KycChildDocumentsForm'
+import { AmlSubjectProfileReviewForm } from './forms/AmlSubjectProfileReviewForm'
+import { AmlSupportingDocumentsReviewForm } from './forms/AmlSupportingDocumentsReviewForm'
+import { ChildAmlReviewContent } from './ChildAmlReviewContent'
 
 import { OpenAccountsForm } from './forms/OpenAccountsForm'
 import { AcctChildOwnerInfoForm } from './forms/AcctChildOwnerInfoForm'
@@ -18,6 +21,9 @@ export const formComponents: Record<string, React.ComponentType> = {
   'kyc': KycForm,
   'kyc-child-info': KycChildInfoForm,
   'kyc-child-documents': KycChildDocumentsForm,
+  'kyc-child-aml-subject-profile': AmlSubjectProfileReviewForm,
+  'kyc-child-aml-documents': AmlSupportingDocumentsReviewForm,
+  'kyc-child-aml-review': ChildAmlReviewContent,
   'open-accounts': OpenAccountsForm,
   'open-accounts-with-annuity': OpenAccountsForm,
   'acct-child-account-owners': AcctChildOwnerInfoForm,
@@ -36,9 +42,15 @@ export const taskDescriptions: Partial<Record<string, string>> = {
   'kyc':
     'Review household members and select who requires identity verification.',
   'kyc-child-info':
-    'Collect client profile data and run identity (CIP) verification for this subject.',
+    'Collect verification profile data and run identity (CIP) screening for this subject.',
   'kyc-child-documents':
     'Supporting documents are optional unless requested during review.',
+  'kyc-child-aml-subject-profile':
+    'Submitted identity and financial profile for this subject. Read-only — request corrections from the advisor if data is incomplete or inconsistent.',
+  'kyc-child-aml-documents':
+    'Evidence uploaded with this subject. Review files before recording an AML disposition.',
+  'kyc-child-aml-review':
+    'Screening outcomes, risk indicators, and disposition actions for this AML case.',
   'open-accounts':
     'Set up accounts, complete identity verification, and prepare documents for client signature.',
   'open-accounts-with-annuity':
@@ -55,37 +67,4 @@ export const taskDescriptions: Partial<Record<string, string>> = {
     'Capture status, routing, dates, and notes for this feature or service workflow line.',
   'acct-child-documents-review':
     'Finalize account documentation and collect client documents when needed for review.',
-}
-
-export type TaskSection = { id: string; label: string; children?: Array<{ id: string; label: string }> }
-
-export const taskSections: Partial<Record<string, Array<TaskSection>>> = {
-  'related-parties': [
-    { id: 'rcd-household', label: 'Household' },
-    { id: 'rcd-related-individuals', label: 'Related Individuals' },
-    { id: 'rcd-trusts', label: 'Trusts' },
-    { id: 'rcd-other-entities', label: 'Other Entities' },
-    { id: 'rcd-professional-contacts', label: 'Professional Contacts' },
-  ],
-  'existing-accounts': [
-    { id: 'ea-existing-accounts', label: 'Accounts' },
-    { id: 'ea-additional-instructions', label: 'Additional Instructions' },
-  ],
-  'acct-child-account-owners': [
-    { id: 'acct-owners', label: 'Owners & Participants' },
-    { id: 'acct-beneficiaries', label: 'Beneficiaries' },
-    { id: 'acct-info', label: 'Account Information' },
-    { id: 'acct-features', label: 'Investment Elections' },
-  ],
-  'acct-child-documents-review': [
-    { id: 'acct-docs-forms', label: 'Forms for This Account' },
-    { id: 'acct-docs-client-upload', label: 'Supporting Client Documents' },
-    { id: 'acct-docs-notes', label: 'Exceptions / Notes' },
-  ],
-  'acct-child-funding-transfers': [
-    { id: '__top__', label: 'Movement Details' },
-  ],
-  'acct-child-features-services': [
-    { id: '__top__', label: 'Feature Details' },
-  ],
 }

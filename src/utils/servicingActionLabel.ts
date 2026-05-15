@@ -1,3 +1,28 @@
+const JOURNEY_NICKNAME_SEPARATORS = [' - ', ' — '] as const
+
+/**
+ * Drops a leading `[Journey name] -` / `[Journey name] —` prefix when the Journey column
+ * already shows the journey (servicing / onboarding action tables).
+ */
+export function shortActionNicknameForTable(
+  journeyName: string,
+  nickname: string | undefined,
+  title: string,
+): string {
+  const fallback = title.trim() || 'Action'
+  const raw = nickname?.trim()
+  if (!raw) return fallback
+  const jn = journeyName.trim()
+  for (const sep of JOURNEY_NICKNAME_SEPARATORS) {
+    const prefix = `${jn}${sep}`
+    if (raw.startsWith(prefix)) {
+      const rest = raw.slice(prefix.length).trim()
+      return rest || fallback
+    }
+  }
+  return raw
+}
+
 /**
  * For nested child workflow lines, the nickname often repeats the journey and
  * parent workflow label (e.g. "… - Open Financial Account: Rollover IRA").

@@ -8,6 +8,7 @@ import {
   TrendingUp,
   ClipboardList,
 } from "lucide-react";
+import { DraftRingIcon, InProgressRingIcon } from "@/components/servicing/operationalStatusPill";
 
 // ---------------------------------------------------------------------------
 // Mock data
@@ -233,34 +234,14 @@ function StatusBadge({ status }: { status: "In Progress" | "Draft" }) {
   if (status === "In Progress") {
     return (
       <span className="inline-flex items-center gap-1 rounded-full border border-green-200 bg-green-50 px-2 py-0.5 text-xs font-medium text-green-700">
-        <svg className="h-3 w-3" viewBox="0 0 16 16" fill="none">
-          <circle
-            cx="8"
-            cy="8"
-            r="6"
-            stroke="currentColor"
-            strokeWidth="2"
-            strokeDasharray="28"
-            strokeDashoffset="8"
-          />
-        </svg>
+        <InProgressRingIcon />
         In Progress
       </span>
     );
   }
   return (
     <span className="inline-flex items-center gap-1 rounded-full border border-gray-200 bg-gray-50 px-2 py-0.5 text-xs font-medium text-gray-500">
-      <svg className="h-3 w-3" viewBox="0 0 16 16" fill="none">
-        <circle
-          cx="8"
-          cy="8"
-          r="6"
-          stroke="currentColor"
-          strokeWidth="2"
-          strokeDasharray="28"
-          strokeDashoffset="20"
-        />
-      </svg>
+      <DraftRingIcon />
       Draft
     </span>
   );

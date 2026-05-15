@@ -23,6 +23,8 @@ interface TableViewWrapperProps<T> {
   pinRowId?: string
   /** Enables “Group by” in the toolbar (Onboarding → Actions). */
   showGroupBy?: boolean
+  /** Initial group mode when this wrapper mounts (e.g. journey grouping for Document Review team). */
+  defaultGroupBy?: OnboardingActionsGroupBy
   children: (props: {
     rows: T[]
     visibleColumns: string[]
@@ -39,6 +41,7 @@ export function TableViewWrapper<T>({
   defaultRelationshipScope = 'my',
   pinRowId,
   showGroupBy = false,
+  defaultGroupBy = 'none',
   children,
 }: TableViewWrapperProps<T>) {
   const vm = useViewManager<T>(tableId, presets, columns)
@@ -46,7 +49,7 @@ export function TableViewWrapper<T>({
   const [relationshipScope, setRelationshipScope] = useState<RelationshipScope>(defaultRelationshipScope)
   const [quickSortKey, setQuickSortKey] = useState<QuickSortKey>('created_at')
   const [quickSortDirection, setQuickSortDirection] = useState<QuickSortDirection>('desc')
-  const [groupBy, setGroupBy] = useState<OnboardingActionsGroupBy>('none')
+  const [groupBy, setGroupBy] = useState<OnboardingActionsGroupBy>(defaultGroupBy)
 
   const scopedRows = allRows.filter((row) => {
     if (relationshipScope === 'all') return true
@@ -82,11 +85,15 @@ export function TableViewWrapper<T>({
 
   const withPinnedRow = (() => {
     if (!pinRowId) return sortedRows
-    const hasPinned = sortedRows.some((r) => String((r as Record<string, unknown>).id ?? '') === pinRowId)
-    if (hasPinned) return sortedRows
-    const pinned = allRows.find((r) => String((r as Record<string, unknown>).id ?? '') === pinRowId)
-    if (!pinned) return sortedRows
-    return [pinned, ...sortedRows]
+    const rowId = (r: T) => String((r as Record<string, unknown>).id ?? '')
+    const pinnedInSort = sortedRows.find((r) => rowId(r) === pinRowId)
+    if (pinnedInSort) {
+      return [pinnedInSort, ...sortedRows.filter((r) => rowId(r) !== pinRowId)]
+    }
+    /** Pin only when the row matches the active tab filters (e.g. in-progress live journey on Completed). */
+    const pinnedInView = filteredRows.find((r) => rowId(r) === pinRowId)
+    if (!pinnedInView) return sortedRows
+    return [pinnedInView, ...sortedRows]
   })()
 
   const getRowCount = useCallback(

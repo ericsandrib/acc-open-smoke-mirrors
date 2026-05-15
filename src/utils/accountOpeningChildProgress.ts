@@ -14,6 +14,7 @@ import { getMaxAccountOwnersForRegistration } from '@/utils/registrationOwnerLim
 import { getAccountOwnersMissingKyc } from '@/utils/accountOpeningOwnerKyc'
 import { instanceSpecificationComplete } from '@/utils/supportingDocuments'
 import type { SupportingDocumentStatus } from '@/utils/supportingDocuments'
+import { isChildSubTaskVisited } from '@/utils/childSubTaskProgress'
 
 type DocInstance = {
   id: string
@@ -199,13 +200,22 @@ function progressFeaturesHub(state: WorkflowState, accountChildId: string): { fi
   return applySubmittedCap(state, taskId, { filled, total })
 }
 
+const ACCOUNT_OPENING_SUFFIXES = [
+  'account-owners',
+  'funding-transfers',
+  'features-services',
+  'documents-review',
+] as const
+
 function progressDocuments(state: WorkflowState, accountChildId: string): { filled: number; total: number } {
   const taskId = `${accountChildId}-documents-review`
   const docsData = (state.taskData[taskId] as Record<string, unknown> | undefined) ?? {}
   const parent = findParentTaskForChild(state, accountChildId)
   const openAccountsData = (state.taskData[parent?.id ?? 'open-accounts'] as Record<string, unknown> | undefined) ?? {}
   const localDocs = (docsData['child-local-docs'] as DocInstance[] | undefined) ?? []
-  const notes = countStr(docsData.exceptionsNotes)
+  const notes =
+    countStr(openAccountsData.reviewerAdditionalContext) ||
+    countStr(docsData.exceptionsNotes)
   const supportingDocs = getOpenAccountsCoreSupportingDocumentSections()
 
   let reviewRequestedTotal = 0
@@ -228,6 +238,11 @@ function progressDocuments(state: WorkflowState, accountChildId: string): { fill
     return applySubmittedCap(state, taskId, { filled: reviewRequestedFilled, total: reviewRequestedTotal })
   }
 
+  const documentsReviewIndex = ACCOUNT_OPENING_SUFFIXES.indexOf('documents-review')
+  if (documentsReviewIndex >= 0 && isChildSubTaskVisited(state, accountChildId, documentsReviewIndex)) {
+    return applySubmittedCap(state, taskId, { filled: 1, total: 1 })
+  }
+
   // Optional workspace: no automatic completion unless user actually adds uploads/notes.
   const optionalUploadsCount = supportingDocs.reduce((sum, doc) => {
     const parentInstances = (openAccountsData[`doc-instances-${doc.id}`] as DocInstance[] | undefined) ?? []
@@ -236,13 +251,6 @@ function progressDocuments(state: WorkflowState, accountChildId: string): { fill
   const optionalFilled = optionalUploadsCount > 0 || notes > 0 ? 1 : 0
   return applySubmittedCap(state, taskId, { filled: optionalFilled, total: 1 })
 }
-
-const ACCOUNT_OPENING_SUFFIXES = [
-  'account-owners',
-  'funding-transfers',
-  'features-services',
-  'documents-review',
-] as const
 
 export function getAccountOpeningSubTaskProgress(
   state: WorkflowState,

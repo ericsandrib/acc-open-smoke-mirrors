@@ -20,7 +20,7 @@ export type RelationshipScope = 'my' | 'all'
 export type QuickSortKey = 'ready_to_begin' | 'created_at' | 'assigned_to'
 export type QuickSortDirection = 'asc' | 'desc'
 
-/** Onboarding Actions “Group by” toolbar (one column at a time). */
+/** Onboarding Actions “Group by” toolbar (one column at a time). `parentJourneyId` is shown as “Journey” in the UI. */
 export type OnboardingActionsGroupBy = 'none' | 'parentJourneyId'
 
 interface TableControlsProps {
@@ -150,7 +150,7 @@ export function TableControls({
               </DropdownMenuItem>
               <DropdownMenuItem onSelect={() => onGroupByChange('parentJourneyId')}>
                 {groupBy === 'parentJourneyId' ? <Check className="h-3.5 w-3.5 mr-1" /> : <span className="w-4 mr-1" />}
-                Parent onboarding journey
+                Journey
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>

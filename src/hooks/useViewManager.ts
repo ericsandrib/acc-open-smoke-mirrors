@@ -1,4 +1,5 @@
-import { useState, useMemo, useCallback } from 'react'
+import { useState, useMemo, useCallback, useEffect } from 'react'
+import { reconcileActiveViewIdForPresets } from '@/data/servicing-view-presets'
 import type { ColumnDef, ViewFilter, ViewPreset } from '@/types/view-preset'
 
 interface StoredViewState {
@@ -70,6 +71,16 @@ export function useViewManager<T>(
   const [columnOverrides, setColumnOverrides] = useState<string[] | null>(
     stored?.columnOverrides ?? null,
   )
+
+  // When presets change (e.g. reviewer team view), keep status tabs; remap work-queue tab only.
+  useEffect(() => {
+    setActiveViewIdRaw((current) => {
+      const reconciled = reconcileActiveViewIdForPresets(current, presets)
+      if (reconciled === current) return current
+      persistState(tableId, { activeViewId: reconciled })
+      return reconciled
+    })
+  }, [presets, tableId])
 
   const activePreset = presets.find((p) => p.id === activeViewId) ?? defaultPreset
 

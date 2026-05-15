@@ -4,10 +4,15 @@ import { useWorkflow, useChildActionContext, useAdvisorFormsEditable, getChildRe
 import { getSubTaskDisplayTitle } from '@/utils/childTaskRegistry'
 import { OPEN_ACCOUNTS_WITH_ANNUITY_FORM_KEY } from '@/utils/openAccountsTaskContext'
 import { useOpenAccountsVariant } from './openAccountsVariantContext'
-import { formComponents, taskDescriptions, taskSections } from './formRegistry'
+import { formComponents, taskDescriptions } from './formRegistry'
 import { Badge } from '@/components/ui/badge'
-import { ShieldCheck, Lock, AlertTriangle, CheckCircle2, FileText, FileSearch } from 'lucide-react'
+import { ShieldCheck, AlertTriangle, CheckCircle2, FileText, FileSearch } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import {
+  isAccountOpeningAwaitingClarification,
+  isChildAwaitingAdvisorClarification,
+  isKycAwaitingAdvisorClarification,
+} from '@/utils/childStatusDisplay'
 
 function HoDocumentAccountOpeningBanners({
   docReview,
@@ -38,7 +43,9 @@ function HoDocumentAccountOpeningBanners({
         <div className="flex items-start gap-3">
           <AlertTriangle className="h-5 w-5 text-red-600 mt-0.5 shrink-0" />
           <div className="space-y-1">
-            <p className="text-sm font-medium text-red-900 dark:text-red-100">Document Review — Rejected</p>
+            <p className="text-sm font-medium text-red-900 dark:text-red-100">
+              Document Review — Clarification / Document Required
+            </p>
             <p className="text-xs text-red-800/80 dark:text-red-200/70">
               Returned to the advisor at {docReview.decidedAt}.
             </p>
@@ -108,7 +115,9 @@ function HoPrincipalAccountOpeningBanners({
         <div className="flex items-start gap-3">
           <AlertTriangle className="h-5 w-5 text-red-600 mt-0.5 shrink-0" />
           <div className="space-y-1">
-            <p className="text-sm font-medium text-red-900 dark:text-red-100">Principal Review — NIGO</p>
+            <p className="text-sm font-medium text-red-900 dark:text-red-100">
+              Principal Review — Clarification / Document Required
+            </p>
             <p className="text-xs text-red-800/80 dark:text-red-200/70">
               Returned to the advisor at {principalReview.decidedAt}.
             </p>
@@ -149,6 +158,8 @@ function HoPrincipalAccountOpeningBanners({
   return null
 }
 
+
+/** Red feedback banner when a child workflow is returned; in-review state lives in the sidebar status card. */
 function AdvisorViewBanner() {
   const { state } = useWorkflow()
   const ctx = useChildActionContext()
@@ -164,16 +175,98 @@ function AdvisorViewBanner() {
 
   if (!ctx) return null
   const { child } = ctx
-  const isAnnuityAccountOpeningChild =
-    child.childType === 'account-opening' &&
-    ctx.parentTask?.formKey === OPEN_ACCOUNTS_WITH_ANNUITY_FORM_KEY
-  const currentSubTaskFormKey = ctx.currentSubTask.formKey
-  const isKycInfoStep = child.childType === 'kyc' && currentSubTaskFormKey === 'kyc-child-info'
-  const isKycDocumentsStep = child.childType === 'kyc' && currentSubTaskFormKey === 'kyc-child-documents'
+  // Returned to advisor for clarification — persist on every sub-task until resubmitted.
+  if (isKyc && isKycAwaitingAdvisorClarification(reviewState)) {
+    const hoChangesRequested = hoKycReview?.status === 'changes_requested'
+    const teamLabel = hoChangesRequested ? 'Document Review' : 'Compliance review'
+    const isInfoRequested = amlReview?.status === 'info_requested'
+    const detail = hoChangesRequested
+      ? 'Document Review has requested changes to this submission. Please review the feedback and resubmit.'
+      : isInfoRequested
+        ? 'Additional information was requested before this submission can continue. Please respond and resubmit.'
+        : 'This submission was flagged during compliance screening. Please review the notes and resubmit when ready.'
+    const feedbackBlock = hoChangesRequested ? (
+      hoKycReview?.comments ? (
+        <div className="mt-2 rounded-md bg-red-100/60 dark:bg-red-900/30 px-3 py-2">
+          <p className="text-xs text-red-900 dark:text-red-100">
+            <span className="font-semibold">Feedback:</span> {hoKycReview.comments}
+          </p>
+        </div>
+      ) : null
+    ) : isInfoRequested ? (
+      amlReview?.infoRequestComments ? (
+        <div className="mt-2 rounded-md bg-red-100/60 dark:bg-red-900/30 px-3 py-2">
+          <p className="text-xs text-red-900 dark:text-red-100">
+            <span className="font-semibold">Request:</span> {amlReview.infoRequestComments}
+          </p>
+        </div>
+      ) : null
+    ) : amlReview?.findings ? (
+      <div className="mt-2 rounded-md bg-red-100/60 dark:bg-red-900/30 px-3 py-2">
+        <p className="text-xs text-red-900 dark:text-red-100">
+          <span className="font-semibold">Findings:</span> {amlReview.findings}
+        </p>
+      </div>
+    ) : null
+    const decidedAt =
+      hoKycReview?.decidedAt ?? amlReview?.decidedAt ?? decision?.decidedAt
 
-  // Keep reviewer/advisor status context on the primary KYC step only; do not duplicate
-  // the same banner on the Documents step.
-  if (isKycDocumentsStep) return null
+    return (
+      <div className="rounded-lg border border-red-200 bg-red-50 dark:border-red-900/60 dark:bg-red-950/40 px-4 py-3 mb-6">
+        <div className="flex items-start gap-3">
+          <AlertTriangle className="h-5 w-5 text-red-600 dark:text-red-400 mt-0.5 shrink-0" />
+          <div className="space-y-1">
+            <p className="text-sm font-medium text-red-900 dark:text-red-100">Returned by {teamLabel}</p>
+            <p className="text-xs text-red-800/80 dark:text-red-200/70">{detail}</p>
+            {feedbackBlock}
+            {decidedAt ? (
+              <p className="text-xs text-red-700/70 dark:text-red-300/60 mt-1">at {decidedAt}</p>
+            ) : null}
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  if (!isKyc && isAccountOpeningAwaitingClarification(reviewState)) {
+    const rejectedByPrincipal = principalReview?.status === 'nigo'
+    const teamLabel = rejectedByPrincipal ? 'Principal Review' : 'Document Review'
+    const nigoData = rejectedByPrincipal ? principalReview : docReview
+    const feedbackBlock =
+      nigoData?.nigoReason || nigoData?.nigoFeedback ? (
+        <div className="mt-2 rounded-md bg-red-100/60 dark:bg-red-900/30 px-3 py-2 space-y-1">
+          {nigoData?.nigoReason ? (
+            <p className="text-xs text-red-900 dark:text-red-100">
+              <span className="font-semibold">Reason:</span> {nigoData.nigoReason}
+            </p>
+          ) : null}
+          {nigoData?.nigoFeedback ? (
+            <p className="text-xs text-red-800/90 dark:text-red-200/80">
+              <span className="font-semibold">Feedback:</span> {nigoData.nigoFeedback}
+            </p>
+          ) : null}
+        </div>
+      ) : null
+    const decidedAt = nigoData?.decidedAt ?? decision?.decidedAt
+
+    return (
+      <div className="rounded-lg border border-red-200 bg-red-50 dark:border-red-900/60 dark:bg-red-950/40 px-4 py-3 mb-6">
+        <div className="flex items-start gap-3">
+          <AlertTriangle className="h-5 w-5 text-red-600 dark:text-red-400 mt-0.5 shrink-0" />
+          <div className="space-y-1">
+            <p className="text-sm font-medium text-red-900 dark:text-red-100">Returned by {teamLabel}</p>
+            <p className="text-xs text-red-800/80 dark:text-red-200/70">
+              Review feedback, update the application, and submit for review.
+            </p>
+            {feedbackBlock}
+            {decidedAt ? (
+              <p className="text-xs text-red-700/70 dark:text-red-300/60 mt-1">at {decidedAt}</p>
+            ) : null}
+          </div>
+        </div>
+      </div>
+    )
+  }
 
   if (child.status === 'in_progress' || child.status === 'not_started') {
     return null
@@ -184,46 +277,7 @@ function AdvisorViewBanner() {
     let detail = 'Your submission has been returned for corrections. Please review the feedback and resubmit.'
     let feedbackBlock: React.ReactNode = null
 
-    if (isKyc) {
-      if (amlReview?.status === 'flagged') {
-        teamLabel = 'Compliance review'
-        detail =
-          'This submission was flagged during compliance screening. Please review the notes and resubmit when ready.'
-        if (amlReview.findings) {
-          feedbackBlock = (
-            <div className="mt-2 rounded-md bg-red-100/60 dark:bg-red-900/30 px-3 py-2">
-              <p className="text-xs text-red-900 dark:text-red-100">
-                <span className="font-semibold">Findings:</span> {amlReview.findings}
-              </p>
-            </div>
-          )
-        }
-      } else if (amlReview?.status === 'info_requested') {
-        teamLabel = 'Compliance review'
-        detail = 'Additional information was requested before this submission can continue. Please respond and resubmit.'
-        if (amlReview.infoRequestComments) {
-          feedbackBlock = (
-            <div className="mt-2 rounded-md bg-red-100/60 dark:bg-red-900/30 px-3 py-2">
-              <p className="text-xs text-red-900 dark:text-red-100">
-                <span className="font-semibold">Request:</span> {amlReview.infoRequestComments}
-              </p>
-            </div>
-          )
-        }
-      } else if (hoKycReview?.status === 'changes_requested') {
-        teamLabel = 'Document Review'
-        detail = 'Document Review has requested changes to this submission. Please review the feedback and resubmit.'
-        if (hoKycReview.comments) {
-          feedbackBlock = (
-            <div className="mt-2 rounded-md bg-red-100/60 dark:bg-red-900/30 px-3 py-2">
-              <p className="text-xs text-red-900 dark:text-red-100">
-                <span className="font-semibold">Feedback:</span> {hoKycReview.comments}
-              </p>
-            </div>
-          )
-        }
-      }
-    } else {
+    if (!isKyc && !isAccountOpeningAwaitingClarification(reviewState)) {
       const rejectedByDoc = docReview?.status === 'nigo'
       const rejectedByPrincipal = principalReview?.status === 'nigo'
       teamLabel = rejectedByPrincipal ? 'Principal Review Team' : rejectedByDoc ? 'Document Review Team' : 'Home Office'
@@ -263,95 +317,7 @@ function AdvisorViewBanner() {
     )
   }
 
-  if (decision?.outcome === 'approved' && child.status === 'complete') {
-    if (isAnnuityAccountOpeningChild) {
-      return null
-    }
-    if (isKyc && amlReview?.status === 'cleared') {
-      return (
-        <div className="rounded-lg border border-green-200 bg-green-50 dark:border-green-900/60 dark:bg-green-950/40 px-4 py-3 mb-6">
-          <div className="flex items-start gap-3">
-            <CheckCircle2 className="h-5 w-5 text-green-600 dark:text-green-400 mt-0.5 shrink-0" />
-            <div className="space-y-0.5">
-              <p className="text-sm font-medium text-green-900 dark:text-green-100">Compliance screening cleared</p>
-              <p className="text-xs text-green-800/80 dark:text-green-200/70">
-                Required screening steps for this submission are complete. Cleared at {decision.decidedAt}.
-              </p>
-            </div>
-          </div>
-        </div>
-      )
-    }
-
-    if (isKyc) {
-      return (
-        <div className="rounded-lg border border-green-200 bg-green-50 dark:border-green-900/60 dark:bg-green-950/40 px-4 py-3 mb-6">
-          <div className="flex items-start gap-3">
-            <CheckCircle2 className="h-5 w-5 text-green-600 dark:text-green-400 mt-0.5 shrink-0" />
-            <div className="space-y-0.5">
-              <p className="text-sm font-medium text-green-900 dark:text-green-100">Approved — KYC complete</p>
-              <p className="text-xs text-green-800/80 dark:text-green-200/70">
-                Document Review has approved this KYC submission. Approved at {decision.decidedAt}.
-              </p>
-            </div>
-          </div>
-        </div>
-      )
-    }
-
-    return (
-      <div className="rounded-lg border border-green-200 bg-green-50 dark:border-green-900/60 dark:bg-green-950/40 px-4 py-3 mb-6">
-        <div className="flex items-start gap-3">
-          <CheckCircle2 className="h-5 w-5 text-green-600 dark:text-green-400 mt-0.5 shrink-0" />
-          <div className="space-y-0.5">
-            <p className="text-sm font-medium text-green-900 dark:text-green-100">Approved by Home Office</p>
-            <p className="text-xs text-green-800/80 dark:text-green-200/70">
-              Both Document Review and Principal Review have approved this submission. Approved at {decision.decidedAt}.
-            </p>
-          </div>
-        </div>
-      </div>
-    )
-  }
-
-  if (child.status !== 'awaiting_review') {
-    return null
-  }
-
-  const progressParts: string[] = []
-  if (isKyc) {
-    if (amlReview?.status === 'pending') progressParts.push('Compliance screening: In progress')
-    else if (amlReview?.status === 'cleared') progressParts.push('Compliance screening: Cleared')
-    if (hoKycReview?.status === 'pending') progressParts.push('Document Review: Pending')
-  } else {
-    if (docReview?.status === 'igo') progressParts.push('Document Review: Accepted')
-    else if (docReview?.status === 'nigo') progressParts.push('Document Review: Rejected')
-    else if (docReview?.status === 'pending') progressParts.push('Document Review: Pending')
-    if (principalReview?.status === 'pending') progressParts.push('Principal Review: Pending')
-  }
-
-  return (
-    <div className="rounded-lg border border-blue-200 bg-blue-50 dark:border-blue-900/60 dark:bg-blue-950/40 px-4 py-3 mb-6">
-      <div className="flex items-start gap-3">
-        <Lock className="h-5 w-5 text-blue-600 dark:text-blue-400 mt-0.5 shrink-0" />
-        <div className="space-y-0.5">
-          <p className="text-sm font-medium text-blue-900 dark:text-blue-100">
-            {isKycInfoStep ? 'Conditionally submitted — pending requested documents' : 'Read-Only — Under Home Office Review'}
-          </p>
-          <p className="text-xs text-blue-800/80 dark:text-blue-200/70">
-            {isKyc
-              ? 'Your KYC submission is in review. Documents may be requested if provider matching is insufficient or additional information is needed.'
-              : 'This submission is being reviewed by the home office team. All fields are locked until the review is complete.'}
-          </p>
-          {progressParts.length > 0 && (
-            <p className="text-xs text-blue-700/80 dark:text-blue-300/70 mt-1">
-              {progressParts.join(' · ')}
-            </p>
-          )}
-        </div>
-      </div>
-    </div>
-  )
+  return null
 }
 
 export function ChildActionContent() {
@@ -360,16 +326,27 @@ export function ChildActionContent() {
   const variant = useOpenAccountsVariant()
   const isAdvisorView = state.demoViewMode === 'advisor'
   const advisorFormsEditable = useAdvisorFormsEditable()
+  const visitSubTaskIndex = ctx?.subTaskIndex
+  const visitChildId = ctx?.child.id
+  const scrollFormKey = ctx?.currentSubTask.formKey
+  const scrollSubTaskId = ctx?.subTaskId
+
+  useEffect(() => {
+    document.getElementById('wizard-form-scroll-area')?.scrollTo({ top: 0 })
+  }, [scrollFormKey, scrollSubTaskId])
+
+  useEffect(() => {
+    if (visitSubTaskIndex == null || !visitChildId) return
+    dispatch({ type: 'MARK_CHILD_SUB_TASK_VISITED', index: visitSubTaskIndex })
+  }, [visitSubTaskIndex, visitChildId, dispatch])
 
   if (!ctx) return null
 
-  const { child, currentSubTask } = ctx
-  const FormComponent = formComponents[currentSubTask.formKey] ?? null
+  const { child, currentSubTask, subTaskId } = ctx
+  const isAmlKycWorkspace = state.demoViewMode === 'aml' && child.childType === 'kyc'
+  const formKey = currentSubTask.formKey
+  const FormComponent = formComponents[formKey] ?? null
   const description = taskDescriptions[currentSubTask.formKey]
-  const hasExplicitSections = Boolean(taskSections[currentSubTask.formKey]?.length)
-  const hideSyntheticOverview =
-    child.childType === 'kyc' &&
-    (currentSubTask.formKey === 'kyc-child-info' || currentSubTask.formKey === 'kyc-child-documents')
   const inReview = child.status === 'awaiting_review'
   const advisorDisabled = isAdvisorView && !advisorFormsEditable
   const childInReviewerPipeline =
@@ -388,7 +365,13 @@ export function ChildActionContent() {
   const reviewState = getChildReviewState(state, child.id)
   const amlFlagged = reviewState?.amlFlagged
   const amlNotes = reviewState?.amlNotes
-  const formReadOnly = advisorDisabled || isHoTeamAccountOpening
+  const inKycAmlReview =
+    child.childType === 'kyc' &&
+    currentSubTask.formKey === 'kyc-child-info' &&
+    child.status === 'awaiting_review' &&
+    reviewState?.amlReview?.status === 'pending'
+  const formReadOnly =
+    !isAmlKycWorkspace && (advisorDisabled || isHoTeamAccountOpening || inKycAmlReview)
   const hideHeaderDividerInV2 = variant === 'v2' || variant === 'v5'
   const useIncreasedHeaderSpacing =
     variant === 'v2' || variant === 'v3' || variant === 'v4' || variant === 'v5'
@@ -424,13 +407,7 @@ export function ChildActionContent() {
   }, [state.parentSectionFocusId, dispatch])
 
   return (
-    <main
-      className={
-        variant === 'v4'
-          ? 'flex-1 overflow-y-auto overscroll-contain p-8 bg-[#fafafa]'
-          : 'flex-1 overflow-y-auto overscroll-contain p-8'
-      }
-    >
+    <main className={variant === 'v4' ? 'p-8 bg-[#fafafa]' : 'p-8'}>
       <div className="max-w-[52.5rem] mx-auto">
         {inReview && !isAdvisorView && !isHoTeamAccountOpening && child.childType === 'account-opening' && (
           <div className="rounded-lg border border-violet-200 bg-violet-50 dark:border-violet-900/60 dark:bg-violet-950/40 px-4 py-3 mb-6">
@@ -494,13 +471,12 @@ export function ChildActionContent() {
             {description}
           </p>
         )}
-        {!hasExplicitSections && !hideSyntheticOverview ? (
-          <section id="__top__" className="space-y-1.5 scroll-mt-16 mb-6">
-            <h3 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">Overview</h3>
-          </section>
-        ) : null}
         <div className={formReadOnly ? 'pointer-events-none opacity-75 select-none' : ''}>
-          {FormComponent ? <FormComponent /> : <p className="text-muted-foreground">No form available.</p>}
+          {FormComponent ? (
+            <FormComponent key={formKey} />
+          ) : (
+            <p className="text-muted-foreground">No form available.</p>
+          )}
         </div>
       </div>
     </main>

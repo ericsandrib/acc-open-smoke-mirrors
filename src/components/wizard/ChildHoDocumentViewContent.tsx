@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { useWorkflow, useChildActionContext, getChildReviewState } from '@/stores/workflowStore'
+import type { ChildReviewState, RelatedParty, WorkflowState } from '@/types/workflow'
 import { Badge } from '@/components/ui/badge'
 import {
   ChevronDown, Clock, FileText, Shield,
@@ -7,6 +8,82 @@ import {
 } from 'lucide-react'
 import * as Collapsible from '@radix-ui/react-collapsible'
 import { cn } from '@/lib/utils'
+import { getAllOpenAccountsTasks } from '@/utils/openAccountsTaskContext'
+
+const HO_DOC_API_SYNC = 'Custodian document API · batch DOC-2025-4418'
+
+function findKycChildIdForParty(state: WorkflowState, partyId: string, partyName: string): string | undefined {
+  const nameNorm = partyName.trim().toLowerCase()
+  for (const t of getAllOpenAccountsTasks(state)) {
+    for (const c of t.children ?? []) {
+      if (c.childType !== 'kyc') continue
+      const meta = state.taskData[c.id] as Record<string, unknown> | undefined
+      const sid = meta?.kycSubjectPartyId as string | undefined
+      if (sid === partyId) return c.id
+      if (!sid && c.name.trim().toLowerCase() === nameNorm) return c.id
+    }
+  }
+  return undefined
+}
+
+function amlReviewSeverityRank(status: NonNullable<ChildReviewState['amlReview']>['status']): number {
+  switch (status) {
+    case 'escalated':
+      return 0
+    case 'flagged':
+      return 1
+    case 'info_requested':
+      return 2
+    case 'pending':
+      return 3
+    case 'cleared':
+      return 4
+    default:
+      return 5
+  }
+}
+
+function pickWorstAmlReview(
+  reviews: NonNullable<ChildReviewState['amlReview']>[],
+): NonNullable<ChildReviewState['amlReview']> | null {
+  if (reviews.length === 0) return null
+  return reviews.reduce((worst, cur) =>
+    amlReviewSeverityRank(cur.status) < amlReviewSeverityRank(worst.status) ? cur : worst,
+  )
+}
+
+function formatAmlReviewLabel(aml: NonNullable<ChildReviewState['amlReview']>): string {
+  switch (aml.status) {
+    case 'pending':
+      return 'Pending AML Review'
+    case 'cleared':
+      return 'AML Cleared'
+    case 'flagged':
+      return 'AML Flagged'
+    case 'info_requested':
+      return 'AML — Information Requested'
+    case 'escalated':
+      return 'AML Escalated (SAR)'
+    default:
+      return 'AML Review'
+  }
+}
+
+function amlReviewBadgeClassName(status: NonNullable<ChildReviewState['amlReview']>['status']): string {
+  switch (status) {
+    case 'pending':
+      return 'border-transparent bg-violet-50 text-violet-700 dark:bg-violet-950/40 dark:text-violet-200'
+    case 'cleared':
+      return 'border-green-200 bg-green-50 text-green-800 dark:bg-green-950/40 dark:text-green-200'
+    case 'flagged':
+    case 'escalated':
+      return 'border-red-200 bg-red-50/40 text-red-800 dark:bg-red-950/25 dark:text-red-200'
+    case 'info_requested':
+      return 'border-amber-200 bg-amber-50 text-amber-800 dark:bg-amber-950/40 dark:text-amber-100'
+    default:
+      return 'border-border bg-muted text-muted-foreground'
+  }
+}
 
 /** Demo: document intake as if returned from custodian / document API (all verified). */
 const HO_DOC_API_CHECKLIST: { name: string; detail: string }[] = [
@@ -15,8 +92,6 @@ const HO_DOC_API_CHECKLIST: { name: string; detail: string }[] = [
   { name: 'Government-Issued ID', detail: 'IDology pass · image quality OK' },
   { name: 'Proof of Address', detail: 'Utility bill on file' },
 ]
-
-const HO_DOC_API_SYNC = 'Custodian document API · batch DOC-2025-4418'
 
 function ReviewRow({ label, value }: { label: string; value?: string | null }) {
   if (!value) return null
@@ -106,8 +181,23 @@ export function ChildHoDocumentViewContent() {
 
   const docsStep = subTaskData.find((s) => s.suffix === 'documents-review')
 
+  const ownerParties = fallbackOwners.filter(Boolean) as RelatedParty[]
+
+  const accountAml = reviewState?.amlReview
+  const perOwner = ownerParties.map((owner) => {
+    const kycId = findKycChildIdForParty(state, owner.id, owner.name ?? '')
+    const aml = kycId ? getChildReviewState(state, kycId)?.amlReview : undefined
+    return { owner, aml }
+  })
+  const mergedAml: NonNullable<ChildReviewState['amlReview']>[] = []
+  if (accountAml?.status) mergedAml.push(accountAml)
+  for (const { aml } of perOwner) {
+    if (aml?.status) mergedAml.push(aml)
+  }
+  const householdAmlSnapshot = { worst: pickWorstAmlReview(mergedAml), perOwner }
+
   return (
-    <main className="flex-1 overflow-y-auto p-8">
+    <main className="p-8">
       <div className="max-w-3xl mx-auto space-y-6">
         <div className="space-y-1">
           <h2 className="text-2xl font-semibold text-foreground">Document Review</h2>
@@ -116,6 +206,26 @@ export function ChildHoDocumentViewContent() {
             Check completeness, accuracy, and flag any discrepancies.
           </p>
         </div>
+
+        {householdAmlSnapshot.worst ? (
+          <div className="rounded-lg border border-border bg-muted/20 px-4 py-3 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+            <div className="min-w-0">
+              <p className="text-[11px] font-medium text-muted-foreground uppercase tracking-wide">AML screening</p>
+              <p className="text-sm text-muted-foreground mt-0.5">
+                Aggregate AML review status for this account and linked KYC subjects.
+              </p>
+            </div>
+            <Badge
+              variant="outline"
+              className={cn(
+                'text-xs font-medium shrink-0 border shadow-none',
+                amlReviewBadgeClassName(householdAmlSnapshot.worst.status),
+              )}
+            >
+              {formatAmlReviewLabel(householdAmlSnapshot.worst)}
+            </Badge>
+          </div>
+        ) : null}
 
 
         <div className="space-y-3">
@@ -198,14 +308,30 @@ export function ChildHoDocumentViewContent() {
 
           <AccordionSection title="KYC / ID Verification" icon={Shield}>
             <div className="space-y-0">
-              {kycRows.map((owner) => (
-                <div key={owner.id} className="flex items-center justify-between py-2 text-sm border-b border-border last:border-0">
-                  <span>{owner.name}</span>
-                  <Badge variant="secondary" className="text-[10px] px-1.5 py-0 bg-green-100 text-green-800 border-green-200">
-                    Verified · CIP API
-                  </Badge>
-                </div>
-              ))}
+              {kycRows.map((row) => {
+                const aml = householdAmlSnapshot.perOwner.find((x) => x.owner.id === row.id)?.aml
+                return (
+                  <div
+                    key={row.id}
+                    className="flex flex-col gap-2 py-2 text-sm border-b border-border last:border-0 sm:flex-row sm:items-center sm:justify-between"
+                  >
+                    <span className="font-medium text-foreground">{row.name}</span>
+                    <div className="flex flex-wrap items-center gap-1.5 sm:justify-end">
+                      {aml?.status ? (
+                        <Badge
+                          variant="outline"
+                          className={cn('text-[10px] px-1.5 py-0 border shadow-none', amlReviewBadgeClassName(aml.status))}
+                        >
+                          {formatAmlReviewLabel(aml)}
+                        </Badge>
+                      ) : null}
+                      <Badge variant="secondary" className="text-[10px] px-1.5 py-0 bg-green-100 text-green-800 border-green-200">
+                        Verified · CIP API
+                      </Badge>
+                    </div>
+                  </div>
+                )
+              })}
             </div>
           </AccordionSection>
 
@@ -219,6 +345,27 @@ export function ChildHoDocumentViewContent() {
                 <span className="text-muted-foreground">Document package indexed</span>
                 <span>{state.submittedAt ?? 'Sync complete'}</span>
               </div>
+              {householdAmlSnapshot.worst && (
+                <div className="flex items-center justify-between py-1.5 border-b border-border gap-2">
+                  <span className="text-muted-foreground">AML screening (aggregate)</span>
+                  <span className="flex items-center gap-2 shrink-0 text-right">
+                    <Badge
+                      variant="outline"
+                      className={cn(
+                        'text-[10px] border shadow-none',
+                        amlReviewBadgeClassName(householdAmlSnapshot.worst.status),
+                      )}
+                    >
+                      {formatAmlReviewLabel(householdAmlSnapshot.worst)}
+                    </Badge>
+                    {householdAmlSnapshot.worst.decidedAt ? (
+                      <span className="text-foreground tabular-nums">{householdAmlSnapshot.worst.decidedAt}</span>
+                    ) : (
+                      <span className="text-muted-foreground">—</span>
+                    )}
+                  </span>
+                </div>
+              )}
               {docReview?.decidedAt && (
                 <div className="flex items-center justify-between py-1.5 border-b border-border">
                   <span className="text-muted-foreground">Document Review {docReview.status === 'igo' ? 'Accepted' : docReview.status === 'nigo' ? 'Rejected' : 'IGO'}</span>

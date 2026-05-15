@@ -1,7 +1,10 @@
 import { useMemo } from 'react'
 import { useChildActionContext, useTaskData, useWorkflow } from '@/stores/workflowStore'
 import { useSupportingDocumentPreview } from '@/components/wizard/supportingDocumentPreviewContext'
-import { Label } from '@/components/ui/label'
+import {
+  REVIEWER_ADDITIONAL_CONTEXT_KEY,
+  ReviewerAdditionalContextSection,
+} from '@/components/wizard/forms/ReviewerAdditionalContextSection'
 import { Button } from '@/components/ui/button'
 import { FileText, FolderOpen } from 'lucide-react'
 import { EsignFormPdfSampleActions } from '@/components/wizard/EsignFormPdfSampleActions'
@@ -413,39 +416,15 @@ export function AcctChildDocumentsReviewForm() {
               )
             })}
           </div>
-        </div>
-      </section>
-
-      <section id="acct-docs-notes" className="space-y-4 scroll-mt-16">
-        <div
-          className={cn(
-            'space-y-6',
-            isCardVariant &&
-              cn(
-                'rounded-xl p-6 space-y-6 overflow-hidden',
-                isVersion2 && 'border border-foreground/30 bg-background',
-                isVersion3 && 'v3-card-inner-strokes border border-foreground/20 bg-[#fafafa]',
-                isVersion4 && 'border border-foreground/30 bg-white',
-              ),
-          )}
-        >
-          <div>
-            <h3 className={childSectionTitleClass}>
-              Exceptions / notes
-            </h3>
-            <p className={childSectionBodyClass}>
-              Add any document exceptions, delivery notes, or review context for this account.
-            </p>
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="acct-docs-exceptions-notes" className="sr-only">Exceptions / notes</Label>
-            <textarea
-              id="acct-docs-exceptions-notes"
-              className="flex min-h-[88px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
-              value={(data.exceptionsNotes as string) ?? ''}
-              onChange={(e) => updateField('exceptionsNotes', e.target.value)}
-            />
-          </div>
+          <ReviewerAdditionalContextSection
+            idPrefix="acct-docs"
+            value={
+              (openAccountsData[REVIEWER_ADDITIONAL_CONTEXT_KEY] as string) ??
+              (data.exceptionsNotes as string) ??
+              ''
+            }
+            onChange={(value) => updateOpenAccountsField(REVIEWER_ADDITIONAL_CONTEXT_KEY, value)}
+          />
         </div>
       </section>
     </div>

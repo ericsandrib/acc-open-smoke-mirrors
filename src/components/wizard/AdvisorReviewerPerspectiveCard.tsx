@@ -78,7 +78,9 @@ function readPersistedPosition(): Position {
 function documentReviewDemoMode(
   inChildAction: boolean,
   childType: string | undefined,
+  onOnboardingList: boolean,
 ): 'ho-documents' | 'ho-kyc' {
+  if (onOnboardingList) return 'ho-documents'
   if (inChildAction && childType === 'kyc') return 'ho-kyc'
   return 'ho-documents'
 }
@@ -129,8 +131,19 @@ export function AdvisorReviewerPerspectiveCard() {
   const onOnboardingListOrDetail =
     location.pathname === '/onboarding' || location.pathname.startsWith('/onboarding/')
 
-  const amlAvailable = (inChildAction && childType === 'kyc') || onOnboardingListOrDetail
-  const principalUnavailable = inChildAction && childType === 'kyc'
+  const onServicingWizard =
+    /^\/servicing\/[^/]+$/.test(location.pathname) && !location.pathname.endsWith('/servicing')
+
+  const hasKycSubjects = state.tasks.some((t) =>
+    (t.children ?? []).some((c) => c.childType === 'kyc'),
+  )
+
+  const amlAvailable =
+    (inChildAction && childType === 'kyc') ||
+    onOnboardingListOrDetail ||
+    (onServicingWizard && !inChildAction && hasKycSubjects)
+  /** Principal applies to account opening — only block inside an active KYC child wizard, not on onboarding lists. */
+  const principalUnavailable = inChildAction && childType === 'kyc' && !onOnboardingListOrDetail
 
   useEffect(() => {
     if (typeof window === 'undefined') return
@@ -243,7 +256,10 @@ export function AdvisorReviewerPerspectiveCard() {
           </DropdownMenuItem>
           <DropdownMenuItem
             onSelect={() =>
-              dispatch({ type: 'SET_DEMO_VIEW', mode: documentReviewDemoMode(inChildAction, childType) })
+              dispatch({
+                type: 'SET_DEMO_VIEW',
+                mode: documentReviewDemoMode(inChildAction, childType, onOnboardingListOrDetail),
+              })
             }
             className={cn(
               'flex items-center gap-2 border-l-2 border-l-transparent pl-2 text-sm',
@@ -273,7 +289,7 @@ export function AdvisorReviewerPerspectiveCard() {
             disabled={!amlAvailable}
             title={
               !amlAvailable
-                ? 'Open a KYC subject in review, or go to the Onboarding page, to use AML Team view.'
+                ? 'Open a KYC subject on this journey, or go to Onboarding, to use AML Team view.'
                 : undefined
             }
             onSelect={() => dispatch({ type: 'SET_DEMO_VIEW', mode: 'aml' })}

@@ -19,6 +19,11 @@ const ACCOUNT_OPENING_STAGES: TimelineStage[] = [
   { label: 'Draft', description: 'Capture client & account data, validate, and perform ID verification.', matchStatuses: ['not_started', 'in_progress'] },
   { label: 'Client Signature', description: 'Combined eSign package generated and sent to client for signature.', matchStatuses: [] },
   { label: 'Submitted', description: 'Account application submitted to Home Office for review.', matchStatuses: ['awaiting_review'] },
+  {
+    label: 'Clarification / Document Required',
+    description: 'Review team requested clarification or additional documents from the advisor.',
+    matchStatuses: ['ao_clarification_required'],
+  },
   { label: 'Document Review', description: 'Document Review Team verifies completeness of all account documents.', matchStatuses: ['doc_review_pending'] },
   { label: 'Principal Review', description: 'Principal Review Team performs final approval and oversight.', matchStatuses: ['principal_review_pending', 'rejected'] },
   { label: 'Pending Release', description: 'Both reviews passed — account approved (IGO). Preparing for release to Pershing.', matchStatuses: [] },
@@ -30,7 +35,12 @@ const KYC_STAGES: TimelineStage[] = [
   { label: 'ID Verification', description: 'Identity verification performed by Avantos.', matchStatuses: [] },
   { label: 'Submitted', description: 'ID verification documents submitted for compliance review.', matchStatuses: ['awaiting_review'] },
   { label: 'AML Review', description: 'AML Team reviews watchlist codes against OFAC and KYC platforms.', matchStatuses: ['aml_pending', 'aml_flagged', 'rejected'] },
-  { label: 'Document Review', description: 'Review KYC documents and verification data for completeness.', matchStatuses: ['ho_kyc_pending', 'ho_kyc_changes_requested'] },
+  {
+    label: 'Clarification / Document Required',
+    description: 'Review team requested clarification or additional documents from the advisor.',
+    matchStatuses: ['kyc_clarification_required'],
+  },
+  { label: 'Document Review', description: 'Review KYC documents and verification data for completeness.', matchStatuses: ['ho_kyc_pending'] },
   { label: 'Complete', description: 'Identity verified. No further KYC action required.', matchStatuses: ['complete'] },
 ]
 
@@ -52,9 +62,17 @@ function deriveEffectiveStatus(
     const amlStatus = reviewState?.amlReview?.status
     const hoKycStatus = reviewState?.hoKycReview?.status
 
+    if (
+      (rawStatus === 'in_progress' || rawStatus === 'not_started' || rawStatus === 'rejected') &&
+      (amlStatus === 'flagged' ||
+        amlStatus === 'info_requested' ||
+        hoKycStatus === 'changes_requested')
+    ) {
+      return 'kyc_clarification_required'
+    }
+
     if (rawStatus === 'rejected') {
-      if (amlStatus === 'flagged' || amlStatus === 'escalated') return 'rejected'
-      if (hoKycStatus === 'changes_requested') return 'ho_kyc_changes_requested'
+      if (amlStatus === 'escalated') return 'rejected'
       return 'rejected'
     }
 
@@ -73,7 +91,7 @@ function deriveEffectiveStatus(
     return rawStatus
   }
 
-  if (rawStatus !== 'awaiting_review' && rawStatus !== 'rejected') {
+  if (rawStatus !== 'awaiting_review' && rawStatus !== 'rejected' && rawStatus !== 'in_progress' && rawStatus !== 'not_started') {
     return rawStatus
   }
 
@@ -81,10 +99,15 @@ function deriveEffectiveStatus(
   const docStatus = reviewState?.documentReview?.status
   const principalStatus = reviewState?.principalReview?.status
 
+  if (
+    (rawStatus === 'in_progress' || rawStatus === 'not_started' || rawStatus === 'rejected') &&
+    (docStatus === 'nigo' || principalStatus === 'nigo')
+  ) {
+    return 'ao_clarification_required'
+  }
+
   if (rawStatus === 'rejected') {
     if (amlStatus === 'flagged' || amlStatus === 'escalated') return 'rejected'
-    if (principalStatus === 'nigo') return 'rejected'
-    if (docStatus === 'nigo') return 'rejected'
     return 'rejected'
   }
 
@@ -133,12 +156,6 @@ function getReviewNotesForStage(
   if (!reviewState) return []
 
   if (stageLabel === 'Document Review') {
-    if (childType === 'kyc' && reviewState.hoKycReview?.status === 'changes_requested') {
-      return reviewState.hoKycReview.comments
-        ? [{ label: 'Reviewer comments', value: reviewState.hoKycReview.comments }]
-        : []
-    }
-
     if (reviewState.documentReview?.status === 'nigo') {
       return [
         reviewState.documentReview.nigoReason
@@ -162,13 +179,45 @@ function getReviewNotesForStage(
     ].filter((note): note is { label: string; value: string } => Boolean(note))
   }
 
-  if (stageLabel === 'AML Review') {
+  if (
+    stageLabel === 'AML Review' ||
+    stageLabel === 'Clarification / Document Required'
+  ) {
+    if (reviewState.documentReview?.status === 'nigo') {
+      return [
+        reviewState.documentReview.nigoReason
+          ? { label: 'Reason', value: reviewState.documentReview.nigoReason }
+          : null,
+        reviewState.documentReview.nigoFeedback
+          ? { label: 'Feedback', value: reviewState.documentReview.nigoFeedback }
+          : null,
+      ].filter((note): note is { label: string; value: string } => Boolean(note))
+    }
+
+    if (reviewState.principalReview?.status === 'nigo') {
+      return [
+        reviewState.principalReview.nigoReason
+          ? { label: 'Reason', value: reviewState.principalReview.nigoReason }
+          : null,
+        reviewState.principalReview.nigoFeedback
+          ? { label: 'Feedback', value: reviewState.principalReview.nigoFeedback }
+          : null,
+      ].filter((note): note is { label: string; value: string } => Boolean(note))
+    }
     if (reviewState.amlReview?.status === 'flagged' && reviewState.amlReview.findings) {
       return [{ label: 'Correction reason', value: reviewState.amlReview.findings }]
     }
 
     if (reviewState.amlReview?.status === 'info_requested' && reviewState.amlReview.infoRequestComments) {
       return [{ label: 'Request', value: reviewState.amlReview.infoRequestComments }]
+    }
+
+    if (
+      childType === 'kyc' &&
+      reviewState.hoKycReview?.status === 'changes_requested' &&
+      reviewState.hoKycReview.comments
+    ) {
+      return [{ label: 'Reviewer comments', value: reviewState.hoKycReview.comments }]
     }
 
     if (reviewState.amlReview?.status === 'escalated' && reviewState.amlReview.reason) {

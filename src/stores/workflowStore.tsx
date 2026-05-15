@@ -18,6 +18,11 @@ import {
   seedOpenAccountsAdditionalInstructions,
 } from '@/data/seed'
 import { seededJourneys } from '@/data/servicingSeed'
+import {
+  isHoDemoServicingJourneyId,
+  JOHN_SMITH_ONBOARDING_JOURNEY_ID,
+  JOHN_SMITH_ONBOARDING_JOURNEY_NAME,
+} from '@/data/defaultOnboardingJourney'
 import type { JourneyAction, JourneyStatus } from '@/types/servicing'
 import {
   getChildSubTaskIds,
@@ -30,12 +35,14 @@ import {
   OPEN_ACCOUNTS_WITH_ANNUITY_FORM_KEY,
 } from '@/utils/openAccountsTaskContext'
 import { resolveJourneyEntryTaskIdAfterInit } from '@/utils/journeyEntryTask'
+import { bumpChildHighWaterMark } from '@/utils/childSubTaskProgress'
 import { generateAccountOpenIdentifiers } from '@/utils/accountOpenIdentifiers'
 import { mergeFeatureRequests } from '@/types/featureRequests'
 import {
   advisorIdentitySimPassDisplay,
   getAdvisorIdentitySimDisplay,
 } from '@/utils/advisorIdentityVerificationSimDisplay'
+import { getKycChildIdsForSignedAccountChildren } from '@/utils/postEnvelopeSignatureAml'
 
 /** Dev-only simulation keys must not be persisted with workflow localStorage. */
 function stripAdvisorIdentityDemoSimulationForStorage(state: WorkflowState): WorkflowState {
@@ -105,9 +112,7 @@ function stampLastAmlRunForKycChild(state: WorkflowState, childId: string): Work
   return state.relatedParties.map((p) => (p.id === partyId ? { ...p, lastAmlRunAt: isoDate } : p))
 }
 
-/** KYC-only demo views — invalid when drilling into account opening (or similar) children. */
-const KYC_DEMO_VIEW_MODES = new Set(['aml', 'ho-kyc'])
-/** Account HO demo views — invalid when drilling into a KYC child. */
+/** Account HO demo views — preserved when drilling into account-opening family children. */
 const ACCOUNT_HO_DEMO_VIEW_MODES = new Set(['ho-documents', 'ho-principal'])
 
 function sanitizeDemoViewModeForChild(
@@ -120,14 +125,21 @@ function sanitizeDemoViewModeForChild(
     return childType === 'kyc' ? 'ho-kyc' : 'advisor'
   }
   if (childType === 'kyc') {
-    return ACCOUNT_HO_DEMO_VIEW_MODES.has(mode) ? 'advisor' : mode
+    /** Account-opening HO lanes map to the KYC document-review shell; keep principal label in the demo card. */
+    if (mode === 'ho-documents') return 'ho-kyc'
+    if (mode === 'ho-principal') return 'ho-principal'
+    return mode
   }
   if (
     childType === 'account-opening' ||
     childType === 'funding-line' ||
     childType === 'feature-service-line'
   ) {
-    return KYC_DEMO_VIEW_MODES.has(mode) ? 'advisor' : mode
+    if (ACCOUNT_HO_DEMO_VIEW_MODES.has(mode)) return mode
+    /** KYC document-review lane → account document-review lane (not advisor). */
+    if (mode === 'ho-kyc') return 'ho-documents'
+    if (mode === 'aml') return 'advisor'
+    return mode
   }
   return mode
 }
@@ -176,8 +188,39 @@ const initialState: WorkflowState = {
     }
   })(),
   assignedTo: 'Sarah Chen',
+  journeyId: JOHN_SMITH_ONBOARDING_JOURNEY_ID,
+  journeyName: JOHN_SMITH_ONBOARDING_JOURNEY_NAME,
+  journeyStartedAt: '2026-05-15T12:00:00.000Z',
   v5NoAnnuityOpenAccountsPage: null,
   v6IncludeAnnuityAccounts: false,
+}
+
+function isJohnSmithPrimaryHousehold(state: WorkflowState): boolean {
+  const primary =
+    state.relatedParties.find((p) => p.isPrimary) ??
+    state.relatedParties.find((p) => p.type === 'household_member') ??
+    state.relatedParties[0]
+  if (!primary) return false
+  if (primary.id === 'member-1') return true
+  const name = `${primary.firstName ?? ''} ${primary.lastName ?? ''}`.trim() || primary.name
+  return name.toLowerCase() === 'john smith'
+}
+
+/**
+ * Stale localStorage sometimes kept a Document Review demo `journeyId` while related parties
+ * still reflected the default John Smith household — the onboarding list then showed John Smith
+ * in Relationship but opened the wrong journey template on click.
+ */
+function repairJohnSmithDefaultJourney(state: WorkflowState): WorkflowState {
+  if (!isJohnSmithPrimaryHousehold(state)) return state
+  if (state.journeyId === JOHN_SMITH_ONBOARDING_JOURNEY_ID) return state
+  if (state.journeyId && !isHoDemoServicingJourneyId(state.journeyId)) return state
+  return {
+    ...state,
+    journeyId: JOHN_SMITH_ONBOARDING_JOURNEY_ID,
+    journeyName: JOHN_SMITH_ONBOARDING_JOURNEY_NAME,
+    journeyStartedAt: state.journeyStartedAt ?? '2026-05-15T12:00:00.000Z',
+  }
 }
 
 const WORKFLOW_STORAGE_KEY = 'demo-workflow-state'
@@ -205,8 +248,12 @@ function getInitialWorkflowState(): WorkflowState {
        */
       v6IncludeAnnuityAccounts:
         variant === 'v6' ? false : parsed.v6IncludeAnnuityAccounts === true,
+      /** Recompute so split-journey tasks (e.g. `open-accounts-annuity`) are never missing vs stale `flatTaskOrder`. */
+      flatTaskOrder: computeFlatTaskOrder(parsed.tasks, parsed.actions),
     }
-    return normalizeV6AnnuityActiveTask(merged)
+    const rehydrated = rehydrateOpenAccountsChildrenForServicingSeedJourney(merged)
+    const repaired = repairJohnSmithDefaultJourney(rehydrated)
+    return normalizeV6AnnuityActiveTask(repaired)
   } catch {
     return initialState
   }
@@ -298,14 +345,15 @@ function findServicingGrandchildren(journeyId: string | undefined): JourneyActio
 }
 
 /**
- * Queue/table opens use {@link INITIALIZE_FROM_RELATIONSHIP}, which previously cleared all task
- * `children` and defaulted to a non–split Open Accounts shape — so the wizard showed a single task
- * with no nested KYC / account lines. Seed a minimal demo tree so the full sidebar + Open Accounts
- * hub match the default persisted demo.
+ * Queue/table opens use {@link INITIALIZE_FROM_RELATIONSHIP}, which clears task `children` before
+ * this helper runs.
  *
  * When the journey exists in {@link seededJourneys} with nested servicing actions that carry
- * {@link JourneyAction.childId}, those ids are copied into workflow children so `?childId=` deep
- * links from the Document Review table resolve via {@link ENTER_CHILD_ACTION}.
+ * {@link JourneyAction.childId}, those lines are copied onto the in-app (non-annuity) Open Accounts
+ * task so `?childId=` deep links from the Document Review table resolve via {@link ENTER_CHILD_ACTION}.
+ *
+ * For journeys **not** in that seed (e.g. a newly created onboarding relationship), Open Accounts
+ * starts with **no** child workflows until the advisor adds accounts from the picker.
  */
 function seedDemoOpenAccountsChildrenForRelationshipInit(
   tasks: Task[],
@@ -316,16 +364,10 @@ function seedDemoOpenAccountsChildrenForRelationshipInit(
     relatedParties.find((p) => p.isPrimary) ??
     relatedParties.find((p) => p.type === 'household_member') ??
     relatedParties[0]
-  const primaryName =
-    primary?.name?.trim() ||
-    primary?.organizationName?.trim() ||
-    [primary?.firstName, primary?.lastName].filter(Boolean).join(' ').trim() ||
-    'Household member'
   const partyId = primary?.id ?? 'member-1'
   const kycSubjectType = primary?.type === 'related_organization' ? 'entity' : 'individual'
 
   const slug = (journeyId ?? 'seed').replace(/[^a-zA-Z0-9]+/g, '-')
-  const kycCfg = getChildTypeConfig('kyc')
   const acctCfg = getChildTypeConfig('account-opening')
   const taskDataPatch: Record<string, Record<string, unknown>> = {}
 
@@ -363,34 +405,7 @@ function seedDemoOpenAccountsChildrenForRelationshipInit(
       })
     }
 
-    const kycChildId = `${kycCfg.idPrefix}-rel-${slug}`
-    const acctChildId = `${acctCfg.idPrefix}-rel-${slug}`
-    taskDataPatch[kycChildId] = {
-      kycSubjectPartyId: partyId,
-      kycSubjectType,
-    }
-    const gen = generateAccountOpenIdentifiers('Non-annuity brokerage account', acctChildId)
-    taskDataPatch[acctChildId] = {
-      accountNumber: gen.accountNumber,
-      shortName: gen.shortName,
-      featureRequests: mergeFeatureRequests(undefined),
-    }
-    return [
-      {
-        id: kycChildId,
-        name: `${primaryName} — KYC`,
-        status: 'not_started' as const,
-        formKey: kycCfg.idPrefix,
-        childType: 'kyc' as const,
-      },
-      {
-        id: acctChildId,
-        name: 'Non-annuity brokerage account',
-        status: 'not_started' as const,
-        formKey: acctCfg.idPrefix,
-        childType: 'account-opening' as const,
-      },
-    ]
+    return []
   }
 
   const nonAnnuityChildren = buildNonAnnuityChildren()
@@ -405,6 +420,9 @@ function seedDemoOpenAccountsChildrenForRelationshipInit(
     if (t.formKey === OPEN_ACCOUNTS_WITH_ANNUITY_FORM_KEY) {
       const existing = t.children ?? []
       if (existing.some((c) => c.childType === 'account-opening')) return t
+      if (servicingGrandchildren.length === 0) {
+        return { ...t, children: [] }
+      }
       const acctChildId = `${acctCfg.idPrefix}-annuity-rel-${slug}`
       const gen = generateAccountOpenIdentifiers('Annuity contract account', acctChildId)
       taskDataPatch[acctChildId] = {
@@ -431,6 +449,32 @@ function seedDemoOpenAccountsChildrenForRelationshipInit(
   return { tasks: next, taskDataPatch }
 }
 
+/**
+ * Some refreshes left Open Accounts with no `children` while `journeyId` still matches a servicing
+ * document-review seed (nested KYC / account lines). Graft children + taskData from the same helper
+ * used at journey init so AML/KYC rows resolve again.
+ */
+function rehydrateOpenAccountsChildrenForServicingSeedJourney(state: WorkflowState): WorkflowState {
+  const journeyId = state.journeyId
+  if (!journeyId) return state
+  if (findServicingGrandchildren(journeyId).length === 0) return state
+
+  const openTask = state.tasks.find((t) => t.formKey === OPEN_ACCOUNTS_FORM_KEY)
+  if (!openTask || (openTask.children?.length ?? 0) > 0) return state
+
+  const { tasks, taskDataPatch } = seedDemoOpenAccountsChildrenForRelationshipInit(
+    state.tasks,
+    state.relatedParties,
+    journeyId,
+  )
+  return {
+    ...state,
+    tasks,
+    taskData: { ...state.taskData, ...taskDataPatch },
+    flatTaskOrder: computeFlatTaskOrder(tasks, state.actions),
+  }
+}
+
 function nextV5NoAnnuityPageForActiveTask(
   state: WorkflowState,
   newTaskId: string,
@@ -448,6 +492,50 @@ function nextV5NoAnnuityPageForActiveTask(
   return state.v5NoAnnuityOpenAccountsPage ?? 'instructions'
 }
 
+function findActiveChild(state: WorkflowState): ChildTask | undefined {
+  if (!state.activeChildActionId) return undefined
+  return state.tasks
+    .flatMap((t) => t.children ?? [])
+    .find((c) => c.id === state.activeChildActionId)
+}
+
+/** Keep sidebar + main pane aligned when reviewer demo mode changes (suffix-based). */
+function remapChildSubTaskIndexForDemoView(
+  state: WorkflowState,
+  nextDemoViewMode: WorkflowState['demoViewMode'],
+): number | undefined {
+  const child = findActiveChild(state)
+  if (!child) return undefined
+
+  const nextVisible = getVisibleChildSubTasks(child.childType, nextDemoViewMode, child.status)
+  if (nextVisible.length === 0) return undefined
+
+  const prevVisible = getVisibleChildSubTasks(child.childType, state.demoViewMode, child.status)
+  const raw = state.activeChildSubTaskIndex ?? 0
+  const clampedPrev = Math.min(Math.max(0, raw), Math.max(prevVisible.length - 1, 0))
+  const suffix = prevVisible[clampedPrev]?.suffix
+
+  let idx = suffix != null ? nextVisible.findIndex((s) => s.suffix === suffix) : clampedPrev
+  if (idx < 0) {
+    if (suffix === 'aml-review' || suffix === 'aml-results') {
+      const documentsIdx = nextVisible.findIndex((s) => s.suffix === 'documents')
+      idx = documentsIdx >= 0 ? documentsIdx : 0
+    } else {
+      idx = Math.min(clampedPrev, nextVisible.length - 1)
+    }
+  }
+
+  return Math.min(Math.max(0, idx), nextVisible.length - 1)
+}
+
+function clampChildSubTaskIndex(state: WorkflowState, index: number): number | undefined {
+  const child = findActiveChild(state)
+  if (!child) return undefined
+  const visible = getVisibleChildSubTasks(child.childType, state.demoViewMode, child.status)
+  if (visible.length === 0) return undefined
+  return Math.min(Math.max(0, index), visible.length - 1)
+}
+
 function workflowReducer(state: WorkflowState, action: WorkflowAction): WorkflowState {
   switch (action.type) {
     case 'SET_ACTIVE_TASK': {
@@ -456,22 +544,23 @@ function workflowReducer(state: WorkflowState, action: WorkflowAction): Workflow
         redirectedId !== action.taskId &&
         state.tasks.find((t) => t.id === action.taskId)?.formKey ===
           OPEN_ACCOUNTS_WITH_ANNUITY_FORM_KEY
-      const taskExists = state.flatTaskOrder.includes(redirectedId)
-      if (!taskExists) return state
+      const taskInGraph = state.tasks.some((t) => t.id === redirectedId)
+      if (!taskInGraph) return state
+      const reconciledOrder = computeFlatTaskOrder(state.tasks, state.actions)
+      if (!reconciledOrder.includes(redirectedId)) return state
       const newTasks = state.tasks.map((t) =>
         t.id === redirectedId ? { ...t, unread: false } : t
       )
-      const activatedAnnuityTask =
-        state.tasks.find((t) => t.id === redirectedId)?.formKey === OPEN_ACCOUNTS_WITH_ANNUITY_FORM_KEY
       return {
         ...state,
         activeTaskId: redirectedId,
         tasks: newTasks,
+        flatTaskOrder: reconciledOrder,
         /** Match {@link GO_TO_TASK}: picking a top-level journey task always exits a child workflow. */
         activeChildActionId: undefined,
         activeChildSubTaskIndex: undefined,
         childActionResume: undefined,
-        ...(activatedAnnuityTask ? { v6IncludeAnnuityAccounts: false } : {}),
+        /** v6: do not set {@link WorkflowState.v6IncludeAnnuityAccounts} here — the annuity-order task defaults to No until the advisor chooses Yes in {@link OpenAccountsForm}. */
         v5NoAnnuityOpenAccountsPage: blockedAnnuityNavigation
           ? 'envelopes'
           : nextV5NoAnnuityPageForActiveTask(state, redirectedId),
@@ -501,20 +590,20 @@ function workflowReducer(state: WorkflowState, action: WorkflowAction): Workflow
         redirectedId !== action.taskId &&
         state.tasks.find((t) => t.id === action.taskId)?.formKey ===
           OPEN_ACCOUNTS_WITH_ANNUITY_FORM_KEY
-      if (!state.flatTaskOrder.includes(redirectedId)) return state
+      if (!state.tasks.some((t) => t.id === redirectedId)) return state
+      const reconciledGoOrder = computeFlatTaskOrder(state.tasks, state.actions)
+      if (!reconciledGoOrder.includes(redirectedId)) return state
       const goToTasks = state.tasks.map((t) =>
         t.id === redirectedId ? { ...t, unread: false } : t
       )
-      const activatedAnnuityTask =
-        state.tasks.find((t) => t.id === redirectedId)?.formKey === OPEN_ACCOUNTS_WITH_ANNUITY_FORM_KEY
       return {
         ...state,
         activeTaskId: redirectedId,
         tasks: goToTasks,
+        flatTaskOrder: reconciledGoOrder,
         activeChildActionId: undefined,
         activeChildSubTaskIndex: undefined,
         childActionResume: undefined,
-        ...(activatedAnnuityTask ? { v6IncludeAnnuityAccounts: false } : {}),
         v5NoAnnuityOpenAccountsPage: blockedAnnuityNavigation
           ? 'envelopes'
           : nextV5NoAnnuityPageForActiveTask(state, redirectedId),
@@ -686,7 +775,7 @@ function workflowReducer(state: WorkflowState, action: WorkflowAction): Workflow
         flatTaskOrder: spawnOrder,
         activeChildActionId: newChildId,
         activeChildSubTaskIndex: 0,
-        demoViewMode: sanitizeDemoViewModeForChild('advisor', action.childType),
+        demoViewMode: sanitizeDemoViewModeForChild(state.demoViewMode ?? 'advisor', action.childType),
         childHighWaterMark: spawnHwm,
       }
     }
@@ -922,7 +1011,8 @@ function workflowReducer(state: WorkflowState, action: WorkflowAction): Workflow
         relatedParties: structuredClone(action.relatedParties),
         financialAccounts: structuredClone(action.financialAccounts),
         activeTaskId: entryTaskId,
-        demoViewMode: state.demoViewMode,
+        /** Preserve reviewer/advisor perspective while navigating between journeys and workflows. */
+        demoViewMode: state.demoViewMode ?? 'advisor',
         flatTaskOrder: newOrder,
         taskData: {
           'client-info': structuredClone(action.clientInfo),
@@ -932,6 +1022,7 @@ function workflowReducer(state: WorkflowState, action: WorkflowAction): Workflow
         },
         journeyName: action.journeyName,
         journeyId: action.journeyId ?? `journey-${Date.now()}`,
+        journeyStartedAt: new Date().toISOString(),
         ...(() => {
           const journeyDue = new Date()
           journeyDue.setDate(journeyDue.getDate() + 30)
@@ -1027,27 +1118,20 @@ function workflowReducer(state: WorkflowState, action: WorkflowAction): Workflow
           enteredChild.status === 'complete' ||
           enteredChild.status === 'canceled' ||
           enteredChild.status === 'rejected')
-      const isAwaitingReview = enteredChild?.status === 'awaiting_review'
-      const isAccountOpeningAwaiting = isAwaitingReview && enteredChild?.childType === 'account-opening'
       const seedTime = new Date().toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })
-      const nextDemoRaw =
-        !childInReviewerPipeline
-          ? 'advisor'
-          : isAwaitingReview
-          ? isAccountOpeningAwaiting
-            ? (state.demoViewMode ?? 'ho-documents')
-            : (state.demoViewMode ?? 'advisor')
-          : (state.demoViewMode ?? 'advisor')
       const enterIdx = action.subTaskIndex ?? 0
       const enterHwm = state.childHighWaterMark ?? {}
-      const enterCurHwm = enterHwm[action.childId] ?? -1
-      const enterNewHwm = enterIdx > enterCurHwm ? { ...enterHwm, [action.childId]: enterIdx } : enterHwm
+      const enterNewHwm = bumpChildHighWaterMark(
+        { ...state, childHighWaterMark: enterHwm },
+        action.childId,
+        enterIdx,
+      )
       return {
         ...state,
         activeChildActionId: action.childId,
         activeChildSubTaskIndex: enterIdx,
         childActionResume: action.resumeAfterExit,
-        demoViewMode: sanitizeDemoViewModeForChild(nextDemoRaw, enteredChild?.childType),
+        demoViewMode: sanitizeDemoViewModeForChild(state.demoViewMode ?? 'advisor', enteredChild?.childType),
         childHighWaterMark: enterNewHwm,
         submittedAt:
           childInReviewerPipeline
@@ -1057,13 +1141,27 @@ function workflowReducer(state: WorkflowState, action: WorkflowAction): Workflow
     }
 
     case 'EXIT_CHILD_ACTION': {
+      const exitingChild = state.activeChildActionId
+        ? state.tasks
+            .flatMap((t) => t.children ?? [])
+            .find((c) => c.id === state.activeChildActionId)
+        : undefined
+      const demoViewAfterChildExit =
+        exitingChild?.childType === 'kyc' && state.demoViewMode === 'ho-kyc'
+          ? 'ho-documents'
+          : state.demoViewMode
+
       if (state.childActionResume) {
         const { accountChildId, subTaskIndex } = state.childActionResume
+        const resumeChild = state.tasks
+          .flatMap((t) => t.children ?? [])
+          .find((c) => c.id === accountChildId)
         return {
           ...state,
           activeChildActionId: accountChildId,
           activeChildSubTaskIndex: subTaskIndex,
           childActionResume: undefined,
+          demoViewMode: sanitizeDemoViewModeForChild(demoViewAfterChildExit, resumeChild?.childType),
         }
       }
       return {
@@ -1071,11 +1169,28 @@ function workflowReducer(state: WorkflowState, action: WorkflowAction): Workflow
         activeChildActionId: undefined,
         activeChildSubTaskIndex: undefined,
         childActionResume: undefined,
+        demoViewMode: demoViewAfterChildExit,
       }
     }
 
     case 'SET_CHILD_SUB_TASK': {
-      return { ...state, activeChildSubTaskIndex: action.index }
+      const idx = clampChildSubTaskIndex(state, action.index)
+      if (idx == null || !state.activeChildActionId) return state
+      return {
+        ...state,
+        activeChildSubTaskIndex: idx,
+        childHighWaterMark: bumpChildHighWaterMark(state, state.activeChildActionId, idx),
+      }
+    }
+
+    case 'MARK_CHILD_SUB_TASK_VISITED': {
+      if (!state.activeChildActionId) return state
+      const idx = clampChildSubTaskIndex(state, action.index)
+      if (idx == null) return state
+      return {
+        ...state,
+        childHighWaterMark: bumpChildHighWaterMark(state, state.activeChildActionId, idx),
+      }
     }
 
     case 'CHILD_GO_NEXT': {
@@ -1089,7 +1204,7 @@ function workflowReducer(state: WorkflowState, action: WorkflowAction): Workflow
       const nextIdx = state.activeChildSubTaskIndex + 1
       const prevHwm = state.childHighWaterMark ?? {}
       const curHwm = prevHwm[state.activeChildActionId] ?? 0
-      const newHwm = nextIdx > curHwm ? { ...prevHwm, [state.activeChildActionId]: nextIdx } : prevHwm
+      const newHwm = bumpChildHighWaterMark(state, state.activeChildActionId, nextIdx)
       return { ...state, activeChildSubTaskIndex: nextIdx, childHighWaterMark: newHwm }
     }
 
@@ -1227,6 +1342,9 @@ function workflowReducer(state: WorkflowState, action: WorkflowAction): Workflow
         }
       }
 
+      const activeSubmitted =
+        state.activeChildActionId != null && childIds.has(state.activeChildActionId)
+
       return {
         ...state,
         tasks: updatedTasks,
@@ -1235,6 +1353,81 @@ function workflowReducer(state: WorkflowState, action: WorkflowAction): Workflow
           Object.entries(state.childReviewDecisionsByChildId ?? {}).filter(
             ([childId]) => !childIds.has(childId),
           ),
+        ),
+        /** Parent Open Accounts “simulate signing” / batch submit is an advisor journey action; stay out of HO reviewer shell so sidebar tasks (Client Setup, annuity row) remain available. */
+        demoViewMode: 'advisor',
+        ...(activeSubmitted
+          ? {
+              activeChildActionId: undefined,
+              activeChildSubTaskIndex: undefined,
+              childActionResume: undefined,
+            }
+          : {}),
+      }
+    }
+
+    case 'POST_ENVELOPE_SIGNATURE_AML_FOR_OWNERS': {
+      const accountChildIds = new Set(action.accountChildIds)
+      if (accountChildIds.size === 0) return state
+
+      const kycIdsAll = getKycChildIdsForSignedAccountChildren(
+        state,
+        accountChildIds,
+        action.supplementalOwnerPartyIds,
+      )
+      const kycIds = kycIdsAll.filter((id) => {
+        const child = state.tasks.flatMap((t) => t.children ?? []).find((c) => c.id === id)
+        if (child?.childType !== 'kyc') return false
+        return (
+          child.status === 'awaiting_review' ||
+          child.status === 'in_progress' ||
+          child.status === 'not_started'
+        )
+      })
+      if (kycIds.length === 0) return state
+
+      const kycIdSet = new Set(kycIds)
+      const defaultKycCip: NonNullable<ChildReviewState['cipStatus']> = {
+        idVerification: 'pass' as const,
+        addressMatch: 'pass' as const,
+        dobMatch: 'pass' as const,
+        overallStatus: 'pass' as const,
+      }
+
+      const nextTasks = state.tasks.map((t) => {
+        if (!t.children) return t
+        return {
+          ...t,
+          children: t.children.map((c) => {
+            if (!kycIdSet.has(c.id) || c.childType !== 'kyc') return c
+            if (c.status === 'complete' || c.status === 'canceled') return c
+            if (c.status === 'awaiting_review') return c
+            if (c.status === 'in_progress' || c.status === 'not_started') {
+              return { ...c, status: 'awaiting_review' as const }
+            }
+            return c
+          }),
+        }
+      })
+
+      const nextChildReviews = { ...state.childReviewsByChildId }
+      for (const kid of kycIds) {
+        const prev = nextChildReviews[kid] ?? {}
+        nextChildReviews[kid] = {
+          ...prev,
+          amlReview: { status: 'pending' as const },
+          hoKycReview: prev.hoKycReview ?? { status: 'pending' as const },
+          cipStatus: prev.cipStatus ?? defaultKycCip,
+          kycPreAmlTimeline: prev.kycPreAmlTimeline ?? buildKycPreAmlTimeline(),
+        }
+      }
+
+      return {
+        ...state,
+        tasks: nextTasks,
+        childReviewsByChildId: nextChildReviews,
+        childReviewDecisionsByChildId: Object.fromEntries(
+          Object.entries(state.childReviewDecisionsByChildId ?? {}).filter(([id]) => !kycIdSet.has(id)),
         ),
       }
     }
@@ -1642,7 +1835,14 @@ function workflowReducer(state: WorkflowState, action: WorkflowAction): Workflow
         ...(nextParties ? { relatedParties: nextParties } : {}),
         childReviewsByChildId: {
           ...state.childReviewsByChildId,
-          [cid]: { ...prev, amlReview: { status: 'cleared', decidedAt: amlClearTs } },
+          [cid]: {
+            ...prev,
+            amlReview: {
+              status: 'cleared',
+              decidedAt: amlClearTs,
+              ...(action.approvalReason ? { approvalReason: action.approvalReason } : {}),
+            },
+          },
         },
       }
     }
@@ -1657,7 +1857,7 @@ function workflowReducer(state: WorkflowState, action: WorkflowAction): Workflow
         return {
           ...t,
           children: t.children.map((c) =>
-            c.id === amlFlagId ? { ...c, status: 'rejected' as const } : c,
+            c.id === amlFlagId ? { ...c, status: 'in_progress' as const } : c,
           ),
         }
       })
@@ -1734,7 +1934,6 @@ function workflowReducer(state: WorkflowState, action: WorkflowAction): Workflow
           ...state.childReviewDecisionsByChildId,
           [hoReqId]: { outcome: 'rejected', decidedAt: hoReqTs },
         },
-        demoViewMode: 'advisor',
       }
     }
 
@@ -1743,8 +1942,18 @@ function workflowReducer(state: WorkflowState, action: WorkflowAction): Workflow
       const amlInfoTs = new Date().toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })
       const amlInfoId = state.activeChildActionId
       const prevInfo = state.childReviewsByChildId?.[amlInfoId] ?? {}
+      const amlInfoTasks = state.tasks.map((t) => {
+        if (!t.children) return t
+        return {
+          ...t,
+          children: t.children.map((c) =>
+            c.id === amlInfoId ? { ...c, status: 'in_progress' as const } : c,
+          ),
+        }
+      })
       return {
         ...state,
+        tasks: amlInfoTasks,
         childReviewsByChildId: {
           ...state.childReviewsByChildId,
           [amlInfoId]: {
@@ -1797,10 +2006,12 @@ function workflowReducer(state: WorkflowState, action: WorkflowAction): Workflow
     }
 
     case 'SET_DEMO_VIEW': {
+      const remappedIdx = remapChildSubTaskIndexForDemoView(state, action.mode)
       return {
         ...state,
         demoViewMode: action.mode,
         submittedAt: state.submittedAt ?? new Date().toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' }),
+        ...(remappedIdx != null ? { activeChildSubTaskIndex: remappedIdx } : {}),
       }
     }
 
@@ -1946,6 +2157,30 @@ export function useAdvisorFormsEditable(): boolean {
     rs.principalReview?.status === 'nigo' ||
     false
   )
+}
+
+/**
+ * Document Review (ho-kyc) demo: `true` when the reviewer may edit KYC intake fields inline.
+ * Demo defaults to editable when AML has cleared and HO KYC review is pending.
+ */
+export function useHoKycFormsEditable(): boolean {
+  const { state } = useWorkflow()
+  const mode = state.demoViewMode
+  if (mode !== 'ho-kyc' && mode !== 'ho-principal' && mode !== 'ho-documents') return false
+
+  const childId = state.activeChildActionId
+  if (!childId) return false
+
+  const child = state.tasks.flatMap((t) => t.children ?? []).find((c) => c.id === childId)
+  if (!child || child.childType !== 'kyc' || child.status !== 'awaiting_review') return false
+
+  const rights = (state.taskData[`${childId}-ho-rights`] as Record<string, unknown> | undefined) ?? {}
+  if (rights.canEditKycFields === false) return false
+
+  const rs = getChildReviewState(state, childId)
+  if (!rs) return false
+
+  return rs.amlReview?.status === 'cleared' && rs.hoKycReview?.status === 'pending'
 }
 
 /**

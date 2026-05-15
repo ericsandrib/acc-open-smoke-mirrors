@@ -69,6 +69,10 @@ import { CompleteAccountOpeningConfirmModal } from '@/components/wizard/WizardFo
 import { Netx360HandoffSection, Netx360SubmitSection } from './Netx360HandoffSection'
 import { DocumentUploadInstancesTable } from './DocumentUploadInstancesTable'
 import {
+  REVIEWER_ADDITIONAL_CONTEXT_KEY,
+  ReviewerAdditionalContextSection,
+} from '@/components/wizard/forms/ReviewerAdditionalContextSection'
+import {
   Dialog,
   DialogContent,
   DialogHeader,
@@ -586,6 +590,22 @@ export function OpenAccountsForm() {
         childIds: childIdsToSubmitForReview,
       })
     }
+
+    if (signedAccountChildIds.size > 0) {
+      const supplementalOwnerPartyIds = env.signers
+        .filter((s) => {
+          if (!s.partyId) return false
+          const scoped = s.accountChildIds
+          if (!scoped?.length) return true
+          return scoped.some((id) => signedAccountChildIds.has(id))
+        })
+        .map((s) => s.partyId as string)
+      dispatch({
+        type: 'POST_ENVELOPE_SIGNATURE_AML_FOR_OWNERS',
+        accountChildIds: [...signedAccountChildIds],
+        ...(supplementalOwnerPartyIds.length > 0 ? { supplementalOwnerPartyIds } : {}),
+      })
+    }
   }
 
   const cancelEnvelope = (envelopeId: string) => {
@@ -783,7 +803,8 @@ export function OpenAccountsForm() {
                     </button>
                     <div className="flex items-center gap-2">
                       {(() => {
-                        const displayStatus = deriveChildDisplayStatus(child.status)
+                        const reviewState = state.childReviewsByChildId?.[child.id]
+                        const displayStatus = deriveChildDisplayStatus(child.status, reviewState)
                         const cfg = childStatusConfig[displayStatus]
                         return (
                           <Badge
@@ -1005,6 +1026,11 @@ export function OpenAccountsForm() {
             </p>
           </div>
         )}
+        <ReviewerAdditionalContextSection
+          idPrefix="open-accounts"
+          value={(data[REVIEWER_ADDITIONAL_CONTEXT_KEY] as string) ?? ''}
+          onChange={(value) => updateField(REVIEWER_ADDITIONAL_CONTEXT_KEY, value)}
+        />
       </section>
       ) : null}
       </div>
@@ -1214,7 +1240,7 @@ export function OpenAccountsForm() {
         <div className="mb-4">
           <h3 className={subsectionTitleClass}>KYC Reviews</h3>
           <p className={subsectionBodyClass}>
-            Track and complete client information and identity verification for each subject.
+            Track and complete Client Verification Information and identity verification for each subject.
           </p>
         </div>
         <div>
@@ -1242,6 +1268,7 @@ export function OpenAccountsForm() {
                     displayStatus === 'nigo' ||
                     displayStatus === 'nigo_document' ||
                     displayStatus === 'nigo_principal' ||
+                    displayStatus === 'clarification_required' ||
                     displayStatus === 'rejected_aml'
                   ) {
                     return (

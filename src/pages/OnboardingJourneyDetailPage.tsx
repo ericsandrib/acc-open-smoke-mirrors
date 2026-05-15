@@ -6,9 +6,10 @@ import { useServicing } from '@/stores/servicingStore'
 import { useTheme } from '@/stores/themeStore'
 import { useJourneyNavigation } from '@/hooks/useJourneyNavigation'
 import { deriveOnboardingJourneyRows } from '@/components/servicing/OnboardingJourneysTable'
+import { visibleOnboardingJourneyActions } from '@/utils/onboardingJourneyActionTree'
 import { StatusBadge } from '@/components/servicing/StatusBadge'
+import { OperationalStatusPill } from '@/components/servicing/operationalStatusPill'
 import { childStatusConfig, type ChildDisplayStatus } from '@/utils/childStatusDisplay'
-import { Badge } from '@/components/ui/badge'
 import { cn } from '@/lib/utils'
 import { ChevronRight, ChevronDown } from 'lucide-react'
 import {
@@ -37,7 +38,7 @@ export function OnboardingJourneyDetailPage() {
   const { journeyId } = useParams<{ journeyId: string }>()
   const navigate = useNavigate()
   const { onboardingJourneys } = useServicing()
-  const { showNestedGroups } = useTheme()
+  const { showNestedGroups, hideOnboardingJourneyChildWorkflows } = useTheme()
   const { navigateToServicing } = useJourneyNavigation()
   const [expandedGroupIds, setExpandedGroupIds] = useState<Set<string>>(new Set())
 
@@ -70,6 +71,7 @@ export function OnboardingJourneyDetailPage() {
   const vis = (_key: string) => true
   const colCount = allColumns.length
   const journeyPct = row.totalTasks > 0 ? row.progressedTasks / row.totalTasks : 0
+  const actions = visibleOnboardingJourneyActions(row.actions, hideOnboardingJourneyChildWorkflows)
 
   return (
     <>
@@ -111,40 +113,19 @@ export function OnboardingJourneyDetailPage() {
             </tr>
           </thead>
           <tbody className="[&>tr:nth-child(even)]:bg-muted/30">
-            {row.actions
+            {actions
               .filter((action) => !action.parentActionId)
               .flatMap((action) => {
-                const childActions = row.actions.filter((a) => a.parentActionId === action.id)
+                const childActions = actions.filter((a) => a.parentActionId === action.id)
                 const actionTotal = action.tasks.length
                 const actionDone = action.tasks.filter((t) => t.status !== 'not_started').length
                 const actionPct = actionTotal > 0 ? actionDone / actionTotal : 0
-                return [
-                  <DataTableRow
-                    key={`action-${action.id}`}
-                    className="cursor-pointer hover:bg-muted/50"
-                    border={false}
-                    onClick={() => navigateToServicing(row, action.id)}
-                  >
-                    <DataTableCell type="primary" className="font-medium text-foreground/90">
-                      {action.title}
-                    </DataTableCell>
-                    <DataTableCell />
-                    <DataTableCell type="badge">
-                      <StatusBadge status={action.status} />
-                    </DataTableCell>
-                    <DataTableCell />
-                    <DataTableCell />
-                    <DataTableCell align="end" type="secondary">
-                      <div className="flex items-center justify-end gap-2">
-                        <span>{actionDone}/{actionTotal}</span>
-                        <ProgressBar value={actionPct} />
-                      </div>
-                    </DataTableCell>
-                  </DataTableRow>,
 
-                  ...childActions.flatMap((childAction) => {
-                    const grandchildActions = row.actions.filter((a) => a.parentActionId === childAction.id && !a.groupType)
-                    const groupActions = row.actions.filter((a) => a.parentActionId === childAction.id && a.groupType)
+                const nestedChildRows = hideOnboardingJourneyChildWorkflows
+                  ? []
+                  : childActions.flatMap((childAction) => {
+                    const grandchildActions = actions.filter((a) => a.parentActionId === childAction.id && !a.groupType)
+                    const groupActions = actions.filter((a) => a.parentActionId === childAction.id && a.groupType)
                     if (grandchildActions.length === 0 && groupActions.length === 0) return []
                     return [
                       <tr
@@ -162,7 +143,7 @@ export function OnboardingJourneyDetailPage() {
                         const cfg = gc.displayStatus
                           ? childStatusConfig[gc.displayStatus as ChildDisplayStatus]
                           : undefined
-                        const gcGroups = row.actions.filter((a) => a.parentActionId === gc.id && a.groupType)
+                        const gcGroups = actions.filter((a) => a.parentActionId === gc.id && a.groupType)
                         return [
                           <DataTableRow
                             key={`action-${gc.id}`}
@@ -176,9 +157,12 @@ export function OnboardingJourneyDetailPage() {
                             <DataTableCell />
                             <DataTableCell type="badge">
                               {cfg ? (
-                                <Badge variant="outline" className={cn('text-xs font-medium border-transparent', cfg.className)}>
-                                  {cfg.label}
-                                </Badge>
+                                <OperationalStatusPill
+                                  variant={cfg.pillVariant}
+                                  label={cfg.label}
+                                  className={cfg.className}
+                                  showIcon={Boolean(cfg.pillVariant)}
+                                />
                               ) : (
                                 <StatusBadge status={gc.status} />
                               )}
@@ -194,7 +178,7 @@ export function OnboardingJourneyDetailPage() {
                           </DataTableRow>,
 
                           ...(showNestedGroups ? gcGroups : []).flatMap((group) => {
-                            const groupChildren = row.actions.filter((a) => a.parentActionId === group.id)
+                            const groupChildren = actions.filter((a) => a.parentActionId === group.id)
                             if (groupChildren.length === 0) return []
                             const isGroupExpanded = expandedGroupIds.has(group.id)
                             const groupTotal = groupChildren.reduce((s, a) => s + a.tasks.length, 0)
@@ -246,9 +230,12 @@ export function OnboardingJourneyDetailPage() {
                                     <DataTableCell />
                                     <DataTableCell type="badge">
                                       {gc2Cfg ? (
-                                        <Badge variant="outline" className={cn('text-xs font-medium border-transparent', gc2Cfg.className)}>
-                                          {gc2Cfg.label}
-                                        </Badge>
+                                        <OperationalStatusPill
+                                          variant={gc2Cfg.pillVariant}
+                                          label={gc2Cfg.label}
+                                          className={gc2Cfg.className}
+                                          showIcon={Boolean(gc2Cfg.pillVariant)}
+                                        />
                                       ) : (
                                         <StatusBadge status={gc2.status} />
                                       )}
@@ -270,7 +257,7 @@ export function OnboardingJourneyDetailPage() {
                       }),
 
                       ...(showNestedGroups ? groupActions : []).flatMap((group) => {
-                        const groupChildren = row.actions.filter((a) => a.parentActionId === group.id)
+                        const groupChildren = actions.filter((a) => a.parentActionId === group.id)
                         if (groupChildren.length === 0) return []
                         const isGroupExpanded = expandedGroupIds.has(group.id)
                         const groupTotal = groupChildren.reduce((s, a) => s + a.tasks.length, 0)
@@ -322,9 +309,12 @@ export function OnboardingJourneyDetailPage() {
                                 <DataTableCell />
                                 <DataTableCell type="badge">
                                   {gc2Cfg ? (
-                                    <Badge variant="outline" className={cn('text-xs font-medium border-transparent', gc2Cfg.className)}>
-                                      {gc2Cfg.label}
-                                    </Badge>
+                                    <OperationalStatusPill
+                                      variant={gc2Cfg.pillVariant}
+                                      label={gc2Cfg.label}
+                                      className={gc2Cfg.className}
+                                      showIcon={Boolean(gc2Cfg.pillVariant)}
+                                    />
                                   ) : (
                                     <StatusBadge status={gc2.status} />
                                   )}
@@ -343,7 +333,33 @@ export function OnboardingJourneyDetailPage() {
                         ]
                       }),
                     ]
-                  }),
+                  })
+
+                return [
+                  <DataTableRow
+                    key={`action-${action.id}`}
+                    className="cursor-pointer hover:bg-muted/50"
+                    border={false}
+                    onClick={() => navigateToServicing(row, action.id)}
+                  >
+                    <DataTableCell type="primary" className="font-medium text-foreground/90">
+                      {action.title}
+                    </DataTableCell>
+                    <DataTableCell />
+                    <DataTableCell type="badge">
+                      <StatusBadge status={action.status} />
+                    </DataTableCell>
+                    <DataTableCell />
+                    <DataTableCell />
+                    <DataTableCell align="end" type="secondary">
+                      <div className="flex items-center justify-end gap-2">
+                        <span>{actionDone}/{actionTotal}</span>
+                        <ProgressBar value={actionPct} />
+                      </div>
+                    </DataTableCell>
+                  </DataTableRow>,
+
+                  ...nestedChildRows,
                 ]
               })}
           </tbody>

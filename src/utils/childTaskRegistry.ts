@@ -19,7 +19,7 @@ const CHILD_TYPE_CONFIGS: Record<ChildType, ChildTypeConfig> = {
     idPrefix: 'kyc-child',
     displayLabel: 'KYC Review',
     subTasks: [
-      { suffix: 'info', title: 'Client Information', formKey: 'kyc-child-info' },
+      { suffix: 'info', title: 'Client Verification Information', formKey: 'kyc-child-info' },
       { suffix: 'documents', title: 'Supporting Documents', formKey: 'kyc-child-documents' },
     ],
   },
@@ -60,14 +60,28 @@ const CHILD_TYPE_CONFIGS: Record<ChildType, ChildTypeConfig> = {
   },
 }
 
-const KYC_AML_RESULTS_SUBTASK: SubTaskDefinition = {
-  suffix: 'aml-results',
-  title: 'AML Results',
-  formKey: 'kyc-child-aml-results',
-}
+/** AML compliance console: review-oriented navigation (not advisor onboarding steps). */
+const KYC_AML_REVIEW_SUBTASKS: readonly SubTaskDefinition[] = [
+  { suffix: 'info', title: 'Client Profile', formKey: 'kyc-child-aml-subject-profile' },
+  { suffix: 'documents', title: 'Supporting Documents', formKey: 'kyc-child-aml-documents' },
+  { suffix: 'aml-review', title: 'AML Review', formKey: 'kyc-child-aml-review' },
+]
+
+const AML_EXTRA_SUBTASK_SUFFIXES: readonly SubTaskDefinition[] = [
+  { suffix: 'aml-review', title: 'AML Review', formKey: 'kyc-child-aml-review' },
+  /** @deprecated Legacy suffix — maps to AML Review */
+  { suffix: 'aml-results', title: 'AML Review', formKey: 'kyc-child-aml-review' },
+]
 
 export function getChildTypeConfig(childType: ChildType): ChildTypeConfig {
   return CHILD_TYPE_CONFIGS[childType]
+}
+
+/** HO document-review reviewer demo modes (includes principal/doc lanes mapped for KYC children). */
+export function isHoKycReviewerDemoView(
+  demoViewMode: WorkflowState['demoViewMode'] | undefined,
+): boolean {
+  return demoViewMode === 'ho-kyc' || demoViewMode === 'ho-documents' || demoViewMode === 'ho-principal'
 }
 
 export function getVisibleChildSubTasks(
@@ -75,29 +89,51 @@ export function getVisibleChildSubTasks(
   demoViewMode: WorkflowState['demoViewMode'],
   _childStatus?: TaskStatus,
 ): readonly SubTaskDefinition[] {
-  const subTasks = CHILD_TYPE_CONFIGS[childType].subTasks
   if (childType === 'kyc' && demoViewMode === 'aml') {
-    return [...subTasks, KYC_AML_RESULTS_SUBTASK]
+    return KYC_AML_REVIEW_SUBTASKS
   }
-  return subTasks
+  const base = CHILD_TYPE_CONFIGS[childType].subTasks
+  if (childType === 'kyc') {
+    return base.filter((s) => s.suffix !== 'documents')
+  }
+  return base
 }
 
 /** Stable sidebar / header label for a sub-task across advisor and reviewer views. */
 export function getSubTaskDisplayTitle(
-  _childType: ChildType,
+  childType: ChildType,
   subTask: SubTaskDefinition,
-  _demoViewMode: WorkflowState['demoViewMode'],
+  demoViewMode: WorkflowState['demoViewMode'],
 ): string {
+  if (childType === 'kyc' && demoViewMode === 'aml') {
+    const aml = KYC_AML_REVIEW_SUBTASKS.find((s) => s.suffix === subTask.suffix)
+    if (aml) return aml.title
+  }
   return subTask.title
 }
 
 /** Sub-step index for a child type + form key (e.g. switching siblings on the same step). */
-export function getSubTaskIndexByFormKey(childType: ChildType, formKey: string): number {
+export function getSubTaskIndexByFormKey(
+  childType: ChildType,
+  formKey: string,
+  demoViewMode?: WorkflowState['demoViewMode'],
+): number {
   if (childType === 'kyc' && formKey === 'kyc-child-cip-results') {
     return CHILD_TYPE_CONFIGS.kyc.subTasks.findIndex((s) => s.formKey === 'kyc-child-info')
   }
-  const idx = CHILD_TYPE_CONFIGS[childType].subTasks.findIndex((s) => s.formKey === formKey)
-  return idx >= 0 ? idx : 0
+  const visible =
+    demoViewMode != null
+      ? getVisibleChildSubTasks(childType, demoViewMode)
+      : getVisibleChildSubTasks(childType, 'advisor')
+  if (childType === 'kyc' && formKey === 'kyc-child-documents' && demoViewMode !== 'aml') {
+    return visible.findIndex((s) => s.suffix === 'info')
+  }
+  const idx = visible.findIndex((s) => s.formKey === formKey)
+  if (idx >= 0) return idx
+  if (childType === 'kyc' && formKey === 'kyc-child-aml-review') {
+    return KYC_AML_REVIEW_SUBTASKS.findIndex((s) => s.suffix === 'aml-review')
+  }
+  return 0
 }
 
 export function getChildSubTaskIds(childId: string, childType: ChildType): string[] {
@@ -113,6 +149,11 @@ export function parseChildSubTaskId(
     for (const sub of config.subTasks) {
       flattened.push({ config, sub })
     }
+    if (config.childType === 'kyc') {
+      for (const sub of AML_EXTRA_SUBTASK_SUFFIXES) {
+        flattened.push({ config, sub })
+      }
+    }
   }
   flattened.sort((a, b) => b.sub.suffix.length - a.sub.suffix.length)
 
@@ -125,7 +166,7 @@ export function parseChildSubTaskId(
       }
     }
   }
-  // Legacy: "CIP Results" was a separate KYC sub-step; verification now lives on Client Information.
+  // Legacy: "CIP Results" was a separate KYC sub-step; verification now lives on Client Verification Information.
   if (id.endsWith('-cip-results')) {
     const childId = id.slice(0, -'-cip-results'.length)
     if (childId.startsWith(`${CHILD_TYPE_CONFIGS.kyc.idPrefix}-`)) {
@@ -141,6 +182,9 @@ export function getSubTaskByFormKey(formKey: string): SubTaskDefinition | null {
   for (const config of Object.values(CHILD_TYPE_CONFIGS)) {
     const found = config.subTasks.find((s) => s.formKey === formKey)
     if (found) return found
+  }
+  for (const sub of KYC_AML_REVIEW_SUBTASKS) {
+    if (sub.formKey === formKey) return sub
   }
   if (formKey === 'kyc-child-cip-results') {
     return CHILD_TYPE_CONFIGS.kyc.subTasks.find((s) => s.formKey === 'kyc-child-info') ?? null

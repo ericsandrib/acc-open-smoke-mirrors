@@ -28,7 +28,7 @@ interface NigoDialogProps {
   onClose: () => void
   teamLabel: string
   onSubmit: (reason: string, feedback?: string) => void
-  /** `reject` uses Accept/Reject-style copy for HO Document Team; default keeps NIGO terminology (e.g. Principal). */
+  /** `reject` uses Accept/Reject-style copy for HO Document Team; default uses clarification copy (e.g. Principal). */
   variant?: 'nigo' | 'reject'
   reasonOptions?: NigoReasonOption[]
   reasonLabel?: string
@@ -66,7 +66,7 @@ export function NigoDialog({
           </div>
           <div className="space-y-1">
             <h3 className="text-base font-semibold">
-              {variant === 'reject' ? 'Reject submission' : 'Not In Good Order (NIGO)'}
+              {variant === 'reject' ? 'Reject submission' : 'Request clarification'}
             </h3>
             <p className="text-sm text-muted-foreground">
               {variant === 'reject' ? (
@@ -75,7 +75,8 @@ export function NigoDialog({
                 </>
               ) : (
                 <>
-                  As the {teamLabel}, flag this submission as NIGO. It will be returned to the advisor for corrections.
+                  As the {teamLabel}, request clarification or additional documents. The submission will be returned to
+                  the advisor for corrections.
                 </>
               )}
             </p>
@@ -83,7 +84,7 @@ export function NigoDialog({
         </div>
 
         <div className="space-y-2">
-          <Label>{reasonLabel ?? (variant === 'reject' ? 'Rejection reason' : 'NIGO Reason')}</Label>
+          <Label>{reasonLabel ?? (variant === 'reject' ? 'Rejection reason' : 'Clarification reason')}</Label>
           <Select value={reason} onValueChange={setReason}>
             <SelectTrigger>
               <SelectValue placeholder="Select a reason..." />
@@ -111,7 +112,7 @@ export function NigoDialog({
         <div className="flex items-center justify-end gap-3 pt-1">
           <Button variant="outline" onClick={onClose}>Cancel</Button>
           <Button variant="destructive" onClick={handleSubmit} disabled={!reason}>
-            {variant === 'reject' ? 'Submit rejection' : 'Submit NIGO'}
+            {variant === 'reject' ? 'Submit rejection' : 'Submit request'}
           </Button>
         </div>
       </div>

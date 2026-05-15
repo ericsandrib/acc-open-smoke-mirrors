@@ -12,11 +12,20 @@ import { useSortableTable } from '@/hooks/useSortableTable'
 import { compareString } from '@/lib/sort-comparators'
 import { ChevronRight, ChevronDown, GitBranch, Link2, ShieldCheck, Briefcase } from 'lucide-react'
 import { childStatusConfig, type ChildDisplayStatus } from '@/utils/childStatusDisplay'
-import { Badge } from '@/components/ui/badge'
+import {
+  deriveParentOperationalSummary,
+  formatWorkflowBreakdownLine,
+} from '@/utils/workflowSummary'
+import { OperationalStatusPill } from './operationalStatusPill'
 import { cn } from '@/lib/utils'
-import { type ActionRow, actionRowInHomeOfficeReviewPipeline, ReviewQueueTypePill } from './ActionsTable'
+import { type ActionRow, actionRowInHomeOfficeReviewPipeline, deriveActionRows, ReviewQueueTypePill } from './ActionsTable'
 import type { OnboardingActionsGroupBy } from './table-controls'
 import { compactNestedActionLabel } from '@/utils/servicingActionLabel'
+
+/** Open Accounts section shells (“KYC Reviews”, “Accounts”) nest under the parent but are not child workflows — they have no `childId`. */
+function isLeafChildWorkflowRow(row: ActionRow): boolean {
+  return row.isChildWorkflow && Boolean(row.childId)
+}
 
 const leadingLayoutClass = 'grid grid-cols-[1.25rem_1.25rem_minmax(0,1fr)] items-center gap-2 min-w-0'
 const leadingSlotClass = 'flex h-5 w-5 shrink-0 items-center justify-center'
@@ -32,12 +41,26 @@ function JourneyLeading({
   icon,
   children,
   className,
+  /**
+   * Flat list (no “Group by journey”): no expand chevron column — avoids an empty 1.25rem track that
+   * pushed labels past the “Journey” header. Nested journey rows keep the 3-column grid.
+   */
+  flat = false,
 }: {
   expand?: ReactNode
   icon?: ReactNode
   children: ReactNode
   className?: string
+  flat?: boolean
 }) {
+  if (flat) {
+    return (
+      <div className={cn('flex min-w-0 items-center gap-2', className)}>
+        {icon ? <span className={leadingSlotClass}>{icon}</span> : null}
+        <span className="min-w-0 flex-1 truncate">{children}</span>
+      </div>
+    )
+  }
   return (
     <div className={cn(leadingLayoutClass, className)}>
       <span className={leadingSlotClass}>{expand}</span>
@@ -88,132 +111,68 @@ function ProgressBar({ value, className }: { value: number; className?: string }
   )
 }
 
-function StateModelCell({ row }: { row: ActionRow }) {
+function ReviewStatusBadge({
+  label,
+  className,
+  title,
+  variant = 'default',
+  pillVariant,
+}: {
+  label: string
+  className: string
+  title?: string
+  variant?: 'default' | 'detail'
+  pillVariant?: 'draft' | 'completed' | 'declined'
+}) {
+  return (
+    <OperationalStatusPill
+      title={title}
+      variant={pillVariant}
+      label={label}
+      className={cn(variant === 'detail' && 'opacity-[0.88] ring-1 ring-border/40', className)}
+      showIcon={Boolean(pillVariant)}
+    />
+  )
+}
+
+function StateModelCell({ row, variant = 'default' }: { row: ActionRow; variant?: 'default' | 'detail' }) {
   const ds = row.displayStatus
   const cfg =
     ds && ds in childStatusConfig ? childStatusConfig[ds as ChildDisplayStatus] : undefined
   if (cfg) {
     return (
-      <Badge variant="outline" className={cn('text-xs font-medium border-transparent', cfg.className)}>
-        {cfg.label}
-      </Badge>
+      <ReviewStatusBadge
+        label={cfg.label}
+        className={cfg.className}
+        variant={variant}
+        pillVariant={cfg.pillVariant}
+      />
     )
   }
-  return <span className="text-sm text-foreground/80">{row.stateModelStatus}</span>
-}
-
-/** Higher index = lower priority for which statuses to show first when space is limited. */
-const STATUS_DISPLAY_PRIORITY: string[] = [
-  'rejected_aml',
-  'nigo_document',
-  'nigo_principal',
-  'nigo',
-  'escalation_hold',
-  'aml_review',
-  'document_review',
-  'ho_kyc_review',
-  'principal_review',
-  'awaiting_documents',
-  'awaiting_review',
-  'draft',
-  'canceled',
-  'complete',
-]
-
-function statusRank(sortKey: string): number {
-  const i = STATUS_DISPLAY_PRIORITY.indexOf(sortKey)
-  return i === -1 ? 500 : i
-}
-
-function rowStatusSignature(row: ActionRow): { sortKey: string; label: string; className: string } | null {
-  const ds = row.displayStatus
-  if (ds && ds in childStatusConfig) {
-    const c = childStatusConfig[ds as ChildDisplayStatus]
-    return { sortKey: ds, label: c.label, className: c.className }
-  }
-  const sm = row.stateModelStatus?.trim()
-  if (sm) {
-    const queueLike = sm === 'Need Review' || sm === 'In Review'
-    return {
-      sortKey: `fallback:${sm}`,
-      label: queueLike ? 'Need Review' : sm,
-      className: queueLike ? childStatusConfig.awaiting_review.className : 'bg-muted/80 text-muted-foreground border-border',
-    }
-  }
-  return null
-}
-
-function OverflowCountBadge({ count }: { count: number }) {
-  if (count <= 0) return null
   return (
-    <Badge
-      variant="outline"
-      className="h-5 shrink-0 border-transparent bg-muted/70 px-1.5 py-0 text-[10px] font-semibold text-muted-foreground"
-    >
-      +{count}
-    </Badge>
+    <span className={cn('text-sm text-foreground/80', variant === 'detail' && 'text-muted-foreground')}>
+      {row.stateModelStatus}
+    </span>
   )
 }
 
-function JourneyTypeSummary({ rows }: { rows: ActionRow[] }) {
-  const kyc = rows.filter((r) => r.reviewQueueItemType === 'KYC').length
-  const acct = rows.filter((r) => r.reviewQueueItemType === 'Account').length
-  if (!kyc && !acct) {
+function ParentOperationalStatusBadge({ allChildRows }: { allChildRows: ActionRow[] }) {
+  if (allChildRows.length === 0) {
     return <span className="text-sm text-muted-foreground">—</span>
   }
-  return (
-    <div className="flex max-w-[min(100%,240px)] flex-wrap items-center gap-1 min-w-0">
-      {kyc > 0 ? (
-        <>
-          <ReviewQueueTypePill type="KYC" />
-          {kyc > 1 ? <OverflowCountBadge count={kyc - 1} /> : null}
-        </>
-      ) : null}
-      {acct === 1 ? <ReviewQueueTypePill type="Account" /> : null}
-      {acct === 2 ? <ReviewQueueTypePill type="Account" label="Accounts" /> : null}
-      {acct > 2 ? (
-        <>
-          <ReviewQueueTypePill type="Account" label="Accounts" />
-          <OverflowCountBadge count={acct - 2} />
-        </>
-      ) : null}
-    </div>
-  )
-}
-
-function JourneyReviewStatusSummary({ rows }: { rows: ActionRow[] }) {
-  const sigs = rows.map(rowStatusSignature).filter(Boolean) as Array<{ sortKey: string; label: string; className: string }>
-  if (sigs.length === 0) {
+  const summary = deriveParentOperationalSummary(allChildRows)
+  if (!summary) {
     return <span className="text-sm text-muted-foreground">—</span>
   }
-  const byLabel = new Map<string, { className: string; rank: number }>()
-  for (const s of sigs) {
-    const r = statusRank(s.sortKey)
-    const ex = byLabel.get(s.label)
-    if (!ex || r < ex.rank) {
-      byLabel.set(s.label, { className: s.className, rank: r })
-    }
-  }
-  const list = [...byLabel.entries()]
-    .map(([label, v]) => ({ sortKey: label, label, className: v.className, rank: v.rank }))
-    .sort((a, b) => a.rank - b.rank)
-  const maxVisible = 2
-  const visible = list.slice(0, maxVisible)
-  const overflowKinds = list.length - maxVisible
+  const breakdownLine = formatWorkflowBreakdownLine(allChildRows)
+  const title = breakdownLine ? `${summary.label} · ${breakdownLine}` : summary.label
   return (
-    <div className="flex max-w-[min(100%,340px)] flex-wrap items-center gap-1 min-w-0">
-      {visible.map((s) => (
-        <Badge
-          key={s.sortKey}
-          variant="outline"
-          title={s.label}
-          className={cn('max-w-[10rem] shrink-0 truncate border-transparent text-xs font-medium', s.className)}
-        >
-          {s.label}
-        </Badge>
-      ))}
-      {overflowKinds > 0 ? <OverflowCountBadge count={overflowKinds} /> : null}
-    </div>
+    <ReviewStatusBadge
+      label={summary.label}
+      className={summary.className}
+      title={title}
+      pillVariant={summary.pillVariant}
+    />
   )
 }
 
@@ -223,11 +182,23 @@ interface DocumentReviewActionsTableProps {
   journeys: Journey[]
   /** When omitted (e.g. Servicing), defaults to journey grouping. */
   groupBy?: OnboardingActionsGroupBy
+  /**
+   * How to pick rows under each journey.
+   * - `pipeline` (default): reviewer-pipeline child lines when any exist, else any children, else all rows.
+   * - `allChildWorkflows`: every nested child line regardless of review status (advisor “all statuses”).
+   */
+  nestRowMode?: 'pipeline' | 'allChildWorkflows'
 }
 
 type JourneyGroup = { journeyId: string; journeyName: string; relationshipName: string; rows: ActionRow[] }
 
-export function DocumentReviewActionsTable({ rows, visibleColumns, journeys, groupBy }: DocumentReviewActionsTableProps) {
+export function DocumentReviewActionsTable({
+  rows,
+  visibleColumns,
+  journeys,
+  groupBy,
+  nestRowMode = 'pipeline',
+}: DocumentReviewActionsTableProps) {
   const { navigateToServicing } = useJourneyNavigation()
   const navigate = useNavigate()
   const [expandedJourneyIds, setExpandedJourneyIds] = useState<Set<string>>(new Set())
@@ -235,12 +206,18 @@ export function DocumentReviewActionsTable({ rows, visibleColumns, journeys, gro
   const layoutGroupBy = groupBy ?? 'parentJourneyId'
 
   const nestRows = useMemo(() => {
-    const pipelineChildren = rows.filter((r) => r.isChildWorkflow && actionRowInHomeOfficeReviewPipeline(r))
+    if (nestRowMode === 'allChildWorkflows') {
+      const children = rows.filter(isLeafChildWorkflowRow)
+      return children.length > 0 ? children : rows
+    }
+    const pipelineChildren = rows.filter(
+      (r) => isLeafChildWorkflowRow(r) && actionRowInHomeOfficeReviewPipeline(r),
+    )
     if (pipelineChildren.length > 0) return pipelineChildren
-    const anyChildren = rows.filter((r) => r.isChildWorkflow)
+    const anyChildren = rows.filter(isLeafChildWorkflowRow)
     if (anyChildren.length > 0) return anyChildren
     return rows
-  }, [rows])
+  }, [rows, nestRowMode])
 
   const groups = useMemo((): JourneyGroup[] => {
     const map = new Map<string, ActionRow[]>()
@@ -265,6 +242,16 @@ export function DocumentReviewActionsTable({ rows, visibleColumns, journeys, gro
     const m = new Map<string, Journey>()
     for (const j of journeys) m.set(j.id, j)
     return m
+  }, [journeys])
+
+  /** All leaf child workflows per journey — used for parent Status + expanded breakdown (filter-independent). */
+  const allChildRowsByJourneyId = useMemo(() => {
+    const map = new Map<string, ActionRow[]>()
+    for (const journey of journeys) {
+      const children = deriveActionRows([journey]).filter(isLeafChildWorkflowRow)
+      if (children.length > 0) map.set(journey.id, children)
+    }
+    return map
   }, [journeys])
 
   const toggleJourney = (id: string) => {
@@ -316,12 +303,14 @@ export function DocumentReviewActionsTable({ rows, visibleColumns, journeys, gro
               sortable={layoutGroupBy !== 'none'}
               sorted={layoutGroupBy !== 'none' ? sorted('journeyName') : false}
               onSort={layoutGroupBy !== 'none' ? () => onSort('journeyName') : undefined}
-              style={{ minWidth: 240 }}
+              className="min-w-0"
+              style={{ minWidth: 156 }}
               className={
-                layoutGroupBy !== 'none' ? '[&>button]:pl-[64px] [&>span]:pl-[64px]' : undefined
+                /* Align header with leading icon column (grid: expand + gap + icon); not journey name text. */
+                layoutGroupBy !== 'none' ? '[&>button]:!pl-9 [&>span]:!pl-9' : undefined
               }
             >
-              Journey / workflow
+              {layoutGroupBy === 'none' ? 'Action' : 'Journey'}
             </DataTableHeader>
           )}
           {vis('reviewQueueItemType') && (
@@ -335,7 +324,7 @@ export function DocumentReviewActionsTable({ rows, visibleColumns, journeys, gro
             </DataTableHeader>
           )}
           {vis('stateModelStatus') && (
-            <DataTableHeader size="comfortable">Review Status</DataTableHeader>
+            <DataTableHeader size="comfortable">Status</DataTableHeader>
           )}
           {vis('assignedTo') && (
             <DataTableHeader size="comfortable">Assigned To</DataTableHeader>
@@ -356,7 +345,7 @@ export function DocumentReviewActionsTable({ rows, visibleColumns, journeys, gro
               >
                 {(vis('nickname') || vis('title') || vis('journeyName')) && (
                   <DataTableCell type="primary" className="font-medium text-foreground/70">
-                    <JourneyLeading icon={childWorkflowIconFromRow(row)}>
+                    <JourneyLeading flat icon={childWorkflowIconFromRow(row)}>
                       <span className="truncate">{workflowLabel(row, visibleColumns)}</span>
                     </JourneyLeading>
                   </DataTableCell>
@@ -375,7 +364,7 @@ export function DocumentReviewActionsTable({ rows, visibleColumns, journeys, gro
                 )}
                 {vis('stateModelStatus') && (
                   <DataTableCell type="badge">
-                    <StateModelCell row={row} />
+                    <StateModelCell row={row} variant="detail" />
                   </DataTableCell>
                 )}
                 {vis('assignedTo') && <DataTableCell>{row.assignedTo}</DataTableCell>}
@@ -401,6 +390,7 @@ export function DocumentReviewActionsTable({ rows, visibleColumns, journeys, gro
               const totalTasks = group.rows.reduce((s, r) => s + r.total, 0)
               const doneTasks = group.rows.reduce((s, r) => s + r.complete, 0)
               const journeyPct = totalTasks > 0 ? doneTasks / totalTasks : 0
+              const allChildRows = allChildRowsByJourneyId.get(group.journeyId) ?? []
 
               return [
                 <DataTableRow
@@ -436,8 +426,8 @@ export function DocumentReviewActionsTable({ rows, visibleColumns, journeys, gro
                     </DataTableCell>
                   )}
                   {vis('reviewQueueItemType') && (
-                    <DataTableCell className="align-middle">
-                      <JourneyTypeSummary rows={group.rows} />
+                    <DataTableCell type="secondary" className="align-middle">
+                      <span className="text-sm text-muted-foreground">—</span>
                     </DataTableCell>
                   )}
                   {vis('relationshipName') && (
@@ -448,8 +438,8 @@ export function DocumentReviewActionsTable({ rows, visibleColumns, journeys, gro
                     </DataTableCell>
                   )}
                   {vis('stateModelStatus') && (
-                    <DataTableCell className="align-middle">
-                      <JourneyReviewStatusSummary rows={group.rows} />
+                    <DataTableCell type="badge" className="align-middle">
+                      <ParentOperationalStatusBadge allChildRows={allChildRows} />
                     </DataTableCell>
                   )}
                   {vis('assignedTo') && (
@@ -491,7 +481,7 @@ export function DocumentReviewActionsTable({ rows, visibleColumns, journeys, gro
                         {vis('relationshipName') && <DataTableCell />}
                         {vis('stateModelStatus') && (
                           <DataTableCell type="badge">
-                            <StateModelCell row={row} />
+                            <StateModelCell row={row} variant="detail" />
                           </DataTableCell>
                         )}
                         {vis('assignedTo') && <DataTableCell>{row.assignedTo}</DataTableCell>}

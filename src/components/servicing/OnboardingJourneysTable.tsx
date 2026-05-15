@@ -8,6 +8,7 @@ import {
   DataTableCell,
 } from '@/components/ui/data-table'
 import { StatusBadge } from './StatusBadge'
+import { OperationalStatusPill } from './operationalStatusPill'
 import { useSortableTable } from '@/hooks/useSortableTable'
 import {
   compareString,
@@ -17,7 +18,7 @@ import {
 } from '@/lib/sort-comparators'
 import { ChevronRight, ChevronDown, GitBranch, Link2, ShieldCheck, Briefcase } from 'lucide-react'
 import { childStatusConfig, type ChildDisplayStatus } from '@/utils/childStatusDisplay'
-import { Badge } from '@/components/ui/badge'
+import { visibleOnboardingJourneyActions } from '@/utils/onboardingJourneyActionTree'
 import { cn } from '@/lib/utils'
 
 export type OnboardingJourneyRow = Journey & { totalTasks: number; progressedTasks: number }
@@ -85,6 +86,8 @@ interface OnboardingJourneysTableProps {
   rows: OnboardingJourneyRow[]
   visibleColumns: string[]
   showNestedGroups?: boolean
+  /** When true, hide KYC Reviews / Accounts section headers and KYC / account-opening child rows. */
+  hideChildWorkflows?: boolean
 }
 
 function ProgressBar({ value, className }: { value: number; className?: string }) {
@@ -99,7 +102,12 @@ function ProgressBar({ value, className }: { value: number; className?: string }
   )
 }
 
-export function OnboardingJourneysTable({ rows, visibleColumns, showNestedGroups = false }: OnboardingJourneysTableProps) {
+export function OnboardingJourneysTable({
+  rows,
+  visibleColumns,
+  showNestedGroups = false,
+  hideChildWorkflows = false,
+}: OnboardingJourneysTableProps) {
   const { navigateToServicing } = useJourneyNavigation()
   const [expandedJourneyIds, setExpandedJourneyIds] = useState<Set<string>>(new Set())
   const [collapsedActionIds, setCollapsedActionIds] = useState<Set<string>>(new Set())
@@ -143,7 +151,18 @@ export function OnboardingJourneysTable({ rows, visibleColumns, showNestedGroups
     <DataTable>
       <thead className="bg-muted/60 border-b border-border [&_th_svg]:hidden">
         <tr>
-          {vis('name') && <DataTableHeader size="comfortable" sortable sorted={sorted('name')} onSort={() => onSort('name')} style={{ minWidth: 240 }} className="[&>button]:pl-[64px] [&>span]:pl-[64px]">Journey</DataTableHeader>}
+          {vis('name') && (
+            <DataTableHeader
+              size="comfortable"
+              sortable
+              sorted={sorted('name')}
+              onSort={() => onSort('name')}
+              style={{ minWidth: 240 }}
+              className="[&>button]:!pl-9 [&>span]:!pl-9"
+            >
+              Journey
+            </DataTableHeader>
+          )}
           {vis('relationshipName') && (
             <DataTableHeader
               size="comfortable"
@@ -165,6 +184,7 @@ export function OnboardingJourneysTable({ rows, visibleColumns, showNestedGroups
         {sortedRows.flatMap((row) => {
           const isExpanded = expandedJourneyIds.has(row.id)
           const journeyPct = row.totalTasks > 0 ? row.progressedTasks / row.totalTasks : 0
+          const actions = visibleOnboardingJourneyActions(row.actions, hideChildWorkflows)
           return [
             /* ── Journey row ─────────────────────────────────── */
             <DataTableRow
@@ -232,18 +252,20 @@ export function OnboardingJourneysTable({ rows, visibleColumns, showNestedGroups
             </DataTableRow>,
 
             ...(isExpanded
-              ? row.actions
+              ? actions
                   .filter((action) => !action.parentActionId)
                   .flatMap((action) => {
-                    const childActions = row.actions.filter((a) => a.parentActionId === action.id)
+                    const childActions = actions.filter((a) => a.parentActionId === action.id)
                     const actionTotal = action.tasks.length
                     const actionDone = action.tasks.filter((t) => t.status !== 'not_started').length
                     const actionPct = actionTotal > 0 ? actionDone / actionTotal : 0
-                    const hasChildRegion = childActions.some((childAction) => {
-                      const grandchildActions = row.actions.filter((a) => a.parentActionId === childAction.id && !a.groupType)
-                      const groupActions = row.actions.filter((a) => a.parentActionId === childAction.id && a.groupType)
-                      return grandchildActions.length > 0 || groupActions.length > 0
-                    })
+                    const hasChildRegion =
+                      !hideChildWorkflows &&
+                      childActions.some((childAction) => {
+                        const grandchildActions = actions.filter((a) => a.parentActionId === childAction.id && !a.groupType)
+                        const groupActions = actions.filter((a) => a.parentActionId === childAction.id && a.groupType)
+                        return grandchildActions.length > 0 || groupActions.length > 0
+                      })
                     const isActionExpanded = hasChildRegion && !collapsedActionIds.has(action.id)
                     return [
                       /* ── Action row ──────────────────────────────── */
@@ -296,10 +318,10 @@ export function OnboardingJourneysTable({ rows, visibleColumns, showNestedGroups
                         )}
                       </DataTableRow>,
 
-                      ...(isActionExpanded ? [
+                      ...(isActionExpanded && !hideChildWorkflows ? [
                         ...childActions.flatMap((childAction) => {
-                        const grandchildActions = row.actions.filter((a) => a.parentActionId === childAction.id && !a.groupType)
-                        const groupActions = row.actions.filter((a) => a.parentActionId === childAction.id && a.groupType)
+                        const grandchildActions = actions.filter((a) => a.parentActionId === childAction.id && !a.groupType)
+                        const groupActions = actions.filter((a) => a.parentActionId === childAction.id && a.groupType)
                         if (grandchildActions.length === 0 && groupActions.length === 0) return []
                         return [
                           /* ── Section header ────────────────────────── */
@@ -326,7 +348,7 @@ export function OnboardingJourneysTable({ rows, visibleColumns, showNestedGroups
                             const cfg = gc.displayStatus
                               ? childStatusConfig[gc.displayStatus as ChildDisplayStatus]
                               : undefined
-                            const gcGroups = row.actions.filter((a) => a.parentActionId === gc.id && a.groupType)
+                            const gcGroups = actions.filter((a) => a.parentActionId === gc.id && a.groupType)
                             return [
                               <DataTableRow
                                 key={`${row.id}-action-${gc.id}`}
@@ -345,9 +367,12 @@ export function OnboardingJourneysTable({ rows, visibleColumns, showNestedGroups
                                 {vis('status') && (
                                   <DataTableCell type="badge">
                                     {cfg ? (
-                                      <Badge variant="outline" className={cn('text-xs font-medium border-transparent', cfg.className)}>
-                                        {cfg.label}
-                                      </Badge>
+                                      <OperationalStatusPill
+                                        variant={cfg.pillVariant}
+                                        label={cfg.label}
+                                        className={cfg.className}
+                                        showIcon={Boolean(cfg.pillVariant)}
+                                      />
                                     ) : (
                                       <StatusBadge status={gc.status} />
                                     )}
@@ -367,7 +392,7 @@ export function OnboardingJourneysTable({ rows, visibleColumns, showNestedGroups
 
                               /* ── Group rows under this account ──────── */
                               ...(showNestedGroups ? gcGroups : []).flatMap((group) => {
-                                const groupChildren = row.actions.filter((a) => a.parentActionId === group.id)
+                                const groupChildren = actions.filter((a) => a.parentActionId === group.id)
                                 if (groupChildren.length === 0) return []
                                 const isGroupExpanded = expandedGroupIds.has(group.id)
                                 const groupTotal = groupChildren.reduce((s, a) => s + a.tasks.length, 0)
@@ -429,9 +454,12 @@ export function OnboardingJourneysTable({ rows, visibleColumns, showNestedGroups
                                         {vis('status') && (
                                           <DataTableCell type="badge">
                                             {gc2Cfg ? (
-                                              <Badge variant="outline" className={cn('text-xs font-medium border-transparent', gc2Cfg.className)}>
-                                                {gc2Cfg.label}
-                                              </Badge>
+                                              <OperationalStatusPill
+                                                variant={gc2Cfg.pillVariant}
+                                                label={gc2Cfg.label}
+                                                className={gc2Cfg.className}
+                                                showIcon={Boolean(gc2Cfg.pillVariant)}
+                                              />
                                             ) : (
                                               <StatusBadge status={gc2.status} />
                                             )}
@@ -457,7 +485,7 @@ export function OnboardingJourneysTable({ rows, visibleColumns, showNestedGroups
 
                           /* ── Standalone group rows (not under a sub-workflow) */
                           ...(showNestedGroups ? groupActions : []).flatMap((group) => {
-                            const groupChildren = row.actions.filter((a) => a.parentActionId === group.id)
+                            const groupChildren = actions.filter((a) => a.parentActionId === group.id)
                             if (groupChildren.length === 0) return []
                             const isGroupExpanded = expandedGroupIds.has(group.id)
                             const groupTotal = groupChildren.reduce((s, a) => s + a.tasks.length, 0)
@@ -518,9 +546,12 @@ export function OnboardingJourneysTable({ rows, visibleColumns, showNestedGroups
                                     {vis('status') && (
                                       <DataTableCell type="badge">
                                         {gc2Cfg ? (
-                                          <Badge variant="outline" className={cn('text-xs font-medium border-transparent', gc2Cfg.className)}>
-                                            {gc2Cfg.label}
-                                          </Badge>
+                                          <OperationalStatusPill
+                                            variant={gc2Cfg.pillVariant}
+                                            label={gc2Cfg.label}
+                                            className={gc2Cfg.className}
+                                            showIcon={Boolean(gc2Cfg.pillVariant)}
+                                          />
                                         ) : (
                                           <StatusBadge status={gc2.status} />
                                         )}

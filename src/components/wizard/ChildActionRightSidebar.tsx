@@ -101,7 +101,8 @@ export function ChildActionRightSidebar() {
         <div
           className={cn(
             'flex flex-1 min-h-0 flex-col',
-            showDocumentsTab && activeTab === 'documents' ? 'overflow-hidden' : 'overflow-y-auto p-4',
+            activeTab === 'activity' ? 'overflow-y-auto p-4' : 'overflow-hidden p-4',
+            showDocumentsTab && activeTab === 'documents' && 'overflow-hidden p-0',
           )}
         >
           {activeTab === 'activity' && (

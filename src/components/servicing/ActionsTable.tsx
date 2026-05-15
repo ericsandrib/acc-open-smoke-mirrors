@@ -16,7 +16,7 @@ import {
 } from '@/lib/sort-comparators'
 import type { Journey, JourneyAction, JourneyStatus } from '@/types/servicing'
 import { childStatusConfig, type ChildDisplayStatus } from '@/utils/childStatusDisplay'
-import { compactNestedActionLabel } from '@/utils/servicingActionLabel'
+import { compactNestedActionLabel, shortActionNicknameForTable } from '@/utils/servicingActionLabel'
 import { reviewerQueueLaneForDisplayStatus, type ReviewerQueueLane } from '@/data/servicing-view-presets'
 import { Badge } from '@/components/ui/badge'
 import { cn } from '@/lib/utils'
@@ -41,19 +41,20 @@ function computeStateModelLabel(action: JourneyAction): string {
   if (ds && ds in childStatusConfig) {
     return childStatusConfig[ds as ChildDisplayStatus].label
   }
+  if (action.status === 'awaiting_review') {
+    return childStatusConfig.awaiting_review.label
+  }
   switch (action.status) {
-    case 'awaiting_review':
-      return 'Need Review'
     case 'in_progress':
-      return 'Active'
+      return 'In Progress'
     case 'complete':
-      return 'Complete'
+      return 'Completed'
     case 'not_started':
-      return 'Not started'
+      return 'Not Started'
     case 'rejected':
       return 'Rejected'
     case 'cancelled':
-      return 'Cancelled'
+      return 'Declined'
     default:
       return String(action.status)
   }
@@ -85,6 +86,8 @@ export interface ActionRow {
   stateModelStatus: string
   /** KYC vs account-opening child (Document Review queue); empty for other rows. */
   reviewQueueItemType: '' | 'KYC' | 'Account'
+  /** Tab filter bucket for All / In Progress / Completed presets. */
+  listTab: ActionListTab
 }
 const HOME_OFFICE_REVIEW_DISPLAY = new Set<string>([
   'awaiting_review',
@@ -93,6 +96,7 @@ const HOME_OFFICE_REVIEW_DISPLAY = new Set<string>([
   'ho_kyc_review',
   'escalation_hold',
   'principal_review',
+  'clarification_required',
   'nigo',
   'nigo_document',
   'nigo_principal',
@@ -115,6 +119,18 @@ export function actionRowInHomeOfficeReviewPipeline(row: ActionRow): boolean {
   return typeof ds === 'string' && HOME_OFFICE_REVIEW_DISPLAY.has(ds)
 }
 
+/** Buckets for Actions list tabs (All / In Progress / Completed). */
+export type ActionListTab = 'in_progress' | 'complete' | 'not_started'
+
+/** Maps workflow + pipeline status to a list tab (child `awaiting_review` → in progress). */
+export function deriveActionListTab(
+  action: Pick<JourneyAction, 'status' | 'displayStatus'>,
+): ActionListTab {
+  if (action.status === 'complete' || action.displayStatus === 'complete') return 'complete'
+  if (action.status === 'not_started') return 'not_started'
+  return 'in_progress'
+}
+
 /** Document Review row type from servicing / workflow parent ids. */
 export function deriveReviewQueueItemType(action: JourneyAction): 'KYC' | 'Account' | '' {
   if (action.groupType === 'funding' || action.groupType === 'feature-service') return 'Account'
@@ -133,7 +149,7 @@ export function deriveActionRows(journeys: Journey[]): ActionRow[] {
         journeyId: journey.id,
         title: action.title,
         status: action.status,
-        nickname: action.nickname,
+        nickname: shortActionNicknameForTable(journey.name, action.nickname, action.title),
         parentActionId: action.parentActionId,
         journeyName: journey.name,
         relationshipName: journey.relationshipName,
@@ -147,6 +163,7 @@ export function deriveActionRows(journeys: Journey[]): ActionRow[] {
         displayStatus: action.displayStatus,
         stateModelStatus: computeStateModelLabel(action),
         reviewQueueItemType: deriveReviewQueueItemType(action),
+        listTab: deriveActionListTab(action),
       }
     }),
   )
@@ -236,14 +253,14 @@ export function ActionsTable({ rows, visibleColumns, groupBy = 'none' }: Actions
       }
     >
       {vis('nickname') && (
-        <DataTableCell type="primary" className="font-medium">
+        <DataTableCell type="primary" className="min-w-0 max-w-[12rem] font-medium">
           {row.isChildWorkflow
             ? compactNestedActionLabel({
                 journeyName: row.journeyName,
                 isChildWorkflow: true,
                 preferredLabel: row.nickname ?? row.title,
               })
-            : row.nickname}
+            : (row.nickname ?? row.title)}
         </DataTableCell>
       )}
       {vis('reviewQueueItemType') && (
@@ -283,26 +300,47 @@ export function ActionsTable({ rows, visibleColumns, groupBy = 'none' }: Actions
     <DataTable>
       <thead className="bg-muted/60 border-b border-border [&_th_svg]:hidden">
         <tr>
-          {vis('nickname') && <DataTableHeader size="comfortable" sortable sorted={sorted('nickname')} onSort={() => onSort('nickname')} style={{ width: 250 }}>Action Nickname</DataTableHeader>}
+          {vis('nickname') && (
+            <DataTableHeader
+              size="comfortable"
+              sortable
+              sorted={sorted('nickname')}
+              onSort={() => onSort('nickname')}
+              style={{ width: '18%', minWidth: 100, maxWidth: 168 }}
+            >
+              Action
+            </DataTableHeader>
+          )}
           {vis('reviewQueueItemType') && (
             <DataTableHeader
               size="comfortable"
               sortable
               sorted={sorted('reviewQueueItemType')}
               onSort={() => onSort('reviewQueueItemType')}
-              style={{ width: 96 }}
+              style={{ width: 72 }}
             >
               Type
             </DataTableHeader>
           )}
-          {vis('title') && <DataTableHeader size="comfortable" sortable sorted={sorted('title')} onSort={() => onSort('title')} style={{ width: 200 }}>Action Type</DataTableHeader>}
+          {vis('title') && (
+            <DataTableHeader
+              size="comfortable"
+              sortable
+              sorted={sorted('title')}
+              onSort={() => onSort('title')}
+              style={{ width: '14%', minWidth: 92, maxWidth: 150 }}
+            >
+              Action Type
+            </DataTableHeader>
+          )}
           {vis('journeyName') && (
             <DataTableHeader
               size="comfortable"
               sortable
               sorted={sorted('journeyName')}
               onSort={() => onSort('journeyName')}
-              style={{ minWidth: 240 }}
+              className="min-w-0"
+              style={{ width: '28%', minWidth: 120 }}
             >
               Journey
             </DataTableHeader>
@@ -326,7 +364,7 @@ export function ActionsTable({ rows, visibleColumns, groupBy = 'none' }: Actions
               sorted={sorted('stateModelStatus')}
               onSort={() => onSort('stateModelStatus')}
             >
-              Review Status
+              Status
             </DataTableHeader>
           )}
           {vis('assignedTo') && <DataTableHeader size="comfortable" sortable sorted={sorted('assignedTo')} onSort={() => onSort('assignedTo')}>Assigned To</DataTableHeader>}
@@ -342,10 +380,31 @@ export function ActionsTable({ rows, visibleColumns, groupBy = 'none' }: Actions
                 border={false}
                 onClick={() => navigate(`/servicing/${g.journeyId}`)}
               >
-                <DataTableCell colSpan={Math.max(1, visibleColCount)} type="primary" className="font-semibold">
-                  <span className="truncate">{g.journeyName}</span>
-                  <span className="ml-2 font-normal text-muted-foreground tabular-nums">{g.journeyId}</span>
-                </DataTableCell>
+                {vis('journeyName') ? (
+                  <>
+                    {vis('nickname') && <DataTableCell />}
+                    {vis('reviewQueueItemType') && (
+                      <DataTableCell type="secondary" className="align-middle">
+                        <span className="text-sm text-muted-foreground">—</span>
+                      </DataTableCell>
+                    )}
+                    {vis('title') && <DataTableCell />}
+                    <DataTableCell type="primary" className="min-w-0 font-semibold">
+                      <span className="truncate">{g.journeyName}</span>
+                      <span className="ml-2 font-normal text-muted-foreground tabular-nums">{g.journeyId}</span>
+                    </DataTableCell>
+                    {vis('relationshipName') && <DataTableCell />}
+                    {vis('status') && <DataTableCell />}
+                    {vis('stateModelStatus') && <DataTableCell />}
+                    {vis('assignedTo') && <DataTableCell />}
+                    {vis('tasksComplete') && <DataTableCell />}
+                  </>
+                ) : (
+                  <DataTableCell colSpan={Math.max(1, visibleColCount)} type="primary" className="font-semibold">
+                    <span className="truncate">{g.journeyName}</span>
+                    <span className="ml-2 font-normal text-muted-foreground tabular-nums">{g.journeyId}</span>
+                  </DataTableCell>
+                )}
               </DataTableRow>,
               ...g.rows.map((row) => renderDataRow(row)),
             ])

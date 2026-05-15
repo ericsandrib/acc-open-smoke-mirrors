@@ -16,6 +16,7 @@ import {
   SelectItem,
 } from '@/components/ui/select'
 import { cn } from '@/lib/utils'
+import { shortActionNicknameForTable } from '@/utils/servicingActionLabel'
 import { teamMembers } from '@/data/teamMembers'
 import { formComponents, taskDescriptions } from '@/components/wizard/formRegistry'
 import type { Task, TaskStatus } from '@/types/workflow'
@@ -40,8 +41,8 @@ const statusColors: Record<TaskStatus, string> = {
 const statusLabels: Record<TaskStatus, string> = {
   not_started: 'Ready to Begin',
   in_progress: 'In Progress',
-  complete: 'Complete',
-  canceled: 'Canceled',
+  complete: 'Completed',
+  canceled: 'Declined',
   blocked: 'Blocked',
   awaiting_review: 'Awaiting Review',
   rejected: 'Rejected',
@@ -188,7 +189,11 @@ export function JourneyDetailPage() {
               }
               return crumbs
             })()}
-            currentPage={focusedAction?.nickname ?? journey.name}
+            currentPage={
+              focusedAction
+                ? shortActionNicknameForTable(journey.name, focusedAction.nickname, focusedAction.title)
+                : journey.name
+            }
             rightContent={
               <div className="flex items-center gap-2">
                 <ServicingStatusBadge status={focusedAction?.status ?? journey.status} />

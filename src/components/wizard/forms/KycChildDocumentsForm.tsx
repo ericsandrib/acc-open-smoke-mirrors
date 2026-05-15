@@ -11,7 +11,11 @@ import {
   DocumentUploadInstancesTable,
   type DocumentUploadInstance,
 } from '@/components/wizard/forms/DocumentUploadInstancesTable'
-import { AlertTriangle, CheckCircle2 } from 'lucide-react'
+import { AlertTriangle } from 'lucide-react'
+import {
+  REVIEWER_ADDITIONAL_CONTEXT_KEY,
+  ReviewerAdditionalContextSection,
+} from '@/components/wizard/forms/ReviewerAdditionalContextSection'
 import {
   getOpenAccountsCoreSupportingDocumentSections,
   getDocSubTypes,
@@ -98,16 +102,6 @@ export function KycChildDocumentsForm() {
           </div>
         </div>
       )}
-      {isLocked && isApproved && (
-        <div className="rounded-md border border-green-200 bg-green-50 dark:border-green-900/60 dark:bg-green-950/40 px-3 py-2.5">
-          <div className="flex items-center gap-2">
-            <CheckCircle2 className="h-4 w-4 text-green-600 dark:text-green-400 shrink-0" />
-            <p className="text-xs font-medium text-green-900 dark:text-green-100">
-              This KYC package has been approved. Supporting documents are read-only.
-            </p>
-          </div>
-        </div>
-      )}
       {docs.map((doc) => {
         const instances = (data[`doc-instances-${doc.id}`] as DocumentUploadInstance[] | undefined) ?? []
         const nextAssignees = assignmentOptions
@@ -151,6 +145,13 @@ export function KycChildDocumentsForm() {
           </div>
         )
       })}
+
+      <ReviewerAdditionalContextSection
+        idPrefix="kyc-docs"
+        value={(data[REVIEWER_ADDITIONAL_CONTEXT_KEY] as string) ?? ''}
+        onChange={(value) => updateField(REVIEWER_ADDITIONAL_CONTEXT_KEY, value)}
+        disabled={isLocked}
+      />
     </div>
   )
 }

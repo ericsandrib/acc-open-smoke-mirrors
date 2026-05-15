@@ -2,6 +2,11 @@ import { useEffect, useMemo, useState } from 'react'
 import { useWorkflow } from '@/stores/workflowStore'
 import { collectJourneySupportingDocumentRows } from '@/utils/journeySupportingDocuments'
 import { useSupportingDocumentPreview } from '@/components/wizard/supportingDocumentPreviewContext'
+import {
+  isPreviewablePdfFileName,
+  pdfViewerEmbedSrc,
+  resolveSupportingDocumentPreviewSrc,
+} from '@/utils/supportingDocumentPreviewResolve'
 import { FileText } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
@@ -41,8 +46,11 @@ export function JourneySupportingDocumentsPanel() {
   }, [rows])
 
   const selected = rows.find((r) => r.previewKey === selectedPreviewKey) ?? null
-  const previewUrl = selected ? getPreviewUrl(selected.previewKey) : undefined
+  const previewUrl = selected
+    ? resolveSupportingDocumentPreviewSrc(selected.previewKey, selected.fileName, getPreviewUrl)
+    : undefined
   const kind = selected ? previewKindFromFileName(selected.fileName) : 'none'
+  const hasSessionBlob = selected ? Boolean(getPreviewUrl(selected.previewKey)?.startsWith('blob:')) : false
 
   if (rows.length === 0) {
     return (
@@ -67,7 +75,7 @@ export function JourneySupportingDocumentsPanel() {
           <h3 className="text-sm font-semibold text-foreground">Supporting documents</h3>
         </div>
         <p className="text-xs text-muted-foreground leading-snug">
-          Click a row to preview. PDFs and images uploaded in this session open below; refresh clears previews.
+          Click a row to preview. PDFs and images open below; demo placeholders are used when files were uploaded before this session.
         </p>
       </div>
 
@@ -76,7 +84,9 @@ export function JourneySupportingDocumentsPanel() {
         <ul className="min-h-0 flex-1 space-y-2 overflow-y-auto pr-1">
           {rows.map((r) => {
             const isSelected = r.previewKey === selectedPreviewKey
-            const hasBlob = Boolean(getPreviewUrl(r.previewKey))
+            const hasPreview = Boolean(
+              resolveSupportingDocumentPreviewSrc(r.previewKey, r.fileName, getPreviewUrl),
+            )
             return (
               <li key={r.rowKey}>
                 <button
@@ -94,10 +104,10 @@ export function JourneySupportingDocumentsPanel() {
                   <div className="mt-1.5 flex flex-col gap-0.5 text-foreground/90">
                     <span>
                       <span className="text-muted-foreground">File: </span>
-                      <span className={cn(hasBlob && r.fileName !== 'No file uploaded' && 'text-primary underline-offset-2')}>
+                      <span className={cn(hasPreview && r.fileName !== 'No file uploaded' && 'text-primary underline-offset-2')}>
                         {r.fileName}
                       </span>
-                      {hasBlob && r.fileName !== 'No file uploaded' ? (
+                      {hasPreview && r.fileName !== 'No file uploaded' ? (
                         <span className="sr-only"> — selected for preview</span>
                       ) : null}
                     </span>
@@ -131,11 +141,26 @@ export function JourneySupportingDocumentsPanel() {
             <div className="space-y-2 p-3 text-xs text-muted-foreground leading-relaxed">
               <p>No in-browser preview for this row.</p>
               <p>
-                Pre-seeded filenames or uploads from a previous page load are not kept as files. Upload again in
-                the supporting-documents step in this session to preview here while you step through the workflow.
+                {isPreviewablePdfFileName(selected.fileName)
+                  ? 'A demo PDF could not be loaded for this filename.'
+                  : 'Upload a PDF or image in the supporting-documents step to preview here.'}
               </p>
             </div>
-          ) : kind === 'image' ? (
+          ) : kind === 'pdf' ? (
+            <object
+              title={`Preview: ${selected.fileName}`}
+              data={pdfViewerEmbedSrc(previewUrl)}
+              type="application/pdf"
+              className="h-full min-h-[200px] w-full bg-white"
+            >
+              <div className="p-3 text-xs text-muted-foreground">
+                PDF preview is not available in this browser.{' '}
+                <a href={previewUrl} target="_blank" rel="noreferrer" className="text-primary underline">
+                  Open in new tab
+                </a>
+              </div>
+            </object>
+          ) : kind === 'image' && hasSessionBlob ? (
             <div className="flex h-full min-h-[180px] items-center justify-center overflow-auto p-2">
               <img
                 src={previewUrl}
@@ -143,12 +168,6 @@ export function JourneySupportingDocumentsPanel() {
                 className="max-h-full max-w-full object-contain"
               />
             </div>
-          ) : kind === 'pdf' ? (
-            <iframe
-              title={`Preview: ${selected.fileName}`}
-              src={previewUrl}
-              className="h-full min-h-[200px] w-full border-0 bg-white"
-            />
           ) : (
             <div className="space-y-2 p-3 text-xs text-muted-foreground">
               <p>Preview for this file type is not embedded in the demo.</p>

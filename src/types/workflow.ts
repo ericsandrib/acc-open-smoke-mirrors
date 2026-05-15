@@ -182,7 +182,7 @@ export interface ChildReviewState {
   principalReview?: { status: 'pending' | 'igo' | 'nigo'; decidedAt?: string; nigoReason?: string; nigoFeedback?: string }
   amlFlagged?: boolean
   amlNotes?: string
-  amlReview?: { status: 'pending' | 'cleared' | 'flagged' | 'info_requested' | 'escalated'; decidedAt?: string; findings?: string; infoRequestComments?: string; reason?: string }
+  amlReview?: { status: 'pending' | 'cleared' | 'flagged' | 'info_requested' | 'escalated'; decidedAt?: string; findings?: string; infoRequestComments?: string; reason?: string; approvalReason?: string }
   cipStatus?: {
     idVerification: 'pass' | 'fail' | 'pending'
     addressMatch: 'pass' | 'fail' | 'pending'
@@ -228,6 +228,8 @@ export interface WorkflowState {
   taskData: Record<string, Record<string, unknown>>
   journeyName?: string
   journeyId?: string
+  /** ISO timestamp when the advisor started this journey (Compose / template); drives servicing “Created” + sort. */
+  journeyStartedAt?: string
   /** Display date for the journey header (e.g. "Oct 8"). */
   journeyDateLabel?: string
   /** ISO timestamp for journey due date (tooltip + header short label source). */
@@ -315,13 +317,22 @@ export type WorkflowAction =
   | { type: 'CHILD_GO_NEXT' }
   | { type: 'CHILD_GO_BACK' }
   | { type: 'SET_CHILD_SUB_TASK'; index: number }
+  /** Marks a child sub-step as visited (drives progress for optional / read-only steps). */
+  | { type: 'MARK_CHILD_SUB_TASK_VISITED'; index: number }
   | { type: 'SUBMIT_FOR_REVIEW' }
   | { type: 'SUBMIT_ALL_ACCOUNT_OPENING_CHILDREN_FOR_REVIEW'; openAccountsTaskId: string }
   | { type: 'SUBMIT_ACCOUNT_OPENING_CHILDREN_FOR_REVIEW'; childIds: string[] }
+  /**
+   * After simulated (or real) client e-sign on account paperwork: run AML on KYC child workflows for
+   * account owners tied to those accounts. Sets {@link ChildReviewState.amlReview} to pending; if
+   * {@link ChildReviewState.amlFlagged} is already true, the wizard shows AML review (see `deriveChildDisplayStatus`).
+   * Optional `supplementalOwnerPartyIds` merges e-sign recipients when account-owner taskData is sparse.
+   */
+  | { type: 'POST_ENVELOPE_SIGNATURE_AML_FOR_OWNERS'; accountChildIds: string[]; supplementalOwnerPartyIds?: string[] }
   | { type: 'ACCEPT_REVIEW' }
   | { type: 'REJECT_REVIEW'; reason: string; feedback?: string }
   | { type: 'SUBMIT_CHILD_FOR_REVIEW' }
-  /** Demo: advisor runs KYC/CIP screening from Client Information; updates {@link ChildReviewState.cipStatus}. */
+  /** Demo: advisor runs KYC/CIP screening from Client Verification Information; updates {@link ChildReviewState.cipStatus}. */
   | { type: 'RUN_ADVISOR_KYC_VERIFICATION'; childId: string }
   /**
    * Dev-only: set advisor identity verification card to a canned scenario for demos (no {@link WorkflowState.taskData} changes).
@@ -336,7 +347,7 @@ export type WorkflowAction =
   | { type: 'PRINCIPAL_REVIEW_IGO' }
   | { type: 'PRINCIPAL_REVIEW_NIGO'; reason: string; feedback?: string }
   | { type: 'SET_AML_FLAG'; flagged: boolean; notes?: string }
-  | { type: 'AML_REVIEW_CLEAR' }
+  | { type: 'AML_REVIEW_CLEAR'; approvalReason?: string }
   | { type: 'AML_REVIEW_FLAG'; findings?: string }
   | { type: 'HO_KYC_APPROVE' }
   | { type: 'HO_KYC_REQUEST_CHANGES'; comments: string }

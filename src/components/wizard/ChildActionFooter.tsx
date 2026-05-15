@@ -11,6 +11,7 @@ import {
 import { Button } from '@/components/ui/button'
 import { CheckCircle2, ChevronLeft, ChevronRight, ShieldAlert } from 'lucide-react'
 import { getKycValidationErrors, kycChildHasOptionalIdVerification } from './forms/KycChildInfoForm'
+import { isChildAwaitingAdvisorClarification } from '@/utils/childStatusDisplay'
 import {
   getAccountOpeningChildSubmissionIssues,
   hasAccountOpeningChildBeenSubmittedForReview,
@@ -129,7 +130,11 @@ export function ChildActionFooter() {
     child.childType === 'funding-line' || child.childType === 'feature-service-line'
   const isAdvisorView = state.demoViewMode === 'advisor'
   const isAmlView = state.demoViewMode === 'aml'
-  const isHoKycView = state.demoViewMode === 'ho-kyc'
+  const isHoKycReviewerView =
+    isKyc &&
+    (state.demoViewMode === 'ho-kyc' ||
+      state.demoViewMode === 'ho-documents' ||
+      state.demoViewMode === 'ho-principal')
   const kycParty =
     isKyc
       ? state.relatedParties.find((p) => p.id === (state.taskData[child.id]?.kycSubjectPartyId as string | undefined)) ??
@@ -229,10 +234,6 @@ export function ChildActionFooter() {
       }
     }
     dispatch({ type: 'SUBMIT_CHILD_FOR_REVIEW' })
-    dispatch({
-      type: 'SET_DEMO_VIEW',
-      mode: child.childType === 'account-opening' ? 'ho-documents' : 'advisor',
-    })
     setShowResubmitModal(false)
   }
 
@@ -285,7 +286,10 @@ export function ChildActionFooter() {
 
   const handleConfirmCompleteAccountStep = () => {
     dispatch({ type: 'SUBMIT_CHILD_FOR_REVIEW' })
-    dispatch({ type: 'SET_DEMO_VIEW', mode: 'ho-documents' })
+    const alreadySubmitted = hasAccountOpeningChildBeenSubmittedForReview(state, child.id)
+    if (!alreadySubmitted) {
+      dispatch({ type: 'SET_DEMO_VIEW', mode: 'ho-documents' })
+    }
     setShowCompleteStepModal(false)
   }
 
@@ -296,14 +300,15 @@ export function ChildActionFooter() {
   }
 
   const childReviewState = getChildReviewState(state, child.id)
+  const clarificationRequired = isChildAwaitingAdvisorClarification(childReviewState)
   const resubmitShownInApplicationStatusCard =
     isAdvisorView &&
     advisorResubmitEligible &&
     isLast &&
-    childReviewState?.documentReview?.status === 'nigo' &&
+    clarificationRequired &&
     (child.childType === 'account-opening' || child.childType === 'kyc')
 
-  if (isAdvisorView || isAmlView || isHoKycView) {
+  if (isAdvisorView || isAmlView || isHoKycReviewerView) {
     const showSubmittedNavigation = isAdvisorView && child.status === 'awaiting_review' && !advisorFormsEditable
 
     return (
@@ -325,7 +330,7 @@ export function ChildActionFooter() {
               )}
             </div>
             <div className="flex items-center gap-3">
-            {advisorResubmitEligible && isLast && !resubmitShownInApplicationStatusCard ? (
+            {advisorResubmitEligible && isLast && !resubmitShownInApplicationStatusCard && !isKyc ? (
               <Button onClick={handleResubmit}>
                 Submit for Review
               </Button>
@@ -356,16 +361,10 @@ export function ChildActionFooter() {
                 </span>
               </div>
             ) : isLast && (child.status === 'in_progress' || child.status === 'not_started') ? (
-              child.childType === 'account-opening' ? (
-                <Button variant="outline" onClick={() => dispatch({ type: 'EXIT_CHILD_ACTION' })}>
-                  Next
-                  <ChevronRight className="h-4 w-4" />
-                </Button>
-              ) : (
-                <Button onClick={handleDone}>
-                  Submit for Review
-                </Button>
-              )
+              <Button variant="outline" onClick={() => dispatch({ type: 'EXIT_CHILD_ACTION' })}>
+                Next
+                <ChevronRight className="h-4 w-4" />
+              </Button>
             ) : null}
             {!isLast && !hideNextForCompletedAnnuityOwners && (
               <Button variant="outline" onClick={() => dispatch({ type: 'CHILD_GO_NEXT' })}>

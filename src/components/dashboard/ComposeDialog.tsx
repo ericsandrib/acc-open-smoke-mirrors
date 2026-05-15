@@ -112,7 +112,7 @@ export function ComposeDialog({ onClose }: ComposeDialogProps) {
   const { dispatch } = useWorkflow()
   const { variant: wizardOpenAccountsVariant } = useOpenAccountsVariantControls()
   const hideActionSettings = wizardOpenAccountsVariant === 'v6'
-  const { currentLiveJourney, saveCurrentJourney } = useServicing()
+  const { currentLiveJourney, saveCurrentJourney, recordJourneyCreated } = useServicing()
   const location = useLocation()
   const navigate = useNavigate()
 
@@ -204,6 +204,7 @@ export function ComposeDialog({ onClose }: ComposeDialogProps) {
             openAnnuityAccount: openAnnuityAccount === 'yes',
           },
     })
+    recordJourneyCreated(newJourneyId)
     toast.success(`Journey "${name}" created for ${relationship.name}`)
 
     if (createMore) {

@@ -60,8 +60,8 @@ const statusColors: Record<TaskStatus, string> = {
 const statusLabels: Record<TaskStatus, string> = {
   not_started: 'Ready to Begin',
   in_progress: 'In Progress',
-  complete: 'Complete',
-  canceled: 'Canceled',
+  complete: 'Completed',
+  canceled: 'Declined',
   blocked: 'Blocked',
   awaiting_review: 'Awaiting Review',
   rejected: 'Rejected',
@@ -174,11 +174,11 @@ function TaskProgressIndicator({
     variant === 'canceled'
       ? 'Canceled'
       : variant === 'done'
-        ? edited ? 'Complete · Edited' : 'Complete'
+        ? edited ? 'Completed · Edited' : 'Completed'
         : variant === 'ambiguous'
           ? 'No progress to report'
           : displayPct === 0
-            ? edited ? 'Not started · Edited' : 'Not started'
+            ? edited ? 'Not Started · Edited' : 'Not Started'
             : edited
               ? `${displayPct}% complete · Edited`
               : `${displayPct}% complete`

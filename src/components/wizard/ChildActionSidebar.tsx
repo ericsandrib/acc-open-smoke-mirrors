@@ -19,6 +19,7 @@ import {
   getAccountOpeningChildSubmissionIssues,
   getAccountOpeningSubTaskProgress,
 } from '@/utils/accountOpeningChildProgress'
+import { getGenericChildSubTaskProgress } from '@/utils/childSubTaskProgress'
 import type { LucideIcon } from 'lucide-react'
 import {
   FileText,
@@ -41,6 +42,8 @@ import {
 } from '@/components/ui/select'
 import { useWizardRightPanel } from '@/components/wizard/wizardRightPanelContext'
 import { getActiveStageLabel } from '@/components/wizard/ChildActionTimelineSheet'
+import { isChildAwaitingAdvisorClarification } from '@/utils/childStatusDisplay'
+import { getKycValidationErrors, kycChildHasOptionalIdVerification } from './forms/KycChildInfoForm'
 import { JourneyHeader, type WorkflowBreadcrumbItem } from '@/components/wizard/JourneyHeader'
 import { computeOverallJourneyProgressPct } from '@/components/wizard/StepSidebar'
 import { AssignAllTasksControl } from '@/components/wizard/AssignAllTasksControl'
@@ -52,7 +55,6 @@ import {
 import type { TaskStatus } from '@/types/workflow'
 import { getAccountOwnersMissingKyc } from '@/utils/accountOpeningOwnerKyc'
 import { NigoDialog } from './NigoDialog'
-import { getKycValidationErrors, kycChildHasOptionalIdVerification } from './forms/KycChildInfoForm'
 import {
   Dialog,
   DialogContent,
@@ -124,10 +126,16 @@ function getReasonLabel(options: ReviewReasonOption[], value: string): string {
  */
 function SubTaskProgressIndicator({
   subTaskId,
+  formKey,
+  childId,
+  subTaskIndex,
   accountOpeningChildId,
   subTaskSuffix,
 }: {
   subTaskId: string
+  formKey: string
+  childId: string
+  subTaskIndex: number
   accountOpeningChildId?: string
   subTaskSuffix?: string
 }) {
@@ -152,7 +160,14 @@ function SubTaskProgressIndicator({
   } else if (lockedComplete) {
     filled = 1
   } else {
-    filled = isSubmitted || hasData ? 1 : 0
+    const progress = getGenericChildSubTaskProgress(state, {
+      subTaskId,
+      formKey,
+      childId,
+      subTaskIndex,
+    })
+    filled = progress.filled
+    total = progress.total
   }
   const pct = Math.min(1, Math.max(0, filled / total))
   const edited = hasData
@@ -169,14 +184,14 @@ function SubTaskProgressIndicator({
       ? 'Canceled'
       : variant === 'done'
       ? edited
-        ? 'Complete · Edited'
-        : 'Complete'
+        ? 'Completed · Edited'
+        : 'Completed'
       : variant === 'ambiguous'
       ? 'No progress to report'
       : displayPct === 0
       ? edited
-        ? 'Not started · Edited'
-        : 'Not started'
+        ? 'Not Started · Edited'
+        : 'Not Started'
       : edited
       ? `${displayPct}% complete · Edited`
       : `${displayPct}% complete`
@@ -202,7 +217,6 @@ function SubTaskProgressIndicator({
 
 type ReviewerDialog =
   | null
-  | 'kyc-submit'
   | 'aml-approve'
   | 'aml-return'
   | 'aml-escalate'
@@ -349,6 +363,10 @@ function ReviewConfirmDialog({
   description,
   confirmLabel,
   confirmClassName,
+  notesLabel,
+  notesPlaceholder,
+  notesValue,
+  onNotesChange,
   onCancel,
   onConfirm,
 }: {
@@ -357,16 +375,32 @@ function ReviewConfirmDialog({
   description: ReactNode
   confirmLabel: string
   confirmClassName?: string
+  notesLabel?: string
+  notesPlaceholder?: string
+  notesValue?: string
+  onNotesChange?: (value: string) => void
   onCancel: () => void
   onConfirm: () => void
 }) {
+  const hasNotes = Boolean(notesLabel && onNotesChange)
   return (
     <Dialog open={open} onOpenChange={(nextOpen) => !nextOpen && onCancel()}>
-      <DialogContent className={cn('max-w-sm', reviewDialogContentClass)}>
+      <DialogContent className={cn(hasNotes ? 'max-w-md' : 'max-w-sm', reviewDialogContentClass)}>
         <DialogHeader>
           <DialogTitle>{title}</DialogTitle>
           <DialogDescription>{description}</DialogDescription>
         </DialogHeader>
+        {hasNotes ? (
+          <div className="space-y-2">
+            <Label className="text-sm">{notesLabel}</Label>
+            <textarea
+              value={notesValue ?? ''}
+              onChange={(e) => onNotesChange!(e.target.value)}
+              placeholder={notesPlaceholder}
+              className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm min-h-[88px] resize-none focus:outline-none focus:ring-2 focus:ring-ring"
+            />
+          </div>
+        ) : null}
         <DialogFooter>
           <Button type="button" variant="outline" onClick={onCancel}>
             Cancel
@@ -383,7 +417,6 @@ function ReviewConfirmDialog({
 function ChildReviewStatusActions() {
   const { state, dispatch } = useWorkflow()
   const ctx = useChildActionContext()
-  const advisorResubmitEligible = useAdvisorResubmitEligible()
   const [dialog, setDialog] = useState<ReviewerDialog>(null)
   const [showNigoModal, setShowNigoModal] = useState<'document' | 'principal' | null>(null)
   const [comments, setComments] = useState('')
@@ -400,15 +433,12 @@ function ChildReviewStatusActions() {
   const childMeta = (state.taskData[child.id] as Record<string, unknown> | undefined) ?? {}
   const subjectLabel = childMeta.kycSubjectType === 'entity' ? 'legal entity' : 'individual'
   const mode = state.demoViewMode
-  const kycParty =
-    child.childType === 'kyc'
-      ? state.relatedParties.find((p) => p.id === (childMeta.kycSubjectPartyId as string | undefined)) ??
-        state.relatedParties.find((p) => p.name === child.name)
-      : null
-  const kycSubjectType: 'individual' | 'entity' =
-    childMeta.kycSubjectType === 'entity' || kycParty?.type === 'related_organization'
-      ? 'entity'
-      : 'individual'
+
+  const hasReviewerActions =
+    mode === 'aml' ||
+    mode === 'ho-documents' ||
+    mode === 'ho-principal' ||
+    mode === 'ho-kyc'
 
   const closeDialog = () => {
     setDialog(null)
@@ -416,56 +446,12 @@ function ChildReviewStatusActions() {
     setSelectedReason('')
   }
 
-  const openKycSubmitDialog = () => {
-    const infoTaskId = `${child.id}-info`
-    const infoData = state.taskData[infoTaskId] ?? {}
-    const errors = getKycValidationErrors(infoData, {
-      optionalIdVerification: kycChildHasOptionalIdVerification(child),
-      subjectType: kycSubjectType,
-    })
-
-    if (errors.length > 0) {
-      toast.error('Please fix validation errors before submitting', {
-        description: `${errors.length} required field${errors.length === 1 ? '' : 's'} need attention. Review the summary at the top of the form.`,
-      })
-      dispatch({
-        type: 'SET_TASK_DATA',
-        taskId: infoTaskId,
-        fields: { _submitAttempted: true, _validationScrollNonce: Date.now() },
-      })
-      dispatch({ type: 'SET_CHILD_SUB_TASK', index: 0 })
-      return
-    }
-
-    setDialog('kyc-submit')
-  }
-
-  const hasReviewerActions =
-    mode === 'aml' ||
-    mode === 'ho-documents' ||
-    mode === 'ho-principal' ||
-    mode === 'ho-kyc'
-  const showAdvisorKycSubmit =
-    mode === 'advisor' &&
-    child.childType === 'kyc' &&
-    (child.status === 'not_started' ||
-      child.status === 'in_progress' ||
-      advisorResubmitEligible)
-
-  if (!hasReviewerActions && !showAdvisorKycSubmit) return null
+  if (!hasReviewerActions) return null
 
   let actions: ReactNode = null
   let helper: ReactNode = null
 
-  if (showAdvisorKycSubmit) {
-    actions = (
-      <StatusActionGroup>
-        <StatusActionButton tone="primary" className="w-full" onClick={openKycSubmitDialog}>
-          Submit for Review
-        </StatusActionButton>
-      </StatusActionGroup>
-    )
-  } else if (mode === 'aml') {
+  if (mode === 'aml') {
     const terminal = amlReview?.status && amlReview.status !== 'pending'
     if (!terminal) {
       actions = (
@@ -484,7 +470,10 @@ function ChildReviewStatusActions() {
         </StatusActionGroup>
       )
     }
-  } else if (mode === 'ho-kyc') {
+  } else if (
+    mode === 'ho-kyc' ||
+    (child.childType === 'kyc' && (mode === 'ho-principal' || mode === 'ho-documents'))
+  ) {
     const amlBlocked =
       amlReview?.status === 'pending' ||
       amlReview?.status === 'flagged' ||
@@ -592,24 +581,6 @@ function ChildReviewStatusActions() {
       </div>
 
       <ReviewConfirmDialog
-        open={dialog === 'kyc-submit'}
-        title="Submit for Review"
-        description={(
-          <>
-            You are about to submit <span className="font-medium text-foreground">{child.name}</span> for
-            compliance verification. Once submitted, the information will be locked and forwarded for review.
-          </>
-        )}
-        confirmLabel="Submit for Review"
-        onCancel={closeDialog}
-        onConfirm={() => {
-          dispatch({ type: 'SUBMIT_CHILD_FOR_REVIEW' })
-          dispatch({ type: 'SET_DEMO_VIEW', mode: 'advisor' })
-          closeDialog()
-        }}
-      />
-
-      <ReviewConfirmDialog
         open={dialog === 'aml-approve'}
         title="Approve AML Review"
         description={(
@@ -618,11 +589,15 @@ function ChildReviewStatusActions() {
             AML/sanctions screening review is complete.
           </>
         )}
+        notesLabel="Approval reason"
+        notesPlaceholder="Summarize the screening outcome and rationale for approval..."
+        notesValue={comments}
+        onNotesChange={setComments}
         confirmLabel="Confirm Approval"
         confirmClassName="bg-green-600 hover:bg-green-700 text-white"
         onCancel={closeDialog}
         onConfirm={() => {
-          dispatch({ type: 'AML_REVIEW_CLEAR' })
+          dispatch({ type: 'AML_REVIEW_CLEAR', approvalReason: comments.trim() || undefined })
           closeDialog()
         }}
       />
@@ -992,11 +967,13 @@ export function ChildActionSidebar() {
           workflowBreadcrumbs={workflowBreadcrumbs}
           onWorkflowBreadcrumbChevronClick={exitToParentAction}
           journeySubtitle={
-            child.childType === 'kyc'
-              ? 'KYC'
-              : child.childType === 'account-opening'
-                ? 'Account opening'
-                : 'Workflow'
+            viewMode === 'aml' && child.childType === 'kyc'
+              ? 'AML compliance'
+              : child.childType === 'kyc'
+                ? 'KYC'
+                : child.childType === 'account-opening'
+                  ? 'Account opening'
+                  : 'Workflow'
           }
           onIconClick={variant === 'v5' ? () => navigate('/onboarding') : undefined}
           iconTooltip={variant === 'v5' ? 'Onboarding' : undefined}
@@ -1056,6 +1033,9 @@ export function ChildActionSidebar() {
                         <span className="flex shrink-0 items-center">
                           <SubTaskProgressIndicator
                             subTaskId={subTaskId}
+                            formKey={subTask.formKey}
+                            childId={child.id}
+                            subTaskIndex={idx}
                             accountOpeningChildId={child.childType === 'account-opening' ? child.id : undefined}
                             subTaskSuffix={child.childType === 'account-opening' ? subTask.suffix : undefined}
                           />
@@ -1071,20 +1051,67 @@ export function ChildActionSidebar() {
 
         {(child.childType === 'account-opening' || child.childType === 'kyc') && (() => {
           const reviewState = getChildReviewState(state, child.id)
-          const docIsNigo = reviewState?.documentReview?.status === 'nigo'
-          const stageLabel = docIsNigo
-            ? 'NIGO'
+          const clarificationRequired = isChildAwaitingAdvisorClarification(reviewState)
+          const stageLabel = clarificationRequired
+            ? 'Clarification / Document Required'
             : getActiveStageLabel(child.status, child.childType, reviewState ?? undefined)
-          const statusSentence = docIsNigo
-            ? 'Review feedback and resubmit for document review.'
+          const statusSentence = clarificationRequired
+            ? 'Review feedback, update the package, and submit for review.'
             : stageLabel === 'Draft'
               ? 'Application is in progress.'
-              : `Application is in ${stageLabel.toLowerCase()}.`
-          const detailSentence =
-            docIsNigo ? null : stageLabel === 'Draft'
+              : `Application is in ${stageLabel}.`
+          const detailSentence = clarificationRequired
+            ? null
+            : stageLabel === 'Draft'
               ? 'Complete all sections to submit.'
               : 'Check the activity timeline for details.'
-          const showResubmit = state.demoViewMode === 'advisor' && docIsNigo && advisorResubmitEligible
+          const showResubmit =
+            state.demoViewMode === 'advisor' &&
+            advisorResubmitEligible &&
+            clarificationRequired
+          const resubmitButtonLabel = 'Submit for Review'
+
+          const handleStatusCardResubmit = () => {
+            if (child.childType === 'kyc') {
+              const infoTaskId = `${child.id}-info`
+              const infoData = state.taskData[infoTaskId] ?? {}
+              const childMeta = state.taskData[child.id] ?? {}
+              const kycParty =
+                state.relatedParties.find(
+                  (p) => p.id === (childMeta.kycSubjectPartyId as string | undefined),
+                ) ?? state.relatedParties.find((p) => p.name === child.name)
+              const kycSubjectType: 'individual' | 'entity' =
+                childMeta.kycSubjectType === 'entity' || kycParty?.type === 'related_organization'
+                  ? 'entity'
+                  : 'individual'
+              const errors = getKycValidationErrors(infoData, {
+                optionalIdVerification: kycChildHasOptionalIdVerification(child),
+                subjectType: kycSubjectType,
+              })
+              if (errors.length > 0) {
+                toast.error('Please fix validation errors before submitting', {
+                  description: `${errors.length} required field${errors.length === 1 ? '' : 's'} need attention.`,
+                })
+                dispatch({
+                  type: 'SET_TASK_DATA',
+                  taskId: infoTaskId,
+                  fields: { _submitAttempted: true, _validationScrollNonce: Date.now() },
+                })
+                dispatch({ type: 'SET_CHILD_SUB_TASK', index: 0 })
+                return
+              }
+            } else if (child.childType === 'account-opening') {
+              const issues = getAccountOpeningChildSubmissionIssues(state, child.id)
+              if (issues.length > 0) {
+                toast.error('Cannot submit yet', {
+                  description: `Resolve ${issues.length} issue${issues.length === 1 ? '' : 's'} before resubmitting.`,
+                })
+                return
+              }
+            }
+            setResubmitOpen(true)
+          }
+
           return (
             <div className="shrink-0 p-2 border-t border-border">
               <div className="rounded-xl border border-border/80 bg-card overflow-hidden shadow-sm">
@@ -1098,7 +1125,7 @@ export function ChildActionSidebar() {
                   </div>
                 </div>
                 <div className="px-3 pb-2.5 space-y-3">
-                  {docIsNigo ? (
+                  {clarificationRequired ? (
                     <p className="text-sm text-foreground leading-snug">{statusSentence}</p>
                   ) : (
                     <p className="text-[12.5px] font-normal text-muted-foreground/85 leading-snug">
@@ -1112,8 +1139,8 @@ export function ChildActionSidebar() {
                     </p>
                   )}
                   {showResubmit ? (
-                    <Button type="button" className="w-full" onClick={() => setResubmitOpen(true)}>
-                      Resubmit for Review
+                    <Button type="button" className="w-full" onClick={handleStatusCardResubmit}>
+                      {resubmitButtonLabel}
                     </Button>
                   ) : null}
                 </div>
@@ -1141,10 +1168,13 @@ export function ChildActionSidebar() {
       <Dialog open={resubmitOpen} onOpenChange={setResubmitOpen}>
         <DialogContent className="max-w-md">
           <DialogHeader>
-            <DialogTitle>Resubmit for review?</DialogTitle>
+            <DialogTitle>
+              {child.childType === 'kyc' ? 'Submit for review?' : 'Resubmit for review?'}
+            </DialogTitle>
             <DialogDescription>
-              This will resubmit the application to the Document Review Team. Advisor edits will lock until review
-              completes.
+              {child.childType === 'kyc'
+                ? 'This will resubmit the KYC package to the AML Team. Advisor edits will lock until review completes.'
+                : 'This will resubmit the application to the Document Review Team. Advisor edits will lock until review completes.'}
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
@@ -1165,11 +1195,10 @@ export function ChildActionSidebar() {
                   }
                 }
                 dispatch({ type: 'SUBMIT_CHILD_FOR_REVIEW' })
-                dispatch({ type: 'SET_DEMO_VIEW', mode: child.childType === 'account-opening' ? 'ho-documents' : 'advisor' })
                 setResubmitOpen(false)
               }}
             >
-              Resubmit for Review
+              {child.childType === 'kyc' ? 'Submit for Review' : 'Resubmit for Review'}
             </Button>
           </DialogFooter>
         </DialogContent>

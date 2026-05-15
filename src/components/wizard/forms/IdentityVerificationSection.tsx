@@ -12,6 +12,7 @@ import {
 import { cn } from '@/lib/utils'
 import { buildAdvisorIdentityGuidance } from '@/utils/advisorIdentityVerificationGuidance'
 import { getAdvisorIdentitySimDisplay } from '@/utils/advisorIdentityVerificationSimDisplay'
+import { isKycChildInAmlReview } from '@/utils/childStatusDisplay'
 
 const isDev = import.meta.env.DEV
 
@@ -35,7 +36,7 @@ function formatLastChecked(iso: string | undefined): string | null {
 const sectionCls = 'text-base font-semibold leading-snug text-foreground'
 const sectionBodyCls = 'text-[14px] text-muted-foreground mt-2 leading-normal'
 
-/** Advisor-facing CIP / identity check (no AML copy). Home office uses {@link ChildHoKycViewContent}. */
+/** Advisor-facing CIP / identity check (no AML copy). */
 export function IdentityVerificationSection({
   childId,
   childStatus,
@@ -52,6 +53,7 @@ export function IdentityVerificationSection({
   const hoApproved = reviewState?.hoKycReview?.status === 'approved'
   const packageCompleteApproved = childStatus === 'complete' && decision?.outcome === 'approved'
   const packageUnavailable = hoApproved || packageCompleteApproved
+  const inAmlReview = isKycChildInAmlReview(childStatus, reviewState)
 
   const hasAdvisorRun = Boolean(reviewState?.kycVerificationLastCheckedAt)
   const lastCheckedLabel = formatLastChecked(reviewState?.kycVerificationLastCheckedAt)
@@ -79,7 +81,7 @@ export function IdentityVerificationSection({
         ? ('Passed' as const)
         : cip?.overallStatus === 'fail'
           ? g.headlineStatus
-          : ('Pending verification' as const)
+          : ('Pending Verification' as const)
     const showRemediation = Boolean(cip?.overallStatus === 'fail' && g.issues.length > 0)
     const passSummary =
       cip?.overallStatus === 'pass'
@@ -105,6 +107,7 @@ export function IdentityVerificationSection({
   const canRun =
     isAdvisor &&
     !packageUnavailable &&
+    !inAmlReview &&
     phase === 'idle' &&
     childStatus !== 'canceled' &&
     childStatus !== 'blocked'
@@ -137,13 +140,19 @@ export function IdentityVerificationSection({
   const buttonDisabled =
     !isAdvisor ||
     packageUnavailable ||
+    inAmlReview ||
     phase === 'loading' ||
     phase === 'success' ||
     childStatus === 'canceled' ||
     childStatus === 'blocked'
 
   const showSimulateControl =
-    isDev && isAdvisor && !packageUnavailable && childStatus !== 'canceled' && childStatus !== 'blocked'
+    isDev &&
+    isAdvisor &&
+    !packageUnavailable &&
+    !inAmlReview &&
+    childStatus !== 'canceled' &&
+    childStatus !== 'blocked'
 
   const dispatchSim = useCallback(
     (preset: SimulateAdvisorIdentityPreset) => {

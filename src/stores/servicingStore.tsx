@@ -4,9 +4,10 @@ import type { TaskStatus, WorkflowState } from '@/types/workflow'
 import { seededJourneys } from '@/data/servicingSeed'
 import { useWorkflow } from './workflowStore'
 import { getActionStatus } from '@/utils/getActionStatus'
-import { getChildTypeConfig } from '@/utils/childTaskRegistry'
+import { getChildTypeConfig, getVisibleChildSubTasks } from '@/utils/childTaskRegistry'
 import { deriveChildDisplayStatus } from '@/utils/childStatusDisplay'
 import { formatOpenAccountsChildRowLabel } from '@/utils/openAccountsChildRowLabel'
+import { readLastCreatedJourneyId, writeLastCreatedJourneyId } from '@/utils/lastCreatedJourney'
 
 /** Map workflow task status to servicing journey action status (spelling + blocked). */
 function toJourneyActionStatus(s: TaskStatus): JourneyStatus {
@@ -16,7 +17,10 @@ function toJourneyActionStatus(s: TaskStatus): JourneyStatus {
 }
 
 function deriveLiveJourney(state: WorkflowState): Journey | null {
-  const primaryParty = state.relatedParties.find((p) => p.isPrimary)
+  const primaryParty =
+    state.relatedParties.find((p) => p.isPrimary) ??
+    state.relatedParties.find((p) => p.type === 'household_member') ??
+    state.relatedParties[0]
   if (!primaryParty) return null
   if (!state.journeyId) return null
 
@@ -63,7 +67,8 @@ function deriveLiveJourney(state: WorkflowState): Journey | null {
         const childConfig = getChildTypeConfig(c.childType)
         const isTerminal = c.status === 'complete' || c.status === 'awaiting_review' || c.status === 'canceled'
         const hwm = state.childHighWaterMark?.[c.id] ?? -1
-        const childTasks: JourneyTask[] = childConfig.subTasks.map((sub, idx): JourneyTask => {
+        const visibleSubTasks = getVisibleChildSubTasks(c.childType, state.demoViewMode, c.status)
+        const childTasks: JourneyTask[] = visibleSubTasks.map((sub, idx): JourneyTask => {
           let subStatus: TaskStatus = 'not_started'
           if (isTerminal) {
             subStatus = c.status
@@ -178,7 +183,9 @@ function deriveLiveJourney(state: WorkflowState): Journey | null {
     category: 'Onboarding' as const,
     relationshipName: primaryParty.name ?? 'Current Journey',
     status: allComplete ? 'complete' : anyStarted ? 'in_progress' : 'not_started',
-    createdAt: new Date().toISOString().split('T')[0],
+    createdAt: state.journeyStartedAt
+      ? state.journeyStartedAt.slice(0, 10)
+      : new Date().toISOString().split('T')[0],
     assignedTo: state.assignedTo ?? 'Unassigned',
     createdBy: state.assignedTo ?? 'Unassigned',
     actions: journeyActions,
@@ -191,6 +198,9 @@ interface ServicingContextValue {
   allActions: JourneyAction[]
   allTasks: JourneyTask[]
   currentLiveJourney: Journey | null
+  /** Most recently created journey — stays pinned on listing when browsing other demos. */
+  lastCreatedJourneyId: string
+  recordJourneyCreated: (journeyId: string) => void
   saveCurrentJourney: (journey: Journey) => void
   updateJourneyAssignee: (journeyId: string, assignee: string) => void
 }
@@ -212,6 +222,12 @@ export function ServicingProvider({ children }: { children: ReactNode }) {
   const { state, dispatch } = useWorkflow()
   const [savedJourneys, setSavedJourneys] = useState<Journey[]>([])
   const [assigneeOverrides, setAssigneeOverrides] = useState<Record<string, string>>({})
+  const [lastCreatedJourneyId, setLastCreatedJourneyId] = useState(readLastCreatedJourneyId)
+
+  const recordJourneyCreated = useCallback((journeyId: string) => {
+    writeLastCreatedJourneyId(journeyId)
+    setLastCreatedJourneyId(journeyId)
+  }, [])
 
   const liveJourney = deriveLiveJourney(state)
 
@@ -229,14 +245,20 @@ export function ServicingProvider({ children }: { children: ReactNode }) {
     setAssigneeOverrides((prev) => ({ ...prev, [journeyId]: assignee }))
   }, [liveJourney, dispatch])
 
-  const journeys = [
-    ...savedJourneys,
-    ...seededJourneys,
-    ...(liveJourney ? [liveJourney] : []),
-  ].map((j) => {
-    const override = assigneeOverrides[j.id]
-    return override ? applyAssigneeOverride(j, override) : j
-  })
+  /**
+   * One row per id: live workflow wins over saved snapshots over static seed.
+   * (Avoids `journeys.find` returning a stale seeded template when the same id is active in workflowStore.)
+   */
+  const journeys = (() => {
+    const map = new Map<string, Journey>()
+    for (const j of seededJourneys) map.set(j.id, j)
+    for (const j of savedJourneys) map.set(j.id, j)
+    if (liveJourney) map.set(liveJourney.id, liveJourney)
+    return Array.from(map.values()).map((j) => {
+      const override = assigneeOverrides[j.id]
+      return override ? applyAssigneeOverride(j, override) : j
+    })
+  })()
 
   const onboardingJourneys = (() => {
     const journeyMap = new Map<string, Journey>()
@@ -260,7 +282,19 @@ export function ServicingProvider({ children }: { children: ReactNode }) {
   )
 
   return (
-    <ServicingContext.Provider value={{ journeys, onboardingJourneys, allActions, allTasks, currentLiveJourney: liveJourney, saveCurrentJourney, updateJourneyAssignee }}>
+    <ServicingContext.Provider
+      value={{
+        journeys,
+        onboardingJourneys,
+        allActions,
+        allTasks,
+        currentLiveJourney: liveJourney,
+        lastCreatedJourneyId,
+        recordJourneyCreated,
+        saveCurrentJourney,
+        updateJourneyAssignee,
+      }}
+    >
       {children}
     </ServicingContext.Provider>
   )

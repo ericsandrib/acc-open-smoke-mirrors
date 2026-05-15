@@ -1,25 +1,6 @@
 import { StepSidebar } from './StepSidebar'
 import { TaskContent } from './TaskContent'
 import { DetailSidebar } from './DetailSidebar'
-import { TaskSectionPanel } from './TaskSectionPanel'
-import { taskSections, type TaskSection } from './formRegistry'
-
-/**
- * Convert nested TaskSection[] to TaskSectionPanel `groups` shape.
- * - Sections with children → group with that label + child sections (popover renders label + indented children).
- * - Sections without children → standalone "group" with empty label + a self-section
- *   (popover skips the header, dot bar still gets one dot).
- * Returns `null` if the sections are entirely flat — caller can use the legacy `sections` prop.
- */
-function toSectionGroups(sections: TaskSection[]): Array<{ key: string; label: string; sections: { id: string; label: string }[] }> | null {
-  const hasNested = sections.some((s) => s.children?.length)
-  if (!hasNested) return null
-  return sections.map((s) =>
-    s.children?.length
-      ? { key: s.id, label: s.label, sections: s.children }
-      : { key: s.id, label: '', sections: [{ id: s.id, label: s.label }] },
-  )
-}
 import { WizardFooter } from './WizardFooter'
 import { ChildActionSidebar } from './ChildActionSidebar'
 import { ChildActionContent } from './ChildActionContent'
@@ -27,9 +8,7 @@ import { ChildActionFooter } from './ChildActionFooter'
 import { ChildActionRightSidebar } from './ChildActionRightSidebar'
 import { ChildHoDocumentViewContent } from './ChildHoDocumentViewContent'
 import { ChildHoPrincipalViewContent } from './ChildHoPrincipalViewContent'
-import { ChildHoKycViewContent } from './ChildHoKycViewContent'
-import { ChildAmlReviewContent } from './ChildAmlReviewContent'
-import React, { useState, useRef, useEffect, type ReactNode } from 'react'
+import React, { useState, useRef, useEffect, useMemo, type ReactNode } from 'react'
 import { PanelRight } from 'lucide-react'
 import { VerticalNav } from '@/components/navigation/vertical-nav'
 import { AccessoryBar } from '@/components/accessory-bar'
@@ -72,7 +51,7 @@ import { ComposeDialog } from '@/components/dashboard/ComposeDialog'
 import { AdvisorReviewerPerspectiveCard } from '@/components/wizard/AdvisorReviewerPerspectiveCard'
 import { useChildActionContext, useWorkflow } from '@/stores/workflowStore'
 import { cn } from '@/lib/utils'
-import { useNavigate, useSearchParams } from 'react-router-dom'
+import { useNavigate, useSearchParams, useLocation } from 'react-router-dom'
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -108,7 +87,6 @@ type HeaderBreadcrumb = {
 }
 
 const HEADER_BREADCRUMB_MAX_VISIBLE = 4
-const BENEFICIARY_ENABLED_REGISTRATIONS = new Set(['TOD_IND', 'TOD_JT', 'IRA', 'ROTH_IRA'])
 
 function HoverDropdownMenu({ trigger, children }: { trigger: React.ReactNode; children: React.ReactElement }) {
   const [open, setOpen] = useState(false)
@@ -400,6 +378,18 @@ export function WizardLayout() {
   return <WizardLayoutInner />
 }
 
+/** Single scroll region above the wizard footer — only scrolls when content exceeds available height. */
+function WizardFormScrollArea({ children }: { children: ReactNode }) {
+  return (
+    <div
+      id="wizard-form-scroll-area"
+      className="min-h-0 flex-1 basis-0 overflow-y-auto overscroll-contain [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden"
+    >
+      {children}
+    </div>
+  )
+}
+
 function WizardLayoutInner() {
   const { state, dispatch } = useWorkflow()
   const childActionCtx = useChildActionContext()
@@ -408,6 +398,13 @@ function WizardLayoutInner() {
   const { variant: wizardOpenAccountsVariantRaw } = useOpenAccountsVariantControls()
   const prevOpenAccountsVariantRef = useRef<typeof wizardOpenAccountsVariantRaw | null>(null)
   const [searchParams] = useSearchParams()
+  const location = useLocation()
+  /** Used to apply URL deep-links once per route+search; avoids re-applying when `state.tasks` gets a new array reference after in-app navigation (e.g. sidebar → annuity task). */
+  const wizardDeepLocationKey = useMemo(
+    () => `${location.pathname}${location.search}`,
+    [location.pathname, location.search],
+  )
+  const urlDeepLinkAppliedForLocationKeyRef = useRef<string | null>(null)
   const [composeOpen, setComposeOpen] = useState(false)
   const inChildAction = !!state.activeChildActionId
   const viewMode = state.demoViewMode
@@ -428,26 +425,59 @@ function WizardLayoutInner() {
   const querySectionId = searchParams.get('sectionId')
   const queryChildId = searchParams.get('childId')
 
+  // Apply URL deep-link params once per `pathname + search`. `state.tasks` must stay in deps so
+  // we can apply after INITIALIZE when the linked task appears, but we must not re-apply on every
+  // tasks reference change or a sticky `?taskId=open-accounts` overwrites a sidebar pick such as
+  // "Account Opening + Annuity Order" (`open-accounts-annuity`).
   useEffect(() => {
-    if (!queryTaskId && !querySectionId && !queryChildId) return
+    if (!queryTaskId && !querySectionId && !queryChildId) {
+      urlDeepLinkAppliedForLocationKeyRef.current = null
+      return
+    }
+
+    if (urlDeepLinkAppliedForLocationKeyRef.current === wizardDeepLocationKey) {
+      return
+    }
+
+    let canMarkDeepLinkConsumed = true
+
     if (queryTaskId) {
       const task = state.tasks.find((t) => t.id === queryTaskId)
-      if (task && state.activeTaskId !== queryTaskId) {
+      if (!task) {
+        canMarkDeepLinkConsumed = false
+      } else if (state.activeTaskId !== queryTaskId) {
         dispatch({ type: 'SET_ACTIVE_TASK', taskId: task.id })
       }
     }
-    if (querySectionId) {
+
+    if (canMarkDeepLinkConsumed && querySectionId) {
       dispatch({ type: 'FOCUS_PARENT_TASK_SECTION', sectionId: querySectionId })
     }
-    if (queryChildId && state.activeChildActionId !== queryChildId) {
+
+    if (canMarkDeepLinkConsumed && queryChildId && state.activeChildActionId !== queryChildId) {
       const childExists = state.tasks.some((t) =>
         (t.children ?? []).some((c) => c.id === queryChildId),
       )
-      if (childExists) {
+      if (!childExists) {
+        canMarkDeepLinkConsumed = false
+      } else {
         dispatch({ type: 'ENTER_CHILD_ACTION', childId: queryChildId })
       }
     }
-  }, [queryTaskId, querySectionId, queryChildId, state.tasks, state.activeTaskId, state.activeChildActionId, dispatch])
+
+    if (canMarkDeepLinkConsumed) {
+      urlDeepLinkAppliedForLocationKeyRef.current = wizardDeepLocationKey
+    }
+  }, [
+    wizardDeepLocationKey,
+    queryTaskId,
+    querySectionId,
+    queryChildId,
+    state.tasks,
+    state.activeTaskId,
+    state.activeChildActionId,
+    dispatch,
+  ])
 
   /** Reviewer demo: Client Setup is hidden — if it was active, jump to Open Accounts (non-annuity path when split). */
   useEffect(() => {
@@ -500,23 +530,6 @@ function WizardLayoutInner() {
     : undefined
   const isKycChild = activeChild?.childType === 'kyc'
   const activeChildSubTask = childActionCtx?.currentSubTask
-  const activeKycSubTask = isKycChild ? activeChildSubTask : undefined
-  const showKycDocumentsSubTask = activeKycSubTask?.formKey === 'kyc-child-documents'
-  const showKycIntakeSubTask =
-    activeKycSubTask?.formKey === 'kyc-child-info' ||
-    activeKycSubTask?.formKey === 'kyc-child-documents'
-  const childSections = (() => {
-    if (!activeChildSubTask || !activeChild) return []
-    const sections = taskSections[activeChildSubTask.formKey] ?? []
-    if (activeChildSubTask.formKey !== 'acct-child-account-owners') return sections
-    const childMeta = state.taskData[activeChild.id] as Record<string, unknown> | undefined
-    const childRegType = (childMeta?.registrationType as string | undefined) ?? null
-    return sections.filter((section) => {
-      if (section.id !== 'acct-beneficiaries') return true
-      return childRegType != null && BENEFICIARY_ENABLED_REGISTRATIONS.has(childRegType)
-    })
-  })()
-
   /** Reviewer demo tabs only for this child once it is submitted / in review / complete — not from global `submittedAt` (e.g. after KYC approval elsewhere). */
   const childInReviewerPipeline =
     !!activeChild &&
@@ -531,11 +544,11 @@ function WizardLayoutInner() {
   const isHoDocView = viewMode === 'ho-documents'
   const isHoPrincipalView = viewMode === 'ho-principal'
   const isHoKycView = viewMode === 'ho-kyc'
+  const isHoKycReviewerShell = isKycChild && (
+    viewMode === 'ho-kyc' || viewMode === 'ho-documents' || viewMode === 'ho-principal'
+  )
   const isAmlView = viewMode === 'aml'
   const isHomeOfficeView = isHoDocView || isHoPrincipalView
-  /** Client Information in ho-kyc mode uses the dedicated reviewer shell (formerly the separate CIP step). */
-  const showHoKycClientInfoReviewerShell =
-    isHoKycView && isKycChild && activeKycSubTask?.formKey === 'kyc-child-info'
   /** Stale `ho-documents` / `ho-principal` after KYC must not put a draft account child into HO reviewer layout. */
   const showHomeOfficeAccountLayout =
     isHomeOfficeView &&
@@ -697,39 +710,29 @@ function WizardLayoutInner() {
                   <div className="flex flex-1 min-h-0 overflow-hidden min-w-0">
                     <div className="flex-1 flex flex-col overflow-hidden min-w-0">
                       <WizardAccessoryBar />
-                      {showKycIntakeSubTask ? <ChildActionContent /> : <ChildAmlReviewContent />}
+                      <WizardFormScrollArea>
+                        <ChildActionContent
+                          key={`${state.activeChildActionId}-${state.activeChildSubTaskIndex ?? 0}-${viewMode}`}
+                        />
+                      </WizardFormScrollArea>
                       <ChildActionFooter />
                     </div>
-                    {wizardOpenAccountsVariantRaw !== 'v5' &&
-                      childSections.length > 0 &&
-                      showKycDocumentsSubTask && (
-                      <TaskSectionPanel
-                        sections={childSections}
-                        onSelectSection={(sectionId) => dispatch({ type: 'FOCUS_PARENT_TASK_SECTION', sectionId })}
-                      />
-                    )}
                     <ChildActionRightSidebar />
                   </div>
                 </div>
               </div>
-            ) : isHoKycView && isKycChild ? (
+            ) : isHoKycReviewerShell ? (
               <div className="flex-1 flex flex-col min-h-0 min-w-0 overflow-hidden">
                 <div className="flex flex-1 min-h-0 overflow-hidden">
                   <ChildActionSidebar />
                   <div className="flex flex-1 min-h-0 overflow-hidden min-w-0">
                     <div className="flex-1 flex flex-col overflow-hidden min-w-0">
                       <WizardAccessoryBar />
-                      {showHoKycClientInfoReviewerShell ? <ChildHoKycViewContent /> : <ChildActionContent />}
+                      <WizardFormScrollArea>
+                        <ChildActionContent />
+                      </WizardFormScrollArea>
                       <ChildActionFooter />
                     </div>
-                    {wizardOpenAccountsVariantRaw !== 'v5' &&
-                      childSections.length > 0 &&
-                      showKycDocumentsSubTask && (
-                      <TaskSectionPanel
-                        sections={childSections}
-                        onSelectSection={(sectionId) => dispatch({ type: 'FOCUS_PARENT_TASK_SECTION', sectionId })}
-                      />
-                    )}
                     <ChildActionRightSidebar />
                   </div>
                 </div>
@@ -742,16 +745,11 @@ function WizardLayoutInner() {
                     <div className="flex flex-1 min-h-0 overflow-hidden min-w-0">
                       <div className="flex-1 flex flex-col overflow-hidden min-w-0">
                         <WizardAccessoryBar />
-                        <ChildActionContent />
+                        <WizardFormScrollArea>
+                          <ChildActionContent />
+                        </WizardFormScrollArea>
                         <ChildActionFooter />
                       </div>
-                      {wizardOpenAccountsVariantRaw !== 'v5' &&
-                        childSections.length > 0 && (
-                        <TaskSectionPanel
-                          sections={childSections}
-                          onSelectSection={(sectionId) => dispatch({ type: 'FOCUS_PARENT_TASK_SECTION', sectionId })}
-                        />
-                      )}
                       <ChildActionRightSidebar />
                     </div>
                   </div>
@@ -763,7 +761,9 @@ function WizardLayoutInner() {
                     <div className="flex flex-1 min-h-0 overflow-hidden min-w-0">
                       <div className="flex-1 flex flex-col overflow-hidden min-w-0">
                         <WizardAccessoryBar />
-                        {isHoDocView ? <ChildHoDocumentViewContent /> : <ChildHoPrincipalViewContent />}
+                        <WizardFormScrollArea>
+                          {isHoDocView ? <ChildHoDocumentViewContent /> : <ChildHoPrincipalViewContent />}
+                        </WizardFormScrollArea>
                         <ChildActionFooter />
                       </div>
                       <ChildActionRightSidebar />
@@ -778,70 +778,31 @@ function WizardLayoutInner() {
                   <WizardAccessoryBar />
                   <div className="relative flex flex-1 min-h-0 overflow-hidden">
                     <div className="flex-1 min-h-0 flex flex-col overflow-hidden min-w-0">
-                      <ChildActionContent />
+                      <WizardFormScrollArea>
+                        <ChildActionContent />
+                      </WizardFormScrollArea>
                       <ChildActionFooter />
                     </div>
-                    {wizardOpenAccountsVariantRaw !== 'v5' &&
-                      childSections.length > 0 && (
-                      <TaskSectionPanel
-                        sections={childSections}
-                        onSelectSection={(sectionId) => dispatch({ type: 'FOCUS_PARENT_TASK_SECTION', sectionId })}
-                      />
-                    )}
                   </div>
                 </div>
                 <ChildActionRightSidebar />
               </>
             )
-          ) : (() => {
-            const activeTask = state.tasks.find((t) => t.id === state.activeTaskId)
-            const sections = activeTask ? (taskSections[activeTask.formKey] ?? []) : []
-            const useV2StyledScrollspy =
-              (variant === 'v2' || variant === 'v3' || variant === 'v4' || variant === 'v5') &&
-              !!activeTask &&
-              (activeTask.formKey === 'related-parties' || activeTask.formKey === 'existing-accounts')
-            return (
-              <>
-                <StepSidebar />
-                <div className="flex-1 min-h-0 flex flex-col overflow-hidden">
-                  <WizardAccessoryBar />
-                  <div className="relative flex flex-1 min-h-0 overflow-hidden">
-                    <div className="flex-1 min-h-0 flex flex-col overflow-hidden min-w-0">
-                      <TaskContent />
-                      <WizardFooter />
-                    </div>
-                    {wizardOpenAccountsVariantRaw !== 'v5' && sections.length > 0 ? (
-                      (() => {
-                        const groups = toSectionGroups(sections)
-                        return groups ? (
-                          <TaskSectionPanel
-                            sections={[]}
-                            onSelectSection={() => {}}
-                            panelTitle={useV2StyledScrollspy ? 'On this page' : undefined}
-                            visualStyle={useV2StyledScrollspy ? 'v2-bare' : 'default'}
-                            groups={groups}
-                            onSelectGroupSection={(_groupKey, sectionId) => {
-                              dispatch({ type: 'FOCUS_PARENT_TASK_SECTION', sectionId })
-                            }}
-                          />
-                        ) : (
-                          <TaskSectionPanel
-                            sections={sections.map((s) => ({ id: s.id, label: s.label }))}
-                            onSelectSection={(sectionId) => {
-                              dispatch({ type: 'FOCUS_PARENT_TASK_SECTION', sectionId })
-                            }}
-                            panelTitle={useV2StyledScrollspy ? 'On this page' : undefined}
-                            visualStyle={useV2StyledScrollspy ? 'v2-bare' : 'default'}
-                          />
-                        )
-                      })()
-                    ) : null}
+          ) : (
+            <>
+              <StepSidebar />
+              <div className="flex-1 min-h-0 flex flex-col overflow-hidden">
+                <WizardAccessoryBar />
+                <div className="relative flex flex-1 min-h-0 overflow-hidden">
+                  <div className="flex-1 min-h-0 flex flex-col overflow-hidden min-w-0">
+                    <TaskContent />
+                    <WizardFooter />
                   </div>
                 </div>
-                <DetailSidebar />
-              </>
-            )
-          })()}
+              </div>
+              <DetailSidebar />
+            </>
+          )}
       </div>
       </div>
       </SupportingDocumentPreviewProvider>

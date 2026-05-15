@@ -170,7 +170,7 @@ export function ChildHoPrincipalViewContent() {
   })()
 
   return (
-    <main className="flex-1 overflow-y-auto p-8">
+    <main className="p-8">
       <div className="max-w-3xl mx-auto space-y-6">
         <div className="space-y-1">
           <h2 className="text-2xl font-semibold text-foreground">Principal Review</h2>
@@ -188,9 +188,11 @@ export function ChildHoPrincipalViewContent() {
             defaultOpen
             badge={
               docIsNigo ? (
-                <Badge variant="secondary" className="text-[10px] bg-red-100 text-red-800 border-red-200">NIGO</Badge>
+                <Badge variant="secondary" className="text-[10px] bg-red-100 text-red-800 border-red-200">
+                  Clarification required
+                </Badge>
               ) : (
-                <Badge variant="secondary" className="text-[10px] bg-green-100 text-green-800 border-green-200">IGO</Badge>
+                <Badge variant="secondary" className="text-[10px] bg-green-100 text-green-800 border-green-200">Accepted</Badge>
               )
             }
           >
@@ -199,7 +201,7 @@ export function ChildHoPrincipalViewContent() {
               <div className="flex items-center justify-between text-sm">
                 <span className="text-muted-foreground">Document Review Status</span>
                 <span className="font-medium">
-                  {docIsNigo ? 'Not In Good Order (NIGO)' : 'In Good Order (IGO)'}
+                  {docIsNigo ? 'Clarification / Document Required' : 'Accepted'}
                 </span>
               </div>
               <div className="flex items-center justify-between text-sm">
@@ -209,7 +211,7 @@ export function ChildHoPrincipalViewContent() {
               {docIsNigo && docReview?.nigoReason && (
                 <div className="rounded-md bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800/40 px-3 py-2 space-y-1">
                   <p className="text-xs text-red-900 dark:text-red-100">
-                    <span className="font-semibold">NIGO Reason:</span> {docReview.nigoReason}
+                    <span className="font-semibold">Reason:</span> {docReview.nigoReason}
                   </p>
                   {docReview.nigoFeedback && (
                     <p className="text-xs text-red-800/90 dark:text-red-200/80">
@@ -329,7 +331,7 @@ export function ChildHoPrincipalViewContent() {
               </div>
               <div className="flex items-center justify-between py-1.5 border-b border-border">
                 <span className="text-muted-foreground">
-                  Document Review — {docIsNigo ? 'NIGO' : 'IGO'}
+                  Document Review — {docIsNigo ? 'Clarification / Document Required' : 'Accepted'}
                 </span>
                 <span>{docReviewedAt}</span>
               </div>

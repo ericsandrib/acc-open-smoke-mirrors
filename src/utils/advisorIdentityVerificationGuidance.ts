@@ -15,9 +15,9 @@ function readInfo(info: Record<string, unknown>, subjectIsEntity: boolean) {
 
 export type AdvisorIdentityHeadlineStatus =
   | 'Passed'
-  | 'Needs attention'
-  | 'Pending verification'
-  | 'Unable to verify'
+  | 'Needs Attention'
+  | 'Pending Verification'
+  | 'Unable to Verify'
 
 /** Operational issues + remediation steps for advisors (no AML / watchlist language). */
 export function buildAdvisorIdentityGuidance(
@@ -26,7 +26,7 @@ export function buildAdvisorIdentityGuidance(
   subjectIsEntity: boolean,
 ): { issues: string[]; actions: string[]; headlineStatus: AdvisorIdentityHeadlineStatus } {
   if (!cip || cip.overallStatus === 'pending') {
-    return { issues: [], actions: [], headlineStatus: 'Pending verification' }
+    return { issues: [], actions: [], headlineStatus: 'Pending Verification' }
   }
 
   if (cip.overallStatus === 'pass') {
@@ -98,8 +98,8 @@ export function buildAdvisorIdentityGuidance(
     (cip.addressMatch === 'fail' ? 1 : 0) +
     (!subjectIsEntity && cip.dobMatch === 'fail' ? 1 : 0)
   const maxFails = subjectIsEntity ? 2 : 3
-  const headlineStatus: 'Needs attention' | 'Unable to verify' =
-    failCount >= maxFails && failCount > 0 ? 'Unable to verify' : 'Needs attention'
+  const headlineStatus: 'Needs Attention' | 'Unable to Verify' =
+    failCount >= maxFails && failCount > 0 ? 'Unable to Verify' : 'Needs Attention'
 
   return {
     issues,

@@ -17,6 +17,7 @@ import {
 } from '@/lib/sort-comparators'
 import type { Journey } from '@/types/servicing'
 import type { TaskStatus } from '@/types/workflow'
+import { shortActionNicknameForTable } from '@/utils/servicingActionLabel'
 
 export interface TaskRow {
   id: string
@@ -43,7 +44,7 @@ export function deriveTaskRows(journeys: Journey[]): TaskRow[] {
         status: task.status,
         assignedTo: task.assignedTo,
         isSubTask: task.isSubTask,
-        nickname: task.nickname,
+        nickname: shortActionNicknameForTable(journey.name, task.nickname, task.title),
         actionTitle: action.title,
         journeyName: journey.name,
         relationshipName: journey.relationshipName,
@@ -86,16 +87,47 @@ export function TasksTable({ rows, visibleColumns }: TasksTableProps) {
     <DataTable>
       <thead className="bg-muted/60 border-b border-border [&_th_svg]:hidden">
         <tr>
-          {vis('title') && <DataTableHeader size="comfortable" sortable sorted={sorted('title')} onSort={() => onSort('title')} style={{ width: 200 }}>Task</DataTableHeader>}
-          {vis('nickname') && <DataTableHeader size="comfortable" sortable sorted={sorted('nickname')} onSort={() => onSort('nickname')}>Action Nickname</DataTableHeader>}
-          {vis('actionTitle') && <DataTableHeader size="comfortable" sortable sorted={sorted('actionTitle')} onSort={() => onSort('actionTitle')}>Action Type</DataTableHeader>}
+          {vis('title') && (
+            <DataTableHeader
+              size="comfortable"
+              sortable
+              sorted={sorted('title')}
+              onSort={() => onSort('title')}
+              style={{ width: '20%', minWidth: 100, maxWidth: 200 }}
+            >
+              Task
+            </DataTableHeader>
+          )}
+          {vis('nickname') && (
+            <DataTableHeader
+              size="comfortable"
+              sortable
+              sorted={sorted('nickname')}
+              onSort={() => onSort('nickname')}
+              style={{ width: '18%', minWidth: 96, maxWidth: 168 }}
+            >
+              Action
+            </DataTableHeader>
+          )}
+          {vis('actionTitle') && (
+            <DataTableHeader
+              size="comfortable"
+              sortable
+              sorted={sorted('actionTitle')}
+              onSort={() => onSort('actionTitle')}
+              style={{ width: '14%', minWidth: 88, maxWidth: 150 }}
+            >
+              Action Type
+            </DataTableHeader>
+          )}
           {vis('journeyName') && (
             <DataTableHeader
               size="comfortable"
               sortable
               sorted={sorted('journeyName')}
               onSort={() => onSort('journeyName')}
-              style={{ minWidth: 240 }}
+              className="min-w-0"
+              style={{ width: '28%', minWidth: 120 }}
             >
               Journey
             </DataTableHeader>
@@ -135,7 +167,11 @@ export function TasksTable({ rows, visibleColumns }: TasksTableProps) {
                 )}
               </DataTableCell>
             )}
-            {vis('nickname') && <DataTableCell>{row.nickname}</DataTableCell>}
+            {vis('nickname') && (
+              <DataTableCell className="min-w-0 max-w-[12rem]">
+                <span className="block truncate">{row.nickname}</span>
+              </DataTableCell>
+            )}
             {vis('actionTitle') && <DataTableCell>{row.actionTitle}</DataTableCell>}
             {vis('journeyName') && (
               <DataTableCell className="min-w-0">

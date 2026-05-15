@@ -1,4 +1,4 @@
-/** Subtype value: show free-text "Document type name" field. */
+/** Subtype value: Other / Custom document type (no separate name field). */
 export const CUSTOM_DOCUMENT_SUBTYPE_VALUE = '__custom__'
 
 export type SupportingDocumentStatus =
@@ -46,6 +46,5 @@ export function instanceSpecificationComplete(
 ): boolean {
   if (subTypesCount === 0) return true
   if (!subType?.trim()) return false
-  if (subType === CUSTOM_DOCUMENT_SUBTYPE_VALUE && !customSubTypeLabel?.trim()) return false
   return true
 }

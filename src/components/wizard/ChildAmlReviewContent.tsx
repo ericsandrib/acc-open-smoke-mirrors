@@ -149,8 +149,7 @@ export function ChildAmlReviewContent() {
     .filter(Boolean)
 
   return (
-    <main className="flex-1 overflow-y-auto overscroll-contain p-8">
-      <div className="max-w-[52.5rem] mx-auto space-y-6">
+    <div className="space-y-6">
         {/* Status Banner */}
         {amlReview?.status === 'cleared' && (
           <div className="rounded-lg border border-green-200 bg-green-50 px-4 py-3">
@@ -237,27 +236,21 @@ export function ChildAmlReviewContent() {
           </div>
         )}
 
-        {/* Header */}
         <div>
           {amlFlagged ? (
-            <div className="flex items-center gap-3 mb-1">
+            <div className="flex items-center gap-3 mb-3">
               <Badge variant="outline" className="text-red-700 border-red-200 bg-red-50 text-[10px]">
                 Advisor Flagged
               </Badge>
             </div>
           ) : null}
-          <h1
-            className={
-              amlFlagged
-                ? 'text-4xl font-semibold text-foreground mt-2'
-                : 'text-4xl font-semibold text-foreground'
-            }
-          >
-            {fullName}
-          </h1>
-          <p className="text-sm text-muted-foreground mt-1">
-            {isEntity ? 'Anti-Money Laundering & Sanctions Screening (KYB)' : 'Anti-Money Laundering & Sanctions Screening'}
-          </p>
+          <div className="rounded-lg border border-border bg-muted/20 px-4 py-3">
+            <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Subject under review</p>
+            <p className="text-lg font-semibold text-foreground mt-1">{fullName}</p>
+            <p className="text-sm text-muted-foreground mt-0.5">
+              {isEntity ? 'KYB — sanctions & adverse media screening' : 'AML — sanctions, PEP & adverse media screening'}
+            </p>
+          </div>
           <div className="mt-4 rounded-lg border border-border bg-muted/20 p-4 space-y-2">
             <p className="text-sm font-semibold text-foreground">Decision Context</p>
             <ReviewRow label="Risk Level" value={riskLevel} />
@@ -425,7 +418,6 @@ export function ChildAmlReviewContent() {
             </div>
           </AccordionSection>
         </Accordion>
-      </div>
-    </main>
+    </div>
   )
 }

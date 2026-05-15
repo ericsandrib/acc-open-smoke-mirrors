@@ -5,7 +5,14 @@ import { Label } from '@/components/ui/label'
 import { Separator } from '@/components/ui/separator'
 
 export function SettingsPage() {
-  const { colorScheme, setColorScheme, showNestedGroups, setShowNestedGroups } = useTheme()
+  const {
+    colorScheme,
+    setColorScheme,
+    showNestedGroups,
+    setShowNestedGroups,
+    hideOnboardingJourneyChildWorkflows,
+    setHideOnboardingJourneyChildWorkflows,
+  } = useTheme()
 
   return (
     <AppShell>
@@ -59,6 +66,22 @@ export function SettingsPage() {
               checked={showNestedGroups}
               onCheckedChange={(checked) => setShowNestedGroups(checked === true)}
               aria-label="Show nested workflow groups"
+            />
+          </div>
+          <div className="flex items-center justify-between gap-4 rounded-lg border border-border bg-card px-4 py-3 shadow-sm">
+            <div className="space-y-0.5">
+              <Label htmlFor="hide-journey-child-workflows" className="text-foreground">
+                Hide KYC, Accounts, and child workflows
+              </Label>
+              <p className="text-xs text-muted-foreground">
+                In the Onboarding Journeys tab, show only top-level actions (e.g. Client Setup, Open Accounts) — hide KYC Reviews and Accounts section headers and their child workflow rows.
+              </p>
+            </div>
+            <Checkbox
+              id="hide-journey-child-workflows"
+              checked={hideOnboardingJourneyChildWorkflows}
+              onCheckedChange={(checked) => setHideOnboardingJourneyChildWorkflows(checked === true)}
+              aria-label="Hide KYC, Accounts, and child workflows in onboarding journeys"
             />
           </div>
         </section>

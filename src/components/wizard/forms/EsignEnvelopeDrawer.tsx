@@ -44,7 +44,7 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { OPTIONAL_ESIGN_FORM_CATALOG, PAPERWORK_DELIVERY_OPTIONS } from '@/data/esignEnvelopeOptions'
-import type { EsignEnvelope, EsignEnvelopeSigner } from '@/types/esignEnvelope'
+import type { EsignEnvelope, EsignEnvelopeSigner, PaperworkDeliveryMethod } from '@/types/esignEnvelope'
 import { groupFormSelectionsByAccountChild } from '@/utils/buildEsignEnvelopeFormRows'
 import { deriveDefaultEnvelopeName } from '@/utils/deriveEnvelopeDisplayName'
 import { downloadEnvelopeManifest } from '@/utils/downloadEsignEnvelopeManifest'
@@ -111,12 +111,17 @@ function cloneEnvelope(e: EsignEnvelope): EsignEnvelope {
   }
 }
 
+/** eSignature flows send to DocuSign; in-person / mail are wet-signature packages saved locally. */
+function isElectronicSignatureDelivery(method: PaperworkDeliveryMethod): boolean {
+  return method === 'esignature' || method === 'inperson_esignature'
+}
+
 interface EsignEnvelopeDrawerProps {
   open: boolean
   onOpenChange: (open: boolean) => void
   envelope: EsignEnvelope
   onSave: (envelope: EsignEnvelope) => void
-  /** When true, primary button says "Create envelope". */
+  /** When true, primary action is create: label is Send (eSign) or Save (wet); edit mode always Save. */
   isCreate?: boolean
 }
 
@@ -854,7 +859,11 @@ export function EsignEnvelopeDrawer({
               Cancel
             </Button>
             <Button type="button" onClick={handleSave}>
-              {isCreate ? 'Create envelope' : 'Save envelope'}
+              {!isCreate
+                ? 'Save envelope'
+                : isElectronicSignatureDelivery(local.deliveryMethod)
+                  ? 'Send envelope'
+                  : 'Save envelope'}
             </Button>
           </div>
         </SheetFooter>
