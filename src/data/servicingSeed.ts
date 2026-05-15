@@ -1,5 +1,10 @@
-import type { Journey, JourneyAction, JourneyCategory, JourneyTask } from '@/types/servicing'
+import type { Journey, JourneyAction, JourneyCategory, JourneyStatus, JourneyTask } from '@/types/servicing'
 import type { TaskStatus } from '@/types/workflow'
+
+function hoDemoLineTaskStatus(status: JourneyStatus): TaskStatus {
+  if (status === 'cancelled') return 'canceled'
+  return status
+}
 import { actions, tasks } from './seed'
 import { generateAccountOpenIdentifiers } from '@/utils/accountOpenIdentifiers'
 import { formatOpenAccountsChildRowLabel } from '@/utils/openAccountsChildRowLabel'
@@ -119,6 +124,7 @@ function buildDocumentReviewDemoJourney(
   for (const l of kycLines) {
     const actionId = `${id}-account-opening-${l.lineKey}`
     const lineStatus = l.status ?? 'awaiting_review'
+    const taskStatus = hoDemoLineTaskStatus(lineStatus)
     grandkids.push({
       id: actionId,
       journeyId: id,
@@ -134,7 +140,7 @@ function buildDocumentReviewDemoJourney(
           actionId,
           journeyId: id,
           title: 'Client Verification Information',
-          status: lineStatus,
+          status: taskStatus,
           assignedTo,
           nickname: l.nickname,
         },
@@ -147,6 +153,7 @@ function buildDocumentReviewDemoJourney(
     const { accountNumber } = generateAccountOpenIdentifiers(l.title, l.childId)
     const workflowListLabel = formatOpenAccountsChildRowLabel(l.title, { accountNumber })
     const lineStatus = l.status ?? 'awaiting_review'
+    const taskStatus = hoDemoLineTaskStatus(lineStatus)
     grandkids.push({
       id: actionId,
       journeyId: id,
@@ -162,7 +169,7 @@ function buildDocumentReviewDemoJourney(
           actionId,
           journeyId: id,
           title: 'Account setup',
-          status: lineStatus,
+          status: taskStatus,
           assignedTo,
           nickname: workflowListLabel,
         },

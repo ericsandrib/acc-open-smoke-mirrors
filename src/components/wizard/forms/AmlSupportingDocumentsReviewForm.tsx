@@ -20,9 +20,9 @@ function statusLabel(status: DocumentUploadInstance['status']): string {
       return 'Uploaded'
     case 'requested_by_review':
       return 'Requested'
-    case 'approved':
-      return 'Approved'
-    case 'rejected':
+    case 'accepted':
+      return 'Accepted'
+    case 'rejected_needs_replacement':
       return 'Rejected'
     default:
       return 'Pending'

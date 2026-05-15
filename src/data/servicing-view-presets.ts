@@ -1,4 +1,4 @@
-import type { ColumnDef, ViewPreset } from '@/types/view-preset'
+import type { ColumnDef, ViewFilter, ViewPreset } from '@/types/view-preset'
 
 // ── Journey columns ─────────────────────────────────────────────────
 export const journeyColumns: ColumnDef[] = [
@@ -190,10 +190,10 @@ function reviewerQueuePreset(
   }
   const visible = [...actionVisibleColumnsJourneyGroupedShell]
   /** Document Review team triages KYC HO review, account documents, and AML-stage child workflows. */
-  const filters =
+  const filters: ViewFilter[] =
     lane === 'documents' && opts?.documentTeamIncludesAmlPipeline
-      ? [{ column: 'reviewerQueueLane', operator: 'includes' as const, value: ['documents', 'aml', 'ho-kyc'] }]
-      : [{ column: 'reviewerQueueLane', operator: 'equals' as const, value: lane }]
+      ? [{ column: 'reviewerQueueLane', operator: 'includes', value: ['documents', 'aml', 'ho-kyc'] }]
+      : [{ column: 'reviewerQueueLane', operator: 'equals', value: lane }]
   if (opts?.kycChildWorkflowsOnly) {
     filters.push({ column: 'reviewQueueItemType', operator: 'equals', value: 'KYC' })
   }

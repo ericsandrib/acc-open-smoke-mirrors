@@ -303,12 +303,12 @@ export function DocumentReviewActionsTable({
               sortable={layoutGroupBy !== 'none'}
               sorted={layoutGroupBy !== 'none' ? sorted('journeyName') : false}
               onSort={layoutGroupBy !== 'none' ? () => onSort('journeyName') : undefined}
-              className="min-w-0"
-              style={{ minWidth: 156 }}
               className={
-                /* Align header with leading icon column (grid: expand + gap + icon); not journey name text. */
-                layoutGroupBy !== 'none' ? '[&>button]:!pl-9 [&>span]:!pl-9' : undefined
+                layoutGroupBy !== 'none'
+                  ? 'min-w-0 [&>button]:!pl-9 [&>span]:!pl-9'
+                  : 'min-w-0'
               }
+              style={{ minWidth: 156 }}
             >
               {layoutGroupBy === 'none' ? 'Action' : 'Journey'}
             </DataTableHeader>
