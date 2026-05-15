@@ -15,6 +15,7 @@ import { getAccountOwnersMissingKyc } from '@/utils/accountOpeningOwnerKyc'
 import { instanceSpecificationComplete } from '@/utils/supportingDocuments'
 import type { SupportingDocumentStatus } from '@/utils/supportingDocuments'
 import { isChildSubTaskVisited } from '@/utils/childSubTaskProgress'
+import { isAccountOpeningDocumentsStepVisible } from '@/utils/childTaskRegistry'
 
 type DocInstance = {
   id: string
@@ -168,44 +169,39 @@ function mergedFeatureLineSetupData(state: WorkflowState, lineId: string): Recor
   }
 }
 
-function progressFundingHub(state: WorkflowState, accountChildId: string): { filled: number; total: number } {
-  const taskId = `${accountChildId}-funding-transfers`
-  const lines = getFundingLinesForAccount(state, accountChildId)
-  if (lines.length === 0) {
-    return applySubmittedCap(state, taskId, { filled: 0, total: 1 })
-  }
-  let filled = 0
-  let total = 0
-  for (const line of lines) {
-    const p = fundingLineSetupProgress(mergedFundingLineSetupData(state, line.id))
-    filled += p.filled
-    total += p.total
-  }
-  return applySubmittedCap(state, taskId, { filled, total })
-}
-
-function progressFeaturesHub(state: WorkflowState, accountChildId: string): { filled: number; total: number } {
-  const taskId = `${accountChildId}-features-services`
-  const lines = getFeatureLinesForAccount(state, accountChildId)
-  if (lines.length === 0) {
-    return applySubmittedCap(state, taskId, { filled: 0, total: 1 })
-  }
-  let filled = 0
-  let total = 0
-  for (const line of lines) {
-    const p = featureLineSetupProgress(mergedFeatureLineSetupData(state, line.id))
-    filled += p.filled
-    total += p.total
-  }
-  return applySubmittedCap(state, taskId, { filled, total })
-}
-
 const ACCOUNT_OPENING_SUFFIXES = [
   'account-owners',
   'funding-transfers',
   'features-services',
   'documents-review',
 ] as const
+
+function accountOpeningProgressSuffixes(
+  demoViewMode: WorkflowState['demoViewMode'] | undefined,
+): readonly string[] {
+  if (!isAccountOpeningDocumentsStepVisible(demoViewMode)) {
+    return ACCOUNT_OPENING_SUFFIXES.filter((s) => s !== 'documents-review')
+  }
+  return ACCOUNT_OPENING_SUFFIXES
+}
+
+function progressFundingHub(state: WorkflowState, accountChildId: string): { filled: number; total: number } {
+  const taskId = `${accountChildId}-funding-transfers`
+  const fundingIndex = ACCOUNT_OPENING_SUFFIXES.indexOf('funding-transfers')
+  if (fundingIndex >= 0 && isChildSubTaskVisited(state, accountChildId, fundingIndex)) {
+    return applySubmittedCap(state, taskId, { filled: 1, total: 1 })
+  }
+  return applySubmittedCap(state, taskId, { filled: 0, total: 1 })
+}
+
+function progressFeaturesHub(state: WorkflowState, accountChildId: string): { filled: number; total: number } {
+  const taskId = `${accountChildId}-features-services`
+  const featuresIndex = ACCOUNT_OPENING_SUFFIXES.indexOf('features-services')
+  if (featuresIndex >= 0 && isChildSubTaskVisited(state, accountChildId, featuresIndex)) {
+    return applySubmittedCap(state, taskId, { filled: 1, total: 1 })
+  }
+  return applySubmittedCap(state, taskId, { filled: 0, total: 1 })
+}
 
 function progressDocuments(state: WorkflowState, accountChildId: string): { filled: number; total: number } {
   const taskId = `${accountChildId}-documents-review`
@@ -277,7 +273,7 @@ export function getAccountOpeningAggregateProgress(
 ): { filled: number; total: number } {
   let filled = 0
   let total = 0
-  for (const suffix of ACCOUNT_OPENING_SUFFIXES) {
+  for (const suffix of accountOpeningProgressSuffixes(state.demoViewMode)) {
     const p = getAccountOpeningSubTaskProgress(state, accountChildId, suffix)
     filled += p.filled
     total += p.total
@@ -335,7 +331,7 @@ export function getAccountOpeningChildSubmissionIssues(
     }
   }
 
-  if (!kycEsignExternal) {
+  if (!kycEsignExternal && isAccountOpeningDocumentsStepVisible(state.demoViewMode)) {
     const docsTaskId = `${accountChildId}-documents-review`
     const docsData = (state.taskData[docsTaskId] as Record<string, unknown> | undefined) ?? {}
     const executedEsignForms =

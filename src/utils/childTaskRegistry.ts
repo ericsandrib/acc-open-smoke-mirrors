@@ -84,6 +84,13 @@ export function isHoKycReviewerDemoView(
   return demoViewMode === 'ho-kyc' || demoViewMode === 'ho-documents' || demoViewMode === 'ho-principal'
 }
 
+/** Account-level Documents step is omitted from the advisor open-accounts child workflow. */
+export function isAccountOpeningDocumentsStepVisible(
+  demoViewMode: WorkflowState['demoViewMode'] | undefined,
+): boolean {
+  return (demoViewMode ?? 'advisor') !== 'advisor'
+}
+
 export function getVisibleChildSubTasks(
   childType: ChildType,
   demoViewMode: WorkflowState['demoViewMode'],
@@ -93,8 +100,8 @@ export function getVisibleChildSubTasks(
     return KYC_AML_REVIEW_SUBTASKS
   }
   const base = CHILD_TYPE_CONFIGS[childType].subTasks
-  if (childType === 'kyc') {
-    return base.filter((s) => s.suffix !== 'documents')
+  if (childType === 'account-opening' && !isAccountOpeningDocumentsStepVisible(demoViewMode)) {
+    return base.filter((s) => s.suffix !== 'documents-review')
   }
   return base
 }
@@ -125,9 +132,6 @@ export function getSubTaskIndexByFormKey(
     demoViewMode != null
       ? getVisibleChildSubTasks(childType, demoViewMode)
       : getVisibleChildSubTasks(childType, 'advisor')
-  if (childType === 'kyc' && formKey === 'kyc-child-documents' && demoViewMode !== 'aml') {
-    return visible.findIndex((s) => s.suffix === 'info')
-  }
   const idx = visible.findIndex((s) => s.formKey === formKey)
   if (idx >= 0) return idx
   if (childType === 'kyc' && formKey === 'kyc-child-aml-review') {

@@ -6,6 +6,8 @@ const VISIT_ONLY_FORM_KEYS = new Set([
   'kyc-child-aml-subject-profile',
   'kyc-child-aml-documents',
   'kyc-child-aml-review',
+  'acct-child-funding-transfers',
+  'acct-child-features-services',
   'acct-child-documents-review',
 ])
 
