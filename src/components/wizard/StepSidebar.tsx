@@ -225,15 +225,16 @@ type DisplayActionNode = {
   taskRows: DisplayTaskRow[]
 }
 
-/** Advisor-only rows in the no-annuity open-accounts sub-nav (v5/v6 grouped list and non-split v5 list). */
-function filterAdvisorOnlyOpenAccountsNavNodes(
+/** Open Accounts sub-nav: supporting documents live on KYC child workflows, not parent pages. */
+function filterOpenAccountsNavNodes(
   nodes: DisplayTaskNode[],
   isAdvisorDemoView: boolean,
 ): DisplayTaskNode[] {
-  if (isAdvisorDemoView) return nodes
-  return nodes.filter(
-    (n) => n.v5NoAnnuityPage !== 'documents' && n.v5NoAnnuityPage !== 'envelopes',
-  )
+  return nodes.filter((n) => {
+    if (n.v5NoAnnuityPage === 'documents') return false
+    if (!isAdvisorDemoView && n.v5NoAnnuityPage === 'envelopes') return false
+    return true
+  })
 }
 
 function isDisplayTaskNodeActive(dt: DisplayTaskNode, state: WorkflowState): boolean {
@@ -266,10 +267,11 @@ function isDisplayTaskNodeActive(dt: DisplayTaskNode, state: WorkflowState): boo
  * - In v2/v3/v4 split: keep both open-accounts tasks visible (renamed labels on each row).
  * - In v5 split: collapsible “Account Opening” first, then a flat “Account Opening + Annuity Order” task row (sibling to that group).
  * - In v6 split: optional flat annuity-order row after the Account Opening group (when annuity path is enabled).
- *   Without-annuity side uses navigator rows (Account Setup, KYC Initiation, Supporting Documents, Envelopes)
+ *   Without-annuity side uses navigator rows (Accounts, KYC, Envelopes) on the parent task;
+ *   supporting documents are on each KYC child workflow.
  *   that all bind to the same underlying task and swap full-page `OpenAccountsForm` content.
- * - In reviewer demo (`demoViewMode` other than `advisor`): Supporting Documents, Envelopes, and any
- *   Annuity-order path rows are omitted from the sidebar (advisor-only).
+ * - In reviewer demo (`demoViewMode` other than `advisor`): Envelopes and annuity-order rows are
+ *   omitted from the sidebar (advisor-only). Parent Supporting Documents is never shown here.
  */
 export function buildDisplayActions(state: WorkflowState, variant: OpenAccountsVariant): DisplayActionNode[] {
   const hideClientSetupInReviewer = (state.demoViewMode ?? 'advisor') !== 'advisor'
@@ -331,7 +333,7 @@ export function buildDisplayActions(state: WorkflowState, variant: OpenAccountsV
                   v5NoAnnuityPage: 'envelopes',
                 },
               ]
-              return filterAdvisorOnlyOpenAccountsNavNodes(v5NoSplitRows, isAdvisorDemoView).map((task) => ({
+              return filterOpenAccountsNavNodes(v5NoSplitRows, isAdvisorDemoView).map((task) => ({
                 type: 'task' as const,
                 task,
               }))
@@ -419,7 +421,7 @@ export function buildDisplayActions(state: WorkflowState, variant: OpenAccountsV
     type: 'group',
     id: 'v5-accounts-without-annuity',
     label: OPEN_ACCOUNTS_NAV_NO_ANNUITY_GROUP_LABEL,
-    tasks: filterAdvisorOnlyOpenAccountsNavNodes(v5NonAnnuityGroupTasks, isAdvisorDemoView),
+    tasks: filterOpenAccountsNavNodes(v5NonAnnuityGroupTasks, isAdvisorDemoView),
   }
 
   const v6NonAnnuityGroupTasks: DisplayTaskNode[] =
@@ -456,7 +458,7 @@ export function buildDisplayActions(state: WorkflowState, variant: OpenAccountsV
     type: 'group',
     id: 'v6-accounts-without-annuity',
     label: OPEN_ACCOUNTS_NAV_NO_ANNUITY_GROUP_LABEL,
-    tasks: filterAdvisorOnlyOpenAccountsNavNodes(v6NonAnnuityGroupTasks, isAdvisorDemoView),
+    tasks: filterOpenAccountsNavNodes(v6NonAnnuityGroupTasks, isAdvisorDemoView),
   }
 
   const accountOpeningGroup: DisplayActionNode = {

@@ -55,6 +55,7 @@ import {
   OPEN_ACCOUNTS_WITH_ANNUITY_FORM_KEY,
 } from '@/utils/openAccountsTaskContext'
 import { formatOpenAccountsChildRowLabel } from '@/utils/openAccountsChildRowLabel'
+import { isParentOpenAccountsSupportingDocumentsEnabled } from '@/utils/childTaskRegistry'
 import { buildSupportingDocumentPreviewKey } from '@/utils/journeySupportingDocuments'
 import { useOpenAccountsTaskOverride, useOpenAccountsVariant, useOpenAccountsVariantControls } from '@/components/wizard/openAccountsVariantContext'
 import { mergeFeatureRequests } from '@/types/featureRequests'
@@ -216,7 +217,9 @@ export function OpenAccountsForm() {
     v5SubPage != null
   const showV5Instructions = !isV5NoAnnuityPaged || v5SubPage === 'instructions'
   const showV5Kyc = !isV5NoAnnuityPaged || v5SubPage === 'kyc'
-  const showV5Documents = !isV5NoAnnuityPaged || v5SubPage === 'documents'
+  const showParentSupportingDocuments = isParentOpenAccountsSupportingDocumentsEnabled()
+  const showV5Documents =
+    showParentSupportingDocuments && (!isV5NoAnnuityPaged || v5SubPage === 'documents')
   const showV5Envelopes = !isV5NoAnnuityPaged || v5SubPage === 'envelopes'
   const isV6WithoutAnnuityInstructions = taskOverride?.idPrefix?.startsWith('v6-noann-') ?? false
   const isV6WithAnnuitySetup = taskOverride?.idPrefix?.startsWith('v6-wann-') ?? false

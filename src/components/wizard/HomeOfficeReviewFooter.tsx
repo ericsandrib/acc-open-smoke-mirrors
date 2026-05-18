@@ -4,6 +4,10 @@ import { Button } from '@/components/ui/button'
 import { CheckCircle2, XCircle, ShieldAlert } from 'lucide-react'
 import { NigoDialog } from './NigoDialog'
 import { getAccountOwnersMissingKyc } from '@/utils/accountOpeningOwnerKyc'
+import {
+  isChildInDocumentReviewQueue,
+  isChildInPrincipalReviewQueue,
+} from '@/utils/childReviewQueue'
 
 export function HomeOfficeReviewFooter() {
   const { state, dispatch } = useWorkflow()
@@ -62,6 +66,10 @@ export function HomeOfficeReviewFooter() {
     }
 
     if (amlBlocked) {
+      return null
+    }
+
+    if (!child || !isChildInDocumentReviewQueue(child, reviewState)) {
       return null
     }
 
@@ -171,13 +179,14 @@ export function HomeOfficeReviewFooter() {
       )
     }
 
-    const docIgo = docReview?.status === 'igo'
-    /** Account opening has no AML gate; KYC / legacy flows may still require AML cleared before principal approval. */
-    const amlGateApplies = amlReview != null
-    const amlCleared = amlReview?.status === 'cleared'
-  const kycBlockedOwners =
-    child?.childType === 'account-opening' ? getAccountOwnersMissingKyc(state, child.id).names : []
-  const blocked = !docIgo || (amlGateApplies && !amlCleared) || kycBlockedOwners.length > 0
+    const kycBlockedOwners =
+      child?.childType === 'account-opening' ? getAccountOwnersMissingKyc(state, child.id).names : []
+    const inPrincipalQueue = child ? isChildInPrincipalReviewQueue(child, reviewState) : false
+    const blocked = !inPrincipalQueue || kycBlockedOwners.length > 0
+
+    if (!child || !inPrincipalQueue) {
+      return null
+    }
 
     return (
       <>

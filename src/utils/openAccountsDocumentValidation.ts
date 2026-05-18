@@ -3,27 +3,12 @@ import type { EsignEnvelope } from '@/types/esignEnvelope'
 import { getAccountOwnersMissingKyc } from '@/utils/accountOpeningOwnerKyc'
 import { getAccountOpeningChildSubmissionIssues } from '@/utils/accountOpeningChildProgress'
 import { getEnvelopeDisplayName } from '@/utils/deriveEnvelopeDisplayName'
-import { getOpenAccountsCoreSupportingDocumentSections, getDocSubTypes } from '@/utils/registrationDocuments'
 import type { RegistrationType } from '@/utils/registrationDocuments'
 import { getEsignEnvelopeStatus } from '@/utils/esignEnvelopeStatus'
 import { getAlternativeStrategyEsignSubmitBlockers } from '@/utils/alternativeStrategyValidation'
 import { isAnnuityExternalPlatformOpenAccountsTask } from '@/utils/openAccountsTaskContext'
-import {
-  instanceSpecificationComplete,
-  type SupportingDocumentStatus,
-} from '@/utils/supportingDocuments'
 
 type OwnerSlot = { partyId?: string; type: string }
-
-interface DocInstance {
-  id: string
-  docTypeId: string
-  assignedTo: string
-  fileName?: string
-  subType?: string
-  customSubTypeLabel?: string
-  status?: SupportingDocumentStatus
-}
 
 /**
  * Registration types for accounts that have at least one owner slot assigned to a party (used by other flows such
@@ -53,41 +38,11 @@ export function getRegistrationTypesForOpenAccountsUploadSection(
  * Suggested optional rows never block submission.
  */
 export function getOpenAccountsMissingDocumentSpecificationIssues(
-  state: WorkflowState,
-  openAccountsTaskId: string,
+  _state: WorkflowState,
+  _openAccountsTaskId: string,
 ): string[] {
-  const openAccountsTask = state.tasks.find((t) => t.id === openAccountsTaskId)
-  if (!openAccountsTask) return []
-
-  const uploadDocs = getOpenAccountsCoreSupportingDocumentSections()
-
-  const taskData = (state.taskData[openAccountsTaskId] as Record<string, unknown> | undefined) ?? {}
-  const issues: string[] = []
-
-  for (const doc of uploadDocs) {
-    const subTypes = getDocSubTypes(doc.id)
-    const instances = (taskData[`doc-instances-${doc.id}`] as DocInstance[] | undefined) ?? []
-    const requested = instances.filter((i) => i.status === 'requested_by_review')
-    if (requested.length === 0) continue
-
-    const missingSpec = requested.filter(
-      (i) => !instanceSpecificationComplete(i.subType, i.customSubTypeLabel, subTypes.length),
-    ).length
-    if (missingSpec > 0) {
-      issues.push(
-        `${doc.label}: ${missingSpec} row${missingSpec === 1 ? '' : 's'} requested during review still need a document type (or custom type name).`,
-      )
-    }
-
-    const missingFile = requested.filter((i) => !i.fileName?.trim()).length
-    if (missingFile > 0) {
-      issues.push(
-        `${doc.label}: ${missingFile} upload${missingFile === 1 ? '' : 's'} requested during review still need a file.`,
-      )
-    }
-  }
-
-  return issues
+  /** Supporting document uploads are collected on KYC child workflows (CIP), not the parent Open Accounts task. */
+  return []
 }
 
 /**

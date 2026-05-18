@@ -31,7 +31,6 @@ export const combinedOpenAccountsSections: CombinedAccordionSectionGroup[] = [
     label: 'Accounts without Annuities',
     sections: [
       { id: 'oa-accounts', label: 'Accounts' },
-      { id: 'oa-documents', label: 'Supporting Documents' },
       { id: 'oa-kyc', label: 'KYC Verification' },
       { id: 'oa-esign', label: 'Envelopes' },
     ],

@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { useWorkflow, getChildReviewState } from '@/stores/workflowStore'
+import { isChildInAmlReviewQueue } from '@/utils/childReviewQueue'
 import { Button } from '@/components/ui/button'
 import { Label } from '@/components/ui/label'
 import { CheckCircle2, XCircle, AlertTriangle, ShieldAlert } from 'lucide-react'
@@ -66,6 +67,10 @@ export function AmlReviewFooter() {
         </div>
       </footer>
     )
+  }
+
+  if (!child || !isChildInAmlReviewQueue(child, reviewState)) {
+    return null
   }
 
   return (

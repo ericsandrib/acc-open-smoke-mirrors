@@ -1,8 +1,4 @@
 import type { WorkflowState } from '@/types/workflow'
-import {
-  getAllOpenAccountsTasks,
-  getOpenAccountsTaskData,
-} from '@/utils/openAccountsTaskContext'
 import { getOpenAccountsCoreSupportingDocumentSections } from '@/utils/registrationDocuments'
 import {
   getChildSubTaskIds,
@@ -93,8 +89,45 @@ function rowsFromTaskData(
   return rows
 }
 
+function isSupportingDocumentsSubTask(formKey: string, suffix: string): boolean {
+  return (
+    suffix === 'documents' ||
+    formKey === 'kyc-child-documents' ||
+    formKey === 'kyc-child-aml-documents'
+  )
+}
+
+function collectKycChildSupportingDocumentRows(
+  state: WorkflowState,
+  pushUnique: (rows: JourneySupportingDocRow[]) => void,
+  labelMap: Map<string, string>,
+): void {
+  const kycTask = state.tasks.find((t) => t.formKey === 'kyc')
+  for (const child of kycTask?.children ?? []) {
+    if (child.childType !== 'kyc') continue
+    const visible = getVisibleChildSubTasks(child.childType, state.demoViewMode, child.status)
+    for (const st of visible) {
+      if (!isSupportingDocumentsSubTask(st.formKey, st.suffix)) continue
+      const subId = `${child.id}-${st.suffix}`
+      const subData = (state.taskData[subId] as Record<string, unknown> | undefined) ?? {}
+      const scope = `${child.name} · ${st.title}`
+      pushUnique(rowsFromTaskData(state, subData, subId, scope, labelMap))
+    }
+    const config = getChildTypeConfig(child.childType)
+    for (const id of getChildSubTaskIds(child.id, child.childType)) {
+      if (visible.some((v) => `${child.id}-${v.suffix}` === id)) continue
+      const st = config.subTasks.find((s) => id === `${child.id}-${s.suffix}`)
+      if (!st || !isSupportingDocumentsSubTask(st.formKey, st.suffix)) continue
+      const subData = (state.taskData[id] as Record<string, unknown> | undefined) ?? {}
+      if (!Object.keys(subData).some((k) => k.startsWith('doc-instances-'))) continue
+      const scope = `${child.name} · ${st.title}`
+      pushUnique(rowsFromTaskData(state, subData, id, scope, labelMap))
+    }
+  }
+}
+
 /**
- * Collect supporting-document upload rows from Open Accounts task payloads and,
+ * Collect supporting-document upload rows from KYC child workflows and,
  * when a child workflow is active, that child and its sub-step `taskData` keys.
  */
 export function collectJourneySupportingDocumentRows(state: WorkflowState): JourneySupportingDocRow[] {
@@ -110,12 +143,7 @@ export function collectJourneySupportingDocumentRows(state: WorkflowState): Jour
     }
   }
 
-  for (const t of getAllOpenAccountsTasks(state)) {
-    const scope = t.title?.trim() || 'Open Accounts'
-    pushUnique(
-      rowsFromTaskData(state, getOpenAccountsTaskData(state, t.id), t.id, scope, labelMap),
-    )
-  }
+  collectKycChildSupportingDocumentRows(state, pushUnique, labelMap)
 
   if (state.activeChildActionId) {
     const child = state.tasks.flatMap((x) => x.children ?? []).find((c) => c.id === state.activeChildActionId)

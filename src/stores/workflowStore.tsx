@@ -1051,8 +1051,12 @@ function workflowReducer(state: WorkflowState, action: WorkflowAction): Workflow
         activeTask?.formKey === OPEN_ACCOUNTS_FORM_KEY &&
         state.v5NoAnnuityOpenAccountsPage != null
       ) {
-        const order: V5NoAnnuityPage[] = ['instructions', 'kyc', 'documents', 'envelopes']
-        const i = order.indexOf(state.v5NoAnnuityOpenAccountsPage)
+        const order: V5NoAnnuityPage[] = ['instructions', 'kyc', 'envelopes']
+        const current =
+          state.v5NoAnnuityOpenAccountsPage === 'documents'
+            ? 'kyc'
+            : state.v5NoAnnuityOpenAccountsPage
+        const i = order.indexOf(current ?? 'instructions')
         if (i >= 0 && i < order.length - 1) {
           return { ...state, v5NoAnnuityOpenAccountsPage: order[i + 1] }
         }
@@ -1083,8 +1087,12 @@ function workflowReducer(state: WorkflowState, action: WorkflowAction): Workflow
         activeTask?.formKey === OPEN_ACCOUNTS_FORM_KEY &&
         state.v5NoAnnuityOpenAccountsPage != null
       ) {
-        const order: V5NoAnnuityPage[] = ['instructions', 'kyc', 'documents', 'envelopes']
-        const i = order.indexOf(state.v5NoAnnuityOpenAccountsPage)
+        const order: V5NoAnnuityPage[] = ['instructions', 'kyc', 'envelopes']
+        const current =
+          state.v5NoAnnuityOpenAccountsPage === 'documents'
+            ? 'envelopes'
+            : state.v5NoAnnuityOpenAccountsPage
+        const i = order.indexOf(current ?? 'instructions')
         if (i > 0) {
           return { ...state, v5NoAnnuityOpenAccountsPage: order[i - 1] }
         }

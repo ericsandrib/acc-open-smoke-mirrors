@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { toast } from 'sonner'
 import { useWorkflow, useChildActionContext, getChildReviewState } from '@/stores/workflowStore'
+import { isChildInHoKycReviewQueue } from '@/utils/childReviewQueue'
 import { Button } from '@/components/ui/button'
 import { Label } from '@/components/ui/label'
 import { CheckCircle2, MessageSquare, ShieldAlert, XCircle } from 'lucide-react'
@@ -59,6 +60,10 @@ export function HoKycReviewFooter() {
         </div>
       </footer>
     )
+  }
+
+  if (!isChildInHoKycReviewQueue(child, reviewState)) {
+    return null
   }
 
   return (

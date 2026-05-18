@@ -594,10 +594,7 @@ function WizardLayoutInner() {
       // Section 1: Accounts to Be Opened
       const accountsPct = children.length > 0 ? 100 : 0
 
-      // Section 2: Supporting documents (optional at intake; parent progress does not wait on uploads)
-      const documentsPct = children.length > 0 ? 100 : 0
-
-      // Section 3: KYC Verification
+      // Section 2: KYC Verification (supporting documents are on KYC child workflows, not parent)
       const kycTask = state.tasks.find((t) => t.formKey === 'kyc')
       const kycChildren = (kycTask?.children ?? []).filter((c) => c.childType === 'kyc')
       const ownerPartyIds = new Set<string>()
@@ -620,12 +617,11 @@ function WizardLayoutInner() {
       }).length
       const kycPct = kycOwnerIds.length > 0 && kycDone > 0 ? 100 : 0
 
-      // Section 4: Envelopes
+      // Section 3: Envelopes
       const envelopes = (taskData.esignEnvelopes as Array<unknown> | undefined) ?? []
       const esignPct = envelopes.length > 0 ? 100 : 0
 
-      // Keep parent progress simple: four sections, equally weighted.
-      return Math.round((accountsPct + documentsPct + kycPct + esignPct) / 4)
+      return Math.round((accountsPct + kycPct + esignPct) / 3)
     }
     return 0
   }

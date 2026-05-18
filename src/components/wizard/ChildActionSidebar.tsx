@@ -54,6 +54,12 @@ import {
 } from '@/components/wizard/openAccountsVariantContext'
 import type { TaskStatus } from '@/types/workflow'
 import { getAccountOwnersMissingKyc } from '@/utils/accountOpeningOwnerKyc'
+import {
+  isChildInAmlReviewQueue,
+  isChildInDocumentReviewQueue,
+  isChildInHoKycReviewQueue,
+  isChildInPrincipalReviewQueue,
+} from '@/utils/childReviewQueue'
 import { NigoDialog } from './NigoDialog'
 import {
   Dialog,
@@ -452,6 +458,9 @@ function ChildReviewStatusActions() {
   let helper: ReactNode = null
 
   if (mode === 'aml') {
+    if (!isChildInAmlReviewQueue(child, reviewState)) {
+      actions = null
+    } else {
     const terminal = amlReview?.status && amlReview.status !== 'pending'
     if (!terminal) {
       actions = (
@@ -470,23 +479,21 @@ function ChildReviewStatusActions() {
         </StatusActionGroup>
       )
     }
+    }
   } else if (
     mode === 'ho-kyc' ||
     (child.childType === 'kyc' && (mode === 'ho-principal' || mode === 'ho-documents'))
   ) {
-    const amlBlocked =
-      amlReview?.status === 'pending' ||
-      amlReview?.status === 'flagged' ||
-      amlReview?.status === 'info_requested'
     const amlEscalated = amlReview?.status === 'escalated'
     const terminal = hoKycReview?.status === 'approved' || amlEscalated
+    const inHoKycQueue = isChildInHoKycReviewQueue(child, reviewState)
 
     if (amlEscalated) {
       helper = <p className="text-xs text-red-700">SAR escalated. KYC cannot be approved.</p>
     }
 
     if (!terminal) {
-      if (amlBlocked) {
+      if (!inHoKycQueue) {
         actions = null
       } else {
         actions = (
@@ -508,15 +515,27 @@ function ChildReviewStatusActions() {
     }
   } else if (mode === 'ho-documents') {
     const amlEscalated = amlReview?.status === 'escalated'
-    const amlBlocked = amlReview?.status === 'pending' || amlReview?.status === 'flagged'
     const terminal = docReview?.status === 'igo' || docReview?.status === 'nigo' || amlEscalated
+    const inDocQueue =
+      child.childType === 'kyc'
+        ? isChildInHoKycReviewQueue(child, reviewState)
+        : isChildInDocumentReviewQueue(child, reviewState)
 
     if (amlEscalated) {
       helper = <p className="text-xs text-red-700">SAR escalated. Document review cannot be accepted.</p>
+    } else if (
+      child.status === 'awaiting_review' &&
+      (amlReview?.status === 'pending' || amlReview?.status === 'flagged')
+    ) {
+      helper = (
+        <p className="text-xs text-muted-foreground">
+          Waiting on AML review before document review can begin.
+        </p>
+      )
     }
 
     if (!terminal) {
-      if (amlBlocked) {
+      if (!inDocQueue) {
         actions = null
       } else {
         actions = (
@@ -538,16 +557,27 @@ function ChildReviewStatusActions() {
     }
   } else if (mode === 'ho-principal') {
     const docIgo = docReview?.status === 'igo'
-    const amlGateApplies = amlReview != null
-    const amlCleared = amlReview?.status === 'cleared'
     const amlEscalated = amlReview?.status === 'escalated'
     const kycBlockedOwners =
       child.childType === 'account-opening' ? getAccountOwnersMissingKyc(state, child.id).names : []
-    const blocked = !docIgo || (amlGateApplies && !amlCleared) || kycBlockedOwners.length > 0
+    const inPrincipalQueue = isChildInPrincipalReviewQueue(child, reviewState)
+    const blocked = !inPrincipalQueue || kycBlockedOwners.length > 0
     const terminal = principalReview?.status === 'igo' || principalReview?.status === 'nigo' || amlEscalated
 
     if (amlEscalated) {
       helper = <p className="text-xs text-red-700">SAR escalated. Principal review cannot approve.</p>
+    } else if (!inPrincipalQueue && child.status === 'awaiting_review' && !docIgo) {
+      helper = (
+        <p className="text-xs text-muted-foreground">
+          Waiting on document review before principal review can begin.
+        </p>
+      )
+    } else if (inPrincipalQueue && kycBlockedOwners.length > 0) {
+      helper = (
+        <p className="text-xs text-amber-700">
+          Waiting on KYC approval: {kycBlockedOwners.join(', ')}
+        </p>
+      )
     }
 
     if (!terminal) {

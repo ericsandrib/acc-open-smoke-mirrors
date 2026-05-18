@@ -84,11 +84,26 @@ export function isHoKycReviewerDemoView(
   return demoViewMode === 'ho-kyc' || demoViewMode === 'ho-documents' || demoViewMode === 'ho-principal'
 }
 
-/** Account-level Documents step is omitted from the advisor open-accounts child workflow. */
+/**
+ * Supporting documents are a KYC/CIP requirement — not collected on the parent Open Accounts
+ * task or on account child workflows for advisors.
+ */
+export function isOpenAccountsSupportingDocumentsAtAdvisorHidden(
+  demoViewMode: WorkflowState['demoViewMode'] | undefined,
+): boolean {
+  return (demoViewMode ?? 'advisor') === 'advisor'
+}
+
+/** Parent Open Accounts task — no supporting-documents section (use KYC child workflow). */
+export function isParentOpenAccountsSupportingDocumentsEnabled(): boolean {
+  return false
+}
+
+/** Account-level Documents sub-step — reviewers only; advisors use KYC Supporting Documents. */
 export function isAccountOpeningDocumentsStepVisible(
   demoViewMode: WorkflowState['demoViewMode'] | undefined,
 ): boolean {
-  return (demoViewMode ?? 'advisor') !== 'advisor'
+  return !isOpenAccountsSupportingDocumentsAtAdvisorHidden(demoViewMode)
 }
 
 export function getVisibleChildSubTasks(
