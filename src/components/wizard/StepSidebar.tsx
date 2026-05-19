@@ -225,7 +225,7 @@ type DisplayActionNode = {
   taskRows: DisplayTaskRow[]
 }
 
-/** Open Accounts sub-nav: supporting documents live on KYC child workflows, not parent pages. */
+/** Parent Supporting Documents nav — CIP uploads are on KYC children, not this parent page. */
 function filterOpenAccountsNavNodes(
   nodes: DisplayTaskNode[],
   isAdvisorDemoView: boolean,
@@ -268,10 +268,9 @@ function isDisplayTaskNodeActive(dt: DisplayTaskNode, state: WorkflowState): boo
  * - In v5 split: collapsible “Account Opening” first, then a flat “Account Opening + Annuity Order” task row (sibling to that group).
  * - In v6 split: optional flat annuity-order row after the Account Opening group (when annuity path is enabled).
  *   Without-annuity side uses navigator rows (Accounts, KYC, Envelopes) on the parent task;
- *   supporting documents are on each KYC child workflow.
- *   that all bind to the same underlying task and swap full-page `OpenAccountsForm` content.
+ *   CIP supporting documents are on KYC children; account-level Documents on account-opening children.
  * - In reviewer demo (`demoViewMode` other than `advisor`): Envelopes and annuity-order rows are
- *   omitted from the sidebar (advisor-only). Parent Supporting Documents is never shown here.
+ *   omitted from the sidebar (advisor-only).
  */
 export function buildDisplayActions(state: WorkflowState, variant: OpenAccountsVariant): DisplayActionNode[] {
   const hideClientSetupInReviewer = (state.demoViewMode ?? 'advisor') !== 'advisor'

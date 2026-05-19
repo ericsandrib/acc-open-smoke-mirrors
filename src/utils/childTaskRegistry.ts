@@ -84,26 +84,9 @@ export function isHoKycReviewerDemoView(
   return demoViewMode === 'ho-kyc' || demoViewMode === 'ho-documents' || demoViewMode === 'ho-principal'
 }
 
-/**
- * Supporting documents are a KYC/CIP requirement — not collected on the parent Open Accounts
- * task or on account child workflows for advisors.
- */
-export function isOpenAccountsSupportingDocumentsAtAdvisorHidden(
-  demoViewMode: WorkflowState['demoViewMode'] | undefined,
-): boolean {
-  return (demoViewMode ?? 'advisor') === 'advisor'
-}
-
-/** Parent Open Accounts task — no supporting-documents section (use KYC child workflow). */
+/** Parent Open Accounts task — CIP supporting uploads live on KYC child workflows. */
 export function isParentOpenAccountsSupportingDocumentsEnabled(): boolean {
   return false
-}
-
-/** Account-level Documents sub-step — reviewers only; advisors use KYC Supporting Documents. */
-export function isAccountOpeningDocumentsStepVisible(
-  demoViewMode: WorkflowState['demoViewMode'] | undefined,
-): boolean {
-  return !isOpenAccountsSupportingDocumentsAtAdvisorHidden(demoViewMode)
 }
 
 export function getVisibleChildSubTasks(
@@ -114,11 +97,7 @@ export function getVisibleChildSubTasks(
   if (childType === 'kyc' && demoViewMode === 'aml') {
     return KYC_AML_REVIEW_SUBTASKS
   }
-  const base = CHILD_TYPE_CONFIGS[childType].subTasks
-  if (childType === 'account-opening' && !isAccountOpeningDocumentsStepVisible(demoViewMode)) {
-    return base.filter((s) => s.suffix !== 'documents-review')
-  }
-  return base
+  return CHILD_TYPE_CONFIGS[childType].subTasks
 }
 
 /** Stable sidebar / header label for a sub-task across advisor and reviewer views. */

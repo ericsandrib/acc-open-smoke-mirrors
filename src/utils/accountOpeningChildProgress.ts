@@ -15,7 +15,6 @@ import { getAccountOwnersMissingKyc } from '@/utils/accountOpeningOwnerKyc'
 import { instanceSpecificationComplete } from '@/utils/supportingDocuments'
 import type { SupportingDocumentStatus } from '@/utils/supportingDocuments'
 import { isChildSubTaskVisited } from '@/utils/childSubTaskProgress'
-import { isAccountOpeningDocumentsStepVisible } from '@/utils/childTaskRegistry'
 
 type DocInstance = {
   id: string
@@ -176,12 +175,7 @@ const ACCOUNT_OPENING_SUFFIXES = [
   'documents-review',
 ] as const
 
-function accountOpeningProgressSuffixes(
-  demoViewMode: WorkflowState['demoViewMode'] | undefined,
-): readonly string[] {
-  if (!isAccountOpeningDocumentsStepVisible(demoViewMode)) {
-    return ACCOUNT_OPENING_SUFFIXES.filter((s) => s !== 'documents-review')
-  }
+function accountOpeningProgressSuffixes(): readonly string[] {
   return ACCOUNT_OPENING_SUFFIXES
 }
 
@@ -273,7 +267,7 @@ export function getAccountOpeningAggregateProgress(
 ): { filled: number; total: number } {
   let filled = 0
   let total = 0
-  for (const suffix of accountOpeningProgressSuffixes(state.demoViewMode)) {
+  for (const suffix of accountOpeningProgressSuffixes()) {
     const p = getAccountOpeningSubTaskProgress(state, accountChildId, suffix)
     filled += p.filled
     total += p.total
@@ -331,7 +325,7 @@ export function getAccountOpeningChildSubmissionIssues(
     }
   }
 
-  if (!kycEsignExternal && isAccountOpeningDocumentsStepVisible(state.demoViewMode)) {
+  if (!kycEsignExternal) {
     const docsTaskId = `${accountChildId}-documents-review`
     const docsData = (state.taskData[docsTaskId] as Record<string, unknown> | undefined) ?? {}
     const executedEsignForms =
