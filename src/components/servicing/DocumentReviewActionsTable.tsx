@@ -10,7 +10,7 @@ import {
 } from '@/components/ui/data-table'
 import { useSortableTable } from '@/hooks/useSortableTable'
 import { compareString } from '@/lib/sort-comparators'
-import { ChevronRight, ChevronDown, GitBranch, Link2, ShieldCheck, Briefcase } from 'lucide-react'
+import { ChevronRight, ChevronDown, GitBranch, Link2, ShieldCheck, Briefcase, ArrowDownToLine, Layers } from 'lucide-react'
 import { childStatusConfig, type ChildDisplayStatus } from '@/utils/childStatusDisplay'
 import {
   deriveParentOperationalSummary,
@@ -18,7 +18,15 @@ import {
 } from '@/utils/workflowSummary'
 import { OperationalStatusPill } from './operationalStatusPill'
 import { cn } from '@/lib/utils'
-import { type ActionRow, actionRowInHomeOfficeReviewPipeline, deriveActionRows, ReviewQueueTypePill } from './ActionsTable'
+import {
+  type ActionRow,
+  actionRowInHomeOfficeReviewPipeline,
+  deriveActionRows,
+  isActionGroupRow,
+  isChildUnderActionGroup,
+  resolveAccountSectionActionIdForNavigation,
+  ReviewQueueTypePill,
+} from './ActionsTable'
 import type { OnboardingActionsGroupBy } from './table-controls'
 import { compactNestedActionLabel } from '@/utils/servicingActionLabel'
 
@@ -188,9 +196,56 @@ interface DocumentReviewActionsTableProps {
    * - `allChildWorkflows`: every nested child line regardless of review status (advisor “all statuses”).
    */
   nestRowMode?: 'pipeline' | 'allChildWorkflows'
+  /** When true, funding / feature-service lines nest under their group headers (Onboarding Journeys parity). */
+  showNestedFundingGroups?: boolean
 }
 
 type JourneyGroup = { journeyId: string; journeyName: string; relationshipName: string; rows: ActionRow[] }
+
+type NestedDisplayRow =
+  | { kind: 'workflow'; row: ActionRow; depth: number }
+  | { kind: 'group'; row: ActionRow; depth: number }
+  | { kind: 'groupChild'; row: ActionRow; depth: number }
+
+function buildNestedDisplayRows(
+  journeyRows: ActionRow[],
+  allRows: ActionRow[],
+  expandedGroupIds: Set<string>,
+): NestedDisplayRow[] {
+  const topLevel = journeyRows.filter((r) => !isChildUnderActionGroup(r, allRows))
+  const out: NestedDisplayRow[] = []
+
+  for (const workflowRow of topLevel) {
+    out.push({ kind: 'workflow', row: workflowRow, depth: 1 })
+
+    if (workflowRow.reviewQueueItemType !== 'Account') continue
+
+    const groups = allRows
+      .filter(
+        (r) =>
+          r.journeyId === workflowRow.journeyId &&
+          r.parentActionId === workflowRow.id &&
+          isActionGroupRow(r),
+      )
+      .sort((a, b) => a.title.localeCompare(b.title))
+
+    for (const group of groups) {
+      const groupChildren = allRows
+        .filter((r) => r.parentActionId === group.id && r.childId)
+        .sort((a, b) => a.title.localeCompare(b.title))
+      if (groupChildren.length === 0) continue
+
+      out.push({ kind: 'group', row: group, depth: 2 })
+      if (expandedGroupIds.has(group.id)) {
+        for (const child of groupChildren) {
+          out.push({ kind: 'groupChild', row: child, depth: 3 })
+        }
+      }
+    }
+  }
+
+  return out
+}
 
 export function DocumentReviewActionsTable({
   rows,
@@ -198,26 +253,35 @@ export function DocumentReviewActionsTable({
   journeys,
   groupBy,
   nestRowMode = 'pipeline',
+  showNestedFundingGroups = false,
 }: DocumentReviewActionsTableProps) {
   const { navigateToServicing } = useJourneyNavigation()
   const navigate = useNavigate()
   const [expandedJourneyIds, setExpandedJourneyIds] = useState<Set<string>>(new Set())
+  const [expandedGroupIds, setExpandedGroupIds] = useState<Set<string>>(new Set())
 
   const layoutGroupBy = groupBy ?? 'parentJourneyId'
 
   const nestRows = useMemo(() => {
+    let base: ActionRow[]
     if (nestRowMode === 'allChildWorkflows') {
       const children = rows.filter(isLeafChildWorkflowRow)
-      return children.length > 0 ? children : rows
+      base = children.length > 0 ? children : rows
+    } else {
+      const pipelineChildren = rows.filter(
+        (r) => isLeafChildWorkflowRow(r) && actionRowInHomeOfficeReviewPipeline(r),
+      )
+      if (pipelineChildren.length > 0) base = pipelineChildren
+      else {
+        const anyChildren = rows.filter(isLeafChildWorkflowRow)
+        base = anyChildren.length > 0 ? anyChildren : rows
+      }
     }
-    const pipelineChildren = rows.filter(
-      (r) => isLeafChildWorkflowRow(r) && actionRowInHomeOfficeReviewPipeline(r),
-    )
-    if (pipelineChildren.length > 0) return pipelineChildren
-    const anyChildren = rows.filter(isLeafChildWorkflowRow)
-    if (anyChildren.length > 0) return anyChildren
-    return rows
-  }, [rows, nestRowMode])
+    if (showNestedFundingGroups) {
+      return base.filter((r) => !isChildUnderActionGroup(r, rows))
+    }
+    return base
+  }, [rows, nestRowMode, showNestedFundingGroups])
 
   const groups = useMemo((): JourneyGroup[] => {
     const map = new Map<string, ActionRow[]>()
@@ -263,6 +327,27 @@ export function DocumentReviewActionsTable({
     })
   }
 
+  const toggleGroup = (id: string) => {
+    setExpandedGroupIds((prev) => {
+      const next = new Set(prev)
+      if (next.has(id)) next.delete(id)
+      else next.add(id)
+      return next
+    })
+  }
+
+  const nestedIndentClass = (depth: number) => {
+    if (depth <= 1) return undefined
+    if (depth === 2) return 'pl-7'
+    return 'pl-14'
+  }
+
+  const groupIcon = (groupType: ActionRow['groupType']) => {
+    if (groupType === 'funding') return <ArrowDownToLine className={rowIconClass} />
+    if (groupType === 'feature-service') return <Layers className={rowIconClass} />
+    return <Link2 className={rowIconClass} />
+  }
+
   const vis = (key: string) => key !== 'status' && visibleColumns.includes(key)
 
   const comparators = useMemo(
@@ -279,9 +364,12 @@ export function DocumentReviewActionsTable({
   const handleChildClick = (row: ActionRow) => {
     const journey = journeyStubs.get(row.journeyId)
     if (journey) {
-      if (row.childId && row.parentActionId) {
-        navigateToServicing(journey, row.parentActionId, row.childId)
-        return
+      if (row.childId) {
+        const sectionActionId = resolveAccountSectionActionIdForNavigation(row, rows) ?? row.parentActionId
+        if (sectionActionId) {
+          navigateToServicing(journey, sectionActionId, row.childId)
+          return
+        }
       }
       if (row.parentActionId) {
         navigateToServicing(journey, row.parentActionId)
@@ -291,6 +379,88 @@ export function DocumentReviewActionsTable({
       return
     }
     navigate(`/servicing/${row.journeyId}`)
+  }
+
+  const renderNestedChildRow = (display: NestedDisplayRow) => {
+    const { row, depth, kind } = display
+    const isGroup = kind === 'group'
+    const isGroupExpanded = expandedGroupIds.has(row.id)
+
+    return (
+      <DataTableRow
+        key={`${row.journeyId}-${kind}-${row.id}`}
+        className={cn('cursor-pointer', childRegionRowClass)}
+        border={false}
+        onClick={() => {
+          if (isGroup) {
+            toggleGroup(row.id)
+            return
+          }
+          handleChildClick(row)
+        }}
+      >
+        {(vis('nickname') || vis('title') || vis('journeyName')) && (
+          <DataTableCell
+            type="primary"
+            className={cn(
+              'font-medium text-foreground/70',
+              kind === 'group' && 'text-[13px] text-foreground/65',
+              kind === 'groupChild' && 'text-[13px] text-foreground/65',
+            )}
+          >
+            <JourneyLeading
+              className={nestedIndentClass(depth)}
+              expand={
+                isGroup ? (
+                  isGroupExpanded ? (
+                    <ChevronDown className="h-3.5 w-3.5 text-muted-foreground" />
+                  ) : (
+                    <ChevronRight className="h-3.5 w-3.5 text-muted-foreground" />
+                  )
+                ) : undefined
+              }
+              icon={
+                isGroup
+                  ? groupIcon(row.groupType)
+                  : childWorkflowIconFromRow(row)
+              }
+            >
+              <span className="truncate">{workflowLabel(row, visibleColumns)}</span>
+            </JourneyLeading>
+          </DataTableCell>
+        )}
+        {vis('reviewQueueItemType') && (
+          <DataTableCell type="secondary" className="align-middle">
+            {row.reviewQueueItemType ? <ReviewQueueTypePill type={row.reviewQueueItemType} /> : '—'}
+          </DataTableCell>
+        )}
+        {vis('relationshipName') && <DataTableCell />}
+        {vis('stateModelStatus') && (
+          <DataTableCell type="badge">
+            {isGroup ? (
+              <span className="text-sm text-muted-foreground">—</span>
+            ) : (
+              <StateModelCell row={row} variant="detail" />
+            )}
+          </DataTableCell>
+        )}
+        {vis('assignedTo') && <DataTableCell>{isGroup ? '' : row.assignedTo}</DataTableCell>}
+        {vis('tasksComplete') && (
+          <DataTableCell type="secondary">
+            {isGroup ? (
+              <span className="text-sm text-muted-foreground">—</span>
+            ) : (
+              <div className="flex items-center justify-start gap-2">
+                <span>
+                  {row.complete}/{row.total}
+                </span>
+                <ProgressBar value={row.total > 0 ? row.complete / row.total : 0} />
+              </div>
+            )}
+          </DataTableCell>
+        )}
+      </DataTableRow>
+    )
   }
 
   return (
@@ -459,44 +629,11 @@ export function DocumentReviewActionsTable({
                   )}
                 </DataTableRow>,
                 ...(isExpanded
-                  ? group.rows.map((row) => (
-                      <DataTableRow
-                        key={`${group.journeyId}-${row.id}`}
-                        className={cn('cursor-pointer', childRegionRowClass)}
-                        border={false}
-                        onClick={() => handleChildClick(row)}
-                      >
-                        {(vis('nickname') || vis('title') || vis('journeyName')) && (
-                          <DataTableCell type="primary" className="font-medium text-foreground/70">
-                            <JourneyLeading icon={childWorkflowIconFromRow(row)}>
-                              <span className="truncate">{workflowLabel(row, visibleColumns)}</span>
-                            </JourneyLeading>
-                          </DataTableCell>
-                        )}
-                        {vis('reviewQueueItemType') && (
-                          <DataTableCell type="secondary" className="align-middle">
-                            {row.reviewQueueItemType ? <ReviewQueueTypePill type={row.reviewQueueItemType} /> : '—'}
-                          </DataTableCell>
-                        )}
-                        {vis('relationshipName') && <DataTableCell />}
-                        {vis('stateModelStatus') && (
-                          <DataTableCell type="badge">
-                            <StateModelCell row={row} variant="detail" />
-                          </DataTableCell>
-                        )}
-                        {vis('assignedTo') && <DataTableCell>{row.assignedTo}</DataTableCell>}
-                        {vis('tasksComplete') && (
-                          <DataTableCell type="secondary">
-                            <div className="flex items-center justify-start gap-2">
-                              <span>
-                                {row.complete}/{row.total}
-                              </span>
-                              <ProgressBar value={row.total > 0 ? row.complete / row.total : 0} />
-                            </div>
-                          </DataTableCell>
-                        )}
-                      </DataTableRow>
-                    ))
+                  ? (showNestedFundingGroups
+                      ? buildNestedDisplayRows(group.rows, rows, expandedGroupIds).map((display) =>
+                          renderNestedChildRow(display),
+                        )
+                      : group.rows.map((row) => renderNestedChildRow({ kind: 'workflow', row, depth: 1 })))
                   : []),
               ]
             })}

@@ -88,6 +88,21 @@ export interface ActionRow {
   reviewQueueItemType: '' | 'KYC' | 'Account'
   /** Tab filter bucket for All / In Progress / Completed presets. */
   listTab: ActionListTab
+  /** Funding / feature-service group header under an account-opening child. */
+  groupType?: 'funding' | 'feature-service'
+}
+
+/** Group shell row (Funding & Asset Movement / Features & Services). */
+export function isActionGroupRow(row: ActionRow): boolean {
+  return row.groupType === 'funding' || row.groupType === 'feature-service'
+}
+
+/** Leaf workflow spawned under a funding or feature-service group. */
+export function isChildUnderActionGroup(row: ActionRow, allRows: ActionRow[]): boolean {
+  const parentId = row.parentActionId
+  if (!parentId) return false
+  const parent = allRows.find((r) => r.id === parentId)
+  return Boolean(parent && isActionGroupRow(parent))
 }
 const HOME_OFFICE_REVIEW_DISPLAY = new Set<string>([
   'awaiting_review',
@@ -164,9 +179,27 @@ export function deriveActionRows(journeys: Journey[]): ActionRow[] {
         stateModelStatus: computeStateModelLabel(action),
         reviewQueueItemType: deriveReviewQueueItemType(action),
         listTab: deriveActionListTab(action),
+        groupType: action.groupType,
       }
     }),
   )
+}
+
+/** Open Accounts section action id for deep-linking into a nested funding/feature line. */
+export function resolveAccountSectionActionIdForNavigation(
+  row: ActionRow,
+  allRows: ActionRow[],
+): string | undefined {
+  if (row.parentActionId?.endsWith('-account-opening-child')) return row.parentActionId
+  const directParent = row.parentActionId ? allRows.find((r) => r.id === row.parentActionId) : undefined
+  if (!directParent) return undefined
+  if (isActionGroupRow(directParent)) {
+    const accountChild = directParent.parentActionId
+      ? allRows.find((r) => r.id === directParent.parentActionId)
+      : undefined
+    return accountChild?.parentActionId
+  }
+  return directParent.parentActionId
 }
 
 import type { OnboardingActionsGroupBy } from './table-controls'

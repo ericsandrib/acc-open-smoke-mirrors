@@ -122,6 +122,7 @@ export function OnboardingContent() {
                     journeys={onboardingJourneys}
                     groupBy={groupBy}
                     nestRowMode="allChildWorkflows"
+                    showNestedFundingGroups
                   />
                 )
               }
