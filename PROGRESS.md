@@ -185,13 +185,13 @@
 - [x] Add `KycStatus` type + `getKycStatus` + `getKycStatusBadge` resolvers
 
 ### Phase 2: Subject row + Account & Owners
-- [ ] Replace 3-chip strip on Account & Owners with single KYC chip
-- [ ] Drop `focus` param from `getVerificationSubjectBadge` — single source of truth
-- [ ] Sort priority uses new 4-state model
+- [x] Replace 3-chip strip on Account & Owners with single KYC chip
+- [x] Drop `focus` param from `getVerificationSubjectBadge` — single source of truth
+- [ ] Sort priority uses new 4-state model (deferred to phase 4 cleanup)
 
 ### Phase 3: Unified side-sheet
-- [ ] Build `VerificationDetailsPanel` with KYC / AML / CIP / Failure / Metadata / Documents / History
-- [ ] Replace `OwnerAmlDetails` + `OwnerCipDetails` body with the unified panel
+- [x] Build `VerificationDetailsPanel` with KYC / AML / CIP / Failure / Metadata / Documents / History
+- [x] Replace `OwnerAmlDetails` + `OwnerCipDetails` body with the unified panel
 
 ### Phase 4: Language sweep + cleanup
 - [ ] Replace provider-y labels with operational language
