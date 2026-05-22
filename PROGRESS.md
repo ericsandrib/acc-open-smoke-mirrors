@@ -182,7 +182,7 @@
 ## Spec 007: KYC Status Hierarchy
 
 ### Phase 1: Foundation
-- [ ] Add `KycStatus` type + `getKycStatus` + `getKycStatusBadge` resolvers
+- [x] Add `KycStatus` type + `getKycStatus` + `getKycStatusBadge` resolvers
 
 ### Phase 2: Subject row + Account & Owners
 - [ ] Replace 3-chip strip on Account & Owners with single KYC chip
