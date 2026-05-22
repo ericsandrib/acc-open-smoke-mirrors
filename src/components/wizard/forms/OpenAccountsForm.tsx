@@ -18,6 +18,7 @@ import type { ChildTask, RelatedParty } from '@/types/workflow'
 import { AccountTypePickerDialog } from './AccountTypePickerDialog'
 import type { Selection } from './AccountTypePickerDialog'
 import { spawnOpenAccountChildrenFromSelections } from '@/utils/spawnOpenAccountChildrenFromSelections'
+import { canAdvisorManuallySubmitAccountOpeningChild } from '@/utils/accountOpeningChildProgress'
 import {
   getOpenAccountsCoreSupportingDocumentSections,
   getDocSubTypes,
@@ -60,6 +61,7 @@ import { buildSupportingDocumentPreviewKey } from '@/utils/journeySupportingDocu
 import { useOpenAccountsTaskOverride, useOpenAccountsVariant, useOpenAccountsVariantControls } from '@/components/wizard/openAccountsVariantContext'
 import { mergeFeatureRequests } from '@/types/featureRequests'
 import { getEsignEnvelopeStatus, ESIGN_ENVELOPE_STATUS_LABELS } from '@/utils/esignEnvelopeStatus'
+import { getStatusSemanticClasses } from '@/utils/statusSemanticColors'
 import type { EsignEnvelopeHistoryEvent, EsignEnvelopeStatus, EsignSignerStatus } from '@/types/esignEnvelope'
 import {
   defaultSupportingDocumentStatus,
@@ -444,13 +446,8 @@ export function OpenAccountsForm() {
     setEnvelopeDrawerOpen(false)
   }
 
-  const statusBadgeClass = (status: EsignEnvelopeStatus) => {
-    if (status === 'completed') return 'bg-green-50 text-green-700 border-green-200'
-    if (status === 'declined' || status === 'voided' || status === 'canceled') return 'bg-red-50 text-red-700 border-red-200'
-    if (status === 'delivered') return 'bg-blue-50 text-blue-700 border-blue-200'
-    if (status === 'sent') return 'bg-amber-50 text-amber-700 border-amber-200'
-    return 'bg-muted text-muted-foreground border-border'
-  }
+  const statusBadgeClass = (status: EsignEnvelopeStatus) =>
+    getStatusSemanticClasses(status).pill
 
   const signerStatusLabel: Record<EsignSignerStatus, string> = {
     pending: 'Pending',
@@ -821,7 +818,11 @@ export function OpenAccountsForm() {
                       <div className="hidden group-hover:block">
                         <ChildActionKebabMenu
                           onViewDetails={() => setTimelineChild(child)}
-                          onSubmitForReview={() => submitAccountChildForReview(child.id)}
+                          onSubmitForReview={
+                            canAdvisorManuallySubmitAccountOpeningChild(state, child)
+                              ? () => submitAccountChildForReview(child.id)
+                              : undefined
+                          }
                           submitForReviewLabel={externalAnnuityPlatform ? 'Submit to NetX360' : 'Submit for Review'}
                           onDelete={() => dispatch({ type: 'REMOVE_CHILD', parentTaskId: openAccountsTask!.id, childId: child.id })}
                         />

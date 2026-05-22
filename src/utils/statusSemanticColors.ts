@@ -97,6 +97,15 @@ export const statusSemantic: Record<string, StatusSemantic> = {
   principal_review: 'neutral',
   canceled: 'neutral',
   cancelled: 'neutral',
+
+  // EsignEnvelopeStatus values — same semantic buckets as above.
+  // 'sent' renders as "Awaiting Client Signature" → neutral (waiting on the client, no firm-side action).
+  // 'completed' is success; 'declined' is danger; 'voided' is neutral (canceled by sender).
+  sent: 'neutral',
+  delivered: 'neutral',
+  completed: 'success',
+  declined: 'danger',
+  voided: 'neutral',
 }
 
 export function getStatusSemantic(status?: string): StatusSemantic {
