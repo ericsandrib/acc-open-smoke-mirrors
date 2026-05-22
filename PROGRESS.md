@@ -194,5 +194,6 @@
 - [x] Replace `OwnerAmlDetails` + `OwnerCipDetails` body with the unified panel
 
 ### Phase 4: Language sweep + cleanup
-- [ ] Replace provider-y labels with operational language
-- [ ] Remove legacy helpers (`getAmlStatusSummary`, `getCipStatusSummary` if unused)
+- [x] Replace provider-y labels with operational language
+- [x] Remove legacy helpers (`getAmlStatusSummary`, `getCipStatusSummary`, `getOverallVerificationStatus`, `toneFor*`, `getVerificationSubjectBadge`, `shouldAutoExpandVerificationSubject`, `hasSharedVerificationAttention`)
+- [x] Sort/count routed through `getKycStatusPriority`
