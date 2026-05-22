@@ -157,11 +157,11 @@
 ## Spec 006: Semantic Status Colors
 
 ### Phase 1: Semantic mapping
-- [ ] Add shared semantic palette module
-- [ ] Refactor operationalStatusPill to read from semantic palette
-- [ ] Refactor childStatusConfig to read from semantic palette
-- [ ] Rename `canceled` label from "Declined" to "Canceled"
-- [ ] Update icons to inherit currentColor
+- [x] Add shared semantic palette module
+- [x] Refactor operationalStatusPill to read from semantic palette
+- [x] Refactor childStatusConfig to read from semantic palette
+- [x] Rename `canceled` label from "Declined" to "Canceled"
+- [x] Update icons to inherit currentColor
 
 ### Phase 2: /test route scaffold
 - [ ] Add /test route + persistent sidebar
@@ -178,3 +178,21 @@
 
 ### Phase 5: Code review
 - [ ] Spawn subagent code review and resolve findings
+
+## Spec 007: KYC Status Hierarchy
+
+### Phase 1: Foundation
+- [ ] Add `KycStatus` type + `getKycStatus` + `getKycStatusBadge` resolvers
+
+### Phase 2: Subject row + Account & Owners
+- [ ] Replace 3-chip strip on Account & Owners with single KYC chip
+- [ ] Drop `focus` param from `getVerificationSubjectBadge` — single source of truth
+- [ ] Sort priority uses new 4-state model
+
+### Phase 3: Unified side-sheet
+- [ ] Build `VerificationDetailsPanel` with KYC / AML / CIP / Failure / Metadata / Documents / History
+- [ ] Replace `OwnerAmlDetails` + `OwnerCipDetails` body with the unified panel
+
+### Phase 4: Language sweep + cleanup
+- [ ] Replace provider-y labels with operational language
+- [ ] Remove legacy helpers (`getAmlStatusSummary`, `getCipStatusSummary` if unused)
