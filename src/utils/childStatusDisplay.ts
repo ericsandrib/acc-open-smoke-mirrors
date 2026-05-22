@@ -1,7 +1,10 @@
 import type { ChildReviewState } from '@/types/workflow'
+import { ownersPassedOwnerLevelKyc } from '@/utils/ownerKycReview'
+import { getStatusSemanticClasses } from '@/utils/statusSemanticColors'
 
 export type ChildDisplayStatus =
   | 'draft'
+  | 'awaiting_client_signature'
   | 'awaiting_review'
   | 'aml_review'
   | 'document_review'
@@ -17,21 +20,11 @@ export type ChildDisplayStatus =
   | 'canceled'
   | 'complete'
 
-/** Styling for in-review pipeline stages (servicing tables + wizard child badges). */
-const REVIEW_PIPELINE_PILL =
-  'bg-violet-50 text-violet-700 border-violet-200 dark:bg-violet-950/40 dark:text-violet-200 dark:border-violet-800'
+/** Parent rollup "Needs attention" — warning bucket. */
+export const NEEDS_ATTENTION_PILL = getStatusSemanticClasses('escalation_hold').pill
 
-/** AML rejection — same pill shape as pipeline; red hue (not violet). */
-const AML_REJECTION_PILL =
-  'bg-red-50/40 text-red-800 border-red-200 dark:bg-red-950/25 dark:text-red-200 dark:border-red-800'
-
-/** Parent rollup “Needs attention” — amber light fill (not violet pipeline). */
-export const NEEDS_ATTENTION_PILL =
-  'border-amber-200 bg-amber-50 text-amber-800 dark:border-amber-800 dark:bg-amber-950/40 dark:text-amber-200'
-
-/** Awaiting documents — neutral grey (not violet pipeline). */
-export const AWAITING_DOCUMENTS_PILL =
-  'border-gray-200 bg-gray-100 text-gray-700 dark:border-gray-700 dark:bg-gray-900/50 dark:text-gray-300'
+/** Awaiting documents — neutral grey. */
+export const AWAITING_DOCUMENTS_PILL = getStatusSemanticClasses('awaiting_documents').pill
 
 export const childStatusConfig: Record<
   ChildDisplayStatus,
@@ -39,66 +32,69 @@ export const childStatusConfig: Record<
 > = {
   draft: {
     label: 'Draft',
-    className: 'border-gray-200 bg-gray-50 text-gray-600',
+    className: getStatusSemanticClasses('draft').pill,
     pillVariant: 'draft',
+  },
+  awaiting_client_signature: {
+    label: 'Awaiting Client Signature',
+    className: getStatusSemanticClasses('awaiting_client_signature').pill,
   },
   awaiting_review: {
     label: 'Awaiting Review',
-    className: REVIEW_PIPELINE_PILL,
+    className: getStatusSemanticClasses('awaiting_review').pill,
   },
   aml_review: {
     label: 'AML Review',
-    className: REVIEW_PIPELINE_PILL,
+    className: getStatusSemanticClasses('aml_review').pill,
   },
   document_review: {
     label: 'Document Review',
-    className: REVIEW_PIPELINE_PILL,
+    className: getStatusSemanticClasses('document_review').pill,
   },
   ho_kyc_review: {
     label: 'Document Review',
-    className: REVIEW_PIPELINE_PILL,
+    className: getStatusSemanticClasses('ho_kyc_review').pill,
   },
   escalation_hold: {
-    label: 'Escalation Hold',
-    className: REVIEW_PIPELINE_PILL,
+    label: 'Escalation / Hold',
+    className: getStatusSemanticClasses('escalation_hold').pill,
   },
   principal_review: {
     label: 'Principal Review',
-    className: REVIEW_PIPELINE_PILL,
+    className: getStatusSemanticClasses('principal_review').pill,
   },
   nigo: {
     label: 'Clarification / Document Required',
-    className: REVIEW_PIPELINE_PILL,
+    className: getStatusSemanticClasses('nigo').pill,
   },
   nigo_document: {
     label: 'Clarification / Document Required',
-    className: REVIEW_PIPELINE_PILL,
+    className: getStatusSemanticClasses('nigo_document').pill,
   },
   nigo_principal: {
     label: 'Clarification / Document Required',
-    className: REVIEW_PIPELINE_PILL,
+    className: getStatusSemanticClasses('nigo_principal').pill,
   },
   rejected_aml: {
     label: 'AML Rejection',
-    className: 'border-red-200 bg-red-50 text-red-700',
+    className: getStatusSemanticClasses('rejected_aml').pill,
     pillVariant: 'declined',
   },
   clarification_required: {
     label: 'Clarification / Document Required',
-    className: REVIEW_PIPELINE_PILL,
+    className: getStatusSemanticClasses('clarification_required').pill,
   },
   awaiting_documents: {
     label: 'Awaiting Documents',
-    className: AWAITING_DOCUMENTS_PILL,
+    className: getStatusSemanticClasses('awaiting_documents').pill,
   },
   canceled: {
-    label: 'Declined',
-    className: 'border-red-200 bg-red-50 text-red-700',
-    pillVariant: 'declined',
+    label: 'Canceled',
+    className: getStatusSemanticClasses('canceled').pill,
   },
   complete: {
     label: 'Completed',
-    className: 'border-gray-200 bg-gray-100 text-gray-800',
+    className: getStatusSemanticClasses('complete').pill,
     pillVariant: 'completed',
   },
 }
@@ -108,6 +104,31 @@ export const childStatusConfig: Record<
  * When `reviewState` is provided (active child), uses the two-pass review
  * state for richer labels. Otherwise falls back to mapping from the raw status.
  */
+/** Account still in advisor setup — owner screening may exist but must not drive workflow badges yet. */
+function isPreSubmitAccountOpening(
+  reviewState?: ChildReviewState,
+  rawStatus?: string,
+): boolean {
+  if (reviewState?.accountOpeningPreReviewTimeline?.submittedForReviewAt) return false
+  if (
+    rawStatus === 'rejected' ||
+    rawStatus === 'awaiting_review' ||
+    rawStatus === 'complete' ||
+    rawStatus === 'canceled'
+  ) {
+    return false
+  }
+  return true
+}
+
+/** Owner-level AML screening returned a hit (single-flow account opening). */
+export function hasOwnerLevelAmlFlag(reviewState?: ChildReviewState): boolean {
+  return Object.values(reviewState?.ownerReviews ?? {}).some(
+    (owner) =>
+      owner.amlReview?.status === 'flagged' || owner.amlReview?.status === 'escalated',
+  )
+}
+
 export function deriveChildDisplayStatus(
   rawStatus: string,
   reviewState?: ChildReviewState,
@@ -124,12 +145,30 @@ export function deriveChildDisplayStatus(
       return 'clarification_required'
     }
     if (amlReview?.status === 'escalated') return 'rejected_aml'
-    if (isAccountOpeningAwaitingClarification(reviewState)) return 'clarification_required'
+    if (isAccountOpeningAwaitingClarification(reviewState, rawStatus)) return 'clarification_required'
     return 'nigo'
   }
 
   if (rawStatus === 'awaiting_review') {
     if (!reviewState) return 'awaiting_review'
+    const phase = reviewState.accountWorkflowPhase
+    if (phase === 'aml_review') {
+      return hasOwnerLevelAmlFlag(reviewState) ? 'escalation_hold' : 'aml_review'
+    }
+    if (phase === 'document_review') {
+      const docStatus = reviewState.documentReview?.status
+      if (docStatus === 'igo') return 'principal_review'
+      if (ownersPassedOwnerLevelKyc(reviewState)) return 'awaiting_review'
+      return 'document_review'
+    }
+    if (phase === 'principal_review') {
+      if (reviewState.documentReview?.status !== 'igo' && ownersPassedOwnerLevelKyc(reviewState)) {
+        return 'awaiting_review'
+      }
+      return 'principal_review'
+    }
+    if (phase === 'escalation_hold') return 'escalation_hold'
+    if (phase === 'pending_release') return 'awaiting_review'
     const amlReview = reviewState.amlReview
     const docReview = reviewState.documentReview
     const hoKycReview = reviewState.hoKycReview
@@ -144,15 +183,18 @@ export function deriveChildDisplayStatus(
     }
 
     if (docReview) {
-      if (docReview.status === 'pending') return 'document_review'
       if (docReview.status === 'igo') return 'principal_review'
+      if (docReview.status === 'pending' && ownersPassedOwnerLevelKyc(reviewState)) {
+        return 'awaiting_review'
+      }
+      if (docReview.status === 'pending') return 'document_review'
     }
 
     return 'awaiting_review'
   }
 
   if (rawStatus === 'in_progress' || rawStatus === 'not_started') {
-    if (isChildAwaitingAdvisorClarification(reviewState)) {
+    if (isChildAwaitingAdvisorClarification(reviewState, rawStatus)) {
       return 'clarification_required'
     }
     return 'draft'
@@ -181,23 +223,49 @@ export function isKycAwaitingAdvisorClarification(
   )
 }
 
-/** Account opening returned after document or principal review NIGO. */
+function hasOwnerLevelAccountOpeningClarification(
+  reviewState?: ChildReviewState,
+  rawStatus?: string,
+): boolean {
+  if (isPreSubmitAccountOpening(reviewState, rawStatus)) return false
+  const owners = reviewState?.ownerReviews
+  if (!owners) return false
+  return Object.values(owners).some(
+    (owner) =>
+      owner.amlReview?.status === 'info_requested' ||
+      owner.amlReview?.status === 'flagged' ||
+      owner.hoKycReview?.status === 'changes_requested',
+  )
+}
+
+/** Account opening returned after document/principal NIGO or owner-level AML/CIP remediation. */
 export function isAccountOpeningAwaitingClarification(
   reviewState?: ChildReviewState,
+  rawStatus?: string,
 ): boolean {
+  if (isPreSubmitAccountOpening(reviewState, rawStatus)) {
+    return (
+      reviewState?.documentReview?.status === 'nigo' ||
+      reviewState?.principalReview?.status === 'nigo'
+    )
+  }
   return (
     reviewState?.documentReview?.status === 'nigo' ||
-    reviewState?.principalReview?.status === 'nigo'
+    reviewState?.principalReview?.status === 'nigo' ||
+    reviewState?.amlReview?.status === 'info_requested' ||
+    reviewState?.amlReview?.status === 'flagged' ||
+    hasOwnerLevelAccountOpeningClarification(reviewState, rawStatus)
   )
 }
 
 /** KYC or account opening returned to the advisor for clarification or documents. */
 export function isChildAwaitingAdvisorClarification(
   reviewState?: ChildReviewState,
+  rawStatus?: string,
 ): boolean {
   return (
     isKycAwaitingAdvisorClarification(reviewState) ||
-    isAccountOpeningAwaitingClarification(reviewState)
+    isAccountOpeningAwaitingClarification(reviewState, rawStatus)
   )
 }
 

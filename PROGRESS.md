@@ -153,3 +153,28 @@
 - [x] Smooth animation pass
 - [x] Keyboard accessibility check
 - [x] Verify build passes
+
+## Spec 006: Semantic Status Colors
+
+### Phase 1: Semantic mapping
+- [ ] Add shared semantic palette module
+- [ ] Refactor operationalStatusPill to read from semantic palette
+- [ ] Refactor childStatusConfig to read from semantic palette
+- [ ] Rename `canceled` label from "Declined" to "Canceled"
+- [ ] Update icons to inherit currentColor
+
+### Phase 2: /test route scaffold
+- [ ] Add /test route + persistent sidebar
+- [ ] Data-driven sidebar entries
+- [ ] Stub /test/application-widget entry
+
+### Phase 3: Application Status widget icon
+- [ ] Recolor icon to semantic color of current stage
+
+### Phase 4: Populate /test/application-widget
+- [ ] Extract widget into reusable component
+- [ ] Render every status in terminal + active variants
+- [ ] Classify terminal vs active and label clearly
+
+### Phase 5: Code review
+- [ ] Spawn subagent code review and resolve findings

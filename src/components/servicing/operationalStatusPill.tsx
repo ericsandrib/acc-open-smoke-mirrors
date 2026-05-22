@@ -3,6 +3,7 @@ import { Ban, Check, CircleDot } from 'lucide-react'
 import type { JourneyStatus } from '@/types/servicing'
 import type { TaskStatus } from '@/types/workflow'
 import { cn } from '@/lib/utils'
+import { getStatusSemanticClasses } from '@/utils/statusSemanticColors'
 
 /** Shared pill chrome for journey / task / servicing table status badges. */
 const pillBase =
@@ -63,33 +64,48 @@ type Appearance = {
   icon: ReactNode
 }
 
+// All pill styling resolves through the shared semantic palette
+// (src/utils/statusSemanticColors.ts) so badges + widget icon colors stay in lockstep.
+
 const completedAppearance: Appearance = {
   label: 'Completed',
-  className: 'border-gray-200 bg-gray-100 text-gray-800',
+  className: getStatusSemanticClasses('complete').pill,
   icon: <Check className="h-3 w-3 shrink-0" strokeWidth={2.5} aria-hidden />,
 }
 
 const draftAppearance: Appearance = {
   label: 'Draft',
-  className: 'border-gray-200 bg-gray-50 text-gray-600',
+  className: getStatusSemanticClasses('draft').pill,
   icon: <DraftRingIcon />,
 }
 
 const readyAppearance: Appearance = {
   label: 'Ready to Begin',
-  className: 'border-green-200 bg-green-50 text-green-700',
+  className: getStatusSemanticClasses('not_started').pill,
   icon: <CircleDot className="h-3 w-3 shrink-0" strokeWidth={2} aria-hidden />,
 }
 
 const inProgressAppearance: Appearance = {
   label: 'In Progress',
-  className: 'border-green-200 bg-green-50 text-green-700',
+  className: getStatusSemanticClasses('in_progress').pill,
   icon: <InProgressRingIcon />,
 }
 
-const declinedAppearance: Appearance = {
-  label: 'Declined',
-  className: 'border-red-200 bg-red-50 text-red-700',
+const blockedAppearance: Appearance = {
+  label: 'Blocked',
+  className: getStatusSemanticClasses('blocked').pill,
+  icon: <Ban className="h-3 w-3 shrink-0" strokeWidth={2} aria-hidden />,
+}
+
+const rejectedAppearance: Appearance = {
+  label: 'Rejected',
+  className: getStatusSemanticClasses('rejected').pill,
+  icon: <Ban className="h-3 w-3 shrink-0" strokeWidth={2} aria-hidden />,
+}
+
+const canceledAppearance: Appearance = {
+  label: 'Canceled',
+  className: getStatusSemanticClasses('canceled').pill,
   icon: <Ban className="h-3 w-3 shrink-0" strokeWidth={2} aria-hidden />,
 }
 
@@ -97,11 +113,11 @@ export const operationalStatusByKey: Record<OperationalStatusKey, Appearance> = 
   not_started: readyAppearance,
   in_progress: inProgressAppearance,
   complete: completedAppearance,
-  blocked: declinedAppearance,
-  canceled: declinedAppearance,
-  cancelled: declinedAppearance,
+  blocked: blockedAppearance,
+  canceled: canceledAppearance,
+  cancelled: canceledAppearance,
   awaiting_review: inProgressAppearance,
-  rejected: declinedAppearance,
+  rejected: rejectedAppearance,
 }
 
 export type OperationalPillVariant = 'draft' | 'completed' | 'ready' | 'inProgress' | 'declined'
@@ -111,7 +127,8 @@ const variantAppearance: Record<OperationalPillVariant, Appearance> = {
   completed: completedAppearance,
   ready: readyAppearance,
   inProgress: inProgressAppearance,
-  declined: declinedAppearance,
+  // Legacy 'declined' variant — treat as rejected (danger) for backward compat.
+  declined: rejectedAppearance,
 }
 
 export function OperationalStatusPill({
