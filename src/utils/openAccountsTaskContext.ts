@@ -12,6 +12,9 @@ export const OPEN_ACCOUNTS_NAV_NO_ANNUITY_GROUP_LABEL = 'Account Opening' as con
 /** v5/v6 sidebar + split journey headings: with-annuity / annuity-order branch. */
 export const OPEN_ACCOUNTS_NAV_ANNUITY_ORDER_ROW_LABEL = 'Account Opening + Annuity Order' as const
 
+/** v5/v6 sidebar + open-accounts section: eSign forms package step (internal page key remains `envelopes`). */
+export const OPEN_ACCOUNTS_NAV_FORMS_PACKAGE_LABEL = 'Forms Package' as const
+
 const OPEN_ACCOUNTS_FORM_KEYS: readonly string[] = [
   OPEN_ACCOUNTS_FORM_KEY,
   OPEN_ACCOUNTS_WITH_ANNUITY_FORM_KEY,
@@ -40,7 +43,22 @@ export function findParentTaskForChild(
   childId: string | undefined,
 ): Task | undefined {
   if (!childId) return undefined
-  return state.tasks.find((t) => t.children?.some((c) => c.id === childId))
+  const parents = state.tasks.filter((t) => t.children?.some((c) => c.id === childId))
+  if (parents.length === 0) return undefined
+  if (parents.length === 1) return parents[0]
+
+  const child = parents
+    .flatMap((t) => t.children ?? [])
+    .find((c) => c.id === childId)
+  const nonAnnuityParent = parents.find((t) => t.formKey === OPEN_ACCOUNTS_FORM_KEY)
+  const annuityParent = parents.find((t) => t.formKey === OPEN_ACCOUNTS_WITH_ANNUITY_FORM_KEY)
+
+  /** Brokerage accounts belong on the non-annuity task even if a repair duplicated them. */
+  if (child?.childType === 'account-opening' && nonAnnuityParent) {
+    return nonAnnuityParent
+  }
+  if (annuityParent) return annuityParent
+  return parents[0]
 }
 
 /**

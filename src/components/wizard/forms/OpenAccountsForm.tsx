@@ -1,5 +1,6 @@
 import { useState, useMemo, useRef, useEffect } from 'react'
 import { useWorkflow, useTaskData } from '@/stores/workflowStore'
+import { useTheme } from '@/stores/themeStore'
 import { useSupportingDocumentPreview } from '@/components/wizard/supportingDocumentPreviewContext'
 import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
@@ -13,7 +14,8 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
 } from '@/components/ui/dropdown-menu'
-import { childStatusConfig, deriveChildDisplayStatus } from '@/utils/childStatusDisplay'
+import { childStatusConfig } from '@/utils/childStatusDisplay'
+import { deriveAccountOpeningChildDisplayStatus } from '@/utils/accountOpeningEnvelopeStatus'
 import type { ChildTask, RelatedParty } from '@/types/workflow'
 import { AccountTypePickerDialog } from './AccountTypePickerDialog'
 import type { Selection } from './AccountTypePickerDialog'
@@ -57,6 +59,10 @@ import {
 } from '@/utils/openAccountsTaskContext'
 import { formatOpenAccountsChildRowLabel } from '@/utils/openAccountsChildRowLabel'
 import { isParentOpenAccountsSupportingDocumentsEnabled } from '@/utils/childTaskRegistry'
+import { accountOpeningFormsPackageTaskId } from '@/utils/accountOpeningDocumentTasks'
+import { isEmbeddedAccountOwnerKycEnabled, isSingleFlowKycEnabled } from '@/utils/ownerKycReview'
+import { getAccountPartiesRequiringKyc } from '@/utils/accountOpeningOwnerKyc'
+import { isElectronicSignatureDelivery } from '@/components/wizard/forms/EsignEnvelopeDrawer'
 import { buildSupportingDocumentPreviewKey } from '@/utils/journeySupportingDocuments'
 import { useOpenAccountsTaskOverride, useOpenAccountsVariant, useOpenAccountsVariantControls } from '@/components/wizard/openAccountsVariantContext'
 import { mergeFeatureRequests } from '@/types/featureRequests'
@@ -165,7 +171,7 @@ function EnvelopeKebabMenu({
           onSelect={onCancelEnvelope}
         >
           <XCircle className="h-4 w-4" />
-          Cancel envelope
+          Cancel forms package
         </DropdownMenuItem>
         <DropdownMenuItem
           className="gap-2.5 px-3 py-2 text-sm text-destructive focus:text-destructive"
@@ -173,7 +179,7 @@ function EnvelopeKebabMenu({
           onSelect={onDeleteEnvelope}
         >
           <Trash2 className="h-4 w-4" />
-          Delete envelope
+          Delete forms package
         </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>
@@ -182,6 +188,8 @@ function EnvelopeKebabMenu({
 
 export function OpenAccountsForm() {
   const { state, dispatch } = useWorkflow()
+  const { hideKycChildWorkflows } = useTheme()
+  const hideKycPage = hideKycChildWorkflows
   const openAccountsVariant = useOpenAccountsVariant()
   // v5/v6 intentionally render flat, with no section cards or card-only header strips.
   const isVersion2 = openAccountsVariant === 'v2'
@@ -218,11 +226,17 @@ export function OpenAccountsForm() {
     openAccountsTask?.formKey === OPEN_ACCOUNTS_FORM_KEY &&
     v5SubPage != null
   const showV5Instructions = !isV5NoAnnuityPaged || v5SubPage === 'instructions'
-  const showV5Kyc = !isV5NoAnnuityPaged || v5SubPage === 'kyc'
+  const showV5Kyc = !hideKycPage && (!isV5NoAnnuityPaged || v5SubPage === 'kyc')
   const showParentSupportingDocuments = isParentOpenAccountsSupportingDocumentsEnabled()
   const showV5Documents =
     showParentSupportingDocuments && (!isV5NoAnnuityPaged || v5SubPage === 'documents')
   const showV5Envelopes = !isV5NoAnnuityPaged || v5SubPage === 'envelopes'
+  useEffect(() => {
+    if (!hideKycPage || !isV5NoAnnuityPaged) return
+    if (v5SubPage === 'kyc' || v5SubPage === 'documents') {
+      dispatch({ type: 'SET_V5_NO_ANNUITY_OPEN_ACCOUNTS_PAGE', page: 'instructions' })
+    }
+  }, [hideKycPage, isV5NoAnnuityPaged, v5SubPage, dispatch])
   const isV6WithoutAnnuityInstructions = taskOverride?.idPrefix?.startsWith('v6-noann-') ?? false
   const isV6WithAnnuitySetup = taskOverride?.idPrefix?.startsWith('v6-wann-') ?? false
   const { variant: wizardOpenAccountsVariant } = useOpenAccountsVariantControls()
@@ -251,7 +265,10 @@ export function OpenAccountsForm() {
   const kycParentTask = externalAnnuityPlatform
     ? state.tasks.find((t) => t.formKey === 'kyc')
     : (state.tasks.find((t) => t.formKey === 'kyc') ?? openAccountsTask)
-  const kycChildren = kycParentTask?.children?.filter((c) => c.childType === 'kyc') ?? []
+  const singleFlowKyc = isSingleFlowKycEnabled()
+  const kycChildren = singleFlowKyc
+    ? []
+    : (kycParentTask?.children?.filter((c) => c.childType === 'kyc') ?? [])
   const [kycAddSheetOpen, setKycAddSheetOpen] = useState(false)
   const [kycTimelineChild, setKycTimelineChild] = useState<ChildTask | null>(null)
   const pendingKycPartyId = useRef<string | null>(null)
@@ -413,24 +430,45 @@ export function OpenAccountsForm() {
 
   const saveEnvelopeFromDrawer = (env: EsignEnvelope) => {
     const now = new Date().toISOString()
+    const sendingToClient =
+      envelopeDrawerCreate && isElectronicSignatureDelivery(env.deliveryMethod)
     const normalized = {
       ...env,
       signers: deriveEnvelopeSigners(env.formSelections, env.signers).map((s) => ({
         ...s,
-        signingStatus: s.signingStatus ?? 'pending',
+        signingStatus: sendingToClient ? ('sent' as const) : (s.signingStatus ?? 'pending'),
       })),
-      envelopeStatus: env.envelopeStatus ?? getEsignEnvelopeStatus(env),
+      envelopeStatus: sendingToClient
+        ? ('sent' as const)
+        : (env.envelopeStatus ?? getEsignEnvelopeStatus(env)),
+      sentToClient: sendingToClient ? true : env.sentToClient,
       history:
         env.history && env.history.length > 0
-          ? env.history
+          ? [
+              ...env.history,
+              ...(sendingToClient
+                ? [
+                    {
+                      id: `evt-sent-${now}`,
+                      occurredAt: now,
+                      source: 'advisor' as const,
+                      eventType: 'envelope_status' as const,
+                      envelopeStatus: 'sent' as const,
+                      note: 'Forms package sent to client for signature',
+                    },
+                  ]
+                : []),
+            ]
           : [
               {
                 id: `evt-created-${now}`,
                 occurredAt: now,
                 source: 'advisor' as const,
                 eventType: 'envelope_status' as const,
-                envelopeStatus: env.envelopeStatus ?? 'draft',
-                note: 'Envelope created',
+                envelopeStatus: sendingToClient ? ('sent' as const) : ('draft' as const),
+                note: sendingToClient
+                  ? 'Forms package sent to client for signature'
+                  : 'Forms package created',
               },
             ],
     }
@@ -444,6 +482,28 @@ export function OpenAccountsForm() {
     }
     setEnvelopeDraft(null)
     setEnvelopeDrawerOpen(false)
+
+    // Single-flow KYC: trigger owner KYC when the envelope is sent to the client.
+    // Gated on the "Hide KYC child workflows" setting; only fires on initial create + eSignature delivery.
+    if (
+      envelopeDrawerCreate &&
+      isEmbeddedAccountOwnerKycEnabled() &&
+      isElectronicSignatureDelivery(normalized.deliveryMethod)
+    ) {
+      const accountChildIds = Array.from(
+        new Set(
+          normalized.formSelections
+            .filter((s) => s.included)
+            .map((s) => s.accountChildId),
+        ),
+      )
+      for (const accountChildId of accountChildIds) {
+        const parties = getAccountPartiesRequiringKyc(state, accountChildId)
+        for (const party of parties) {
+          dispatch({ type: 'AUTO_RUN_OWNER_KYC', accountChildId, partyId: party.id })
+        }
+      }
+    }
   }
 
   const statusBadgeClass = (status: EsignEnvelopeStatus) =>
@@ -484,14 +544,14 @@ export function OpenAccountsForm() {
           source: 'docusign',
           eventType: 'envelope_status',
           envelopeStatus: 'sent',
-          note: 'Envelope sent to recipients',
+          note: 'Forms package sent to recipients',
         })
         push({
           occurredAt: now,
           source: 'docusign',
           eventType: 'envelope_status',
           envelopeStatus: 'delivered',
-          note: 'Envelope delivered to recipients',
+          note: 'Forms package delivered to recipients',
         })
         for (const signer of current.signers) {
           push({
@@ -509,7 +569,7 @@ export function OpenAccountsForm() {
           source: 'docusign',
           eventType: 'envelope_status',
           envelopeStatus: 'completed',
-          note: 'Envelope completed',
+          note: 'Forms package completed',
         })
 
         return {
@@ -544,7 +604,7 @@ export function OpenAccountsForm() {
     }
 
     for (const [accountChildId, docs] of rowsByChild.entries()) {
-      const taskId = `${accountChildId}-documents-review`
+      const taskId = accountOpeningFormsPackageTaskId(accountChildId)
       const existing = ((state.taskData[taskId] as Record<string, unknown> | undefined)?.esignExecutedForms ??
         []) as ExecutedEsignForm[]
       const merged = [...existing]
@@ -622,7 +682,7 @@ export function OpenAccountsForm() {
             source: 'advisor' as const,
             eventType: 'envelope_status' as const,
             envelopeStatus: 'canceled' as const,
-            note: 'Envelope canceled. Next send will create a new provider envelope while retaining this row.',
+            note: 'Forms package canceled. Next send will create a new DocuSign package while retaining this row.',
           },
         ]
         return {
@@ -804,7 +864,12 @@ export function OpenAccountsForm() {
                     <div className="flex items-center gap-2">
                       {(() => {
                         const reviewState = state.childReviewsByChildId?.[child.id]
-                        const displayStatus = deriveChildDisplayStatus(child.status, reviewState)
+                        const displayStatus = deriveAccountOpeningChildDisplayStatus(
+                          state,
+                          child.id,
+                          child.status,
+                          reviewState,
+                        )
                         const cfg = childStatusConfig[displayStatus]
                         return (
                           <Badge
@@ -941,7 +1006,7 @@ export function OpenAccountsForm() {
               Supporting Documents
             </h3>
             <p className={subsectionBodyClass}>
-              Supporting documents are optional unless requested during review. Firm and custodian-generated forms are handled in <span className="font-medium text-foreground">Envelopes</span>.
+              Supporting documents are optional unless requested during review. Firm and custodian-generated forms are handled in <span className="font-medium text-foreground">Forms Package</span>.
             </p>
           </div>
         ) : null}
@@ -1047,7 +1112,7 @@ export function OpenAccountsForm() {
       ) : null}
 
       {/* KYC Verification H2 group — KYC sections hidden on annuity path */}
-      {!externalAnnuityPlatform && showV5Kyc ? (
+      {!externalAnnuityPlatform && showV5Kyc && !singleFlowKyc ? (
         <div
           className={cn(
             (openAccountsVariant === 'v5' || openAccountsVariant === 'v6') && 'space-y-9',
@@ -1157,7 +1222,12 @@ export function OpenAccountsForm() {
                       <td className="px-4 py-3">
                         {hasChild ? (() => {
                           const reviewState = state.childReviewsByChildId?.[matchingChild!.id]
-                          const displayStatus = deriveChildDisplayStatus(matchingChild!.status, reviewState)
+                          const displayStatus = deriveAccountOpeningChildDisplayStatus(
+                            state,
+                            matchingChild!.id,
+                            matchingChild!.status,
+                            reviewState,
+                          )
                           const cfg = displayStatus === 'complete'
                             ? { label: 'Verified', className: 'bg-green-50 text-green-700 border-green-200' }
                             : childStatusConfig[displayStatus]
@@ -1260,7 +1330,12 @@ export function OpenAccountsForm() {
               >
                 {(() => {
                   const reviewState = state.childReviewsByChildId?.[child.id]
-                  const displayStatus = deriveChildDisplayStatus(child.status, reviewState)
+                  const displayStatus = deriveAccountOpeningChildDisplayStatus(
+                    state,
+                    child.id,
+                    child.status,
+                    reviewState,
+                  )
                   if (displayStatus === 'complete') {
                     return (
                       <div className="flex h-8 w-8 items-center justify-center rounded-full bg-green-100 text-green-700 shrink-0">
@@ -1292,7 +1367,12 @@ export function OpenAccountsForm() {
               <div className="flex items-center gap-2">
                 {(() => {
                   const reviewState = state.childReviewsByChildId?.[child.id]
-                  const displayStatus = deriveChildDisplayStatus(child.status, reviewState)
+                  const displayStatus = deriveAccountOpeningChildDisplayStatus(
+                    state,
+                    child.id,
+                    child.status,
+                    reviewState,
+                  )
                   const cfg = childStatusConfig[displayStatus]
                   return (
                     <Badge
@@ -1364,7 +1444,7 @@ export function OpenAccountsForm() {
           <hr className="border-t border-border w-full" />
         </div>
       ) : null}
-      {/* Envelopes — H2 (no inner H3 child) */}
+      {/* Forms Package — H2 (no inner H3 child) */}
       {showV5Envelopes ? (
       <div
         className={cn(
@@ -1405,21 +1485,19 @@ export function OpenAccountsForm() {
             {isCardVariant ? (
               <>
                 <h4 className={cardGroupHeadingClass}>
-                  Envelopes
+                  Forms Package
                 </h4>
                 <p className="text-sm text-muted-foreground mt-2">
-                  Create eSignature envelopes for client signatures. Firm and custodian forms are automatically grouped by
-                  account. For in-person or mail delivery, signed documents can be uploaded manually instead of using
-                  eSignature.
+                  Prepare firm and custodian forms for client signatures. Forms are automatically grouped by account.
+                  For in-person or mail delivery, signed documents can be uploaded manually instead of using eSignature.
                 </p>
               </>
             ) : openAccountsVariant === 'v5' ? (
               <>
-                <h3 className={subsectionTitleClass}>Envelopes</h3>
+                <h3 className={subsectionTitleClass}>Forms Package</h3>
                 <p className={subsectionBodyClass}>
-                  Create eSignature envelopes for client signatures. Firm and custodian forms are automatically grouped by
-                  account. For in-person or mail delivery, signed documents can be uploaded manually instead of using
-                  eSignature.
+                  Prepare firm and custodian forms for client signatures. Forms are automatically grouped by account.
+                  For in-person or mail delivery, signed documents can be uploaded manually instead of using eSignature.
                 </p>
               </>
             ) : (
@@ -1428,12 +1506,11 @@ export function OpenAccountsForm() {
                   <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-[8px] bg-foreground/80 text-background text-base font-semibold">
                     3
                   </div>
-                  <h2 className="text-2xl font-semibold">Envelopes</h2>
+                  <h2 className="text-2xl font-semibold">Forms Package</h2>
                 </div>
                 <p className="text-base text-muted-foreground mt-2">
-                  Create eSignature envelopes for client signatures. Firm and custodian forms are automatically grouped by
-                  account. For in-person or mail delivery, signed documents can be uploaded manually instead of using
-                  eSignature.
+                  Prepare firm and custodian forms for client signatures. Forms are automatically grouped by account.
+                  For in-person or mail delivery, signed documents can be uploaded manually instead of using eSignature.
                 </p>
               </>
             )}
@@ -1443,17 +1520,17 @@ export function OpenAccountsForm() {
           <div className="mb-3 flex justify-end">
             <Button type="button" variant="outline" size="sm" className="gap-1.5 shrink-0" onClick={openNewEnvelopeDrawer}>
               <Plus className="h-3.5 w-3.5" />
-              Add envelope
+              Add forms package
             </Button>
           </div>
         ) : null}
         {esignEnvelopes.length === 0 ? (
           <div className="rounded-lg border border-dashed border-border p-6 text-center">
             <FileSignature className="mx-auto mb-2 h-8 w-8 text-muted-foreground/50" />
-            <p className="text-sm font-medium text-muted-foreground mb-4">No envelopes created yet.</p>
+            <p className="text-sm font-medium text-muted-foreground mb-4">No forms packages created yet.</p>
             <Button type="button" variant="secondary" onClick={openNewEnvelopeDrawer}>
               <Plus className="h-4 w-4 mr-2" />
-              New envelope
+              Add forms package
             </Button>
           </div>
         ) : (
@@ -1512,7 +1589,7 @@ export function OpenAccountsForm() {
             </ul>
             <Button type="button" variant="ghost" className="w-full gap-1.5" onClick={openNewEnvelopeDrawer}>
               <Plus className="h-4 w-4" />
-              Add envelope
+              Add forms package
             </Button>
           </div>
         )}
@@ -1537,14 +1614,14 @@ export function OpenAccountsForm() {
       <Dialog open={historyEnvelopeId !== null} onOpenChange={(open) => !open && setHistoryEnvelopeId(null)}>
         <DialogContent className="sm:max-w-2xl">
           <DialogHeader>
-            <DialogTitle>Envelope status history</DialogTitle>
+            <DialogTitle>Forms package status history</DialogTitle>
             <DialogDescription>
-              DocuSign envelope timeline and signer-level signing events.
+              DocuSign forms package timeline and signer-level signing events.
             </DialogDescription>
           </DialogHeader>
           {(() => {
             const env = esignEnvelopes.find((e) => e.id === historyEnvelopeId)
-            if (!env) return <p className="text-sm text-muted-foreground">Envelope not found.</p>
+            if (!env) return <p className="text-sm text-muted-foreground">Forms package not found.</p>
             const history = [...(env.history ?? [])].sort((a, b) => b.occurredAt.localeCompare(a.occurredAt))
             return (
               <div className="space-y-4">
@@ -1563,7 +1640,7 @@ export function OpenAccountsForm() {
                         <div className="flex items-center justify-between gap-3">
                           <p className="text-sm font-medium">
                             {event.eventType === 'envelope_status'
-                              ? `Envelope ${event.envelopeStatus ? ESIGN_ENVELOPE_STATUS_LABELS[event.envelopeStatus] : 'Updated'}`
+                              ? `Forms package ${event.envelopeStatus ? ESIGN_ENVELOPE_STATUS_LABELS[event.envelopeStatus] : 'updated'}`
                               : `${event.signerName ?? 'Signer'} — ${event.signerStatus ? signerStatusLabel[event.signerStatus] : 'Updated'}`}
                           </p>
                           <Badge variant="outline" className="text-[10px]">

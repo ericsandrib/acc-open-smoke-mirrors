@@ -289,7 +289,7 @@ export function Placeholder2Form() {
               let statusLabel = 'Not Started'
               let statusClass = 'bg-muted text-muted-foreground'
               if (child.status === 'complete') {
-                statusLabel = 'Complete'
+                statusLabel = 'Pending Release'
                 statusClass = 'bg-fill-success-tertiary text-text-success-primary'
               } else if (child.status === 'in_progress') {
                 statusLabel = 'In Progress'

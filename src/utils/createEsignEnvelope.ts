@@ -22,7 +22,7 @@ export function createNewEnvelope(
         source: 'advisor',
         eventType: 'envelope_status',
         envelopeStatus: 'draft',
-        note: 'Envelope created',
+        note: 'Forms package created',
       },
     ],
     sentToClient: false,

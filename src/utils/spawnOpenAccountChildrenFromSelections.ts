@@ -11,8 +11,7 @@ export function spawnOpenAccountChildrenFromSelections(
     const totalForType = sel.count
 
     for (let i = 0; i < totalForType; i++) {
-      const idx = i + 1
-      const name = totalForType > 1 ? `${sel.label} Account ${idx}` : `${sel.label} Account`
+      const name = `${sel.label} Account`
       dispatch({
         type: 'SPAWN_CHILD',
         parentTaskId,

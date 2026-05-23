@@ -4,6 +4,7 @@ import { Building, Eye, GripVertical, ShieldAlert, ShieldCheck } from 'lucide-re
 import { cn } from '@/lib/utils'
 import type { WorkflowState } from '@/types/workflow'
 import { useWorkflow } from '@/stores/workflowStore'
+import { isEmbeddedAccountOwnerKycEnabled } from '@/utils/ownerKycReview'
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -17,42 +18,42 @@ type Position = { right: number; bottom: number }
 
 const DEFAULT_POSITION: Position = { right: 24, bottom: 112 }
 
+/** Pixels of movement before a pointer gesture counts as drag (not a click). */
+const DRAG_THRESHOLD_PX = 5
+/** Press longer than this opens nothing — avoids opening on click-and-hold. */
+const CLICK_MAX_DURATION_MS = 250
+
 type DemoMode = NonNullable<WorkflowState['demoViewMode']>
 
-/** Subtle shell + icon hues so each demo workspace is recognizable at a glance. */
+/** Border + icon hues so each demo workspace is recognizable; shell uses opaque white. */
 const PERSPECTIVE_ACCENT: Record<
   DemoMode,
   { shell: string; icon: string; menuSelected: string }
 > = {
   advisor: {
-    shell:
-      'border-slate-400/40 bg-slate-500/[0.06] shadow-slate-900/[0.04] dark:border-slate-500/35 dark:bg-slate-400/[0.07] dark:shadow-black/20',
-    icon: 'text-slate-600 dark:text-slate-300',
-    menuSelected: 'border-l-slate-500/70 bg-slate-500/[0.08] dark:border-l-slate-400/60 dark:bg-slate-400/[0.10]',
+    shell: 'border-slate-400/50 shadow-slate-900/10',
+    icon: 'text-slate-600',
+    menuSelected: 'border-l-slate-500/70 bg-slate-500/[0.08]',
   },
   'ho-documents': {
-    shell:
-      'border-teal-500/30 bg-teal-500/[0.05] shadow-teal-900/[0.04] dark:border-teal-400/28 dark:bg-teal-400/[0.06] dark:shadow-black/20',
-    icon: 'text-teal-700/90 dark:text-teal-300/90',
-    menuSelected: 'border-l-teal-600/65 bg-teal-500/[0.08] dark:border-l-teal-400/55 dark:bg-teal-400/[0.10]',
+    shell: 'border-teal-500/40 shadow-teal-900/10',
+    icon: 'text-teal-700/90',
+    menuSelected: 'border-l-teal-600/65 bg-teal-500/[0.08]',
   },
   'ho-kyc': {
-    shell:
-      'border-teal-500/30 bg-teal-500/[0.05] shadow-teal-900/[0.04] dark:border-teal-400/28 dark:bg-teal-400/[0.06] dark:shadow-black/20',
-    icon: 'text-teal-700/90 dark:text-teal-300/90',
-    menuSelected: 'border-l-teal-600/65 bg-teal-500/[0.08] dark:border-l-teal-400/55 dark:bg-teal-400/[0.10]',
+    shell: 'border-teal-500/40 shadow-teal-900/10',
+    icon: 'text-teal-700/90',
+    menuSelected: 'border-l-teal-600/65 bg-teal-500/[0.08]',
   },
   'ho-principal': {
-    shell:
-      'border-violet-500/32 bg-violet-500/[0.055] shadow-violet-900/[0.05] dark:border-violet-400/30 dark:bg-violet-400/[0.07] dark:shadow-black/20',
-    icon: 'text-violet-700/90 dark:text-violet-300/90',
-    menuSelected: 'border-l-violet-600/65 bg-violet-500/[0.09] dark:border-l-violet-400/55 dark:bg-violet-400/[0.11]',
+    shell: 'border-violet-500/40 shadow-violet-900/10',
+    icon: 'text-violet-700/90',
+    menuSelected: 'border-l-violet-600/65 bg-violet-500/[0.09]',
   },
   aml: {
-    shell:
-      'border-rose-500/30 bg-rose-500/[0.045] shadow-rose-900/[0.04] dark:border-rose-400/28 dark:bg-rose-400/[0.06] dark:shadow-black/20',
-    icon: 'text-rose-700/90 dark:text-rose-300/90',
-    menuSelected: 'border-l-rose-600/65 bg-rose-500/[0.08] dark:border-l-rose-400/55 dark:bg-rose-400/[0.10]',
+    shell: 'border-rose-500/40 shadow-rose-900/10',
+    icon: 'text-rose-700/90',
+    menuSelected: 'border-l-rose-600/65 bg-rose-500/[0.08]',
   },
 }
 
@@ -115,8 +116,17 @@ export function AdvisorReviewerPerspectiveCard() {
   const { state, dispatch } = useWorkflow()
   const location = useLocation()
   const [position, setPosition] = useState<Position>(readPersistedPosition)
-  const draggingRef = useRef<{ pointerId: number; offsetX: number; offsetY: number } | null>(null)
-  const cardRef = useRef<HTMLDivElement | null>(null)
+  const [menuOpen, setMenuOpen] = useState(false)
+  const draggingRef = useRef<{
+    pointerId: number
+    offsetX: number
+    offsetY: number
+    startX: number
+    startY: number
+    startAt: number
+  } | null>(null)
+  const dragMovedRef = useRef(false)
+  const cardRef = useRef<HTMLButtonElement | null>(null)
 
   const inChildAction = Boolean(state.activeChildActionId)
   const activeChild = inChildAction
@@ -138,8 +148,13 @@ export function AdvisorReviewerPerspectiveCard() {
     (t.children ?? []).some((c) => c.childType === 'kyc'),
   )
 
+  const singleFlowKyc = isEmbeddedAccountOwnerKycEnabled()
   const amlAvailable =
     (inChildAction && childType === 'kyc') ||
+    // Single-flow KYC: AML lives on every account-opening child, so the AML team should be
+    // able to switch perspectives anywhere inside the onboarding wizard, including the
+    // parent "Open Accounts" screen.
+    singleFlowKyc ||
     onOnboardingListOrDetail ||
     (onServicingWizard && !inChildAction && hasKycSubjects)
   /** Principal applies to account opening — only block inside an active KYC child wizard, not on onboarding lists. */
@@ -171,10 +186,14 @@ export function AdvisorReviewerPerspectiveCard() {
     const card = cardRef.current
     if (!card) return
     const rect = card.getBoundingClientRect()
+    dragMovedRef.current = false
     draggingRef.current = {
       pointerId: event.pointerId,
       offsetX: event.clientX - rect.left,
       offsetY: event.clientY - rect.top,
+      startX: event.clientX,
+      startY: event.clientY,
+      startAt: Date.now(),
     }
     event.currentTarget.setPointerCapture(event.pointerId)
   }
@@ -182,6 +201,13 @@ export function AdvisorReviewerPerspectiveCard() {
   function handlePointerMove(event: React.PointerEvent<HTMLButtonElement>) {
     const dragging = draggingRef.current
     if (!dragging || dragging.pointerId !== event.pointerId) return
+
+    const dx = event.clientX - dragging.startX
+    const dy = event.clientY - dragging.startY
+    if (!dragMovedRef.current && Math.hypot(dx, dy) < DRAG_THRESHOLD_PX) return
+
+    dragMovedRef.current = true
+    setMenuOpen(false)
     const card = cardRef.current
     if (!card) return
     const rect = card.getBoundingClientRect()
@@ -201,44 +227,58 @@ export function AdvisorReviewerPerspectiveCard() {
     if (event.currentTarget.hasPointerCapture(event.pointerId)) {
       event.currentTarget.releasePointerCapture(event.pointerId)
     }
+
+    const heldMs = Date.now() - dragging.startAt
+    const isQuickClick = !dragMovedRef.current && heldMs <= CLICK_MAX_DURATION_MS
     draggingRef.current = null
+    dragMovedRef.current = false
+
+    if (isQuickClick) {
+      setMenuOpen(true)
+    }
+  }
+
+  function handleTriggerClick(event: React.MouseEvent<HTMLButtonElement>) {
+    // Radix opens on click by default — we open only from handlePointerUp after a quick tap.
+    event.preventDefault()
+    event.stopPropagation()
   }
 
   return (
-    <div
-      ref={cardRef}
-      style={{ right: position.right, bottom: position.bottom }}
-      className={cn(
-        'fixed z-50 flex items-center gap-1.5 rounded-full border px-1.5 py-1 shadow-lg backdrop-blur',
-        'select-none',
-        accent.shell,
-      )}
-      role="region"
-      aria-label="Switch advisor or reviewer workspace"
+    <DropdownMenu
+      open={menuOpen}
+      onOpenChange={(next) => {
+        if (!next) setMenuOpen(false)
+      }}
     >
-      <button
-        type="button"
-        aria-label="Drag to move"
-        title="Drag to move"
-        onPointerDown={handlePointerDown}
-        onPointerMove={handlePointerMove}
-        onPointerUp={handlePointerUp}
-        onPointerCancel={handlePointerUp}
-        className="cursor-grab touch-none rounded-full p-1 text-muted-foreground hover:bg-muted hover:text-foreground active:cursor-grabbing"
-      >
-        <GripVertical className="h-3.5 w-3.5" />
-      </button>
-      <DropdownMenu>
-        <DropdownMenuTrigger asChild>
-          <button
-            type="button"
-            className="flex max-w-[min(100vw-6rem,16rem)] items-center gap-2 rounded-full px-2.5 py-1 text-xs font-medium text-foreground hover:bg-muted/70 transition-colors"
-          >
+      <DropdownMenuTrigger asChild>
+        <button
+          ref={cardRef}
+          type="button"
+          style={{ right: position.right, bottom: position.bottom }}
+          aria-label={`${label}. Click to switch workspace, drag to move.`}
+          title="Click to switch workspace · drag to move"
+          onPointerDown={handlePointerDown}
+          onPointerMove={handlePointerMove}
+          onPointerUp={handlePointerUp}
+          onPointerCancel={handlePointerUp}
+          onClick={handleTriggerClick}
+          className={cn(
+            'fixed z-[100] flex cursor-grab touch-none items-center gap-1.5 rounded-full border bg-white py-1 pl-1.5 pr-1.5 shadow-lg',
+            'select-none isolate active:cursor-grabbing hover:bg-white',
+            accent.shell,
+          )}
+        >
+          <span className="shrink-0 rounded-full p-1 text-muted-foreground pointer-events-none">
+            <GripVertical className="h-3.5 w-3.5" aria-hidden />
+          </span>
+          <span className="flex max-w-[min(100vw-6rem,16rem)] min-w-0 items-center gap-2 px-2.5">
             <ModeGlyph mode={mode} />
-            <span className="truncate text-left font-medium">{label}</span>
-          </button>
-        </DropdownMenuTrigger>
-        <DropdownMenuContent
+            <span className="truncate text-left text-xs font-medium text-foreground">{label}</span>
+          </span>
+        </button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent
           align="end"
           side="top"
           sideOffset={8}
@@ -302,7 +342,6 @@ export function AdvisorReviewerPerspectiveCard() {
             AML Team View
           </DropdownMenuItem>
         </DropdownMenuContent>
-      </DropdownMenu>
-    </div>
+    </DropdownMenu>
   )
 }

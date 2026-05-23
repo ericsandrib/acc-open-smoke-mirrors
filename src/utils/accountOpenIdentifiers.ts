@@ -7,8 +7,11 @@ export function generateAccountOpenIdentifiers(childName: string, childId: strin
 } {
   const idPart = childId.replace(/[^0-9a-z]/gi, '').slice(-8).toUpperCase() || 'NEWACCT'
   /** Stable 10 digits derived from child id so Open Accounts, servicing seed, and tables stay aligned. */
-  const digitPool = (childId.replace(/\D/g, '') + idPart.replace(/\D/g, '') + '9876543210').replace(/\D/g, '')
-  const accountNumber = digitPool.padEnd(10, '0').slice(-10).padStart(10, '0')
+  const uniqueDigits = (childId.replace(/\D/g, '') + idPart.replace(/\D/g, '')).replace(/\D/g, '')
+  const accountNumber =
+    uniqueDigits.length >= 10
+      ? uniqueDigits.slice(-10)
+      : (uniqueDigits + '0000000000').slice(0, 10)
   const words = childName
     .replace(/[^a-zA-Z0-9\s]/g, '')
     .trim()

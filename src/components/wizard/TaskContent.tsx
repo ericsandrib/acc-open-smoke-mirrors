@@ -113,7 +113,7 @@ export function TaskContent() {
           : state.v5NoAnnuityOpenAccountsPage === 'documents'
             ? 'Supporting Documents'
             : state.v5NoAnnuityOpenAccountsPage === 'envelopes'
-              ? 'Envelopes'
+              ? 'Forms Package'
               : null
       : null
   const v5WithAnnuityTaskTitle =
@@ -127,9 +127,9 @@ export function TaskContent() {
       ? state.v5NoAnnuityOpenAccountsPage === 'kyc'
         ? 'Complete identity verification (KYC/KYB) before accounts can be opened. For trust accounts, include trustees and beneficial owners.'
         : state.v5NoAnnuityOpenAccountsPage === 'documents'
-          ? 'Supporting documents are optional unless requested during review. Firm and custodian-generated forms are handled in Envelopes.'
+          ? 'Supporting documents are optional unless requested during review. Firm and custodian-generated forms are handled in Forms Package.'
         : state.v5NoAnnuityOpenAccountsPage === 'envelopes'
-          ? 'Create eSignature envelopes for client signatures. Firm and custodian forms are automatically grouped by account. For in-person or mail delivery, signed documents can be uploaded manually instead of using eSignature.'
+          ? 'Prepare firm and custodian forms for client signatures. Forms are automatically grouped by account. For in-person or mail delivery, signed documents can be uploaded manually instead of using eSignature.'
           : null
       : null
 

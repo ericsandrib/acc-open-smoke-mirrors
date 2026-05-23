@@ -8,6 +8,10 @@ import {
 } from '@/components/wizard/wizardRightPanelContext'
 import { ChildActionTimeline } from '@/components/wizard/ChildActionTimelineSheet'
 import { JourneySupportingDocumentsPanel } from '@/components/wizard/JourneySupportingDocumentsPanel'
+import {
+  handleWizardIsolatedPanelShellWheel,
+  handleWizardIsolatedScrollPaneWheel,
+} from '@/utils/wizardScroll'
 
 const TAB_ORDER_FULL: WizardRightPanelTab[] = ['details', 'activity', 'comments', 'documents']
 
@@ -31,7 +35,9 @@ export function ChildActionRightSidebar() {
   const { collapsed, activeTab, setActiveTab } = useWizardRightPanel()
 
   const showDocumentsTab =
-    state.demoViewMode != null && state.demoViewMode !== 'advisor'
+    state.demoViewMode != null &&
+    state.demoViewMode !== 'advisor' &&
+    state.demoViewMode !== 'ho-principal'
 
   const tabOrder = useMemo(
     () =>
@@ -61,6 +67,7 @@ export function ChildActionRightSidebar() {
       )}
       aria-label="Application details"
       aria-hidden={collapsed}
+      onWheel={handleWizardIsolatedPanelShellWheel}
     >
       <div
         className={cn(
@@ -99,11 +106,13 @@ export function ChildActionRightSidebar() {
         </div>
 
         <div
+          data-wizard-scroll-pane
           className={cn(
-            'flex flex-1 min-h-0 flex-col',
+            'flex flex-1 min-h-0 flex-col overscroll-y-contain',
             activeTab === 'activity' ? 'overflow-y-auto p-4' : 'overflow-hidden p-4',
             showDocumentsTab && activeTab === 'documents' && 'overflow-hidden p-0',
           )}
+          onWheel={handleWizardIsolatedScrollPaneWheel}
         >
           {activeTab === 'activity' && (
             <>

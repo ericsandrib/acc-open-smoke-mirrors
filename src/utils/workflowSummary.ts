@@ -70,6 +70,7 @@ const SUMMARY_BUCKET_BY_STATUS: Record<ChildDisplayStatus, SummaryBucket> = {
   ho_kyc_review: 'inReview',
   principal_review: 'inReview',
   draft: 'inProgress',
+  awaiting_client_signature: 'inProgress',
   complete: 'complete',
   canceled: 'canceled',
 }
@@ -133,7 +134,7 @@ const PARENT_OPERATIONAL_TIERS: {
   {
     state: 'complete',
     buckets: ['complete'],
-    label: 'Completed',
+    label: 'Pending Release',
     className: PARENT_OPERATIONAL_BADGE_CLASS.complete,
     pillVariant: 'completed',
   },
@@ -165,7 +166,7 @@ function formatBucketLabel(bucket: SummaryBucket, count: number): string {
     case 'inProgress':
       return count === 1 ? '1 In Progress' : `${count} In Progress`
     case 'complete':
-      return count === 1 ? '1 Completed' : `${count} Completed`
+      return count === 1 ? '1 Pending Release' : `${count} Pending Release`
     case 'canceled':
       return count === 1 ? '1 Declined' : `${count} Declined`
   }

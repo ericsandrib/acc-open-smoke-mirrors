@@ -38,11 +38,19 @@ export function OnboardingJourneyDetailPage() {
   const { journeyId } = useParams<{ journeyId: string }>()
   const navigate = useNavigate()
   const { onboardingJourneys } = useServicing()
-  const { showNestedGroups, hideOnboardingJourneyChildWorkflows } = useTheme()
+  const { showNestedGroups, hideKycChildWorkflows } = useTheme()
   const { navigateToServicing } = useJourneyNavigation()
   const [expandedGroupIds, setExpandedGroupIds] = useState<Set<string>>(new Set())
 
-  const rows = useMemo(() => deriveOnboardingJourneyRows(onboardingJourneys), [onboardingJourneys])
+  const rows = useMemo(
+    () =>
+      deriveOnboardingJourneyRows(
+        onboardingJourneys,
+        hideKycChildWorkflows,
+        hideKycChildWorkflows,
+      ),
+    [onboardingJourneys, hideKycChildWorkflows],
+  )
   const row = rows.find((r) => r.id === journeyId)
 
   const toggleExpanded = (id: string) => {
@@ -71,7 +79,11 @@ export function OnboardingJourneyDetailPage() {
   const vis = (_key: string) => true
   const colCount = allColumns.length
   const journeyPct = row.totalTasks > 0 ? row.progressedTasks / row.totalTasks : 0
-  const actions = visibleOnboardingJourneyActions(row.actions, hideOnboardingJourneyChildWorkflows)
+  const actions = visibleOnboardingJourneyActions(
+    row.actions,
+    hideKycChildWorkflows,
+    hideKycChildWorkflows,
+  )
 
   return (
     <>
@@ -121,9 +133,7 @@ export function OnboardingJourneyDetailPage() {
                 const actionDone = action.tasks.filter((t) => t.status !== 'not_started').length
                 const actionPct = actionTotal > 0 ? actionDone / actionTotal : 0
 
-                const nestedChildRows = hideOnboardingJourneyChildWorkflows
-                  ? []
-                  : childActions.flatMap((childAction) => {
+                const nestedChildRows = childActions.flatMap((childAction) => {
                     const grandchildActions = actions.filter((a) => a.parentActionId === childAction.id && !a.groupType)
                     const groupActions = actions.filter((a) => a.parentActionId === childAction.id && a.groupType)
                     if (grandchildActions.length === 0 && groupActions.length === 0) return []

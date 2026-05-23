@@ -31,7 +31,7 @@ export function countSubjectsNeedingAttention<T extends RelatedParty>(
 }
 
 /**
- * Stable sort by synthesized KYC status priority (fail → pending → unverified → pass).
+ * Stable sort by participant verification priority (fail → pending → not run → pass).
  * Preserves original order within the same priority bucket.
  */
 export function sortPartiesByVerificationPriority<T extends RelatedParty>(

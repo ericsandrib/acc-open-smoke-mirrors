@@ -1,14 +1,22 @@
 import type { RelatedParty, WorkflowState } from '@/types/workflow'
 import { deriveChildDisplayStatus } from '@/utils/childStatusDisplay'
 import { getAllOpenAccountsTasks } from '@/utils/openAccountsTaskContext'
+import { isOwnerKycVerifiedSingleFlow, isSingleFlowKycEnabled } from '@/utils/ownerKycReview'
 
 /**
  * Household members must have completed KYC (party verified or matching KYC child workflow complete).
  * Legal-entity owners skip this check in the demo (entity-level verification is out of scope).
  */
-export function isAccountOwnerKycVerified(state: WorkflowState, party: RelatedParty): boolean {
+export function isAccountOwnerKycVerified(
+  state: WorkflowState,
+  party: RelatedParty,
+  accountChildId?: string,
+): boolean {
   if (party.type === 'related_organization') {
     return true
+  }
+  if (isSingleFlowKycEnabled() && accountChildId) {
+    return isOwnerKycVerifiedSingleFlow(state, accountChildId, party)
   }
   const kycFromStandalone = state.tasks.find((t) => t.formKey === 'kyc')
   const kycChildren = kycFromStandalone
@@ -155,7 +163,7 @@ export function getAccountOwnersMissingKyc(
   const names: string[] = []
 
   for (const party of getAccountPartiesRequiringKyc(state, accountChildId)) {
-    if (!isAccountOwnerKycVerified(state, party)) {
+    if (!isAccountOwnerKycVerified(state, party, accountChildId)) {
       names.push(party.name)
     }
   }

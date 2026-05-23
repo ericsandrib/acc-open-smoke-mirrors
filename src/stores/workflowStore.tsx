@@ -1,5 +1,6 @@
 import { createContext, useContext, useReducer, useCallback, useEffect, type ReactNode } from 'react'
 import type {
+  AccountWorkflowPhase,
   Action,
   WorkflowState,
   WorkflowAction,
@@ -7,6 +8,7 @@ import type {
   ChildTask,
   ChildReviewState,
   ChildType,
+  OwnerKycReviewState,
   RelatedParty,
   TaskStatus,
 } from '@/types/workflow'
@@ -31,18 +33,123 @@ import {
   parseChildSubTaskId,
 } from '@/utils/childTaskRegistry'
 import {
+  findParentTaskForChild,
   OPEN_ACCOUNTS_FORM_KEY,
   OPEN_ACCOUNTS_WITH_ANNUITY_FORM_KEY,
 } from '@/utils/openAccountsTaskContext'
+import {
+  getV5NoAnnuityOpenAccountsNavPageOrder,
+  normalizeV5NoAnnuityPageForNav,
+} from '@/utils/hideKycChildWorkflows'
 import { resolveJourneyEntryTaskIdAfterInit } from '@/utils/journeyEntryTask'
 import { bumpChildHighWaterMark } from '@/utils/childSubTaskProgress'
 import { generateAccountOpenIdentifiers } from '@/utils/accountOpenIdentifiers'
+import { accountOpeningChildNameWithAccountTail } from '@/utils/openAccountsChildRowLabel'
+import {
+  applyWorkflowStorageMigrations,
+  readWorkflowStorageSchemaVersion,
+  WORKFLOW_STORAGE_SCHEMA_KEY,
+  WORKFLOW_STORAGE_SCHEMA_VERSION,
+} from '@/utils/workflowStorageMigration'
+import {
+  collectOrphanAccountOpeningChildIds,
+  stateHasRemappableDemoAccountLast4,
+} from '@/utils/repairAccountOpeningChildNames'
+import { demoAccountNumberForBrokerageIndex } from '@/utils/demoAccountNumberOverrides'
+import { hasAccountOpeningWorkflowEvidence } from '@/utils/seededJourneyWorkflow'
 import { mergeFeatureRequests } from '@/types/featureRequests'
 import {
   advisorIdentitySimPassDisplay,
   getAdvisorIdentitySimDisplay,
 } from '@/utils/advisorIdentityVerificationSimDisplay'
 import { getKycChildIdsForSignedAccountChildren } from '@/utils/postEnvelopeSignatureAml'
+import { getAccountPartiesRequiringKyc } from '@/utils/accountOpeningOwnerKyc'
+import {
+  applyAutoRunOwnerKycToState,
+  appendOwnerVerificationSnapshot,
+  buildSingleFlowAccountOpeningReviewOnSubmit,
+  hydrateAccountOwnerReviewsFromExisting,
+  isEmbeddedAccountOwnerKycEnabled,
+  isSingleFlowKycEnabled,
+  mergeOwnerReviewPatch,
+  propagateOwnerReviewAcrossAccounts,
+} from '@/utils/ownerKycReview'
+import type { VerificationSnapshot } from '@/types/workflow'
+import { hasOwnerLevelAmlFlag } from '@/utils/childStatusDisplay'
+import { isMeaningfulReviewerMessage } from '@/utils/reviewerStageMessages'
+import { formatStructuredReviewText } from '@/utils/formatStructuredReviewText'
+import {
+  applyParticipantAmlApprovalForAccount,
+  invalidateParticipantVerificationForParty,
+} from '@/utils/participantVerification'
+
+function defaultOwnerCipPass(): NonNullable<ChildReviewState['cipStatus']> {
+  return {
+    idVerification: 'pass',
+    addressMatch: 'pass',
+    dobMatch: 'pass',
+    overallStatus: 'pass',
+  }
+}
+
+/** Append a per-owner disposition event to the audit trail. */
+function appendAccountDispositionSnapshots(
+  state: WorkflowState,
+  accountChildId: string,
+  partyIds: string[],
+  base: Omit<VerificationSnapshot, 'id'>,
+): WorkflowState {
+  let next = state
+  for (const partyId of partyIds) {
+    next = appendOwnerVerificationSnapshot(next, accountChildId, partyId, base)
+  }
+  return next
+}
+
+/** Propagate the updated ownerReviews entries to every other account where each party appears. */
+function propagateOwnersAcrossAccounts(
+  state: WorkflowState,
+  sourceAccountChildId: string,
+  partyIds: string[],
+): WorkflowState {
+  let next = state
+  for (const partyId of partyIds) {
+    next = propagateOwnerReviewAcrossAccounts(next, sourceAccountChildId, partyId)
+  }
+  return next
+}
+
+/** Update child.status for a single account-opening child so parent badges stay in sync. */
+function setAccountChildStatus(
+  tasks: WorkflowState['tasks'],
+  accountChildId: string,
+  status: TaskStatus,
+): WorkflowState['tasks'] {
+  return tasks.map((t) => {
+    if (!t.children) return t
+    return {
+      ...t,
+      children: t.children.map((c) =>
+        c.id === accountChildId && c.childType === 'account-opening' ? { ...c, status } : c,
+      ),
+    }
+  })
+}
+
+function patchAccountOwnerReviews(
+  state: WorkflowState,
+  accountChildId: string,
+  partyId: string,
+  ownerPatch: Partial<OwnerKycReviewState>,
+  accountPatch?: Partial<ChildReviewState>,
+): WorkflowState['childReviewsByChildId'] {
+  const prev = state.childReviewsByChildId?.[accountChildId] ?? {}
+  const merged = mergeOwnerReviewPatch(prev, partyId, ownerPatch)
+  return {
+    ...state.childReviewsByChildId,
+    [accountChildId]: { ...merged, ...accountPatch },
+  }
+}
 
 /** Dev-only simulation keys must not be persisted with workflow localStorage. */
 function stripAdvisorIdentityDemoSimulationForStorage(state: WorkflowState): WorkflowState {
@@ -138,6 +245,9 @@ function sanitizeDemoViewModeForChild(
     if (ACCOUNT_HO_DEMO_VIEW_MODES.has(mode)) return mode
     /** KYC document-review lane → account document-review lane (not advisor). */
     if (mode === 'ho-kyc') return 'ho-documents'
+    // Single-flow KYC: AML team operates on account-opening children too, so preserve the
+    // AML view when drilling into the child. Legacy behavior mapped 'aml' → 'advisor'.
+    if (mode === 'aml' && isEmbeddedAccountOwnerKycEnabled()) return 'aml'
     if (mode === 'aml') return 'advisor'
     return mode
   }
@@ -252,8 +362,37 @@ function getInitialWorkflowState(): WorkflowState {
       flatTaskOrder: computeFlatTaskOrder(parsed.tasks, parsed.actions),
     }
     const rehydrated = rehydrateOpenAccountsChildrenForServicingSeedJourney(merged)
-    const repaired = repairJohnSmithDefaultJourney(rehydrated)
-    return normalizeV6AnnuityActiveTask(repaired)
+    const repairedJourney = repairJohnSmithDefaultJourney(rehydrated)
+    const migrated = applyWorkflowStorageMigrations(repairedJourney)
+    const normalized = normalizeV6AnnuityActiveTask(migrated)
+    const finalState: WorkflowState = {
+      ...normalized,
+      flatTaskOrder: computeFlatTaskOrder(normalized.tasks, normalized.actions),
+    }
+    const countAccountChildren = (s: WorkflowState) =>
+      s.tasks
+        .filter((t) => t.formKey === OPEN_ACCOUNTS_FORM_KEY)
+        .reduce(
+          (n, t) => n + (t.children?.filter((c) => c.childType === 'account-opening').length ?? 0),
+          0,
+        )
+    const restoredAccounts =
+      countAccountChildren(finalState) > countAccountChildren(parsed)
+    const remappedAccountNumbers = stateHasRemappableDemoAccountLast4(parsed)
+    const storedSchemaVersion = readWorkflowStorageSchemaVersion()
+    if (
+      storedSchemaVersion < WORKFLOW_STORAGE_SCHEMA_VERSION ||
+      restoredAccounts ||
+      remappedAccountNumbers
+    ) {
+      const storable = stripAdvisorIdentityDemoSimulationForStorage(finalState)
+      window.localStorage.setItem(WORKFLOW_STORAGE_KEY, JSON.stringify(storable))
+      window.localStorage.setItem(
+        WORKFLOW_STORAGE_SCHEMA_KEY,
+        String(WORKFLOW_STORAGE_SCHEMA_VERSION),
+      )
+    }
+    return finalState
   } catch {
     return initialState
   }
@@ -507,10 +646,18 @@ function remapChildSubTaskIndexForDemoView(
   const child = findActiveChild(state)
   if (!child) return undefined
 
-  const nextVisible = getVisibleChildSubTasks(child.childType, nextDemoViewMode, child.status)
+  const phase =
+    child.childType === 'account-opening'
+      ? state.childReviewsByChildId?.[child.id]?.accountWorkflowPhase
+      : undefined
+  const nextVisible = getVisibleChildSubTasks(child.childType, nextDemoViewMode, child.status, {
+    accountWorkflowPhase: phase,
+  })
   if (nextVisible.length === 0) return undefined
 
-  const prevVisible = getVisibleChildSubTasks(child.childType, state.demoViewMode, child.status)
+  const prevVisible = getVisibleChildSubTasks(child.childType, state.demoViewMode, child.status, {
+    accountWorkflowPhase: phase,
+  })
   const raw = state.activeChildSubTaskIndex ?? 0
   const clampedPrev = Math.min(Math.max(0, raw), Math.max(prevVisible.length - 1, 0))
   const suffix = prevVisible[clampedPrev]?.suffix
@@ -518,8 +665,20 @@ function remapChildSubTaskIndexForDemoView(
   let idx = suffix != null ? nextVisible.findIndex((s) => s.suffix === suffix) : clampedPrev
   if (idx < 0) {
     if (suffix === 'aml-review' || suffix === 'aml-results') {
-      const documentsIdx = nextVisible.findIndex((s) => s.suffix === 'documents')
-      idx = documentsIdx >= 0 ? documentsIdx : 0
+      const supportingIdx = nextVisible.findIndex((s) => s.suffix === 'supporting-documents')
+      idx = supportingIdx >= 0 ? supportingIdx : 0
+    } else if (suffix === 'documents-review' || suffix === 'supporting-documents') {
+      const targetSuffix =
+        nextDemoViewMode === 'aml'
+          ? 'supporting-documents'
+          : nextDemoViewMode === 'ho-principal'
+            ? 'account-owners'
+            : 'forms-package'
+      const docIdx = nextVisible.findIndex((s) => s.suffix === targetSuffix)
+      idx = docIdx >= 0 ? docIdx : 0
+    } else if (nextDemoViewMode === 'aml' && child.childType === 'account-opening') {
+      const amlIdx = nextVisible.findIndex((s) => s.suffix === 'aml-review')
+      idx = amlIdx >= 0 ? amlIdx : 0
     } else {
       idx = Math.min(clampedPrev, nextVisible.length - 1)
     }
@@ -531,7 +690,13 @@ function remapChildSubTaskIndexForDemoView(
 function clampChildSubTaskIndex(state: WorkflowState, index: number): number | undefined {
   const child = findActiveChild(state)
   if (!child) return undefined
-  const visible = getVisibleChildSubTasks(child.childType, state.demoViewMode, child.status)
+  const phase =
+    child.childType === 'account-opening'
+      ? state.childReviewsByChildId?.[child.id]?.accountWorkflowPhase
+      : undefined
+  const visible = getVisibleChildSubTasks(child.childType, state.demoViewMode, child.status, {
+    accountWorkflowPhase: phase,
+  })
   if (visible.length === 0) return undefined
   return Math.min(Math.max(0, index), visible.length - 1)
 }
@@ -582,6 +747,23 @@ function workflowReducer(state: WorkflowState, action: WorkflowAction): Workflow
     case 'CLEAR_PARENT_SECTION_FOCUS': {
       if (state.parentSectionFocusId == null) return state
       return { ...state, parentSectionFocusId: undefined }
+    }
+
+    case 'FOCUS_OWNER_FIELDS': {
+      return {
+        ...state,
+        ownerFieldFocus: {
+          accountChildId: action.accountChildId,
+          partyId: action.partyId,
+          fieldHint: action.fieldHint,
+          requestedAt: new Date().toISOString(),
+        },
+      }
+    }
+
+    case 'CLEAR_OWNER_FIELD_FOCUS': {
+      if (!state.ownerFieldFocus) return state
+      return { ...state, ownerFieldFocus: undefined }
     }
 
     case 'GO_TO_TASK': {
@@ -691,6 +873,15 @@ function workflowReducer(state: WorkflowState, action: WorkflowAction): Workflow
       }
     }
 
+    case 'SYNC_SEEDED_JOURNEY_METADATA': {
+      return {
+        ...state,
+        journeyId: action.journeyId,
+        journeyName: action.journeyName,
+        ...(action.assignedTo != null ? { assignedTo: action.assignedTo } : {}),
+      }
+    }
+
     case 'SET_JOURNEY_ASSIGNEE': {
       const newTasks = state.tasks.map((t) => ({
         ...t,
@@ -702,11 +893,31 @@ function workflowReducer(state: WorkflowState, action: WorkflowAction): Workflow
     case 'SPAWN_CHILD': {
       const config = getChildTypeConfig(action.childType)
       let spawnedChildId = ''
+      let spawnedAccountGen: ReturnType<typeof generateAccountOpenIdentifiers> | undefined
       const newTasks = state.tasks.map((t) => {
         if (t.id === action.parentTaskId) {
           const priorChildren = t.children ?? []
           const childId = `${config.idPrefix}-${Date.now()}-${++childIdCounter}`
           spawnedChildId = childId
+          let childName = action.childName
+          if (action.childType === 'account-opening') {
+            const parentTask = state.tasks.find((t) => t.id === action.parentTaskId)
+            const priorBrokerage = priorChildren.filter(
+              (c) =>
+                c.childType === 'account-opening' && !c.name.includes(' - Annuity'),
+            ).length
+            spawnedAccountGen = generateAccountOpenIdentifiers(action.childName, childId)
+            if (parentTask?.formKey === OPEN_ACCOUNTS_FORM_KEY) {
+              spawnedAccountGen = {
+                ...spawnedAccountGen,
+                accountNumber: demoAccountNumberForBrokerageIndex(priorBrokerage),
+              }
+            }
+            childName = accountOpeningChildNameWithAccountTail(
+              action.childName,
+              spawnedAccountGen.accountNumber,
+            )
+          }
           return {
             ...t,
             edited: true,
@@ -714,7 +925,7 @@ function workflowReducer(state: WorkflowState, action: WorkflowAction): Workflow
               ...priorChildren,
               {
                 id: childId,
-                name: action.childName,
+                name: childName,
                 status: 'not_started' as const,
                 formKey: config.idPrefix,
                 childType: action.childType,
@@ -731,25 +942,35 @@ function workflowReducer(state: WorkflowState, action: WorkflowAction): Workflow
           ...(state.taskData[spawnedChildId] ?? {}),
           ...(action.metadata ?? {}),
         }
-        if (action.childType === 'account-opening') {
-          const gen = generateAccountOpenIdentifiers(action.childName, spawnedChildId)
-          merged.accountNumber = (merged.accountNumber as string | undefined) ?? gen.accountNumber
-          merged.shortName = (merged.shortName as string | undefined) ?? gen.shortName
+        if (action.childType === 'account-opening' && spawnedAccountGen) {
+          merged.accountNumber =
+            (merged.accountNumber as string | undefined) ?? spawnedAccountGen.accountNumber
+          merged.shortName = (merged.shortName as string | undefined) ?? spawnedAccountGen.shortName
           merged.featureRequests = mergeFeatureRequests(merged.featureRequests)
+          newTaskData = { ...state.taskData, [spawnedChildId]: merged }
+        } else {
+          newTaskData = { ...state.taskData, [spawnedChildId]: merged }
         }
-        newTaskData = { ...state.taskData, [spawnedChildId]: merged }
       }
-      return { ...state, tasks: newTasks, flatTaskOrder: newOrder, taskData: newTaskData }
+      const next: WorkflowState = { ...state, tasks: newTasks, flatTaskOrder: newOrder, taskData: newTaskData }
+      // KYC is intentionally NOT auto-run on account spawn — it triggers only when the
+      // advisor sends the forms package envelope.
+      return next
     }
 
     case 'SPAWN_AND_ENTER_CHILD': {
       const spawnConfig = getChildTypeConfig(action.childType)
       let newChildId = ''
+      let newChildName = action.childName
       const spawnTasks = state.tasks.map((t) => {
         if (t.id === action.parentTaskId) {
           const priorChildren = t.children ?? []
           const childId = `${spawnConfig.idPrefix}-${Date.now()}-${++childIdCounter}`
           newChildId = childId
+          if (action.childType === 'account-opening') {
+            const gen = generateAccountOpenIdentifiers(action.childName, childId)
+            newChildName = accountOpeningChildNameWithAccountTail(action.childName, gen.accountNumber)
+          }
           return {
             ...t,
             edited: true,
@@ -757,7 +978,7 @@ function workflowReducer(state: WorkflowState, action: WorkflowAction): Workflow
               ...priorChildren,
               {
                 id: childId,
-                name: action.childName,
+                name: newChildName,
                 status: 'not_started' as const,
                 formKey: spawnConfig.idPrefix,
                 childType: action.childType,
@@ -769,15 +990,32 @@ function workflowReducer(state: WorkflowState, action: WorkflowAction): Workflow
       })
       const spawnOrder = computeFlatTaskOrder(spawnTasks, state.actions)
       const spawnHwm = { ...(state.childHighWaterMark ?? {}), [newChildId]: 0 }
-      return {
+      let spawnTaskData = state.taskData
+      if (newChildId && action.childType === 'account-opening') {
+        const gen = generateAccountOpenIdentifiers(action.childName, newChildId)
+        const merged = {
+          ...(state.taskData[newChildId] ?? {}),
+          accountNumber: gen.accountNumber,
+          shortName: gen.shortName,
+          featureRequests: mergeFeatureRequests(
+            (state.taskData[newChildId] as Record<string, unknown> | undefined)?.featureRequests,
+          ),
+        }
+        spawnTaskData = { ...state.taskData, [newChildId]: merged }
+      }
+      const next: WorkflowState = {
         ...state,
         tasks: spawnTasks,
         flatTaskOrder: spawnOrder,
+        taskData: spawnTaskData,
         activeChildActionId: newChildId,
         activeChildSubTaskIndex: 0,
         demoViewMode: sanitizeDemoViewModeForChild(state.demoViewMode ?? 'advisor', action.childType),
         childHighWaterMark: spawnHwm,
       }
+      // KYC is intentionally NOT auto-run on spawn-and-enter — it triggers only when
+      // the advisor sends the forms package envelope.
+      return next
     }
 
     case 'REMOVE_CHILD': {
@@ -831,13 +1069,17 @@ function workflowReducer(state: WorkflowState, action: WorkflowAction): Workflow
     }
 
     case 'UPDATE_RELATED_PARTY': {
-      return {
+      // KYC is intentionally NOT auto-re-run when party fields change. Reviewers re-run
+      // explicitly via the AML / CIP review task's "Re-run" action; advisors re-run on
+      // envelope send. Identity changes invalidate reusable participant AML dispositions.
+      const withParty = {
         ...state,
         relatedParties: state.relatedParties.map((p) =>
-          p.id === action.partyId ? { ...p, ...action.updates } : p
+          p.id === action.partyId ? { ...p, ...action.updates } : p,
         ),
         tasks: markTaskEdited(state.tasks, 'related-parties'),
       }
+      return invalidateParticipantVerificationForParty(withParty, action.partyId, action.updates)
     }
 
     case 'SET_PRIMARY_MEMBER': {
@@ -924,7 +1166,7 @@ function workflowReducer(state: WorkflowState, action: WorkflowAction): Workflow
         }
         return t
       })
-      return {
+      let next: WorkflowState = {
         ...state,
         tasks: newTasks,
         taskData: {
@@ -935,10 +1177,41 @@ function workflowReducer(state: WorkflowState, action: WorkflowAction): Workflow
           },
         },
       }
+      // KYC is intentionally NOT auto-run when the owners list changes; it triggers
+      // only when the advisor sends the forms package envelope. However, when an owner
+      // is added to a new account, copy any prior person-level KYC state from another
+      // account so the new account reflects Jane's existing flagged/verified status.
+      if (parsedData?.suffix === 'account-owners') {
+        next = hydrateAccountOwnerReviewsFromExisting(next, parsedData.childId)
+      }
+      return next
     }
 
     case 'INITIALIZE_FROM_RELATIONSHIP': {
-      const assignee = action.assignedTo ?? 'Unassigned'
+      const assignee = action.assignedTo ?? state.assignedTo ?? 'Unassigned'
+      const initJourneyId = action.journeyId ?? `journey-${Date.now()}`
+
+      /** Never wipe user-created accounts, envelopes, or reviews when re-opening the same journey. */
+      if (
+        action.journeyId &&
+        state.journeyId === action.journeyId &&
+        hasAccountOpeningWorkflowEvidence(state)
+      ) {
+        return {
+          ...state,
+          relatedParties: structuredClone(action.relatedParties),
+          financialAccounts: structuredClone(action.financialAccounts),
+          journeyName: action.journeyName ?? state.journeyName,
+          assignedTo: assignee,
+          journeyOnboardingConfig:
+            action.journeyOnboardingConfig ?? state.journeyOnboardingConfig,
+          taskData: {
+            ...state.taskData,
+            'client-info': structuredClone(action.clientInfo),
+          },
+        }
+      }
+
       // Default client onboarding no longer includes a top-level KYC action/task.
       // Keep childType='kyc' support for account-opening or future standalone flows.
       const baseActions = actions.filter((a) => a.id !== 'kyc')
@@ -1021,7 +1294,7 @@ function workflowReducer(state: WorkflowState, action: WorkflowAction): Workflow
           ...seeded.taskDataPatch,
         },
         journeyName: action.journeyName,
-        journeyId: action.journeyId ?? `journey-${Date.now()}`,
+        journeyId: initJourneyId,
         journeyStartedAt: new Date().toISOString(),
         ...(() => {
           const journeyDue = new Date()
@@ -1051,12 +1324,9 @@ function workflowReducer(state: WorkflowState, action: WorkflowAction): Workflow
         activeTask?.formKey === OPEN_ACCOUNTS_FORM_KEY &&
         state.v5NoAnnuityOpenAccountsPage != null
       ) {
-        const order: V5NoAnnuityPage[] = ['instructions', 'kyc', 'envelopes']
-        const current =
-          state.v5NoAnnuityOpenAccountsPage === 'documents'
-            ? 'kyc'
-            : state.v5NoAnnuityOpenAccountsPage
-        const i = order.indexOf(current ?? 'instructions')
+        const order = getV5NoAnnuityOpenAccountsNavPageOrder()
+        const current = normalizeV5NoAnnuityPageForNav(state.v5NoAnnuityOpenAccountsPage)
+        const i = order.indexOf(current)
         if (i >= 0 && i < order.length - 1) {
           return { ...state, v5NoAnnuityOpenAccountsPage: order[i + 1] }
         }
@@ -1087,12 +1357,9 @@ function workflowReducer(state: WorkflowState, action: WorkflowAction): Workflow
         activeTask?.formKey === OPEN_ACCOUNTS_FORM_KEY &&
         state.v5NoAnnuityOpenAccountsPage != null
       ) {
-        const order: V5NoAnnuityPage[] = ['instructions', 'kyc', 'envelopes']
-        const current =
-          state.v5NoAnnuityOpenAccountsPage === 'documents'
-            ? 'envelopes'
-            : state.v5NoAnnuityOpenAccountsPage
-        const i = order.indexOf(current ?? 'instructions')
+        const order = getV5NoAnnuityOpenAccountsNavPageOrder()
+        const current = normalizeV5NoAnnuityPageForNav(state.v5NoAnnuityOpenAccountsPage)
+        const i = order.indexOf(current)
         if (i > 0) {
           return { ...state, v5NoAnnuityOpenAccountsPage: order[i - 1] }
         }
@@ -1117,6 +1384,7 @@ function workflowReducer(state: WorkflowState, action: WorkflowAction): Workflow
     }
 
     case 'ENTER_CHILD_ACTION': {
+      const parentForEnter = findParentTaskForChild(state, action.childId)
       const enteredChild = state.tasks
         .flatMap((t) => t.children ?? [])
         .find((c) => c.id === action.childId)
@@ -1127,25 +1395,53 @@ function workflowReducer(state: WorkflowState, action: WorkflowAction): Workflow
           enteredChild.status === 'canceled' ||
           enteredChild.status === 'rejected')
       const seedTime = new Date().toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })
-      const enterIdx = action.subTaskIndex ?? 0
+      const sanitizedEnterMode = sanitizeDemoViewModeForChild(
+        state.demoViewMode ?? 'advisor',
+        enteredChild?.childType,
+      )
+      const enterVisible =
+        enteredChild != null
+          ? getVisibleChildSubTasks(enteredChild.childType, sanitizedEnterMode, enteredChild.status, {
+              accountWorkflowPhase:
+                enteredChild.childType === 'account-opening'
+                  ? state.childReviewsByChildId?.[enteredChild.id]?.accountWorkflowPhase
+                  : undefined,
+            })
+          : []
+      let enterIdx = action.subTaskIndex ?? 0
+      if (enterVisible.length > 0) {
+        if (
+          sanitizedEnterMode === 'aml' &&
+          enteredChild?.childType === 'account-opening' &&
+          action.subTaskIndex == null
+        ) {
+          const amlIdx = enterVisible.findIndex((s) => s.suffix === 'aml-review')
+          if (amlIdx >= 0) enterIdx = amlIdx
+        }
+        enterIdx = Math.min(Math.max(0, enterIdx), enterVisible.length - 1)
+      }
       const enterHwm = state.childHighWaterMark ?? {}
       const enterNewHwm = bumpChildHighWaterMark(
         { ...state, childHighWaterMark: enterHwm },
         action.childId,
         enterIdx,
       )
-      return {
+      let next: WorkflowState = {
         ...state,
+        activeTaskId: parentForEnter?.id ?? state.activeTaskId,
         activeChildActionId: action.childId,
         activeChildSubTaskIndex: enterIdx,
         childActionResume: action.resumeAfterExit,
-        demoViewMode: sanitizeDemoViewModeForChild(state.demoViewMode ?? 'advisor', enteredChild?.childType),
+        demoViewMode: sanitizedEnterMode,
         childHighWaterMark: enterNewHwm,
         submittedAt:
           childInReviewerPipeline
             ? (state.submittedAt ?? seedTime)
             : state.submittedAt,
       }
+      // KYC is intentionally NOT auto-run on child-enter; it triggers only when the
+      // advisor sends the forms package envelope.
+      return next
     }
 
     case 'EXIT_CHILD_ACTION': {
@@ -1153,6 +1449,9 @@ function workflowReducer(state: WorkflowState, action: WorkflowAction): Workflow
         ? state.tasks
             .flatMap((t) => t.children ?? [])
             .find((c) => c.id === state.activeChildActionId)
+        : undefined
+      const parentForExit = exitingChild
+        ? findParentTaskForChild(state, exitingChild.id)
         : undefined
       const demoViewAfterChildExit =
         exitingChild?.childType === 'kyc' && state.demoViewMode === 'ho-kyc'
@@ -1164,8 +1463,10 @@ function workflowReducer(state: WorkflowState, action: WorkflowAction): Workflow
         const resumeChild = state.tasks
           .flatMap((t) => t.children ?? [])
           .find((c) => c.id === accountChildId)
+        const resumeParent = findParentTaskForChild(state, accountChildId)
         return {
           ...state,
+          activeTaskId: resumeParent?.id ?? parentForExit?.id ?? state.activeTaskId,
           activeChildActionId: accountChildId,
           activeChildSubTaskIndex: subTaskIndex,
           childActionResume: undefined,
@@ -1174,6 +1475,7 @@ function workflowReducer(state: WorkflowState, action: WorkflowAction): Workflow
       }
       return {
         ...state,
+        activeTaskId: parentForExit?.id ?? state.activeTaskId,
         activeChildActionId: undefined,
         activeChildSubTaskIndex: undefined,
         childActionResume: undefined,
@@ -1338,15 +1640,32 @@ function workflowReducer(state: WorkflowState, action: WorkflowAction): Workflow
         }
       })
 
+      const stateWithUpdatedTasks = { ...state, tasks: updatedTasks }
       const nextChildReviews = { ...(state.childReviewsByChildId ?? {}) }
       for (const childId of childIds) {
+        if (isSingleFlowKycEnabled(state)) {
+          nextChildReviews[childId] = buildSingleFlowAccountOpeningReviewOnSubmit(
+            stateWithUpdatedTasks,
+            childId,
+            'awaiting_review',
+          )
+          continue
+        }
         const prev = nextChildReviews[childId] ?? {}
+        const ownerReviews = prev.ownerReviews ?? {}
+        const ownerStatuses = Object.values(ownerReviews).map((o) => o.amlReview?.status)
+        const derivedPhase = hasOwnerLevelAmlFlag(prev)
+          ? 'escalation_hold'
+          : ownerStatuses.some((s) => s === 'pending' || s === 'info_requested')
+            ? 'aml_review'
+            : 'document_review'
         nextChildReviews[childId] = {
           ...prev,
           documentReview: prev.documentReview ?? { status: 'pending' },
           principalReview: prev.principalReview ?? { status: 'pending' },
           accountOpeningPreReviewTimeline:
             prev.accountOpeningPreReviewTimeline ?? buildAccountOpeningPreReviewTimeline(),
+          accountWorkflowPhase: prev.accountWorkflowPhase ?? derivedPhase,
         }
       }
 
@@ -1618,11 +1937,17 @@ function workflowReducer(state: WorkflowState, action: WorkflowAction): Workflow
               : {}),
           }
         : isAccountOpeningChild
-          ? {
-              documentReview: { status: 'pending' },
-              principalReview: { status: 'pending' },
-              accountOpeningPreReviewTimeline: buildAccountOpeningPreReviewTimeline(),
-            }
+          ? isSingleFlowKycEnabled()
+            ? buildSingleFlowAccountOpeningReviewOnSubmit(
+                state,
+                cid,
+                submittedChild?.status ?? 'in_progress',
+              )
+            : {
+                documentReview: { status: 'pending' },
+                principalReview: { status: 'pending' },
+                accountOpeningPreReviewTimeline: buildAccountOpeningPreReviewTimeline(),
+              }
           : {
               amlReview: { status: 'pending' as const },
               documentReview: { status: 'pending' },
@@ -1721,7 +2046,11 @@ function workflowReducer(state: WorkflowState, action: WorkflowAction): Workflow
         ...state,
         childReviewsByChildId: {
           ...state.childReviewsByChildId,
-          [cid]: { ...prev, documentReview: { status: 'igo', decidedAt: ts } },
+          [cid]: {
+            ...prev,
+            documentReview: { status: 'igo', decidedAt: ts },
+            accountWorkflowPhase: 'principal_review',
+          },
         },
       }
     }
@@ -2013,6 +2342,445 @@ function workflowReducer(state: WorkflowState, action: WorkflowAction): Workflow
       }
     }
 
+    case 'AUTO_RUN_OWNER_KYC': {
+      return applyAutoRunOwnerKycToState(state, action.accountChildId, action.partyId, {
+        reRunReason: action.reRunReason,
+        runBy: action.runBy,
+      })
+    }
+
+    case 'OWNER_AML_REVIEW_CLEAR': {
+      const ts = new Date().toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })
+      let next = patchAccountOwnerReviews(state, action.accountChildId, action.partyId, {
+        amlReview: {
+          status: 'cleared',
+          decidedAt: ts,
+          ...(action.approvalReason ? { approvalReason: action.approvalReason } : {}),
+        },
+      })
+      const owners = getAccountPartiesRequiringKyc(state, action.accountChildId)
+      const allCleared = owners.every(
+        (p) => next?.[action.accountChildId]?.ownerReviews?.[p.id]?.amlReview?.status === 'cleared',
+      )
+      if (allCleared) {
+        next = {
+          ...next,
+          [action.accountChildId]: {
+            ...next![action.accountChildId],
+            accountWorkflowPhase: 'document_review',
+          },
+        }
+      }
+      return { ...state, childReviewsByChildId: next }
+    }
+
+    case 'OWNER_AML_REVIEW_FLAG': {
+      const ts = new Date().toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })
+      const next = patchAccountOwnerReviews(
+        state,
+        action.accountChildId,
+        action.partyId,
+        {
+          amlReview: { status: 'flagged', decidedAt: ts, findings: action.findings },
+          amlPayloadDemo: {
+            ofacMatches: 1,
+            watchlistHits: ['Potential PEP match (demo)'],
+            summary: action.findings,
+          },
+        },
+        { accountWorkflowPhase: 'aml_review' },
+      )
+      return { ...state, childReviewsByChildId: next }
+    }
+
+    case 'OWNER_AML_REQUEST_INFO': {
+      const ts = new Date().toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })
+      const next = patchAccountOwnerReviews(
+        state,
+        action.accountChildId,
+        action.partyId,
+        {
+          amlReview: {
+            status: 'info_requested',
+            decidedAt: ts,
+            infoRequestComments: action.comments,
+          },
+        },
+        { accountWorkflowPhase: 'aml_review' },
+      )
+      const tasks = state.tasks.map((t) => {
+        if (!t.children) return t
+        return {
+          ...t,
+          children: t.children.map((c) =>
+            c.id === action.accountChildId ? { ...c, status: 'in_progress' as const } : c,
+          ),
+        }
+      })
+      return { ...state, tasks, childReviewsByChildId: next }
+    }
+
+    case 'OWNER_CIP_APPROVE': {
+      const ts = new Date().toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })
+      const next = patchAccountOwnerReviews(state, action.accountChildId, action.partyId, {
+        hoKycReview: { status: 'approved', decidedAt: ts },
+        cipStatus: defaultOwnerCipPass(),
+      })
+      const party = state.relatedParties.find((p) => p.id === action.partyId)
+      const nextParties = party
+        ? state.relatedParties.map((p) =>
+            p.id === party.id ? { ...p, kycStatus: 'verified' as const } : p,
+          )
+        : state.relatedParties
+      return { ...state, relatedParties: nextParties, childReviewsByChildId: next }
+    }
+
+    case 'OWNER_CIP_REQUEST_CHANGES': {
+      const ts = new Date().toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })
+      const next = patchAccountOwnerReviews(
+        state,
+        action.accountChildId,
+        action.partyId,
+        {
+          hoKycReview: { status: 'changes_requested', decidedAt: ts, comments: action.comments },
+          cipStatus: {
+            idVerification: 'pass',
+            addressMatch: 'fail',
+            dobMatch: 'pass',
+            overallStatus: 'fail',
+          },
+          cipPayloadDemo: {
+            identityProvider: 'LexisNexis InstantID',
+            mismatches: ['Address does not match utility bill on file'],
+          },
+        },
+        { accountWorkflowPhase: 'document_review' },
+      )
+      const tasks = state.tasks.map((t) => {
+        if (!t.children) return t
+        return {
+          ...t,
+          children: t.children.map((c) =>
+            c.id === action.accountChildId ? { ...c, status: 'in_progress' as const } : c,
+          ),
+        }
+      })
+      return { ...state, tasks, childReviewsByChildId: next }
+    }
+
+    case 'SET_ACCOUNT_WORKFLOW_PHASE': {
+      const prev = state.childReviewsByChildId?.[action.accountChildId] ?? {}
+      return {
+        ...state,
+        childReviewsByChildId: {
+          ...state.childReviewsByChildId,
+          [action.accountChildId]: {
+            ...prev,
+            accountWorkflowPhase: action.phase,
+          },
+        },
+      }
+    }
+
+    case 'ACCOUNT_AML_APPROVE_ALL': {
+      const owners = getAccountPartiesRequiringKyc(state, action.accountChildId)
+      const partyIds = owners.map((p) => p.id)
+      return applyParticipantAmlApprovalForAccount(state, action.accountChildId, partyIds, {
+        approvalReason: action.approvalReason,
+        runBy: state.demoViewMode ?? 'aml',
+      })
+    }
+
+    case 'ACCOUNT_AML_REJECT_ALL': {
+      const ts = new Date().toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })
+      const nowIso = new Date().toISOString()
+      const owners = getAccountPartiesRequiringKyc(state, action.accountChildId)
+      const partyIds = owners.map((p) => p.id)
+      const structuredReason = action.rejectionReason.trim()
+      const reviewerNotes = action.reviewerNotes?.trim() ?? ''
+      const combinedNote = formatStructuredReviewText(structuredReason, reviewerNotes)
+      let next = state.childReviewsByChildId ?? {}
+      for (const p of owners) {
+        next = patchAccountOwnerReviews({ ...state, childReviewsByChildId: next }, action.accountChildId, p.id, {
+          amlReview: {
+            status: 'flagged',
+            decidedAt: ts,
+            ...(isMeaningfulReviewerMessage(combinedNote) ? { findings: combinedNote } : {}),
+          },
+          ...(structuredReason
+            ? {
+                amlPayloadDemo: {
+                  ofacMatches: 1,
+                  watchlistHits: ['Reviewer-flagged after AML screening (demo)'],
+                  summary: structuredReason,
+                },
+              }
+            : {}),
+        }) ?? next
+      }
+      const prev = next[action.accountChildId] ?? {}
+      let out: WorkflowState = {
+        ...state,
+        tasks: setAccountChildStatus(state.tasks, action.accountChildId, 'rejected'),
+        childReviewsByChildId: {
+          ...next,
+          [action.accountChildId]: { ...prev, accountWorkflowPhase: 'escalation_hold' },
+        },
+      }
+      out = appendAccountDispositionSnapshots(out, action.accountChildId, partyIds, {
+        ranAt: nowIso,
+        eventKind: 'aml_reject',
+        runBy: state.demoViewMode ?? 'aml',
+        amlOutcome: 'flagged',
+        rejectionReasonCode: action.rejectionReasonCode,
+        rejectionReason: structuredReason,
+        ...(isMeaningfulReviewerMessage(reviewerNotes) ? { reviewerNotes } : {}),
+        ...(isMeaningfulReviewerMessage(combinedNote) ? { note: combinedNote } : {}),
+      })
+      return propagateOwnersAcrossAccounts(out, action.accountChildId, partyIds)
+    }
+
+    case 'ACCOUNT_AML_REQUEST_INFO': {
+      const ts = new Date().toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })
+      const nowIso = new Date().toISOString()
+      const owners = getAccountPartiesRequiringKyc(state, action.accountChildId)
+      const partyIds = owners.map((p) => p.id)
+      let next = state.childReviewsByChildId ?? {}
+      for (const p of owners) {
+        next = patchAccountOwnerReviews({ ...state, childReviewsByChildId: next }, action.accountChildId, p.id, {
+          amlReview: {
+            status: 'info_requested',
+            decidedAt: ts,
+            ...(isMeaningfulReviewerMessage(action.comments)
+              ? { infoRequestComments: action.comments }
+              : {}),
+          },
+        }) ?? next
+      }
+      const prev = next[action.accountChildId] ?? {}
+      let out: WorkflowState = {
+        ...state,
+        tasks: setAccountChildStatus(state.tasks, action.accountChildId, 'rejected'),
+        childReviewsByChildId: {
+          ...next,
+          [action.accountChildId]: { ...prev, accountWorkflowPhase: 'draft' },
+        },
+      }
+      out = appendAccountDispositionSnapshots(out, action.accountChildId, partyIds, {
+        ranAt: nowIso,
+        eventKind: 'aml_request_info',
+        runBy: state.demoViewMode ?? 'aml',
+        amlOutcome: 'info_requested',
+        ...(isMeaningfulReviewerMessage(action.comments) ? { note: action.comments } : {}),
+      })
+      return propagateOwnersAcrossAccounts(out, action.accountChildId, partyIds)
+    }
+
+    case 'ACCOUNT_AML_ESCALATE': {
+      const ts = new Date().toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })
+      const nowIso = new Date().toISOString()
+      const owners = getAccountPartiesRequiringKyc(state, action.accountChildId)
+      const partyIds = owners.map((p) => p.id)
+      let next = state.childReviewsByChildId ?? {}
+      for (const p of owners) {
+        next = patchAccountOwnerReviews({ ...state, childReviewsByChildId: next }, action.accountChildId, p.id, {
+          amlReview: { status: 'escalated', decidedAt: ts, reason: action.reason },
+        }) ?? next
+      }
+      const prev = next[action.accountChildId] ?? {}
+      let out: WorkflowState = {
+        ...state,
+        childReviewsByChildId: {
+          ...next,
+          [action.accountChildId]: { ...prev, accountWorkflowPhase: 'escalation_hold' },
+        },
+      }
+      out = appendAccountDispositionSnapshots(out, action.accountChildId, partyIds, {
+        ranAt: nowIso,
+        eventKind: 'aml_escalate',
+        runBy: state.demoViewMode ?? 'aml',
+        amlOutcome: 'escalated',
+        note: action.reason,
+      })
+      return propagateOwnersAcrossAccounts(out, action.accountChildId, partyIds)
+    }
+
+    case 'ACCOUNT_CIP_APPROVE_ALL': {
+      const ts = new Date().toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })
+      const nowIso = new Date().toISOString()
+      const owners = getAccountPartiesRequiringKyc(state, action.accountChildId)
+      const partyIds = owners.map((p) => p.id)
+      let next = state.childReviewsByChildId ?? {}
+      for (const p of owners) {
+        next = patchAccountOwnerReviews({ ...state, childReviewsByChildId: next }, action.accountChildId, p.id, {
+          hoKycReview: { status: 'approved', decidedAt: ts },
+          cipStatus: defaultOwnerCipPass(),
+        }) ?? next
+      }
+      const prev = next[action.accountChildId] ?? {}
+      const verifiedPartyIds = new Set(partyIds)
+      let out: WorkflowState = {
+        ...state,
+        relatedParties: state.relatedParties.map((p) =>
+          verifiedPartyIds.has(p.id) ? { ...p, kycStatus: 'verified' as const } : p,
+        ),
+        childReviewsByChildId: {
+          ...next,
+          [action.accountChildId]: {
+            ...prev,
+            // Cascade to legacy timeline so Document Review stage marks completed.
+            documentReview: { status: 'igo', decidedAt: ts },
+            accountWorkflowPhase: 'principal_review',
+          },
+        },
+      }
+      out = appendAccountDispositionSnapshots(out, action.accountChildId, partyIds, {
+        ranAt: nowIso,
+        eventKind: 'cip_approve',
+        runBy: state.demoViewMode ?? 'ho-documents',
+        cipOutcome: 'pass',
+      })
+      return propagateOwnersAcrossAccounts(out, action.accountChildId, partyIds)
+    }
+
+    case 'ACCOUNT_CIP_REJECT_ALL': {
+      const ts = new Date().toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })
+      const nowIso = new Date().toISOString()
+      const owners = getAccountPartiesRequiringKyc(state, action.accountChildId)
+      const partyIds = owners.map((p) => p.id)
+      let next = state.childReviewsByChildId ?? {}
+      for (const p of owners) {
+        next = patchAccountOwnerReviews({ ...state, childReviewsByChildId: next }, action.accountChildId, p.id, {
+          hoKycReview: {
+            status: 'changes_requested',
+            decidedAt: ts,
+            ...(isMeaningfulReviewerMessage(action.comments) ? { comments: action.comments } : {}),
+          },
+          cipStatus: {
+            idVerification: 'fail',
+            addressMatch: 'pass',
+            dobMatch: 'pass',
+            overallStatus: 'fail',
+          },
+        }) ?? next
+      }
+      const prev = next[action.accountChildId] ?? {}
+      let out: WorkflowState = {
+        ...state,
+        tasks: setAccountChildStatus(state.tasks, action.accountChildId, 'rejected'),
+        childReviewsByChildId: {
+          ...next,
+          [action.accountChildId]: { ...prev, accountWorkflowPhase: 'escalation_hold' },
+        },
+      }
+      out = appendAccountDispositionSnapshots(out, action.accountChildId, partyIds, {
+        ranAt: nowIso,
+        eventKind: 'cip_reject',
+        runBy: state.demoViewMode ?? 'ho-documents',
+        cipOutcome: 'fail',
+        ...(isMeaningfulReviewerMessage(action.comments) ? { note: action.comments } : {}),
+      })
+      return propagateOwnersAcrossAccounts(out, action.accountChildId, partyIds)
+    }
+
+    case 'ACCOUNT_CIP_REQUEST_INFO': {
+      const ts = new Date().toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })
+      const nowIso = new Date().toISOString()
+      const owners = getAccountPartiesRequiringKyc(state, action.accountChildId)
+      const partyIds = owners.map((p) => p.id)
+      let next = state.childReviewsByChildId ?? {}
+      for (const p of owners) {
+        next = patchAccountOwnerReviews({ ...state, childReviewsByChildId: next }, action.accountChildId, p.id, {
+          hoKycReview: {
+            status: 'changes_requested',
+            decidedAt: ts,
+            ...(isMeaningfulReviewerMessage(action.comments) ? { comments: action.comments } : {}),
+          },
+        }) ?? next
+      }
+      const prev = next[action.accountChildId] ?? {}
+      let out: WorkflowState = {
+        ...state,
+        tasks: setAccountChildStatus(state.tasks, action.accountChildId, 'rejected'),
+        childReviewsByChildId: {
+          ...next,
+          [action.accountChildId]: { ...prev, accountWorkflowPhase: 'draft' },
+        },
+      }
+      out = appendAccountDispositionSnapshots(out, action.accountChildId, partyIds, {
+        ranAt: nowIso,
+        eventKind: 'cip_request_info',
+        runBy: state.demoViewMode ?? 'ho-documents',
+        ...(isMeaningfulReviewerMessage(action.comments) ? { note: action.comments } : {}),
+      })
+      return propagateOwnersAcrossAccounts(out, action.accountChildId, partyIds)
+    }
+
+    case 'ACCOUNT_PRINCIPAL_APPROVE': {
+      const ts = new Date().toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })
+      const prev = state.childReviewsByChildId?.[action.accountChildId] ?? {}
+      return {
+        ...state,
+        tasks: setAccountChildStatus(state.tasks, action.accountChildId, 'complete'),
+        childReviewsByChildId: {
+          ...state.childReviewsByChildId,
+          [action.accountChildId]: {
+            ...prev,
+            // Cascade to legacy timeline: ensure both Document Review and Principal Review stages
+            // mark completed on approval (defensive in case Document Review wasn't explicitly set).
+            documentReview:
+              prev.documentReview?.status === 'igo'
+                ? prev.documentReview
+                : { status: 'igo', decidedAt: prev.documentReview?.decidedAt ?? ts },
+            principalReview: { status: 'igo', decidedAt: ts },
+            accountWorkflowPhase: 'complete',
+          },
+        },
+      }
+    }
+
+    case 'ACCOUNT_PRINCIPAL_REJECT': {
+      const ts = new Date().toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })
+      const prev = state.childReviewsByChildId?.[action.accountChildId] ?? {}
+      return {
+        ...state,
+        tasks: setAccountChildStatus(state.tasks, action.accountChildId, 'rejected'),
+        childReviewsByChildId: {
+          ...state.childReviewsByChildId,
+          [action.accountChildId]: {
+            ...prev,
+            principalReview: {
+              status: 'nigo',
+              decidedAt: ts,
+              ...(isMeaningfulReviewerMessage(action.reason) ? { nigoReason: action.reason } : {}),
+            },
+            accountWorkflowPhase: 'escalation_hold',
+          },
+        },
+      }
+    }
+
+    case 'ACCOUNT_PRINCIPAL_REQUEST_INFO': {
+      const ts = new Date().toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })
+      const prev = state.childReviewsByChildId?.[action.accountChildId] ?? {}
+      return {
+        ...state,
+        tasks: setAccountChildStatus(state.tasks, action.accountChildId, 'rejected'),
+        childReviewsByChildId: {
+          ...state.childReviewsByChildId,
+          [action.accountChildId]: {
+            ...prev,
+            principalReview: {
+              status: 'nigo',
+              decidedAt: ts,
+              ...(isMeaningfulReviewerMessage(action.comments) ? { nigoFeedback: action.comments } : {}),
+            },
+            accountWorkflowPhase: 'draft',
+          },
+        },
+      }
+    }
+
     case 'SET_DEMO_VIEW': {
       const remappedIdx = remapChildSubTaskIndexForDemoView(state, action.mode)
       return {
@@ -2089,7 +2857,12 @@ export function useChildActionContext() {
   const parentTask = state.tasks.find((t) =>
     t.children?.some((c) => c.id === child.id)
   )
-  const baseSubTasks = getVisibleChildSubTasks(child.childType, state.demoViewMode, child.status)
+  const baseSubTasks = getVisibleChildSubTasks(child.childType, state.demoViewMode, child.status, {
+    accountWorkflowPhase:
+      child.childType === 'account-opening'
+        ? state.childReviewsByChildId?.[child.id]?.accountWorkflowPhase
+        : undefined,
+  })
   const subTasks =
     child.childType === 'account-opening' && parentTask?.formKey === OPEN_ACCOUNTS_WITH_ANNUITY_FORM_KEY
       ? baseSubTasks.filter((s) => s.suffix === 'account-owners')
@@ -2158,12 +2931,22 @@ export function useAdvisorFormsEditable(): boolean {
     )
   }
 
-  return (
-    rs.amlReview?.status === 'info_requested' ||
-    rs.amlReview?.status === 'flagged' ||
+  if (
     rs.documentReview?.status === 'nigo' ||
     rs.principalReview?.status === 'nigo' ||
-    false
+    rs.amlReview?.status === 'info_requested' ||
+    rs.amlReview?.status === 'flagged'
+  ) {
+    return true
+  }
+
+  const owners = rs.ownerReviews
+  if (!owners) return false
+  return Object.values(owners).some(
+    (owner) =>
+      owner.amlReview?.status === 'info_requested' ||
+      owner.amlReview?.status === 'flagged' ||
+      owner.hoKycReview?.status === 'changes_requested',
   )
 }
 
@@ -2204,6 +2987,13 @@ export function useAdvisorResubmitEligible(): boolean {
     .find((c) => c.id === state.activeChildActionId)
   if (!child) return false
 
+  if (
+    child.childType === 'account-opening' &&
+    (child.status === 'not_started' || child.status === 'in_progress')
+  ) {
+    return false
+  }
+
   if (child.status === 'rejected') return true
 
   const rs = getChildReviewState(state, state.activeChildActionId)
@@ -2218,11 +3008,21 @@ export function useAdvisorResubmitEligible(): boolean {
     )
   }
 
-  return (
-    rs.amlReview?.status === 'info_requested' ||
-    rs.amlReview?.status === 'flagged' ||
+  if (
     rs.documentReview?.status === 'nigo' ||
     rs.principalReview?.status === 'nigo' ||
-    false
+    rs.amlReview?.status === 'info_requested' ||
+    rs.amlReview?.status === 'flagged'
+  ) {
+    return true
+  }
+
+  const owners = rs.ownerReviews
+  if (!owners) return false
+  return Object.values(owners).some(
+    (owner) =>
+      owner.amlReview?.status === 'info_requested' ||
+      owner.amlReview?.status === 'flagged' ||
+      owner.hoKycReview?.status === 'changes_requested',
   )
 }

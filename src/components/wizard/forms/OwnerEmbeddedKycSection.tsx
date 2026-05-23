@@ -30,7 +30,7 @@ export function OwnerEmbeddedKycSection({ accountChildId, party }: OwnerEmbedded
 
   const missingFields = getMissingOwnerKycFields(party)
   const reusedFromPrior = Boolean(ownerReview?.reusableVerifiedKyc) && !ownerReview?.autoTriggeredAt
-  const badge = getKycStatusBadge(ownerReview, party)
+  const badge = getKycStatusBadge(ownerReview, party, { includeHint: true })
 
   return (
     <div className="mt-3 rounded-lg border border-border/80 bg-muted/20 px-3 py-3 space-y-2">
@@ -62,12 +62,6 @@ export function OwnerEmbeddedKycSection({ accountChildId, party }: OwnerEmbedded
             Owner verification runs once these fields are complete and the forms package is sent.
           </p>
         </div>
-      )}
-
-      {missingFields.length === 0 && !ownerReview?.autoTriggeredAt && !reusedFromPrior && (
-        <p className="text-xs text-muted-foreground">
-          Owner verification will run when the forms package is sent to the client.
-        </p>
       )}
 
       {ownerReview?.amlReview?.status === 'info_requested' && isAdvisor && (

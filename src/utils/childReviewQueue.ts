@@ -1,4 +1,5 @@
 import type { ChildReviewState, ChildTask } from '@/types/workflow'
+import { isSingleFlowKycEnabled } from '@/utils/ownerKycReview'
 
 type ChildForQueue = Pick<ChildTask, 'status' | 'childType'>
 
@@ -12,6 +13,13 @@ export function isChildInAmlReviewQueue(
   child: ChildForQueue,
   reviewState?: ChildReviewState,
 ): boolean {
+  if (child.childType === 'account-opening' && isSingleFlowKycEnabled()) {
+    const phase = reviewState?.accountWorkflowPhase
+    return (
+      child.status === 'awaiting_review' &&
+      (phase === 'aml_review' || phase === 'escalation_hold')
+    )
+  }
   return child.status === 'awaiting_review' && reviewState?.amlReview?.status === 'pending'
 }
 
@@ -20,6 +28,12 @@ export function isChildInHoKycReviewQueue(
   child: ChildForQueue,
   reviewState?: ChildReviewState,
 ): boolean {
+  if (child.childType === 'account-opening' && isSingleFlowKycEnabled()) {
+    return (
+      child.status === 'awaiting_review' &&
+      reviewState?.accountWorkflowPhase === 'document_review'
+    )
+  }
   return (
     child.childType === 'kyc' &&
     child.status === 'awaiting_review' &&

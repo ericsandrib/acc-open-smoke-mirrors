@@ -8,7 +8,11 @@ const VISIT_ONLY_FORM_KEYS = new Set([
   'kyc-child-aml-review',
   'acct-child-funding-transfers',
   'acct-child-features-services',
+  'acct-child-forms-package',
+  'acct-child-supporting-documents',
   'acct-child-documents-review',
+  'acct-child-cip-review',
+  'acct-child-aml-review',
 ])
 
 export function subTaskCompletesOnVisit(formKey: string): boolean {

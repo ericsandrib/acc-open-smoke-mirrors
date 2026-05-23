@@ -14,6 +14,7 @@ import { VerticalNav } from '@/components/navigation/vertical-nav'
 import { AccessoryBar } from '@/components/accessory-bar'
 import { useWizardRightPanel } from './wizardRightPanelContext'
 import { Button } from '@/components/ui/button'
+import { WIZARD_FORM_SCROLL_AREA_ID } from '@/utils/wizardScroll'
 
 function RightSidebarToggle() {
   const { collapsed, toggle } = useWizardRightPanel()
@@ -50,6 +51,8 @@ function WizardAccessoryBar() {
 import { ComposeDialog } from '@/components/dashboard/ComposeDialog'
 import { AdvisorReviewerPerspectiveCard } from '@/components/wizard/AdvisorReviewerPerspectiveCard'
 import { useChildActionContext, useWorkflow } from '@/stores/workflowStore'
+import { useTheme } from '@/stores/themeStore'
+import { normalizeV5NoAnnuityPageForNav } from '@/utils/hideKycChildWorkflows'
 import { cn } from '@/lib/utils'
 import { useNavigate, useSearchParams, useLocation } from 'react-router-dom'
 import {
@@ -382,8 +385,8 @@ export function WizardLayout() {
 function WizardFormScrollArea({ children }: { children: ReactNode }) {
   return (
     <div
-      id="wizard-form-scroll-area"
-      className="min-h-0 flex-1 basis-0 overflow-y-auto overscroll-contain [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden"
+      id={WIZARD_FORM_SCROLL_AREA_ID}
+      className="min-h-0 flex-1 basis-0 overflow-y-auto overscroll-y-contain [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden"
     >
       {children}
     </div>
@@ -392,6 +395,20 @@ function WizardFormScrollArea({ children }: { children: ReactNode }) {
 
 function WizardLayoutInner() {
   const { state, dispatch } = useWorkflow()
+
+  useEffect(() => {
+    const htmlOverflow = document.documentElement.style.overflow
+    const bodyOverflow = document.body.style.overflow
+    document.documentElement.style.overflow = 'hidden'
+    document.body.style.overflow = 'hidden'
+    return () => {
+      document.documentElement.style.overflow = htmlOverflow
+      document.body.style.overflow = bodyOverflow
+    }
+  }, [])
+
+  const { hideKycChildWorkflows } = useTheme()
+  const hideKycPage = hideKycChildWorkflows
   const childActionCtx = useChildActionContext()
   const navigate = useNavigate()
   const variant = useOpenAccountsVariant()
@@ -522,6 +539,47 @@ function WizardLayoutInner() {
     dispatch,
   ])
 
+  /** Hide KYC child workflows: drop advisor-only KYC Verification sub-page when setting or single-flow is on. */
+  useEffect(() => {
+    if (!hideKycPage || state.activeChildActionId) return
+    const task = state.tasks.find((x) => x.id === state.activeTaskId)
+    if (task?.formKey !== OPEN_ACCOUNTS_FORM_KEY || task.actionId !== 'account-opening') return
+    const page = state.v5NoAnnuityOpenAccountsPage
+    if (page == null) return
+    const normalized = normalizeV5NoAnnuityPageForNav(page, true)
+    if (normalized !== page) {
+      dispatch({ type: 'SET_V5_NO_ANNUITY_OPEN_ACCOUNTS_PAGE', page: normalized })
+    }
+  }, [
+    hideKycPage,
+    state.activeChildActionId,
+    state.activeTaskId,
+    state.tasks,
+    state.v5NoAnnuityOpenAccountsPage,
+    dispatch,
+  ])
+
+  /** Split journey with a stale null sub-page: show Account Opening → Accounts, not a bare task title. */
+  useEffect(() => {
+    if (state.activeChildActionId) return
+    if (
+      !state.tasks.some((t) => t.formKey === OPEN_ACCOUNTS_FORM_KEY) ||
+      !state.tasks.some((t) => t.formKey === OPEN_ACCOUNTS_WITH_ANNUITY_FORM_KEY)
+    ) {
+      return
+    }
+    const task = state.tasks.find((x) => x.id === state.activeTaskId)
+    if (task?.formKey !== OPEN_ACCOUNTS_FORM_KEY || task.actionId !== 'account-opening') return
+    if (state.v5NoAnnuityOpenAccountsPage != null) return
+    dispatch({ type: 'SET_V5_NO_ANNUITY_OPEN_ACCOUNTS_PAGE', page: 'instructions' })
+  }, [
+    state.activeChildActionId,
+    state.activeTaskId,
+    state.tasks,
+    state.v5NoAnnuityOpenAccountsPage,
+    dispatch,
+  ])
+
   const activeChild = inChildAction
     ? state.tasks.flatMap((t) => t.children ?? []).find((c) => c.id === state.activeChildActionId)
     : null
@@ -617,7 +675,7 @@ function WizardLayoutInner() {
       }).length
       const kycPct = kycOwnerIds.length > 0 && kycDone > 0 ? 100 : 0
 
-      // Section 3: Envelopes
+      // Section 3: Forms Package
       const envelopes = (taskData.esignEnvelopes as Array<unknown> | undefined) ?? []
       const esignPct = envelopes.length > 0 ? 100 : 0
 
@@ -697,7 +755,7 @@ function WizardLayoutInner() {
       <WizardRightPanelProvider>
       <SupportingDocumentPreviewProvider>
       <div className="flex min-h-0 flex-col flex-1 min-w-0">
-      <div className="flex flex-1 overflow-hidden">
+      <div className="flex flex-1 min-h-0 overflow-hidden">
           {inChildAction ? (
             isAmlView && isKycChild ? (
               <div className="flex-1 flex flex-col min-h-0 min-w-0 overflow-hidden">
@@ -768,21 +826,19 @@ function WizardLayoutInner() {
                 </div>
               )
             ) : (
-              <>
+              <div className="flex flex-1 min-h-0 overflow-hidden">
                 <ChildActionSidebar />
-                <div className="flex-1 min-h-0 flex flex-col overflow-hidden">
-                  <WizardAccessoryBar />
-                  <div className="relative flex flex-1 min-h-0 overflow-hidden">
-                    <div className="flex-1 min-h-0 flex flex-col overflow-hidden min-w-0">
-                      <WizardFormScrollArea>
-                        <ChildActionContent />
-                      </WizardFormScrollArea>
-                      <ChildActionFooter />
-                    </div>
+                <div className="flex flex-1 min-h-0 overflow-hidden min-w-0">
+                  <div className="flex flex-1 min-h-0 flex flex-col overflow-hidden min-w-0">
+                    <WizardAccessoryBar />
+                    <WizardFormScrollArea>
+                      <ChildActionContent />
+                    </WizardFormScrollArea>
+                    <ChildActionFooter />
                   </div>
+                  <ChildActionRightSidebar />
                 </div>
-                <ChildActionRightSidebar />
-              </>
+              </div>
             )
           ) : (
             <>

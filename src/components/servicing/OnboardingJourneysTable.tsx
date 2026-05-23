@@ -69,12 +69,21 @@ function childWorkflowIcon(sectionTitle: string) {
   return <Link2 className={rowIconClass} />
 }
 
-export function deriveOnboardingJourneyRows(journeys: Journey[]): OnboardingJourneyRow[] {
+export function deriveOnboardingJourneyRows(
+  journeys: Journey[],
+  hideKycChildWorkflows = true,
+  hideAccountChildWorkflows = false,
+): OnboardingJourneyRow[] {
   return journeys
     .filter((journey) => journey.category === 'Onboarding')
     .map((journey) => {
-      const totalTasks = journey.actions.reduce((sum, a) => sum + a.tasks.length, 0)
-      const progressedTasks = journey.actions.reduce(
+      const visibleActions = visibleOnboardingJourneyActions(
+        journey.actions,
+        hideKycChildWorkflows,
+        hideAccountChildWorkflows,
+      )
+      const totalTasks = visibleActions.reduce((sum, a) => sum + a.tasks.length, 0)
+      const progressedTasks = visibleActions.reduce(
         (sum, a) => sum + a.tasks.filter((t) => t.status !== 'not_started').length,
         0,
       )
@@ -86,8 +95,10 @@ interface OnboardingJourneysTableProps {
   rows: OnboardingJourneyRow[]
   visibleColumns: string[]
   showNestedGroups?: boolean
-  /** When true, hide KYC Reviews / Accounts section headers and KYC / account-opening child rows. */
-  hideChildWorkflows?: boolean
+  /** When true, hide KYC Reviews nested rows (single-flow). */
+  hideKyc?: boolean
+  /** When true, hide Accounts section and per-account child rows (Journeys tab only). */
+  hideAccountChildWorkflows?: boolean
 }
 
 function ProgressBar({ value, className }: { value: number; className?: string }) {
@@ -106,7 +117,8 @@ export function OnboardingJourneysTable({
   rows,
   visibleColumns,
   showNestedGroups = false,
-  hideChildWorkflows = false,
+  hideKyc = true,
+  hideAccountChildWorkflows = false,
 }: OnboardingJourneysTableProps) {
   const { navigateToServicing } = useJourneyNavigation()
   const [expandedJourneyIds, setExpandedJourneyIds] = useState<Set<string>>(new Set())
@@ -184,7 +196,11 @@ export function OnboardingJourneysTable({
         {sortedRows.flatMap((row) => {
           const isExpanded = expandedJourneyIds.has(row.id)
           const journeyPct = row.totalTasks > 0 ? row.progressedTasks / row.totalTasks : 0
-          const actions = visibleOnboardingJourneyActions(row.actions, hideChildWorkflows)
+          const actions = visibleOnboardingJourneyActions(
+            row.actions,
+            hideKyc,
+            hideAccountChildWorkflows,
+          )
           return [
             /* ── Journey row ─────────────────────────────────── */
             <DataTableRow
@@ -259,9 +275,7 @@ export function OnboardingJourneysTable({
                     const actionTotal = action.tasks.length
                     const actionDone = action.tasks.filter((t) => t.status !== 'not_started').length
                     const actionPct = actionTotal > 0 ? actionDone / actionTotal : 0
-                    const hasChildRegion =
-                      !hideChildWorkflows &&
-                      childActions.some((childAction) => {
+                    const hasChildRegion = childActions.some((childAction) => {
                         const grandchildActions = actions.filter((a) => a.parentActionId === childAction.id && !a.groupType)
                         const groupActions = actions.filter((a) => a.parentActionId === childAction.id && a.groupType)
                         return grandchildActions.length > 0 || groupActions.length > 0
@@ -318,7 +332,7 @@ export function OnboardingJourneysTable({
                         )}
                       </DataTableRow>,
 
-                      ...(isActionExpanded && !hideChildWorkflows ? [
+                      ...(isActionExpanded ? [
                         ...childActions.flatMap((childAction) => {
                         const grandchildActions = actions.filter((a) => a.parentActionId === childAction.id && !a.groupType)
                         const groupActions = actions.filter((a) => a.parentActionId === childAction.id && a.groupType)

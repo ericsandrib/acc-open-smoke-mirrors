@@ -1,4 +1,5 @@
-import type { ChildType, TaskStatus, WorkflowState } from '@/types/workflow'
+import type { AccountWorkflowPhase, ChildType, TaskStatus, WorkflowState } from '@/types/workflow'
+import { getPersistedHideKycChildWorkflows } from '@/utils/hideKycChildWorkflows'
 
 export interface SubTaskDefinition {
   suffix: string
@@ -31,7 +32,10 @@ const CHILD_TYPE_CONFIGS: Record<ChildType, ChildTypeConfig> = {
       { suffix: 'account-owners', title: 'Account & Owners', formKey: 'acct-child-account-owners' },
       { suffix: 'funding-transfers', title: 'Funding & Asset Movement', formKey: 'acct-child-funding-transfers' },
       { suffix: 'features-services', title: 'Account Features & Services', formKey: 'acct-child-features-services' },
-      { suffix: 'documents-review', title: 'Documents', formKey: 'acct-child-documents-review' },
+      { suffix: 'cip-review', title: 'CIP Verification & Review', formKey: 'acct-child-cip-review' },
+      { suffix: 'aml-review', title: 'AML Screening & Review', formKey: 'acct-child-aml-review' },
+      { suffix: 'forms-package', title: 'Forms Package', formKey: 'acct-child-forms-package' },
+      { suffix: 'supporting-documents', title: 'Supporting Documents', formKey: 'acct-child-supporting-documents' },
     ],
   },
   'funding-line': {
@@ -73,6 +77,13 @@ const AML_EXTRA_SUBTASK_SUFFIXES: readonly SubTaskDefinition[] = [
   { suffix: 'aml-results', title: 'AML Review', formKey: 'kyc-child-aml-review' },
 ]
 
+/** @deprecated Combined Documents step — parse only for persisted child sub-task ids. */
+const LEGACY_ACCOUNT_OPENING_DOCUMENTS_SUBTASK: SubTaskDefinition = {
+  suffix: 'documents-review',
+  title: 'Documents',
+  formKey: 'acct-child-documents-review',
+}
+
 export function getChildTypeConfig(childType: ChildType): ChildTypeConfig {
   return CHILD_TYPE_CONFIGS[childType]
 }
@@ -89,15 +100,58 @@ export function isParentOpenAccountsSupportingDocumentsEnabled(): boolean {
   return false
 }
 
+export interface VisibleSubTaskOptions {
+  /** Single-flow account workflow phase for the child — controls AML/CIP review task visibility. */
+  accountWorkflowPhase?: AccountWorkflowPhase
+}
+
+/**
+ * Single-flow account-opening: AML Review / CIP Review are role-scoped review tasks.
+ * Visible only when "Hide KYC child workflows" is enabled AND the viewer is in the matching review role.
+ * Workflow-state transitions are surfaced through the bottom-left Application Status card, not by
+ * exposing these tasks to advisors.
+ */
+function isAccountOpeningReviewTaskVisible(
+  sub: SubTaskDefinition,
+  demoViewMode: WorkflowState['demoViewMode'],
+  _phase: AccountWorkflowPhase | undefined,
+): boolean {
+  if (!getPersistedHideKycChildWorkflows()) return false
+  if (sub.suffix === 'aml-review') {
+    return demoViewMode === 'aml'
+  }
+  if (sub.suffix === 'cip-review') {
+    return demoViewMode === 'ho-documents' || demoViewMode === 'ho-kyc'
+  }
+  return true
+}
+
 export function getVisibleChildSubTasks(
   childType: ChildType,
   demoViewMode: WorkflowState['demoViewMode'],
   _childStatus?: TaskStatus,
+  options?: VisibleSubTaskOptions,
 ): readonly SubTaskDefinition[] {
   if (childType === 'kyc' && demoViewMode === 'aml') {
     return KYC_AML_REVIEW_SUBTASKS
   }
-  return CHILD_TYPE_CONFIGS[childType].subTasks
+  const all = CHILD_TYPE_CONFIGS[childType].subTasks
+  if (childType === 'kyc' && demoViewMode === 'ho-principal') {
+    return all.filter((s) => s.suffix !== 'documents')
+  }
+  if (childType === 'account-opening') {
+    if (demoViewMode === 'aml') {
+      return all.filter((s) => s.suffix === 'aml-review' || s.suffix === 'supporting-documents')
+    }
+    return all.filter((s) => {
+      if (s.suffix === 'supporting-documents' && demoViewMode === 'ho-principal') {
+        return false
+      }
+      if (s.suffix !== 'aml-review' && s.suffix !== 'cip-review') return true
+      return isAccountOpeningReviewTaskVisible(s, demoViewMode, options?.accountWorkflowPhase)
+    })
+  }
+  return all
 }
 
 /** Stable sidebar / header label for a sub-task across advisor and reviewer views. */
@@ -151,6 +205,9 @@ export function parseChildSubTaskId(
       for (const sub of AML_EXTRA_SUBTASK_SUFFIXES) {
         flattened.push({ config, sub })
       }
+    }
+    if (config.childType === 'account-opening') {
+      flattened.push({ config, sub: LEGACY_ACCOUNT_OPENING_DOCUMENTS_SUBTASK })
     }
   }
   flattened.sort((a, b) => b.sub.suffix.length - a.sub.suffix.length)

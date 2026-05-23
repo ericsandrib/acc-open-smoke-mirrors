@@ -29,6 +29,7 @@ import {
 } from './ActionsTable'
 import type { OnboardingActionsGroupBy } from './table-controls'
 import { compactNestedActionLabel } from '@/utils/servicingActionLabel'
+import { sortJourneyGroupsByCreated } from '@/utils/journeyGroupSort'
 
 /** Open Accounts section shells (“KYC Reviews”, “Accounts”) nest under the parent but are not child workflows — they have no `childId`. */
 function isLeafChildWorkflowRow(row: ActionRow): boolean {
@@ -198,9 +199,19 @@ interface DocumentReviewActionsTableProps {
   nestRowMode?: 'pipeline' | 'allChildWorkflows'
   /** When true, funding / feature-service lines nest under their group headers (Onboarding Journeys parity). */
   showNestedFundingGroups?: boolean
+  /** When true, omit separate KYC child workflows from journey breakdown rows. */
+  hideKycChildWorkflows?: boolean
+  /** Pin this journey’s group to the top (matches Journeys tab). */
+  pinJourneyId?: string
 }
 
-type JourneyGroup = { journeyId: string; journeyName: string; relationshipName: string; rows: ActionRow[] }
+type JourneyGroup = {
+  journeyId: string
+  journeyName: string
+  relationshipName: string
+  createdAt: string
+  rows: ActionRow[]
+}
 
 type NestedDisplayRow =
   | { kind: 'workflow'; row: ActionRow; depth: number }
@@ -254,6 +265,8 @@ export function DocumentReviewActionsTable({
   groupBy,
   nestRowMode = 'pipeline',
   showNestedFundingGroups = false,
+  hideKycChildWorkflows = false,
+  pinJourneyId,
 }: DocumentReviewActionsTableProps) {
   const { navigateToServicing } = useJourneyNavigation()
   const navigate = useNavigate()
@@ -290,17 +303,17 @@ export function DocumentReviewActionsTable({
       list.push(r)
       map.set(r.journeyId, list)
     }
-    return [...map.entries()]
-      .map(([journeyId, groupRows]) => ({
-        journeyId,
-        journeyName: groupRows[0]?.journeyName ?? journeyId,
-        relationshipName: groupRows[0]?.relationshipName ?? '',
-        rows: [...groupRows].sort((a, b) =>
-          workflowLabel(a, visibleColumns).localeCompare(workflowLabel(b, visibleColumns)),
-        ),
-      }))
-      .sort((a, b) => a.journeyName.localeCompare(b.journeyName))
-  }, [nestRows, visibleColumns])
+    const built = [...map.entries()].map(([journeyId, groupRows]) => ({
+      journeyId,
+      journeyName: groupRows[0]?.journeyName ?? journeyId,
+      relationshipName: groupRows[0]?.relationshipName ?? '',
+      createdAt: groupRows[0]?.createdAt ?? '',
+      rows: [...groupRows].sort((a, b) =>
+        workflowLabel(a, visibleColumns).localeCompare(workflowLabel(b, visibleColumns)),
+      ),
+    }))
+    return sortJourneyGroupsByCreated(built, pinJourneyId)
+  }, [nestRows, visibleColumns, pinJourneyId])
 
   const journeyStubs = useMemo(() => {
     const m = new Map<string, Journey>()
@@ -312,11 +325,11 @@ export function DocumentReviewActionsTable({
   const allChildRowsByJourneyId = useMemo(() => {
     const map = new Map<string, ActionRow[]>()
     for (const journey of journeys) {
-      const children = deriveActionRows([journey]).filter(isLeafChildWorkflowRow)
+      const children = deriveActionRows([journey], hideKycChildWorkflows).filter(isLeafChildWorkflowRow)
       if (children.length > 0) map.set(journey.id, children)
     }
     return map
-  }, [journeys])
+  }, [journeys, hideKycChildWorkflows])
 
   const toggleJourney = (id: string) => {
     setExpandedJourneyIds((prev) => {

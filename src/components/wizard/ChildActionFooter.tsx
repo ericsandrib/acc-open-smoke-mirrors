@@ -11,12 +11,13 @@ import {
 import { Button } from '@/components/ui/button'
 import { CheckCircle2, ChevronLeft, ChevronRight, ShieldAlert } from 'lucide-react'
 import { getKycValidationErrors, kycChildHasOptionalIdVerification } from './forms/KycChildInfoForm'
-import { isChildAwaitingAdvisorClarification } from '@/utils/childStatusDisplay'
 import {
   getAccountOpeningChildSubmissionIssues,
   hasAccountOpeningChildBeenSubmittedForReview,
 } from '@/utils/accountOpeningChildProgress'
 import { OPEN_ACCOUNTS_WITH_ANNUITY_FORM_KEY } from '@/utils/openAccountsTaskContext'
+import { handleWizardPanelShellWheel } from '@/utils/wizardScroll'
+import { PENDING_RELEASE_STATUS_LABEL } from '@/utils/childStatusDisplay'
 
 function SubmissionBlockedModal({
   issues,
@@ -116,7 +117,6 @@ export function ChildActionFooter() {
   const ctx = useChildActionContext()
   const footerRef = useRef<HTMLElement | null>(null)
   const [showConfirmModal, setShowConfirmModal] = useState(false)
-  const [showResubmitModal, setShowResubmitModal] = useState(false)
   const [showCompleteStepModal, setShowCompleteStepModal] = useState(false)
   const [submissionIssues, setSubmissionIssues] = useState<string[] | null>(null)
   const advisorFormsEditable = useAdvisorFormsEditable()
@@ -129,12 +129,12 @@ export function ChildActionFooter() {
   const isNestedAccountLineChild =
     child.childType === 'funding-line' || child.childType === 'feature-service-line'
   const isAdvisorView = state.demoViewMode === 'advisor'
-  const isAmlView = state.demoViewMode === 'aml'
-  const isHoKycReviewerView =
-    isKyc &&
-    (state.demoViewMode === 'ho-kyc' ||
-      state.demoViewMode === 'ho-documents' ||
-      state.demoViewMode === 'ho-principal')
+  /** AML / Home Office reviewer modes: footer is Back + Next only (no Submit for Review). */
+  const isReviewerQueueView =
+    state.demoViewMode === 'aml' ||
+    state.demoViewMode === 'ho-documents' ||
+    state.demoViewMode === 'ho-principal' ||
+    state.demoViewMode === 'ho-kyc'
   const kycParty =
     isKyc
       ? state.relatedParties.find((p) => p.id === (state.taskData[child.id]?.kycSubjectPartyId as string | undefined)) ??
@@ -159,6 +159,7 @@ export function ChildActionFooter() {
       <footer
         ref={footerRef}
         className="border-t border-border bg-background px-8 py-3 min-h-14 flex justify-between items-center shrink-0 box-border"
+        onWheel={handleWizardPanelShellWheel}
       >
         <div className="max-w-[52.5rem] mx-auto w-full flex items-center justify-between">
           <div>
@@ -188,53 +189,6 @@ export function ChildActionFooter() {
         </div>
       </footer>
     )
-  }
-
-  const handleResubmit = () => {
-    if (isKyc) {
-      const infoTaskId = `${child.id}-info`
-      const infoData = state.taskData[infoTaskId] ?? {}
-      const childMeta = state.taskData[child.id] ?? {}
-      const errors = getKycValidationErrors(infoData, {
-        optionalIdVerification: kycChildHasOptionalIdVerification(child),
-        subjectType:
-          childMeta.kycSubjectType === 'entity' || kycSubjectType === 'entity'
-            ? 'entity'
-            : 'individual',
-      })
-      if (errors.length > 0) {
-        toast.error('Please fix validation errors before resubmitting', {
-          description: `${errors.length} required field${errors.length === 1 ? '' : 's'} need attention.`,
-        })
-        dispatch({
-          type: 'SET_TASK_DATA',
-          taskId: infoTaskId,
-          fields: { _submitAttempted: true, _validationScrollNonce: Date.now() },
-        })
-        dispatch({ type: 'SET_CHILD_SUB_TASK', index: 0 })
-        return
-      }
-    } else if (child.childType === 'account-opening') {
-      const issues = getAccountOpeningChildSubmissionIssues(state, child.id)
-      if (issues.length > 0) {
-        setSubmissionIssues(issues)
-        return
-      }
-    }
-    setShowResubmitModal(true)
-  }
-
-  const handleConfirmResubmit = () => {
-    if (child.childType === 'account-opening') {
-      const issues = getAccountOpeningChildSubmissionIssues(state, child.id)
-      if (issues.length > 0) {
-        setShowResubmitModal(false)
-        setSubmissionIssues(issues)
-        return
-      }
-    }
-    dispatch({ type: 'SUBMIT_CHILD_FOR_REVIEW' })
-    setShowResubmitModal(false)
   }
 
   const handleDone = () => {
@@ -299,16 +253,7 @@ export function ChildActionFooter() {
     setShowConfirmModal(false)
   }
 
-  const childReviewState = getChildReviewState(state, child.id)
-  const clarificationRequired = isChildAwaitingAdvisorClarification(childReviewState)
-  const resubmitShownInApplicationStatusCard =
-    isAdvisorView &&
-    advisorResubmitEligible &&
-    isLast &&
-    clarificationRequired &&
-    (child.childType === 'account-opening' || child.childType === 'kyc')
-
-  if (isAdvisorView || isAmlView || isHoKycReviewerView) {
+  if (isAdvisorView || isReviewerQueueView) {
     const showSubmittedNavigation = isAdvisorView && child.status === 'awaiting_review' && !advisorFormsEditable
 
     return (
@@ -316,6 +261,7 @@ export function ChildActionFooter() {
         <footer
           ref={footerRef}
           className="border-t border-border bg-background px-8 py-3 min-h-14 flex justify-between items-center shrink-0 box-border"
+          onWheel={handleWizardPanelShellWheel}
         >
           <div className="max-w-[52.5rem] mx-auto w-full flex items-center justify-between">
             <div>
@@ -330,11 +276,7 @@ export function ChildActionFooter() {
               )}
             </div>
             <div className="flex items-center gap-3">
-            {advisorResubmitEligible && isLast && !resubmitShownInApplicationStatusCard && !isKyc ? (
-              <Button onClick={handleResubmit}>
-                Submit for Review
-              </Button>
-            ) : isKyc && isLast && child.status !== 'complete' ? (
+            {isKyc && isLast && child.status !== 'complete' ? (
               <Button variant="outline" onClick={() => dispatch({ type: 'EXIT_CHILD_ACTION' })}>
                 Next
                 <ChevronRight className="h-4 w-4" />
@@ -348,7 +290,7 @@ export function ChildActionFooter() {
               <div className="flex items-center gap-1.5 text-sm text-green-700">
                 <CheckCircle2 className="h-3.5 w-3.5" />
                 <span>
-                  Completed at{' '}
+                  {PENDING_RELEASE_STATUS_LABEL} ·{' '}
                   {(() => {
                     const rs = getChildReviewState(state, child.id)
                     const dec = getChildReviewDecision(state, child.id)
@@ -360,7 +302,11 @@ export function ChildActionFooter() {
                   })()}
                 </span>
               </div>
-            ) : isLast && (child.status === 'in_progress' || child.status === 'not_started') ? (
+            ) : isLast &&
+              (child.status === 'in_progress' ||
+                child.status === 'not_started' ||
+                child.status === 'rejected' ||
+                advisorResubmitEligible) ? (
               <Button variant="outline" onClick={() => dispatch({ type: 'EXIT_CHILD_ACTION' })}>
                 Next
                 <ChevronRight className="h-4 w-4" />
@@ -376,14 +322,6 @@ export function ChildActionFooter() {
           </div>
         </footer>
 
-        {showResubmitModal && (
-          <SubmitConfirmModal
-            childName={child.name}
-            onConfirm={handleConfirmResubmit}
-            onCancel={() => setShowResubmitModal(false)}
-            variant="submit"
-          />
-        )}
         {showConfirmModal && (
           <SubmitConfirmModal
             childName={child.name}
@@ -415,6 +353,7 @@ export function ChildActionFooter() {
       <footer
         ref={footerRef}
         className="border-t border-border bg-background px-8 py-3 min-h-14 flex justify-between items-center shrink-0 box-border"
+        onWheel={handleWizardPanelShellWheel}
       >
         <div className="max-w-[52.5rem] mx-auto w-full flex items-center justify-between">
           <div>
@@ -435,7 +374,7 @@ export function ChildActionFooter() {
                 <div className="flex items-center gap-1.5 text-sm text-green-700">
                   <CheckCircle2 className="h-3.5 w-3.5" />
                   <span>
-                    Completed at{' '}
+                    {isKyc ? 'Completed at' : `${PENDING_RELEASE_STATUS_LABEL} ·`}{' '}
                     {isKyc
                       ? getChildReviewState(state, child.id)?.hoKycReview?.decidedAt ??
                         state.submittedAt ??

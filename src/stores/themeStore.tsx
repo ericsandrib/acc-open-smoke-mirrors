@@ -1,5 +1,9 @@
 import { createContext, useContext, useState, useEffect, type ReactNode } from 'react'
 
+import { shouldHideKycInOnboardingListings } from '@/utils/onboardingJourneyActionTree'
+import type { KycWorkflowMode } from '@/utils/kycWorkflowMode'
+import { getPersistedKycWorkflowMode, persistKycWorkflowMode } from '@/utils/kycWorkflowMode'
+
 type ColorScheme = 'light' | 'dark'
 type BrandTheme = 'mercer' | 'guardian' | 'vanguard'
 
@@ -11,9 +15,13 @@ const ThemeContext = createContext<{
   setBrandTheme: (theme: BrandTheme) => void
   showNestedGroups: boolean
   setShowNestedGroups: (show: boolean) => void
-  /** When true, onboarding Journeys tab hides KYC/Accounts section headers and child workflow rows. */
-  hideOnboardingJourneyChildWorkflows: boolean
-  setHideOnboardingJourneyChildWorkflows: (hide: boolean) => void
+  /**
+   * Derived: true when KYC orchestration mode is single-flow.
+   * Hides nested KYC child rows in Actions/Journeys and account child rows on the Journeys tab only; separate KYC nav is hidden in the wizard.
+   */
+  hideKycChildWorkflows: boolean
+  kycWorkflowMode: KycWorkflowMode
+  setKycWorkflowMode: (mode: KycWorkflowMode) => void
   /** @deprecated Use colorScheme instead */
   theme: ColorScheme
   /** @deprecated Use toggleColorScheme instead */
@@ -36,18 +44,13 @@ function getInitialShowNestedGroups(): boolean {
   return localStorage.getItem('show-nested-groups') === 'true'
 }
 
-function getInitialHideOnboardingJourneyChildWorkflows(): boolean {
-  const stored = localStorage.getItem('hide-onboarding-journey-child-workflows')
-  if (stored === null) return true
-  return stored === 'true'
-}
 
 export function ThemeProvider({ children }: { children: ReactNode }) {
   const [colorScheme, setColorScheme] = useState<ColorScheme>(getInitialColorScheme)
   const [brandTheme, setBrandThemeState] = useState<BrandTheme>(getInitialBrandTheme)
   const [showNestedGroups, setShowNestedGroupsState] = useState<boolean>(getInitialShowNestedGroups)
-  const [hideOnboardingJourneyChildWorkflows, setHideOnboardingJourneyChildWorkflowsState] =
-    useState<boolean>(getInitialHideOnboardingJourneyChildWorkflows)
+  const [kycWorkflowMode, setKycWorkflowModeState] = useState<KycWorkflowMode>(getPersistedKycWorkflowMode)
+  const hideKycChildWorkflows = shouldHideKycInOnboardingListings(kycWorkflowMode)
 
   useEffect(() => {
     document.documentElement.classList.toggle('dark', colorScheme === 'dark')
@@ -64,18 +67,14 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
   }, [showNestedGroups])
 
   useEffect(() => {
-    localStorage.setItem(
-      'hide-onboarding-journey-child-workflows',
-      String(hideOnboardingJourneyChildWorkflows),
-    )
-  }, [hideOnboardingJourneyChildWorkflows])
+    persistKycWorkflowMode(kycWorkflowMode)
+  }, [kycWorkflowMode])
 
   const toggleColorScheme = () => setColorScheme((t) => (t === 'light' ? 'dark' : 'light'))
 
   const setBrandTheme = (theme: BrandTheme) => setBrandThemeState(theme)
   const setShowNestedGroups = (show: boolean) => setShowNestedGroupsState(show)
-  const setHideOnboardingJourneyChildWorkflows = (hide: boolean) =>
-    setHideOnboardingJourneyChildWorkflowsState(hide)
+  const setKycWorkflowMode = (mode: KycWorkflowMode) => setKycWorkflowModeState(mode)
 
   return (
     <ThemeContext.Provider value={{
@@ -86,8 +85,9 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
       setBrandTheme,
       showNestedGroups,
       setShowNestedGroups,
-      hideOnboardingJourneyChildWorkflows,
-      setHideOnboardingJourneyChildWorkflows,
+      hideKycChildWorkflows,
+      kycWorkflowMode,
+      setKycWorkflowMode,
       // backwards compat aliases
       theme: colorScheme,
       toggleTheme: toggleColorScheme,

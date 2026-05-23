@@ -9,6 +9,7 @@ import {
 import * as Collapsible from '@radix-ui/react-collapsible'
 import { cn } from '@/lib/utils'
 import { getAllOpenAccountsTasks } from '@/utils/openAccountsTaskContext'
+import { mergeAccountOpeningDocumentSubTaskData } from '@/utils/accountOpeningDocumentTasks'
 
 const HO_DOC_API_SYNC = 'Custodian document API · batch DOC-2025-4418'
 
@@ -179,7 +180,7 @@ export function ChildHoDocumentViewContent() {
       ? fallbackOwners.map((o) => ({ id: o!.id, name: o!.name }))
       : [{ id: 'demo-owner', name: accountName }]
 
-  const docsStep = subTaskData.find((s) => s.suffix === 'documents-review')
+  const docsData = mergeAccountOpeningDocumentSubTaskData(subTaskData)
 
   const ownerParties = fallbackOwners.filter(Boolean) as RelatedParty[]
 
@@ -267,9 +268,9 @@ export function ChildHoDocumentViewContent() {
           <AccordionSection title="Uploaded Documents" icon={Upload} defaultOpen>
             <div className="space-y-3">
               <p className="text-xs text-muted-foreground">{HO_DOC_API_SYNC}</p>
-              {docsStep && Object.keys(docsStep.data).length > 0 ? (
+              {Object.keys(docsData).length > 0 ? (
                 <dl className="space-y-0">
-                  {Object.entries(docsStep.data).map(([key, value]) => (
+                  {Object.entries(docsData).map(([key, value]) => (
                     <ReviewRow key={key} label={key.replace(/([A-Z])/g, ' $1').replace(/^./, (s) => s.toUpperCase())} value={String(value)} />
                   ))}
                 </dl>

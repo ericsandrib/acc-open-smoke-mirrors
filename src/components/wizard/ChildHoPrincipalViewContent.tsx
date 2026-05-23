@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { useWorkflow, useChildActionContext, getChildReviewState } from '@/stores/workflowStore'
 import { Badge } from '@/components/ui/badge'
 import {
-  ChevronDown, Clock, Users, FileText, CreditCard, Shield, Banknote,
+  ChevronDown, Clock, Users, FileText, CreditCard, Banknote,
   Settings2, ShieldAlert,
 } from 'lucide-react'
 import * as Collapsible from '@radix-ui/react-collapsible'
@@ -130,8 +130,6 @@ export function ChildHoPrincipalViewContent() {
           },
         ]
 
-  const kycRows = displayOwners.map((o) => ({ id: o.id, name: o.name }))
-
   const fundingStep = subTaskData.find((s) => s.suffix === 'funding-transfers')
   const featuresStep = subTaskData.find((s) => s.suffix === 'features-services')
 
@@ -176,7 +174,7 @@ export function ChildHoPrincipalViewContent() {
           <h2 className="text-2xl font-semibold text-foreground">Principal Review</h2>
           <p className="text-sm text-muted-foreground">
             Full overview of <strong>{accountName}</strong> — review document team findings,
-            risk flags, and approve or reject the submission.
+            account suitability, and approve or return the submission to the advisor.
           </p>
         </div>
 
@@ -280,9 +278,6 @@ export function ChildHoPrincipalViewContent() {
                   <div className="flex items-center gap-2 mb-1">
                     <span className="text-sm font-medium">{owner.name}</span>
                     {owner.isPrimary && <Badge variant="secondary" className="text-[10px] px-1.5 py-0">Primary</Badge>}
-                    <Badge variant="outline" className="text-[10px] px-1.5 py-0 bg-green-100 text-green-800 border-green-200">
-                      KYC: Verified
-                    </Badge>
                   </div>
                   <div className="grid grid-cols-2 gap-x-6 gap-y-0.5 text-xs text-muted-foreground">
                     <span>Email: {owner.email ?? 'on file'}</span>
@@ -308,19 +303,6 @@ export function ChildHoPrincipalViewContent() {
                 <ReviewRow key={row.label} label={row.label} value={row.value} />
               ))}
             </dl>
-          </AccordionSection>
-
-          <AccordionSection title="KYC Status" icon={Shield}>
-            <div className="space-y-0">
-              {kycRows.map((owner) => (
-                <div key={owner.id} className="flex items-center justify-between py-2 text-sm border-b border-border last:border-0">
-                  <span>{owner.name}</span>
-                  <Badge variant="secondary" className="text-[10px] px-1.5 py-0 bg-green-100 text-green-800 border-green-200">
-                    Verified · CIP API
-                  </Badge>
-                </div>
-              ))}
-            </div>
           </AccordionSection>
 
           <AccordionSection title="Workflow & Audit" icon={Clock}>

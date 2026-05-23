@@ -144,6 +144,7 @@ export function reviewerQueueLaneForDisplayStatus(displayStatus: string | undefi
   switch (displayStatus) {
     case 'aml_review':
     case 'rejected_aml':
+    case 'escalation_hold':
       return 'aml'
     case 'clarification_required':
     case 'document_review':
@@ -151,7 +152,6 @@ export function reviewerQueueLaneForDisplayStatus(displayStatus: string | undefi
     case 'nigo':
     case 'awaiting_review':
     case 'awaiting_documents':
-    case 'escalation_hold':
       return 'documents'
     case 'ho_kyc_review':
       return 'ho-kyc'
@@ -179,7 +179,7 @@ function reviewerLaneForDemoMode(mode: DemoViewModeForActions): ReviewerQueueLan
 
 function reviewerQueuePreset(
   lane: ReviewerQueueLane,
-  opts?: { documentTeamIncludesAmlPipeline?: boolean; kycChildWorkflowsOnly?: boolean },
+  opts?: { documentTeamIncludesAmlPipeline?: boolean },
 ): ViewPreset {
   const names: Record<ReviewerQueueLane, string> = {
     aml: 'AML Review',
@@ -194,9 +194,6 @@ function reviewerQueuePreset(
     lane === 'documents' && opts?.documentTeamIncludesAmlPipeline
       ? [{ column: 'reviewerQueueLane', operator: 'includes', value: ['documents', 'aml', 'ho-kyc'] }]
       : [{ column: 'reviewerQueueLane', operator: 'equals', value: lane }]
-  if (opts?.kycChildWorkflowsOnly) {
-    filters.push({ column: 'reviewQueueItemType', operator: 'equals', value: 'KYC' })
-  }
   return {
     id: `${REVIEWER_WORK_QUEUE_PRESET_PREFIX}-${lane}`,
     name: names[lane],
@@ -233,9 +230,7 @@ export function actionPresetsForDemoView(mode: DemoViewModeForActions): ViewPres
   const queuePreset =
     lane === 'documents'
       ? reviewerQueuePreset(lane, { documentTeamIncludesAmlPipeline: true })
-      : lane === 'aml'
-        ? reviewerQueuePreset(lane, { kycChildWorkflowsOnly: true })
-        : reviewerQueuePreset(lane)
+      : reviewerQueuePreset(lane)
   const rest = actionPresets.filter((p) => !isReviewerWorkQueuePresetId(p.id)).map((p) => ({ ...p, isDefault: false }))
   return [queuePreset, ...rest]
 }

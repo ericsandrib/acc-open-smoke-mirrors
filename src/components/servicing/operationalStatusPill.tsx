@@ -68,7 +68,7 @@ type Appearance = {
 // (src/utils/statusSemanticColors.ts) so badges + widget icon colors stay in lockstep.
 
 const completedAppearance: Appearance = {
-  label: 'Completed',
+  label: 'Pending Release',
   className: getStatusSemanticClasses('complete').pill,
   icon: <Check className="h-3 w-3 shrink-0" strokeWidth={2.5} aria-hidden />,
 }

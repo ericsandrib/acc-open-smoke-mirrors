@@ -5,10 +5,13 @@ import { useServicing } from '@/stores/servicingStore'
 import type { Action, TaskStatus, Task, WorkflowState } from '@/types/workflow'
 import { cn } from '@/lib/utils'
 import { parseChildSubTaskId } from '@/utils/childTaskRegistry'
+import { shouldHideKycChildWorkflows } from '@/utils/hideKycChildWorkflows'
+import { useTheme } from '@/stores/themeStore'
 import {
   isOpenAccountsFormKey,
   OPEN_ACCOUNTS_FORM_KEY,
   OPEN_ACCOUNTS_NAV_ANNUITY_ORDER_ROW_LABEL,
+  OPEN_ACCOUNTS_NAV_FORMS_PACKAGE_LABEL,
   OPEN_ACCOUNTS_NAV_NO_ANNUITY_GROUP_LABEL,
   OPEN_ACCOUNTS_WITH_ANNUITY_FORM_KEY,
 } from '@/utils/openAccountsTaskContext'
@@ -21,6 +24,7 @@ import { ProgressIcon, pickVariant } from '@/components/wizard/ProgressIcons'
 import type { LucideIcon } from 'lucide-react'
 import { ChevronDown, Users, Wallet, ListChecks, Circle, Loader, CheckCircle2, Ban, Clock, XCircle } from 'lucide-react'
 import { JourneyHeader } from '@/components/wizard/JourneyHeader'
+import { handleWizardPanelShellWheel, handleWizardScrollPaneWheel } from '@/utils/wizardScroll'
 
 const ACTION_ICONS: Record<string, LucideIcon> = {
   'collect-client-data': Users,
@@ -60,7 +64,7 @@ const statusColors: Record<TaskStatus, string> = {
 const statusLabels: Record<TaskStatus, string> = {
   not_started: 'Ready to Begin',
   in_progress: 'In Progress',
-  complete: 'Completed',
+  complete: 'Pending Release',
   canceled: 'Declined',
   blocked: 'Blocked',
   awaiting_review: 'Awaiting Review',
@@ -174,7 +178,7 @@ function TaskProgressIndicator({
     variant === 'canceled'
       ? 'Canceled'
       : variant === 'done'
-        ? edited ? 'Completed · Edited' : 'Completed'
+        ? edited ? 'Pending Release · Edited' : 'Pending Release'
         : variant === 'ambiguous'
           ? 'No progress to report'
           : displayPct === 0
@@ -229,9 +233,11 @@ type DisplayActionNode = {
 function filterOpenAccountsNavNodes(
   nodes: DisplayTaskNode[],
   isAdvisorDemoView: boolean,
+  hideKycPage: boolean,
 ): DisplayTaskNode[] {
   return nodes.filter((n) => {
     if (n.v5NoAnnuityPage === 'documents') return false
+    if (hideKycPage && n.v5NoAnnuityPage === 'kyc') return false
     if (!isAdvisorDemoView && n.v5NoAnnuityPage === 'envelopes') return false
     return true
   })
@@ -267,12 +273,16 @@ function isDisplayTaskNodeActive(dt: DisplayTaskNode, state: WorkflowState): boo
  * - In v2/v3/v4 split: keep both open-accounts tasks visible (renamed labels on each row).
  * - In v5 split: collapsible “Account Opening” first, then a flat “Account Opening + Annuity Order” task row (sibling to that group).
  * - In v6 split: optional flat annuity-order row after the Account Opening group (when annuity path is enabled).
- *   Without-annuity side uses navigator rows (Accounts, KYC, Envelopes) on the parent task;
+ *   Without-annuity side uses navigator rows (Accounts, KYC, Forms Package) on the parent task;
  *   CIP supporting documents are on KYC children; account-level Documents on account-opening children.
- * - In reviewer demo (`demoViewMode` other than `advisor`): Envelopes and annuity-order rows are
+ * - In reviewer demo (`demoViewMode` other than `advisor`): Forms Package and annuity-order rows are
  *   omitted from the sidebar (advisor-only).
  */
-export function buildDisplayActions(state: WorkflowState, variant: OpenAccountsVariant): DisplayActionNode[] {
+export function buildDisplayActions(
+  state: WorkflowState,
+  variant: OpenAccountsVariant,
+  hideKycPage = shouldHideKycChildWorkflows(state),
+): DisplayActionNode[] {
   const hideClientSetupInReviewer = (state.demoViewMode ?? 'advisor') !== 'advisor'
   const isAdvisorDemoView = (state.demoViewMode ?? 'advisor') === 'advisor'
   const visibleActions = state.actions
@@ -327,12 +337,12 @@ export function buildDisplayActions(state: WorkflowState, variant: OpenAccountsV
                 },
                 {
                   id: 'v5-noann-envelopes',
-                  label: 'Envelopes',
+                  label: OPEN_ACCOUNTS_NAV_FORMS_PACKAGE_LABEL,
                   underlyingTaskIds: [noAnnuityOnlyTaskId],
                   v5NoAnnuityPage: 'envelopes',
                 },
               ]
-              return filterOpenAccountsNavNodes(v5NoSplitRows, isAdvisorDemoView).map((task) => ({
+              return filterOpenAccountsNavNodes(v5NoSplitRows, isAdvisorDemoView, hideKycPage).map((task) => ({
                 type: 'task' as const,
                 task,
               }))
@@ -409,7 +419,7 @@ export function buildDisplayActions(state: WorkflowState, variant: OpenAccountsV
           },
           {
             id: 'v5-noann-envelopes',
-            label: 'Envelopes',
+            label: OPEN_ACCOUNTS_NAV_FORMS_PACKAGE_LABEL,
             underlyingTaskIds: [noAnnuityOpenAccountsTaskId],
             v5NoAnnuityPage: 'envelopes',
           },
@@ -420,7 +430,7 @@ export function buildDisplayActions(state: WorkflowState, variant: OpenAccountsV
     type: 'group',
     id: 'v5-accounts-without-annuity',
     label: OPEN_ACCOUNTS_NAV_NO_ANNUITY_GROUP_LABEL,
-    tasks: filterOpenAccountsNavNodes(v5NonAnnuityGroupTasks, isAdvisorDemoView),
+    tasks: filterOpenAccountsNavNodes(v5NonAnnuityGroupTasks, isAdvisorDemoView, hideKycPage),
   }
 
   const v6NonAnnuityGroupTasks: DisplayTaskNode[] =
@@ -446,7 +456,7 @@ export function buildDisplayActions(state: WorkflowState, variant: OpenAccountsV
           },
           {
             id: 'v5-noann-envelopes',
-            label: 'Envelopes',
+            label: OPEN_ACCOUNTS_NAV_FORMS_PACKAGE_LABEL,
             underlyingTaskIds: [noAnnuityOpenAccountsTaskId],
             v5NoAnnuityPage: 'envelopes',
           },
@@ -457,7 +467,7 @@ export function buildDisplayActions(state: WorkflowState, variant: OpenAccountsV
     type: 'group',
     id: 'v6-accounts-without-annuity',
     label: OPEN_ACCOUNTS_NAV_NO_ANNUITY_GROUP_LABEL,
-    tasks: filterOpenAccountsNavNodes(v6NonAnnuityGroupTasks, isAdvisorDemoView),
+    tasks: filterOpenAccountsNavNodes(v6NonAnnuityGroupTasks, isAdvisorDemoView, hideKycPage),
   }
 
   const accountOpeningGroup: DisplayActionNode = {
@@ -511,8 +521,9 @@ export function buildDisplayActions(state: WorkflowState, variant: OpenAccountsV
 export function computeOverallJourneyProgressPct(
   state: WorkflowState,
   variant: OpenAccountsVariant,
+  hideKycPage = shouldHideKycChildWorkflows(state),
 ): number {
-  const displayActions = buildDisplayActions(state, variant)
+  const displayActions = buildDisplayActions(state, variant, hideKycPage)
   const allDisplayTasks: DisplayTaskNode[] = displayActions.flatMap((a) =>
     a.taskRows.flatMap((row) => (row.type === 'task' ? [row.task] : row.tasks)),
   )
@@ -536,7 +547,9 @@ export function computeOverallJourneyProgressPct(
 
 export function StepSidebar() {
   const { state, dispatch } = useWorkflow()
+  const { hideKycChildWorkflows } = useTheme()
   const { journeys } = useServicing()
+  const hideKycPage = hideKycChildWorkflows
   const navigate = useNavigate()
   const workflowExitPath = useMemo(() => {
     const j = journeys.find((x) => x.id === state.journeyId)
@@ -550,8 +563,8 @@ export function StepSidebar() {
   /** v5 collapsible task sections in the pizza tracker; default expanded */
   const [v5GroupOpen, setV5GroupOpen] = useState<Record<string, boolean>>({})
   const displayActions = useMemo(
-    () => buildDisplayActions(state, selectedVariant),
-    [state, selectedVariant],
+    () => buildDisplayActions(state, selectedVariant, hideKycPage),
+    [state, selectedVariant, hideKycPage],
   )
 
   const isV5GroupOpen = (groupId: string) => v5GroupOpen[groupId] !== false
@@ -669,8 +682,8 @@ export function StepSidebar() {
   }
 
   const overallProgressPct = useMemo(
-    () => computeOverallJourneyProgressPct(state, selectedVariant),
-    [state, selectedVariant],
+    () => computeOverallJourneyProgressPct(state, selectedVariant, hideKycPage),
+    [state, selectedVariant, hideKycPage],
   )
 
   return (
@@ -679,6 +692,7 @@ export function StepSidebar() {
         className={cn(
           'w-[330px] shrink-0 border-r border-sidebar-border bg-sidebar-background text-sidebar-foreground flex flex-col min-h-0 self-stretch h-full',
         )}
+        onWheel={handleWizardPanelShellWheel}
       >
         <JourneyHeader
           onExitWorkflow={() => setExitToOnboardingOpen(true)}
@@ -688,7 +702,11 @@ export function StepSidebar() {
           metaAssigneeLabel={state.assignedTo}
           metaProgressPct={overallProgressPct}
         />
-        <div className="flex-1 min-h-0 overflow-y-auto pl-1 pr-2 pt-2">
+        <div
+          data-wizard-scroll-pane
+          className="flex-1 min-h-0 overflow-y-auto overscroll-y-contain pl-1 pr-2 pt-2"
+          onWheel={handleWizardScrollPaneWheel}
+        >
           {displayActions.map((action, actionIndex) => {
             const ActionIcon = getActionIcon(action.id)
             return (

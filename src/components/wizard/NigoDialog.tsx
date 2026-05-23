@@ -32,6 +32,8 @@ interface NigoDialogProps {
   variant?: 'nigo' | 'reject'
   reasonOptions?: NigoReasonOption[]
   reasonLabel?: string
+  title?: string
+  confirmLabel?: string
 }
 
 export function NigoDialog({
@@ -42,6 +44,8 @@ export function NigoDialog({
   variant = 'nigo',
   reasonOptions = NIGO_REASONS,
   reasonLabel,
+  title,
+  confirmLabel,
 }: NigoDialogProps) {
   const [reason, setReason] = useState('')
   const [feedback, setFeedback] = useState('')
@@ -66,19 +70,12 @@ export function NigoDialog({
           </div>
           <div className="space-y-1">
             <h3 className="text-base font-semibold">
-              {variant === 'reject' ? 'Reject submission' : 'Request clarification'}
+              {title ?? (variant === 'reject' ? 'Reject Review' : 'Request clarification')}
             </h3>
             <p className="text-sm text-muted-foreground">
-              {variant === 'reject' ? (
-                <>
-                  As the {teamLabel}, reject this submission. It will be returned to the advisor for corrections.
-                </>
-              ) : (
-                <>
-                  As the {teamLabel}, request clarification or additional documents. The submission will be returned to
-                  the advisor for corrections.
-                </>
-              )}
+              {variant === 'reject'
+                ? 'Reject this submission and return it to the advisor for corrections.'
+                : 'Request clarification or additional documents. The submission will be returned to the advisor for corrections.'}
             </p>
           </div>
         </div>
@@ -112,7 +109,7 @@ export function NigoDialog({
         <div className="flex items-center justify-end gap-3 pt-1">
           <Button variant="outline" onClick={onClose}>Cancel</Button>
           <Button variant="destructive" onClick={handleSubmit} disabled={!reason}>
-            {variant === 'reject' ? 'Submit rejection' : 'Submit request'}
+            {confirmLabel ?? (variant === 'reject' ? 'Reject Review' : 'Submit request')}
           </Button>
         </div>
       </div>

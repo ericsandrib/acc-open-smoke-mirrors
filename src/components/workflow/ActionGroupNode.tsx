@@ -15,7 +15,7 @@ const statusColors: Record<TaskStatus, string> = {
 const statusLabels: Record<TaskStatus, string> = {
   not_started: 'Ready to Begin',
   in_progress: 'In Progress',
-  complete: 'Complete',
+  complete: 'Pending Release',
   canceled: 'Canceled',
   blocked: 'Blocked',
   awaiting_review: 'Awaiting Review',

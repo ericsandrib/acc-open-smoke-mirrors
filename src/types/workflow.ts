@@ -109,6 +109,8 @@ export interface RelatedParty {
   }
   /** For trust organizations: trustees / trust owners requiring government-issued ID for CIP. */
   trustParties?: TrustPartyRef[]
+  /** Demo-only: when true, automated AML screening returns a flagged result for this party. */
+  demoForceFlagAml?: boolean
 }
 
 export type AccountType = 'brokerage' | 'ira' | 'roth_ira' | '401k' | 'trust' | 'checking' | 'savings'
@@ -202,6 +204,127 @@ export interface ChildReviewState {
   kycPreAmlTimeline?: { draftAt: string; idVerificationAt: string; submittedForReviewAt: string }
   /** Demo: timestamps for Draft / Client Signature / Submitted before Home Office review (non-KYC child workflows). */
   accountOpeningPreReviewTimeline?: { draftAt: string; clientSignatureAt: string; submittedForReviewAt: string }
+  /**
+   * Single-flow KYC: owner-level verification keyed by {@link RelatedParty.id}.
+   * Reused across accounts; AML/CIP detail payloads live here (not on separate kyc children).
+   */
+  ownerReviews?: Record<string, OwnerKycReviewState>
+  /** Single-flow account child: centralized routing state (replaces separate KYC child pipelines). */
+  accountWorkflowPhase?: AccountWorkflowPhase
+}
+
+/** Unified account-opening workflow phase (single-flow mode). */
+export type AccountWorkflowPhase =
+  | 'draft'
+  | 'submitted'
+  | 'aml_review'
+  | 'document_review'
+  | 'principal_review'
+  | 'pending_release'
+  | 'complete'
+  | 'escalation_hold'
+
+/** Per-owner KYC / AML / CIP state (person-level, reusable across accounts). */
+export interface OwnerKycReviewState {
+  /** ISO timestamp when background KYC was auto-triggered after required fields completed. */
+  autoTriggeredAt?: string
+  /** Hash of required-field values — CIP re-run only when this changes. */
+  requiredFieldsKey?: string
+  amlReview?: ChildReviewState['amlReview']
+  cipStatus?: ChildReviewState['cipStatus']
+  hoKycReview?: ChildReviewState['hoKycReview']
+  kycVerificationLastCheckedAt?: string
+  kycVerificationResultSummary?: string
+  demoAdvisorIdentitySimulation?: ChildReviewState['demoAdvisorIdentitySimulation']
+  /** AML team only — demo payload. */
+  amlPayloadDemo?: { ofacMatches?: number; watchlistHits?: string[]; summary?: string }
+  /** Document review team only — demo CIP payload. */
+  cipPayloadDemo?: { mismatches?: string[]; identityProvider?: string }
+  /** True when this owner has prior Verified KYC reusable on future accounts (no re-trigger needed). */
+  reusableVerifiedKyc?: boolean
+  /** Single-flow: latest source (account child id) that produced this owner's verified KYC. */
+  reusableSourceAccountChildId?: string
+  /** Run metadata surfaced in CIP / AML review tasks (demo). */
+  provider?: string
+  runType?: 'Automated' | 'Re-run' | 'Manual'
+  triggerSource?: string
+  lastReRunBy?: string
+  reRunReason?: string
+  /** Immutable verification + disposition audit trail. Newest entry last. */
+  verificationSnapshots?: VerificationSnapshot[]
+  /** Fingerprint of identity + screening inputs at last automated screening (AML reuse gate). */
+  screeningFingerprint?: string
+}
+
+/**
+ * Person-level verification profile reused across account-opening workflows.
+ * Account workflow phases remain independent; only AML/CIP disposition is shared.
+ */
+export interface ParticipantVerificationProfile {
+  participantId: string
+  screeningFingerprint: string
+  screeningPayloadVersion?: string
+  amlStatus: 'cleared' | 'pending' | 'flagged' | 'info_requested' | 'escalated'
+  /** Simplified CIP disposition for reuse checks (not a substitute for per-account HO review). */
+  cipStatus: 'verified' | 'pending' | 'fail'
+  lastVerifiedAt: string
+  expiresAt: string
+  lastAmlDispositionAt: string
+  dispositionReviewer?: string
+  approvalReason?: string
+  provider?: string
+  /** Account child where the disposition was first recorded. */
+  sourceAccountChildId?: string
+}
+
+/**
+ * Audit-safe record of a verification run or disposition event.
+ * Once appended, never mutated. Live owner field edits do not retroactively change a snapshot.
+ */
+export interface VerificationSnapshot {
+  id: string
+  ranAt: string
+  /** What occurred: a KYC screening run or a reviewer disposition. */
+  eventKind:
+    | 'screening_run'
+    | 'aml_approve'
+    | 'aml_approve_reused'
+    | 'aml_reject'
+    | 'aml_request_info'
+    | 'aml_escalate'
+    | 'cip_approve'
+    | 'cip_reject'
+    | 'cip_request_info'
+  /** Provider / orchestrator label (e.g. "LexisNexis InstantID"). */
+  provider?: string
+  runType?: 'Automated' | 'Re-run' | 'Manual'
+  triggerSource?: string
+  /** Role / actor that initiated the event. */
+  runBy?: string
+  reRunReason?: string
+  /** Owner field values that were verified at this point in time. */
+  snapshotOf?: {
+    firstName?: string
+    lastName?: string
+    dob?: string
+    email?: string
+    phone?: string
+    taxId?: string
+    legalStreet?: string
+    legalCity?: string
+    legalState?: string
+    legalZip?: string
+  }
+  amlOutcome?: 'cleared' | 'pending' | 'flagged' | 'info_requested' | 'escalated'
+  cipOutcome?: 'pass' | 'fail' | 'pending'
+  /** Reviewer-supplied note (approval reason / findings / info-request comments). */
+  note?: string
+  /** Structured AML rejection reason code (account-opening disposition). */
+  rejectionReasonCode?: string
+  /** Human-readable structured AML rejection reason label. */
+  rejectionReason?: string
+  /** Optional reviewer notes separate from structured rejection reason. */
+  reviewerNotes?: string
 }
 
 export type ChildReviewDecision = { outcome: 'approved' | 'rejected'; decidedAt: string }
@@ -249,6 +372,8 @@ export interface WorkflowState {
   childReviewDecisionsByChildId?: Record<string, ChildReviewDecision>
   /** AML, document, principal, and KYC review substeps keyed by {@link ChildTask.id}. */
   childReviewsByChildId?: Record<string, ChildReviewState>
+  /** Reusable participant-level AML/CIP verification profiles (keyed by {@link RelatedParty.id}). */
+  participantVerificationsByPartyId?: Record<string, ParticipantVerificationProfile>
   /**
    * One-shot: after leaving a child workflow via breadcrumb, StepSidebar should select this
    * parent form section id (e.g. oa-kyc). Cleared when applied or invalid.
@@ -256,7 +381,7 @@ export interface WorkflowState {
   parentSectionFocusId?: string
   /**
    * v5 + split journey: which “page” of the no-annuity Open Accounts task is shown
-   * (Account Instructions / KYC Verification / Envelopes). Null when not in that mode.
+   * (Account Instructions / KYC Verification / Forms Package). Null when not in that mode.
    */
   v5NoAnnuityOpenAccountsPage?: 'instructions' | 'kyc' | 'documents' | 'envelopes' | null
   /**
@@ -266,6 +391,18 @@ export interface WorkflowState {
   v6IncludeAnnuityAccounts?: boolean
   /** Tracks the furthest sub-task index each child has reached (for progress display). */
   childHighWaterMark?: Record<string, number>
+  /**
+   * One-shot deep-link from CIP Verification & Review to Account & Owners.
+   * Consumed by the owners form: scrolls to and highlights the owner / hinted field, then clears.
+   */
+  ownerFieldFocus?: {
+    accountChildId: string
+    partyId: string
+    /** Optional anchor suffix: 'address' | 'tax-id' | 'dob' | 'email' | 'phone' | 'name'. */
+    fieldHint?: string
+    /** Monotonic counter so consumers re-fire when the same target is re-requested. */
+    requestedAt: string
+  }
 }
 
 export type WorkflowAction =
@@ -273,6 +410,9 @@ export type WorkflowAction =
   /** Highlight this section in {@link StepSidebar} for the current task; consumed by the sidebar. */
   | { type: 'FOCUS_PARENT_TASK_SECTION'; sectionId: string }
   | { type: 'CLEAR_PARENT_SECTION_FOCUS' }
+  /** Deep-link from CIP review to Account & Owners. Consumer scrolls + highlights the field. */
+  | { type: 'FOCUS_OWNER_FIELDS'; accountChildId: string; partyId: string; fieldHint?: string }
+  | { type: 'CLEAR_OWNER_FIELD_FOCUS' }
   | { type: 'SET_V5_NO_ANNUITY_OPEN_ACCOUNTS_PAGE'; page: 'instructions' | 'kyc' | 'documents' | 'envelopes' }
   | { type: 'SET_V6_INCLUDE_ANNUITY_ACCOUNTS'; include: boolean }
   /** Leave any child / drill-in flow and open a top-level task from {@link WorkflowState.flatTaskOrder}. */
@@ -303,6 +443,12 @@ export type WorkflowAction =
       journeyOnboardingConfig?: JourneyOnboardingConfig
     }
   | { type: 'SET_JOURNEY_ASSIGNEE'; assignee: string }
+  | {
+      type: 'SYNC_SEEDED_JOURNEY_METADATA'
+      journeyId: string
+      journeyName: string
+      assignedTo?: string
+    }
   | { type: 'GO_NEXT' }
   | { type: 'GO_BACK' }
   | {
@@ -353,3 +499,36 @@ export type WorkflowAction =
   | { type: 'HO_KYC_REQUEST_CHANGES'; comments: string }
   | { type: 'AML_REQUEST_MORE_INFO'; comments: string }
   | { type: 'AML_ESCALATE_SAR'; reason?: string }
+  /** Single-flow: auto-run owner KYC when required owner fields are complete or envelope is sent. */
+  | {
+      type: 'AUTO_RUN_OWNER_KYC'
+      accountChildId: string
+      partyId: string
+      reRunReason?: string
+      runBy?: string
+    }
+  | { type: 'OWNER_AML_REVIEW_CLEAR'; accountChildId: string; partyId: string; approvalReason?: string }
+  | { type: 'OWNER_AML_REVIEW_FLAG'; accountChildId: string; partyId: string; findings?: string }
+  | { type: 'OWNER_AML_REQUEST_INFO'; accountChildId: string; partyId: string; comments: string }
+  | { type: 'OWNER_CIP_APPROVE'; accountChildId: string; partyId: string }
+  | { type: 'OWNER_CIP_REQUEST_CHANGES'; accountChildId: string; partyId: string; comments: string }
+  | { type: 'SET_ACCOUNT_WORKFLOW_PHASE'; accountChildId: string; phase: AccountWorkflowPhase }
+  /** Account-level AML disposition: applies to every natural-person owner on the account. */
+  | { type: 'ACCOUNT_AML_APPROVE_ALL'; accountChildId: string; approvalReason?: string }
+  | {
+      type: 'ACCOUNT_AML_REJECT_ALL'
+      accountChildId: string
+      rejectionReasonCode: string
+      rejectionReason: string
+      reviewerNotes?: string
+    }
+  | { type: 'ACCOUNT_AML_REQUEST_INFO'; accountChildId: string; comments?: string }
+  | { type: 'ACCOUNT_AML_ESCALATE'; accountChildId: string; reason?: string }
+  /** Account-level CIP / document review disposition: applies to every natural-person owner on the account. */
+  | { type: 'ACCOUNT_CIP_APPROVE_ALL'; accountChildId: string }
+  | { type: 'ACCOUNT_CIP_REJECT_ALL'; accountChildId: string; comments?: string }
+  | { type: 'ACCOUNT_CIP_REQUEST_INFO'; accountChildId: string; comments?: string }
+  /** Account-level Principal Review disposition (single-flow). */
+  | { type: 'ACCOUNT_PRINCIPAL_APPROVE'; accountChildId: string }
+  | { type: 'ACCOUNT_PRINCIPAL_REJECT'; accountChildId: string; reason?: string }
+  | { type: 'ACCOUNT_PRINCIPAL_REQUEST_INFO'; accountChildId: string; comments?: string }

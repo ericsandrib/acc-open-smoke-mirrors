@@ -18,6 +18,7 @@ import {
 import type { Journey } from '@/types/servicing'
 import type { TaskStatus } from '@/types/workflow'
 import { shortActionNicknameForTable } from '@/utils/servicingActionLabel'
+import { visibleOnboardingJourneyActions } from '@/utils/onboardingJourneyActionTree'
 
 export interface TaskRow {
   id: string
@@ -33,9 +34,13 @@ export interface TaskRow {
   relationshipName: string
 }
 
-export function deriveTaskRows(journeys: Journey[]): TaskRow[] {
-  return journeys.flatMap((journey) =>
-    journey.actions.flatMap((action) =>
+export function deriveTaskRows(
+  journeys: Journey[],
+  hideKycChildWorkflows = false,
+): TaskRow[] {
+  return journeys.flatMap((journey) => {
+    const actions = visibleOnboardingJourneyActions(journey.actions, hideKycChildWorkflows, false)
+    return actions.flatMap((action) =>
       action.tasks.map((task) => ({
         id: task.id,
         actionId: task.actionId,
@@ -49,8 +54,8 @@ export function deriveTaskRows(journeys: Journey[]): TaskRow[] {
         journeyName: journey.name,
         relationshipName: journey.relationshipName,
       })),
-    ),
-  )
+    )
+  })
 }
 
 interface TasksTableProps {

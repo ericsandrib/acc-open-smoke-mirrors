@@ -306,9 +306,9 @@ export const seededJourneys: Journey[] = [
   // Onboarding journeys
   buildJourney(
     'journey-john-smith',
-    'John Smith Onboarding',
+    'Hartley household account opening',
     'Onboarding',
-    'John Smith',
+    'Hartley / Owens household',
     'Sarah Chen',
     'Sarah Chen',
     '2026-05-15',
@@ -451,7 +451,7 @@ export const seededJourneys: Journey[] = [
         title: 'Joint brokerage — Rivera / Kim',
         lineKey: 'line-rivera-joint',
         childId: 'ho-demo-child-rivera-joint',
-        displayStatus: 'awaiting_documents',
+        displayStatus: 'escalation_hold',
       },
       {
         section: 'kyc',
@@ -532,6 +532,11 @@ export const seededJourneys: Journey[] = [
     ],
   ),
 
+  /**
+   * AML / Document / Principal reviewer queues (Actions tab) use account child `displayStatus`
+   * when KYC rows are hidden (single-flow). Use `escalation_hold` / `aml_review` on account lines
+   * for AML; `document_review` / `nigo_*` for Document Review; `principal_review` for Principal.
+   */
   /** AML team queue — KYC child workflows in AML / rejection stages (accounts follow after KYC clears). */
   buildDocumentReviewDemoJourney(
     'journey-ho-demo-aml-northpoint',
@@ -578,14 +583,14 @@ export const seededJourneys: Journey[] = [
         title: 'Growth SMA — IMA',
         lineKey: 'line-np-sma',
         childId: 'ho-demo-child-np-sma',
-        displayStatus: 'awaiting_documents',
+        displayStatus: 'escalation_hold',
       },
       {
         section: 'accounts',
         title: 'Custodial UTMA',
         lineKey: 'line-np-utma',
         childId: 'ho-demo-child-np-utma',
-        displayStatus: 'awaiting_documents',
+        displayStatus: 'aml_review',
       },
     ],
   ),
@@ -611,21 +616,21 @@ export const seededJourneys: Journey[] = [
         nickname: 'Santos — Carlos Santos KYC',
         lineKey: 'line-santos-kyc-carlos',
         childId: 'ho-demo-child-santos-kyc-carlos',
-        displayStatus: 'escalation_hold',
+        displayStatus: 'aml_review',
       },
       {
         section: 'accounts',
         title: 'Private credit feeder',
         lineKey: 'line-santos-feeder',
         childId: 'ho-demo-child-santos-feeder',
-        displayStatus: 'awaiting_documents',
+        displayStatus: 'escalation_hold',
       },
       {
         section: 'accounts',
         title: 'Offshore blocker (BVI)',
         lineKey: 'line-santos-blocker',
         childId: 'ho-demo-child-santos-blocker',
-        displayStatus: 'awaiting_documents',
+        displayStatus: 'escalation_hold',
       },
     ],
   ),
@@ -661,7 +666,7 @@ export const seededJourneys: Journey[] = [
         title: 'Operating partnership account',
         lineKey: 'line-summit-op',
         childId: 'ho-demo-child-summit-op',
-        displayStatus: 'awaiting_documents',
+        displayStatus: 'document_review',
       },
       {
         section: 'accounts',
@@ -694,7 +699,7 @@ export const seededJourneys: Journey[] = [
         title: 'Safe harbor match account',
         lineKey: 'line-meridian-sh',
         childId: 'ho-demo-child-meridian-sh',
-        displayStatus: 'document_review',
+        displayStatus: 'escalation_hold',
       },
     ],
   ),
@@ -809,6 +814,13 @@ export const seededJourneys: Journey[] = [
         childId: 'ho-demo-child-vance-art',
         displayStatus: 'principal_review',
       },
+      {
+        section: 'accounts',
+        title: 'Charitable remainder unitrust',
+        lineKey: 'line-vance-crut',
+        childId: 'ho-demo-child-vance-crut',
+        displayStatus: 'nigo_principal',
+      },
     ],
   ),
 
@@ -888,14 +900,14 @@ export const seededJourneys: Journey[] = [
         title: 'Consolidated advisory SMA',
         lineKey: 'line-chestnut-sma',
         childId: 'ho-demo-child-chestnut-sma',
-        displayStatus: 'awaiting_documents',
+        displayStatus: 'document_review',
       },
       {
         section: 'accounts',
         title: 'Anchor escrow account',
         lineKey: 'line-chestnut-escrow',
         childId: 'ho-demo-child-chestnut-escrow',
-        displayStatus: 'awaiting_documents',
+        displayStatus: 'nigo_document',
       },
     ],
   ),
@@ -920,7 +932,7 @@ export const seededJourneys: Journey[] = [
         title: 'Side pocket — Series D',
         lineKey: 'line-perim-side',
         childId: 'ho-demo-child-perim-side',
-        displayStatus: 'awaiting_documents',
+        displayStatus: 'document_review',
       },
       {
         section: 'accounts',
@@ -1071,15 +1083,14 @@ export const seededJourneys: Journey[] = [
         title: 'Proprietary sleeve — large cap',
         lineKey: 'line-cres-lcap',
         childId: 'ho-demo-child-cres-lcap',
-        displayStatus: 'awaiting_review',
+        displayStatus: 'escalation_hold',
       },
       {
         section: 'accounts',
         title: 'Omnibus margin overlay',
         lineKey: 'line-cres-omni',
         childId: 'ho-demo-child-cres-omni',
-        displayStatus: 'awaiting_documents',
-        status: 'not_started',
+        displayStatus: 'escalation_hold',
       },
     ],
   ),
@@ -1120,7 +1131,7 @@ export const seededJourneys: Journey[] = [
         title: 'TAMP model delivery — equity',
         lineKey: 'line-pied-eq',
         childId: 'ho-demo-child-pied-eq',
-        displayStatus: 'awaiting_documents',
+        displayStatus: 'escalation_hold',
       },
       {
         section: 'accounts',

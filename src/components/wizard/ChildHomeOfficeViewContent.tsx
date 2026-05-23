@@ -4,6 +4,7 @@ import { Badge } from '@/components/ui/badge'
 import { ChevronDown, Clock, Users, FileText, CreditCard, Shield, Banknote, Settings2, AlertTriangle, CheckCircle2 } from 'lucide-react'
 import * as Collapsible from '@radix-ui/react-collapsible'
 import { cn } from '@/lib/utils'
+import { mergeAccountOpeningDocumentSubTaskData } from '@/utils/accountOpeningDocumentTasks'
 
 function ReviewRow({ label, value }: { label: string; value?: string | null }) {
   if (!value) return null
@@ -83,7 +84,7 @@ export function ChildHomeOfficeViewContent() {
 
   const fundingStep = subTaskData.find((s) => s.suffix === 'funding-transfers')
   const featuresStep = subTaskData.find((s) => s.suffix === 'features-services')
-  const docsStep = subTaskData.find((s) => s.suffix === 'documents-review')
+  const docsData = mergeAccountOpeningDocumentSubTaskData(subTaskData)
 
   return (
     <main className="flex-1 overflow-y-auto p-8">
@@ -240,9 +241,9 @@ export function ChildHomeOfficeViewContent() {
           </AccordionSection>
 
           <AccordionSection title="Documents & Signatures" icon={FileText}>
-            {docsStep && Object.keys(docsStep.data).length > 0 ? (
+            {Object.keys(docsData).length > 0 ? (
               <dl className="space-y-0">
-                {Object.entries(docsStep.data).map(([key, value]) => (
+                {Object.entries(docsData).map(([key, value]) => (
                   <ReviewRow key={key} label={key.replace(/([A-Z])/g, ' $1').replace(/^./, (s) => s.toUpperCase())} value={String(value)} />
                 ))}
               </dl>

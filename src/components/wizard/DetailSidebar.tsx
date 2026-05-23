@@ -4,6 +4,10 @@ import { useWizardRightPanel, WIZARD_RIGHT_RAIL_WIDTH_CLASS } from '@/components
 import { JourneySupportingDocumentsPanel } from '@/components/wizard/JourneySupportingDocumentsPanel'
 import { useWorkflow } from '@/stores/workflowStore'
 import { parseChildSubTaskId, getSubTaskDisplayTitle } from '@/utils/childTaskRegistry'
+import {
+  handleWizardIsolatedPanelShellWheel,
+  handleWizardIsolatedScrollPaneWheel,
+} from '@/utils/wizardScroll'
 
 const JOURNEY_TAB_ORDER = ['details', 'documents'] as const
 type JourneyRailTab = (typeof JOURNEY_TAB_ORDER)[number]
@@ -60,6 +64,7 @@ export function DetailSidebar() {
       )}
       aria-label="Task details"
       aria-hidden={collapsed}
+      onWheel={handleWizardIsolatedPanelShellWheel}
     >
       <div
         className={cn(
@@ -104,10 +109,12 @@ export function DetailSidebar() {
         )}
 
         <div
+          data-wizard-scroll-pane
           className={cn(
-            'flex flex-1 min-h-0 flex-col text-sm',
+            'flex flex-1 min-h-0 flex-col overscroll-y-contain text-sm',
             displayTab === 'documents' ? 'overflow-hidden' : 'overflow-y-auto p-4',
           )}
+          onWheel={handleWizardIsolatedScrollPaneWheel}
         >
           {displayTab === 'details' && (
             <>

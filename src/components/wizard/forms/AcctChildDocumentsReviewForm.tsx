@@ -23,6 +23,7 @@ import {
   type WetSignedFirmUpload,
 } from '@/utils/wetSignedFirmUploads'
 import { findParentTaskForChild } from '@/utils/openAccountsTaskContext'
+import { resolveAccountOpeningFormsPackageTaskId } from '@/utils/accountOpeningDocumentTasks'
 import { buildSupportingDocumentPreviewKey } from '@/utils/journeySupportingDocuments'
 import { useOpenAccountsVariant } from '@/components/wizard/openAccountsVariantContext'
 import { cn } from '@/lib/utils'
@@ -53,9 +54,26 @@ interface ExecutedEsignForm {
   executedAt: string
 }
 
-export function AcctChildDocumentsReviewForm() {
+export type AcctChildDocumentsSection = 'forms-package' | 'supporting-documents' | 'all'
+
+export function AcctChildFormsPackageForm() {
+  return <AcctChildDocumentsReviewForm section="forms-package" />
+}
+
+export function AcctChildSupportingDocumentsForm() {
+  return <AcctChildDocumentsReviewForm section="supporting-documents" />
+}
+
+export function AcctChildDocumentsReviewForm({
+  section = 'all',
+}: {
+  /** Split account-opening document steps; `all` kept for legacy combined Documents sub-task. */
+  section?: AcctChildDocumentsSection
+}) {
   const { state } = useWorkflow()
   const variant = useOpenAccountsVariant()
+  const showFormsPackage = section === 'all' || section === 'forms-package'
+  const showSupportingDocuments = section === 'all' || section === 'supporting-documents'
   // v5/v6 intentionally render flat, with no section cards or card-only header strips.
   const isVersion2 = variant === 'v2'
   const isVersion3 = variant === 'v3'
@@ -68,7 +86,14 @@ export function AcctChildDocumentsReviewForm() {
     ? 'text-sm text-muted-foreground mt-2'
     : 'text-[14px] text-muted-foreground mt-2 leading-normal'
   const ctx = useChildActionContext()
-  const taskId = ctx?.subTaskId ?? ''
+  const formsPackageTaskId =
+    ctx?.child.id != null
+      ? resolveAccountOpeningFormsPackageTaskId(state, ctx.child.id)
+      : ''
+  const taskId =
+    section === 'forms-package'
+      ? formsPackageTaskId
+      : (ctx?.subTaskId ?? '')
   const { data, updateField } = useTaskData(taskId || '__no_child__')
   const openAccountsParentId = ctx
     ? findParentTaskForChild(state, ctx.child.id)?.id ?? 'open-accounts'
@@ -209,6 +234,7 @@ export function AcctChildDocumentsReviewForm() {
 
   return (
     <div className={variant === 'v5' || variant === 'v6' ? 'space-y-9' : 'space-y-7'}>
+      {showFormsPackage ? (
       <section id="acct-docs-forms" className="space-y-4 scroll-mt-16">
         <div
           className={cn(
@@ -330,7 +356,9 @@ export function AcctChildDocumentsReviewForm() {
         </div>
         </div>
       </section>
+      ) : null}
 
+      {showSupportingDocuments ? (
       <section id="acct-docs-client-upload" className="space-y-4 scroll-mt-16">
         <div
           className={cn(
@@ -360,7 +388,7 @@ export function AcctChildDocumentsReviewForm() {
               Supporting Documents
             </h3>
             <p className={childSectionBodyClass}>
-              Supporting documents are optional unless requested during review. Firm and custodian-generated forms are handled in Envelopes.
+              Supporting documents are optional unless requested during review. Firm and custodian-generated forms are handled in Forms Package.
             </p>
           </div>
           <div className="space-y-4">
@@ -427,6 +455,7 @@ export function AcctChildDocumentsReviewForm() {
           />
         </div>
       </section>
+      ) : null}
     </div>
   )
 }

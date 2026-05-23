@@ -12,7 +12,7 @@ function deliveryLabel(v: EsignEnvelope['deliveryMethod']): string {
 
 export function buildEnvelopeManifestText(envelope: EsignEnvelope): string {
   const lines: string[] = []
-  lines.push(`Envelope: ${getEnvelopeDisplayName(envelope)}`)
+  lines.push(`Forms package: ${getEnvelopeDisplayName(envelope)}`)
   lines.push(`Delivery: ${deliveryLabel(envelope.deliveryMethod)}`)
   lines.push('')
   lines.push('— Forms by account —')

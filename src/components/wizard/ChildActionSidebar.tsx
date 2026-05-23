@@ -14,9 +14,9 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from '@/components/ui/tooltip'
-import { getSubTaskDisplayTitle } from '@/utils/childTaskRegistry'
+import { getSubTaskDisplayTitle, getVisibleChildSubTasks } from '@/utils/childTaskRegistry'
+import { getAccountWorkflowPhase, ownersAmlScreeningCleared } from '@/utils/ownerKycReview'
 import {
-  getAccountOpeningChildSubmissionIssues,
   getAccountOpeningSubTaskProgress,
 } from '@/utils/accountOpeningChildProgress'
 import { getGenericChildSubTaskProgress } from '@/utils/childSubTaskProgress'
@@ -46,6 +46,9 @@ import { isChildAwaitingAdvisorClarification } from '@/utils/childStatusDisplay'
 import { getKycValidationErrors, kycChildHasOptionalIdVerification } from './forms/KycChildInfoForm'
 import { JourneyHeader, type WorkflowBreadcrumbItem } from '@/components/wizard/JourneyHeader'
 import { computeOverallJourneyProgressPct } from '@/components/wizard/StepSidebar'
+import { useTheme } from '@/stores/themeStore'
+import { isSingleFlowKycEnabled } from '@/utils/ownerKycReview'
+import { findParentTaskForChild } from '@/utils/openAccountsTaskContext'
 import { AssignAllTasksControl } from '@/components/wizard/AssignAllTasksControl'
 import { ProgressIcon, pickVariant } from '@/components/wizard/ProgressIcons'
 import {
@@ -70,6 +73,8 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog'
 import { toast } from 'sonner'
+import { handleWizardPanelShellWheel, handleWizardScrollPaneWheel } from '@/utils/wizardScroll'
+import { formatStructuredReviewText } from '@/utils/formatStructuredReviewText'
 
 const CHILD_TYPE_ICONS: Record<string, LucideIcon> = {
   'account-opening': Wallet,
@@ -83,6 +88,7 @@ const reviewDialogContentClass =
 
 type ReviewReasonOption = { value: string; label: string }
 
+/** Escalation / legacy AML return flows — not used for account-opening rejection modal. */
 const AML_REJECTION_REASONS: ReviewReasonOption[] = [
   { value: 'sanctions-potential-match', label: 'Potential sanctions or watchlist match' },
   { value: 'pep-adverse-media', label: 'PEP or adverse media concern' },
@@ -91,6 +97,20 @@ const AML_REJECTION_REASONS: ReviewReasonOption[] = [
   { value: 'business-activity-risk', label: 'Occupation, employer, or business activity risk' },
   { value: 'identity-data-inconsistency', label: 'Identity data inconsistency requires review' },
   { value: 'other', label: 'Other AML concern' },
+]
+
+/** Account-opening AML reject disposition — required structured reason + optional notes. */
+const ACCOUNT_OPENING_AML_REJECTION_REASONS: ReviewReasonOption[] = [
+  { value: 'potential-pep-match', label: 'Potential PEP match' },
+  { value: 'ofac-sanctions-match', label: 'OFAC / sanctions match' },
+  { value: 'adverse-media-findings', label: 'Adverse media findings' },
+  { value: 'identity-mismatch', label: 'Identity mismatch' },
+  { value: 'fraud-concern', label: 'Fraud concern' },
+  { value: 'unable-to-verify-identity', label: 'Unable to verify identity' },
+  { value: 'insufficient-supporting-documentation', label: 'Insufficient supporting documentation' },
+  { value: 'duplicate-suspicious-activity', label: 'Duplicate / suspicious account activity' },
+  { value: 'compliance-policy-restriction', label: 'Compliance policy restriction' },
+  { value: 'other', label: 'Other' },
 ]
 
 const DOCUMENT_REVIEW_REJECTION_REASONS: ReviewReasonOption[] = [
@@ -114,13 +134,6 @@ const CIP_REJECTION_REASONS: ReviewReasonOption[] = [
   { value: 'ineligible-subject', label: 'Subject is ineligible for account opening' },
   { value: 'other', label: 'Other CIP rejection reason' },
 ]
-
-function formatStructuredReviewText(reason: string, details: string): string {
-  const trimmedReason = reason.trim()
-  const trimmedDetails = details.trim()
-  if (trimmedReason && trimmedDetails) return `${trimmedReason}\n\nAdditional information: ${trimmedDetails}`
-  return trimmedReason || trimmedDetails
-}
 
 function getReasonLabel(options: ReviewReasonOption[], value: string): string {
   return options.find((reason) => reason.value === value)?.label ?? ''
@@ -190,8 +203,8 @@ function SubTaskProgressIndicator({
       ? 'Canceled'
       : variant === 'done'
       ? edited
-        ? 'Completed · Edited'
-        : 'Completed'
+        ? 'Pending Release · Edited'
+        : 'Pending Release'
       : variant === 'ambiguous'
       ? 'No progress to report'
       : displayPct === 0
@@ -233,6 +246,13 @@ type ReviewerDialog =
   | 'doc-request'
   | 'principal-approve'
   | 'principal-request'
+  | 'account-aml-approve'
+  | 'account-aml-reject'
+  | 'account-cip-approve'
+  | 'account-cip-request'
+  | 'account-principal-approve'
+  | 'account-principal-reject'
+  | 'account-principal-request'
 
 function StatusActionButton({
   children,
@@ -281,6 +301,7 @@ function ReviewTextDialog({
   open,
   title,
   description,
+  supportingDescription,
   reasonLabel,
   reasonPlaceholder = 'Select a reason...',
   reasonOptions,
@@ -289,6 +310,8 @@ function ReviewTextDialog({
   label,
   placeholder,
   value,
+  requireNotesWhenReasonValue,
+  notesValidationMessage,
   confirmLabel,
   confirmTone = 'default',
   onChange,
@@ -298,6 +321,7 @@ function ReviewTextDialog({
   open: boolean
   title: string
   description: ReactNode
+  supportingDescription?: ReactNode
   reasonLabel?: string
   reasonPlaceholder?: string
   reasonOptions?: ReviewReasonOption[]
@@ -306,18 +330,33 @@ function ReviewTextDialog({
   label: string
   placeholder: string
   value: string
+  requireNotesWhenReasonValue?: string
+  notesValidationMessage?: string
   confirmLabel: string
   confirmTone?: 'default' | 'destructive'
   onChange: (value: string) => void
   onCancel: () => void
   onConfirm: () => void
 }) {
+  const notesTrimmed = value.trim()
+  const reasonRequired = Boolean(reasonOptions?.length)
+  const reasonMissing = reasonRequired && !reasonValue
+  const notesRequired =
+    Boolean(requireNotesWhenReasonValue) && reasonValue === requireNotesWhenReasonValue
+  const notesInvalid = notesRequired && !notesTrimmed
+  const confirmDisabled = reasonMissing || notesInvalid
+
   return (
     <Dialog open={open} onOpenChange={(nextOpen) => !nextOpen && onCancel()}>
       <DialogContent className={cn('max-w-md', reviewDialogContentClass)}>
         <DialogHeader>
           <DialogTitle>{title}</DialogTitle>
-          <DialogDescription>{description}</DialogDescription>
+          <DialogDescription asChild>
+            <div className="space-y-2 text-sm text-muted-foreground">
+              <p>{description}</p>
+              {supportingDescription ? <p>{supportingDescription}</p> : null}
+            </div>
+          </DialogDescription>
         </DialogHeader>
         {reasonOptions && reasonOptions.length > 0 && onReasonChange ? (
           <div className="space-y-2">
@@ -344,6 +383,9 @@ function ReviewTextDialog({
             placeholder={placeholder}
             className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm min-h-[88px] resize-none focus:outline-none focus:ring-2 focus:ring-ring"
           />
+          {notesInvalid && notesValidationMessage ? (
+            <p className="text-xs text-destructive">{notesValidationMessage}</p>
+          ) : null}
         </div>
         <DialogFooter>
           <Button type="button" variant="outline" onClick={onCancel}>
@@ -353,7 +395,7 @@ function ReviewTextDialog({
             type="button"
             variant={confirmTone}
             onClick={onConfirm}
-            disabled={Boolean(reasonOptions?.length) && !reasonValue}
+            disabled={confirmDisabled}
           >
             {confirmLabel}
           </Button>
@@ -436,8 +478,6 @@ function ChildReviewStatusActions() {
   const docReview = reviewState?.documentReview
   const principalReview = reviewState?.principalReview
   const hoKycReview = reviewState?.hoKycReview
-  const childMeta = (state.taskData[child.id] as Record<string, unknown> | undefined) ?? {}
-  const subjectLabel = childMeta.kycSubjectType === 'entity' ? 'legal entity' : 'individual'
   const mode = state.demoViewMode
 
   const hasReviewerActions =
@@ -457,7 +497,102 @@ function ChildReviewStatusActions() {
   let actions: ReactNode = null
   let helper: ReactNode = null
 
-  if (mode === 'aml') {
+  // Single-flow KYC: account-opening children expose account-level AML / CIP dispositions
+  // through this status card. These short-circuit before the legacy KYC-child branches below.
+  const isSingleFlowAccountChild =
+    child.childType === 'account-opening' && isSingleFlowKycEnabled(state)
+  const accountPhase = isSingleFlowAccountChild ? getAccountWorkflowPhase(state, child.id) : 'draft'
+
+  if (isSingleFlowAccountChild && mode === 'aml') {
+    const amlScreeningComplete = ownersAmlScreeningCleared(reviewState)
+    if (
+      amlScreeningComplete &&
+      (accountPhase === 'aml_review' || accountPhase === 'escalation_hold')
+    ) {
+      helper = (
+        <p className="text-xs text-muted-foreground">
+          AML screening is complete for all participants. This account is awaiting document review.
+        </p>
+      )
+    } else if (accountPhase !== 'aml_review' && accountPhase !== 'escalation_hold') {
+      helper = (
+        <p className="text-xs text-muted-foreground">
+          AML disposition is available once this account is routed to Escalation / Hold.
+        </p>
+      )
+    } else {
+      actions = (
+        <StatusActionGroup>
+          <StatusActionButton tone="accept" className="w-full" onClick={() => setDialog('account-aml-approve')}>
+            Approve AML
+          </StatusActionButton>
+          <SecondaryActionRow>
+            <StatusActionButton tone="reject" className="w-full" onClick={() => setDialog('account-aml-reject')}>
+              Reject
+            </StatusActionButton>
+          </SecondaryActionRow>
+        </StatusActionGroup>
+      )
+    }
+  } else if (isSingleFlowAccountChild && mode === 'ho-principal') {
+    if (accountPhase !== 'principal_review') {
+      if (accountPhase === 'document_review') {
+        helper = (
+          <p className="text-xs text-muted-foreground">
+            Waiting on document review before principal review can begin.
+          </p>
+        )
+      } else if (accountPhase === 'aml_review' || accountPhase === 'escalation_hold') {
+        helper = (
+          <p className="text-xs text-muted-foreground">
+            Waiting on Escalation / Hold before principal review can begin.
+          </p>
+        )
+      }
+    } else {
+      actions = (
+        <StatusActionGroup>
+          <StatusActionButton tone="accept" className="w-full" onClick={() => setDialog('account-principal-approve')}>
+            Approve Review
+          </StatusActionButton>
+          <SecondaryActionRow>
+            <StatusActionButton tone="reject" className="w-full" onClick={() => setDialog('account-principal-reject')}>
+              Reject Review
+            </StatusActionButton>
+            <StatusActionButton tone="secondary" className="w-full" onClick={() => setDialog('account-principal-request')}>
+              Request Information
+            </StatusActionButton>
+          </SecondaryActionRow>
+        </StatusActionGroup>
+      )
+    }
+  } else if (
+    isSingleFlowAccountChild &&
+    (mode === 'ho-documents' || mode === 'ho-kyc')
+  ) {
+    if (accountPhase !== 'document_review') {
+      if (accountPhase === 'aml_review' || accountPhase === 'escalation_hold') {
+        helper = (
+          <p className="text-xs text-muted-foreground">
+            Waiting on Escalation / Hold before document review can begin.
+          </p>
+        )
+      }
+    } else {
+      actions = (
+        <StatusActionGroup>
+          <StatusActionButton tone="accept" className="w-full" onClick={() => setDialog('account-cip-approve')}>
+            Approve Review
+          </StatusActionButton>
+          <SecondaryActionRow>
+            <StatusActionButton tone="secondary" className="w-full" onClick={() => setDialog('account-cip-request')}>
+              Request Information
+            </StatusActionButton>
+          </SecondaryActionRow>
+        </StatusActionGroup>
+      )
+    }
+  } else if (mode === 'aml') {
     if (!isChildInAmlReviewQueue(child, reviewState)) {
       actions = null
     } else {
@@ -522,7 +657,7 @@ function ChildReviewStatusActions() {
         : isChildInDocumentReviewQueue(child, reviewState)
 
     if (amlEscalated) {
-      helper = <p className="text-xs text-red-700">SAR escalated. Document review cannot be accepted.</p>
+      helper = <p className="text-xs text-red-700">SAR escalated. Document review cannot be approved.</p>
     } else if (
       child.status === 'awaiting_review' &&
       (amlReview?.status === 'pending' || amlReview?.status === 'flagged')
@@ -541,12 +676,9 @@ function ChildReviewStatusActions() {
         actions = (
           <StatusActionGroup>
             <StatusActionButton tone="accept" className="w-full" onClick={() => setDialog('doc-accept')}>
-              Accept
+              Approve Review
             </StatusActionButton>
             <SecondaryActionRow>
-              <StatusActionButton tone="reject" className="w-full" onClick={() => setShowNigoModal('document')}>
-                Reject
-              </StatusActionButton>
               <StatusActionButton tone="secondary" className="w-full" onClick={() => setDialog('doc-request')}>
                 Request Information
               </StatusActionButton>
@@ -585,11 +717,11 @@ function ChildReviewStatusActions() {
         !blocked ? (
           <StatusActionGroup>
             <StatusActionButton tone="accept" className="w-full" onClick={() => setDialog('principal-approve')}>
-              Approve
+              Approve Review
             </StatusActionButton>
             <SecondaryActionRow>
               <StatusActionButton tone="reject" className="w-full" onClick={() => setShowNigoModal('principal')}>
-                Reject
+                Reject Review
               </StatusActionButton>
               <StatusActionButton tone="secondary" className="w-full" onClick={() => setDialog('principal-request')}>
                 Request Information
@@ -613,14 +745,9 @@ function ChildReviewStatusActions() {
       <ReviewConfirmDialog
         open={dialog === 'aml-approve'}
         title="Approve AML Review"
-        description={(
-          <>
-            Confirm approval for <span className="font-medium text-foreground">{child.name}</span> after
-            AML/sanctions screening review is complete.
-          </>
-        )}
-        notesLabel="Approval reason"
-        notesPlaceholder="Summarize the screening outcome and rationale for approval..."
+        description="Confirm that AML and sanctions screening review is complete and approve this submission."
+        notesLabel="Review notes"
+        notesPlaceholder="Add optional review notes..."
         notesValue={comments}
         onNotesChange={setComments}
         confirmLabel="Confirm Approval"
@@ -635,12 +762,7 @@ function ChildReviewStatusActions() {
       <ReviewTextDialog
         open={dialog === 'aml-return'}
         title="Request Information"
-        description={(
-          <>
-            Request additional information from the advisor for{' '}
-            <span className="font-medium text-foreground">{child.name}</span>.
-          </>
-        )}
+        description="Request additional information from the advisor before AML review can continue."
         reasonLabel="Documentation reason"
         reasonOptions={DOCUMENT_REVIEW_REJECTION_REASONS}
         reasonValue={selectedReason}
@@ -664,11 +786,7 @@ function ChildReviewStatusActions() {
       <ReviewTextDialog
         open={dialog === 'aml-escalate'}
         title="Escalate for Suspicious Activity"
-        description={(
-          <>
-            Escalate <span className="font-medium text-foreground">{child.name}</span> for suspicious activity handling.
-          </>
-        )}
+        description="Escalate this submission for suspicious activity handling and SAR review."
         reasonLabel="AML reason"
         reasonOptions={AML_REJECTION_REASONS}
         reasonValue={selectedReason}
@@ -692,13 +810,11 @@ function ChildReviewStatusActions() {
       <ReviewConfirmDialog
         open={dialog === 'ho-kyc-approve'}
         title="Approve KYC"
-        description={(
-          <>
-            Confirm that this <span className="font-medium text-foreground">{subjectLabel}</span> (
-            <span className="font-medium text-foreground">{child.name}</span>) has completed KYC verification
-            and all data has been reviewed.
-          </>
-        )}
+        description="Confirm that KYC verification is complete and all participant data has been reviewed."
+        notesLabel="Review notes"
+        notesPlaceholder="Add optional review notes..."
+        notesValue={comments}
+        onNotesChange={setComments}
         confirmLabel="Confirm Approval"
         confirmClassName="bg-green-600 hover:bg-green-700 text-white"
         onCancel={closeDialog}
@@ -711,12 +827,7 @@ function ChildReviewStatusActions() {
       <ReviewTextDialog
         open={dialog === 'ho-kyc-request'}
         title="Request Information"
-        description={(
-          <>
-            Request additional details for this <span className="font-medium text-foreground">{subjectLabel}</span> (
-            <span className="font-medium text-foreground">{child.name}</span>) before final review.
-          </>
-        )}
+        description="Request additional information from the advisor before document review can continue."
         reasonLabel="Documentation reason"
         reasonOptions={DOCUMENT_REVIEW_REJECTION_REASONS}
         reasonValue={selectedReason}
@@ -744,14 +855,16 @@ function ChildReviewStatusActions() {
       <ReviewTextDialog
         open={dialog === 'ho-kyc-reject'}
         title="Reject"
-        description="Reject this submission and return it to advisor with rationale."
+        description="Reject this submission and return it to the advisor with rationale."
         reasonLabel="Rejection reason"
         reasonOptions={CIP_REJECTION_REASONS}
         reasonValue={selectedReason}
         onReasonChange={setSelectedReason}
-        label="Additional information"
-        placeholder="Describe the reason for rejection..."
+        label="Reviewer notes"
+        placeholder="Add additional compliance findings or review notes..."
         value={comments}
+        requireNotesWhenReasonValue="other"
+        notesValidationMessage="Additional details are required when selecting Other."
         confirmLabel="Confirm Reject"
         confirmTone="destructive"
         onChange={setComments}
@@ -767,14 +880,13 @@ function ChildReviewStatusActions() {
 
       <ReviewConfirmDialog
         open={dialog === 'doc-accept'}
-        title="Accept document review"
-        description={(
-          <>
-            All documents for <span className="font-medium text-foreground">{child.name}</span> have been verified.
-            This will pass the submission to the Principal Review team.
-          </>
-        )}
-        confirmLabel="Confirm accept"
+        title="Approve Review"
+        description="Approve document and CIP review and advance the submission to Principal Review."
+        notesLabel="Review notes"
+        notesPlaceholder="Add optional review notes..."
+        notesValue={comments}
+        onNotesChange={setComments}
+        confirmLabel="Approve Review"
         confirmClassName="bg-green-600 hover:bg-green-700 text-white"
         onCancel={closeDialog}
         onConfirm={() => {
@@ -786,12 +898,7 @@ function ChildReviewStatusActions() {
       <ReviewTextDialog
         open={dialog === 'doc-request'}
         title="Request Information"
-        description={(
-          <>
-            Request additional information from the advisor for{' '}
-            <span className="font-medium text-foreground">{child.name}</span>.
-          </>
-        )}
+        description="Request additional information or supporting documents from the advisor before document review can continue."
         reasonLabel="Documentation reason"
         reasonOptions={DOCUMENT_REVIEW_REJECTION_REASONS}
         reasonValue={selectedReason}
@@ -815,14 +922,9 @@ function ChildReviewStatusActions() {
 
       <ReviewConfirmDialog
         open={dialog === 'principal-approve'}
-        title="Approve Account Opening"
-        description={(
-          <>
-            Are you sure you want to approve <span className="font-medium text-foreground">{child.name}</span>?
-            This will finalize the account and clear it for processing at Pershing.
-          </>
-        )}
-        confirmLabel="Confirm Approval"
+        title="Approve Review"
+        description="Approve principal review and finalize the account opening. The account will be marked complete and cleared for processing."
+        confirmLabel="Approve Review"
         confirmClassName="bg-green-600 hover:bg-green-700 text-white"
         onCancel={closeDialog}
         onConfirm={() => {
@@ -834,12 +936,7 @@ function ChildReviewStatusActions() {
       <ReviewTextDialog
         open={dialog === 'principal-request'}
         title="Request Information"
-        description={(
-          <>
-            Request additional information from the advisor for{' '}
-            <span className="font-medium text-foreground">{child.name}</span>.
-          </>
-        )}
+        description="Request additional information from the advisor needed to complete principal review."
         reasonLabel="Documentation reason"
         reasonOptions={DOCUMENT_REVIEW_REJECTION_REASONS}
         reasonValue={selectedReason}
@@ -856,6 +953,173 @@ function ChildReviewStatusActions() {
             type: 'PRINCIPAL_REVIEW_NIGO',
             reason,
             feedback: comments.trim() || undefined,
+          })
+          closeDialog()
+        }}
+      />
+
+      <ReviewConfirmDialog
+        open={dialog === 'account-aml-approve'}
+        title="Approve AML Screening"
+        description="Approve AML screening and continue onboarding. The account will move to the next review stage."
+        notesLabel="Review notes"
+        notesPlaceholder="Add optional review notes..."
+        notesValue={comments}
+        onNotesChange={setComments}
+        confirmLabel="Approve AML"
+        confirmClassName="bg-green-600 hover:bg-green-700 text-white"
+        onCancel={closeDialog}
+        onConfirm={() => {
+          dispatch({
+            type: 'ACCOUNT_AML_APPROVE_ALL',
+            accountChildId: child.id,
+            approvalReason: comments.trim() || undefined,
+          })
+          closeDialog()
+        }}
+      />
+
+      <ReviewTextDialog
+        open={dialog === 'account-aml-reject'}
+        title="Reject Account Opening"
+        description="Reject this account opening due to AML findings. The advisor will be notified and onboarding will be closed."
+        reasonLabel="Rejection reason"
+        reasonOptions={ACCOUNT_OPENING_AML_REJECTION_REASONS}
+        reasonValue={selectedReason}
+        onReasonChange={setSelectedReason}
+        label="Reviewer notes"
+        placeholder="Add additional compliance findings or review notes..."
+        value={comments}
+        requireNotesWhenReasonValue="other"
+        notesValidationMessage="Additional details are required when selecting Other."
+        confirmLabel="Reject"
+        confirmTone="destructive"
+        onChange={setComments}
+        onCancel={closeDialog}
+        onConfirm={() => {
+          const rejectionReason = getReasonLabel(ACCOUNT_OPENING_AML_REJECTION_REASONS, selectedReason)
+          const reviewerNotes = comments.trim() || undefined
+          dispatch({
+            type: 'ACCOUNT_AML_REJECT_ALL',
+            accountChildId: child.id,
+            rejectionReasonCode: selectedReason,
+            rejectionReason,
+            reviewerNotes,
+          })
+          closeDialog()
+        }}
+      />
+
+      <ReviewConfirmDialog
+        open={dialog === 'account-cip-approve'}
+        title="Approve Review"
+        description="Approve document and CIP review and advance the account to Principal Review. Verification will be recorded for all participants."
+        notesLabel="Review notes"
+        notesPlaceholder="Add optional review notes..."
+        notesValue={comments}
+        onNotesChange={setComments}
+        confirmLabel="Approve Review"
+        confirmClassName="bg-green-600 hover:bg-green-700 text-white"
+        onCancel={closeDialog}
+        onConfirm={() => {
+          dispatch({ type: 'ACCOUNT_CIP_APPROVE_ALL', accountChildId: child.id })
+          closeDialog()
+        }}
+      />
+
+      <ReviewTextDialog
+        open={dialog === 'account-cip-request'}
+        title="Request Information"
+        description="Send the account back to the advisor for additional CIP information or supporting documents."
+        reasonLabel="Documentation reason"
+        reasonOptions={DOCUMENT_REVIEW_REJECTION_REASONS}
+        reasonValue={selectedReason}
+        onReasonChange={setSelectedReason}
+        label="Additional information"
+        placeholder="Describe what additional documentation or corrections are needed..."
+        value={comments}
+        confirmLabel="Send Request"
+        onChange={setComments}
+        onCancel={closeDialog}
+        onConfirm={() => {
+          const reason = getReasonLabel(DOCUMENT_REVIEW_REJECTION_REASONS, selectedReason)
+          dispatch({
+            type: 'ACCOUNT_CIP_REQUEST_INFO',
+            accountChildId: child.id,
+            comments:
+              formatStructuredReviewText(reason, comments) || 'Please provide additional information.',
+          })
+          closeDialog()
+        }}
+      />
+
+      <ReviewConfirmDialog
+        open={dialog === 'account-principal-approve'}
+        title="Approve Review"
+        description="Approve principal review and finalize the account opening. The account will be marked complete and cleared for processing."
+        notesLabel="Review notes"
+        notesPlaceholder="Add optional review notes..."
+        notesValue={comments}
+        onNotesChange={setComments}
+        confirmLabel="Approve Review"
+        confirmClassName="bg-green-600 hover:bg-green-700 text-white"
+        onCancel={closeDialog}
+        onConfirm={() => {
+          dispatch({ type: 'ACCOUNT_PRINCIPAL_APPROVE', accountChildId: child.id })
+          closeDialog()
+        }}
+      />
+
+      <ReviewTextDialog
+        open={dialog === 'account-principal-reject'}
+        title="Reject Review"
+        description="Reject principal review due to supervisory findings. The advisor will be notified and the account will move to Escalation / Hold."
+        reasonLabel="Rejection reason"
+        reasonOptions={DOCUMENT_REVIEW_REJECTION_REASONS}
+        reasonValue={selectedReason}
+        onReasonChange={setSelectedReason}
+        label="Reviewer notes"
+        placeholder="Add additional compliance findings or review notes..."
+        value={comments}
+        requireNotesWhenReasonValue="other"
+        notesValidationMessage="Additional details are required when selecting Other."
+        confirmLabel="Reject Review"
+        confirmTone="destructive"
+        onChange={setComments}
+        onCancel={closeDialog}
+        onConfirm={() => {
+          const rejectionReason = getReasonLabel(DOCUMENT_REVIEW_REJECTION_REASONS, selectedReason)
+          const reviewerNotes = formatStructuredReviewText(rejectionReason, comments) || rejectionReason
+          dispatch({
+            type: 'ACCOUNT_PRINCIPAL_REJECT',
+            accountChildId: child.id,
+            reason: reviewerNotes,
+          })
+          closeDialog()
+        }}
+      />
+
+      <ReviewTextDialog
+        open={dialog === 'account-principal-request'}
+        title="Request Information"
+        description="Request additional information from the advisor needed to complete principal review. The account will return to the advisor for corrections."
+        reasonLabel="Documentation reason"
+        reasonOptions={DOCUMENT_REVIEW_REJECTION_REASONS}
+        reasonValue={selectedReason}
+        onReasonChange={setSelectedReason}
+        label="Additional information"
+        placeholder="Describe what additional information or corrections are needed before principal approval..."
+        value={comments}
+        confirmLabel="Send Request"
+        onChange={setComments}
+        onCancel={closeDialog}
+        onConfirm={() => {
+          const reason = getReasonLabel(DOCUMENT_REVIEW_REJECTION_REASONS, selectedReason)
+          dispatch({
+            type: 'ACCOUNT_PRINCIPAL_REQUEST_INFO',
+            accountChildId: child.id,
+            comments:
+              formatStructuredReviewText(reason, comments) || 'Please provide additional information.',
           })
           closeDialog()
         }}
@@ -878,6 +1142,11 @@ function ChildReviewStatusActions() {
         open={showNigoModal === 'principal'}
         onClose={() => setShowNigoModal(null)}
         teamLabel="Principal Review Team"
+        variant="reject"
+        title="Reject Review"
+        confirmLabel="Reject Review"
+        reasonLabel="Rejection reason"
+        reasonOptions={DOCUMENT_REVIEW_REJECTION_REASONS}
         onSubmit={(reason, feedback) => {
           dispatch({ type: 'PRINCIPAL_REVIEW_NIGO', reason, feedback: feedback || undefined })
           setShowNigoModal(null)
@@ -889,6 +1158,8 @@ function ChildReviewStatusActions() {
 
 export function ChildActionSidebar() {
   const { state, dispatch } = useWorkflow()
+  const { hideKycChildWorkflows } = useTheme()
+  const hideKycPage = hideKycChildWorkflows
   const { journeys } = useServicing()
   const navigate = useNavigate()
   const workflowExitPath = useMemo(() => {
@@ -896,12 +1167,17 @@ export function ChildActionSidebar() {
     return j?.category === 'Onboarding' ? '/onboarding' : '/servicing'
   }, [journeys, state.journeyId])
   const ctx = useChildActionContext()
-  const { setCollapsed: setRightPanelCollapsed, setActiveTab: setRightPanelTab } = useWizardRightPanel()
+  const {
+    collapsed: rightPanelCollapsed,
+    activeTab: rightPanelActiveTab,
+    setCollapsed: setRightPanelCollapsed,
+    setActiveTab: setRightPanelTab,
+  } = useWizardRightPanel()
   const variant = useOpenAccountsVariant()
   const { variant: selectedVariant } = useOpenAccountsVariantControls()
   const journeyProgressPct = useMemo(
-    () => computeOverallJourneyProgressPct(state, selectedVariant),
-    [state, selectedVariant],
+    () => computeOverallJourneyProgressPct(state, selectedVariant, hideKycPage),
+    [state, selectedVariant, hideKycPage],
   )
   const [exitToOnboardingOpen, setExitToOnboardingOpen] = useState(false)
   const [resubmitOpen, setResubmitOpen] = useState(false)
@@ -910,7 +1186,7 @@ export function ChildActionSidebar() {
   const parentTask = useMemo(() => {
     const id = state.activeChildActionId
     if (!id) return undefined
-    return state.tasks.find((t) => (t.children ?? []).some((c) => c.id === id))
+    return findParentTaskForChild(state, id)
   }, [state.activeChildActionId, state.tasks])
 
   const activeChildForNav = useMemo(() => {
@@ -980,7 +1256,7 @@ export function ChildActionSidebar() {
 
   if (!ctx) return null
 
-  const { child, config, subTaskIndex } = ctx
+  const { child, subTaskIndex } = ctx
   /** Match top-level nav style: no numeric prefixes for drill-in child flows. */
   const showSubTaskNumbers =
     child.childType !== 'account-opening' &&
@@ -991,7 +1267,10 @@ export function ChildActionSidebar() {
 
   return (
     <TooltipProvider delayDuration={300}>
-      <nav className="w-[330px] shrink-0 border-r border-sidebar-border bg-sidebar-background text-sidebar-foreground flex flex-col min-h-0 self-stretch h-full">
+      <nav
+        className="w-[330px] shrink-0 border-r border-sidebar-border bg-sidebar-background text-sidebar-foreground flex flex-col min-h-0 self-stretch h-full"
+        onWheel={handleWizardPanelShellWheel}
+      >
         <JourneyHeader
           onExitWorkflow={() => setExitToOnboardingOpen(true)}
           workflowBreadcrumbs={workflowBreadcrumbs}
@@ -1011,7 +1290,11 @@ export function ChildActionSidebar() {
           metaAssigneeLabel={state.assignedTo}
           metaProgressPct={journeyProgressPct}
         />
-        <div className="flex-1 min-h-0 overflow-y-auto pl-1 pr-2 pt-2">
+        <div
+          data-wizard-scroll-pane
+          className="flex-1 min-h-0 overflow-y-auto overscroll-y-contain pl-1 pr-2 pt-2"
+          onWheel={handleWizardScrollPaneWheel}
+        >
           <div className="mb-4 flex items-start gap-2.5 px-2.5">
             {/* Match StepSidebar spine: line z-0, opaque icon z-10, flex-1 filler; keep this column above the task column if layers overlap at the gutter. */}
             <div className="relative z-20 flex w-7 shrink-0 flex-col items-center self-stretch">
@@ -1030,7 +1313,12 @@ export function ChildActionSidebar() {
               </div>
 
               <ul className="space-y-1">
-                {config.subTasks.map((subTask, idx) => {
+                {getVisibleChildSubTasks(child.childType, viewMode, child.status, {
+                  accountWorkflowPhase:
+                    child.childType === 'account-opening'
+                      ? getAccountWorkflowPhase(state, child.id)
+                      : undefined,
+                }).map((subTask, idx) => {
                   const subTaskId = `${child.id}-${subTask.suffix}`
                   return (
                     <li key={subTask.suffix}>
@@ -1081,7 +1369,7 @@ export function ChildActionSidebar() {
 
         {(child.childType === 'account-opening' || child.childType === 'kyc') && (() => {
           const reviewState = getChildReviewState(state, child.id)
-          const clarificationRequired = isChildAwaitingAdvisorClarification(reviewState)
+          const clarificationRequired = isChildAwaitingAdvisorClarification(reviewState, child.status)
           const stageLabel = clarificationRequired
             ? 'Clarification / Document Required'
             : getActiveStageLabel(child.status, child.childType, reviewState ?? undefined)
@@ -1092,14 +1380,15 @@ export function ChildActionSidebar() {
               : `Application is in ${stageLabel}.`
           const detailSentence = clarificationRequired
             ? null
-            : stageLabel === 'Draft'
-              ? 'Complete all sections to submit.'
-              : 'Check the activity timeline for details.'
+            : stageLabel === 'Draft' &&
+                child.childType === 'account-opening' &&
+                isSingleFlowKycEnabled(state)
+              ? 'Review submits automatically after the client signs the forms package.'
+              : stageLabel === 'Draft'
+                ? 'Complete all sections to submit.'
+                : 'Check the activity timeline for details.'
           const showResubmit =
-            state.demoViewMode === 'advisor' &&
-            advisorResubmitEligible &&
-            clarificationRequired
-          const resubmitButtonLabel = 'Submit for Review'
+            state.demoViewMode === 'advisor' && advisorResubmitEligible
 
           const handleStatusCardResubmit = () => {
             if (child.childType === 'kyc') {
@@ -1128,14 +1417,6 @@ export function ChildActionSidebar() {
                   fields: { _submitAttempted: true, _validationScrollNonce: Date.now() },
                 })
                 dispatch({ type: 'SET_CHILD_SUB_TASK', index: 0 })
-                return
-              }
-            } else if (child.childType === 'account-opening') {
-              const issues = getAccountOpeningChildSubmissionIssues(state, child.id)
-              if (issues.length > 0) {
-                toast.error('Cannot submit yet', {
-                  description: `Resolve ${issues.length} issue${issues.length === 1 ? '' : 's'} before resubmitting.`,
-                })
                 return
               }
             }
@@ -1170,7 +1451,7 @@ export function ChildActionSidebar() {
                   )}
                   {showResubmit ? (
                     <Button type="button" className="w-full" onClick={handleStatusCardResubmit}>
-                      {resubmitButtonLabel}
+                      Submit for Review
                     </Button>
                   ) : null}
                 </div>
@@ -1178,7 +1459,12 @@ export function ChildActionSidebar() {
                 <div className="border-t border-border/60 bg-muted/35 px-3 flex items-center" style={{ minHeight: '44px' }}>
                   <button
                     type="button"
+                    aria-expanded={!rightPanelCollapsed && rightPanelActiveTab === 'activity'}
                     onClick={() => {
+                      if (!rightPanelCollapsed && rightPanelActiveTab === 'activity') {
+                        setRightPanelCollapsed(true)
+                        return
+                      }
                       setRightPanelTab('activity')
                       setRightPanelCollapsed(false)
                     }}
@@ -1198,13 +1484,11 @@ export function ChildActionSidebar() {
       <Dialog open={resubmitOpen} onOpenChange={setResubmitOpen}>
         <DialogContent className="max-w-md">
           <DialogHeader>
-            <DialogTitle>
-              {child.childType === 'kyc' ? 'Submit for review?' : 'Resubmit for review?'}
-            </DialogTitle>
+            <DialogTitle>Submit for review?</DialogTitle>
             <DialogDescription>
               {child.childType === 'kyc'
-                ? 'This will resubmit the KYC package to the AML Team. Advisor edits will lock until review completes.'
-                : 'This will resubmit the application to the Document Review Team. Advisor edits will lock until review completes.'}
+                ? 'This will submit the KYC package to the AML Team. Advisor edits will lock until review completes.'
+                : 'This will submit the application to the Document Review Team. Advisor edits will lock until review completes.'}
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
@@ -1214,21 +1498,11 @@ export function ChildActionSidebar() {
             <Button
               type="button"
               onClick={() => {
-                if (child.childType === 'account-opening') {
-                  const issues = getAccountOpeningChildSubmissionIssues(state, child.id)
-                  if (issues.length > 0) {
-                    toast.error('Cannot submit yet', {
-                      description: `Resolve ${issues.length} issue${issues.length === 1 ? '' : 's'} before resubmitting.`,
-                    })
-                    setResubmitOpen(false)
-                    return
-                  }
-                }
                 dispatch({ type: 'SUBMIT_CHILD_FOR_REVIEW' })
                 setResubmitOpen(false)
               }}
             >
-              {child.childType === 'kyc' ? 'Submit for Review' : 'Resubmit for Review'}
+              Submit for Review
             </Button>
           </DialogFooter>
         </DialogContent>

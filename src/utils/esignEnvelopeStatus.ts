@@ -11,7 +11,7 @@ export function getEsignEnvelopeStatus(envelope: EsignEnvelope): EsignEnvelopeSt
 
 export const ESIGN_ENVELOPE_STATUS_LABELS: Record<EsignEnvelopeStatus, string> = {
   draft: 'Draft',
-  sent: 'Sent',
+  sent: 'Awaiting Client Signature',
   delivered: 'Delivered',
   completed: 'Completed',
   declined: 'Declined',

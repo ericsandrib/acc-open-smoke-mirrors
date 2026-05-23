@@ -46,6 +46,14 @@ import {
 import { OPTIONAL_ESIGN_FORM_CATALOG, PAPERWORK_DELIVERY_OPTIONS } from '@/data/esignEnvelopeOptions'
 import type { EsignEnvelope, EsignEnvelopeSigner, PaperworkDeliveryMethod } from '@/types/esignEnvelope'
 import { groupFormSelectionsByAccountChild } from '@/utils/buildEsignEnvelopeFormRows'
+import {
+  OWNER_KYC_REQUIRED_FIELD_LABELS,
+  getMissingOwnerKycFields,
+  isEmbeddedAccountOwnerKycEnabled,
+  type OwnerKycRequiredField,
+} from '@/utils/ownerKycReview'
+import { getAccountPartiesRequiringKyc } from '@/utils/accountOpeningOwnerKyc'
+import { AlertTriangle } from 'lucide-react'
 import { deriveDefaultEnvelopeName } from '@/utils/deriveEnvelopeDisplayName'
 import { downloadEnvelopeManifest } from '@/utils/downloadEsignEnvelopeManifest'
 import { flattenPdfForPreview } from '@/utils/flattenPdfForPreview'
@@ -112,7 +120,7 @@ function cloneEnvelope(e: EsignEnvelope): EsignEnvelope {
 }
 
 /** eSignature flows send to DocuSign; in-person / mail are wet-signature packages saved locally. */
-function isElectronicSignatureDelivery(method: PaperworkDeliveryMethod): boolean {
+export function isElectronicSignatureDelivery(method: PaperworkDeliveryMethod): boolean {
   return method === 'esignature' || method === 'inperson_esignature'
 }
 
@@ -182,6 +190,27 @@ export function EsignEnvelopeDrawer({
   )
 
   const { state } = useWorkflow()
+
+  const singleFlowKyc = isEmbeddedAccountOwnerKycEnabled()
+
+  /** Per-account owner field gaps that prevent forms generation for that account. */
+  const accountMissingFields = useMemo(() => {
+    const map = new Map<string, { partyId: string; partyName: string; missing: OwnerKycRequiredField[] }[]>()
+    if (!singleFlowKyc) return map
+    const accountIds = Array.from(new Set(local.formSelections.map((r) => r.accountChildId)))
+    for (const accountChildId of accountIds) {
+      const parties = getAccountPartiesRequiringKyc(state, accountChildId)
+      const rows: { partyId: string; partyName: string; missing: OwnerKycRequiredField[] }[] = []
+      for (const party of parties) {
+        const missing = getMissingOwnerKycFields(party)
+        if (missing.length > 0) {
+          rows.push({ partyId: party.id, partyName: party.name, missing })
+        }
+      }
+      if (rows.length > 0) map.set(accountChildId, rows)
+    }
+    return map
+  }, [singleFlowKyc, local.formSelections, state])
 
   const accountOpeningChildren = useMemo(() => {
     return state.tasks
@@ -295,10 +324,23 @@ export function EsignEnvelopeDrawer({
     }
   }
 
+  const blockedAccountIds = useMemo(
+    () => new Set(accountMissingFields.keys()),
+    [accountMissingFields],
+  )
+
+  const sendableAccountCount = accountSelections.filter(
+    (a) => a.included && !blockedAccountIds.has(a.accountChildId),
+  ).length
+
   const handleSave = () => {
     const trimmed = local.name.trim()
     const resolvedName = trimmed || deriveDefaultEnvelopeName(local)
-    onSave({ ...local, name: resolvedName })
+    // Drop any blocked accounts from the included set before saving — they can't have forms generated.
+    const sanitizedFormSelections = local.formSelections.map((row) =>
+      blockedAccountIds.has(row.accountChildId) ? { ...row, included: false } : row,
+    )
+    onSave({ ...local, name: resolvedName, formSelections: sanitizedFormSelections })
   }
 
   const previewDefaultName =
@@ -547,15 +589,15 @@ export function EsignEnvelopeDrawer({
         className="flex h-full max-h-[100dvh] w-full flex-col gap-0 overflow-hidden p-0 sm:max-w-2xl"
       >
         <SheetHeader className="space-y-1 border-b border-border px-6 py-4 text-left">
-          <SheetTitle>{isCreate ? 'New signing envelope' : 'Edit signing envelope'}</SheetTitle>
+          <SheetTitle>{isCreate ? 'New forms package' : 'Edit forms package'}</SheetTitle>
           <SheetDescription>
-            Configure delivery, firm/custodian forms by account, signers, and any extra uploads for this envelope.
+            Configure delivery, firm/custodian forms by account, signers, and any extra uploads for this forms package.
           </SheetDescription>
         </SheetHeader>
 
         <div className="min-h-0 flex-1 overflow-y-auto px-6 py-4 space-y-6">
           <div className="space-y-2">
-            <Label htmlFor="env-name">Envelope name</Label>
+            <Label htmlFor="env-name">Forms package name</Label>
             <Input
               id="env-name"
               value={local.name}
@@ -564,7 +606,7 @@ export function EsignEnvelopeDrawer({
             />
             {previewDefaultName ? (
               <p className="text-xs text-muted-foreground leading-snug">
-                If left blank, this envelope will be saved as:{' '}
+                If left blank, this forms package will be saved as:{' '}
                 <span className="font-medium text-foreground">{previewDefaultName}</span>
               </p>
             ) : null}
@@ -599,7 +641,7 @@ export function EsignEnvelopeDrawer({
             <div>
               <p className="text-sm font-medium">Firm &amp; custodian forms</p>
               <p className="text-xs text-muted-foreground mt-1">
-                Select which account(s) to include in this envelope. Forms for selected accounts are included
+                Select which account(s) to include in this forms package. Forms for selected accounts are included
                 automatically and cannot be removed individually.
               </p>
             </div>
@@ -611,19 +653,31 @@ export function EsignEnvelopeDrawer({
             ) : (
               <div className="space-y-4">
                 {accountSelections.map(({ accountChildId, rows, included, accountOpeningName, accountNumberLabel }) => {
+                  const ownersMissing = accountMissingFields.get(accountChildId)
+                  const blockedByMissingFields = (ownersMissing?.length ?? 0) > 0
                   return (
                   <div
                     key={accountChildId}
                     className={cn(
                       'rounded-lg border border-border bg-card overflow-hidden',
                       !included && 'opacity-70',
+                      blockedByMissingFields && 'border-amber-300',
                     )}
                   >
                     <div className="bg-muted/50 px-3 py-2 border-b border-border flex items-start justify-between gap-3">
-                      <label className="min-w-0 flex items-start gap-2.5 cursor-pointer">
+                      <label
+                        className={cn(
+                          'min-w-0 flex items-start gap-2.5',
+                          blockedByMissingFields ? 'cursor-not-allowed' : 'cursor-pointer',
+                        )}
+                      >
                         <Checkbox
-                          checked={included}
-                          onCheckedChange={(v) => setAccountIncluded(accountChildId, v === true)}
+                          checked={included && !blockedByMissingFields}
+                          disabled={blockedByMissingFields}
+                          onCheckedChange={(v) => {
+                            if (blockedByMissingFields) return
+                            setAccountIncluded(accountChildId, v === true)
+                          }}
                           className="mt-0.5"
                         />
                         <div className="space-y-0.5 min-w-0">
@@ -637,6 +691,25 @@ export function EsignEnvelopeDrawer({
                         </div>
                       </label>
                     </div>
+                    {blockedByMissingFields && (
+                      <div className="bg-amber-50/70 border-b border-amber-200 px-3 py-2 text-xs text-amber-900 flex items-start gap-2">
+                        <AlertTriangle className="h-3.5 w-3.5 mt-0.5 shrink-0 text-amber-700" />
+                        <div className="space-y-1">
+                          <p className="font-medium">Cannot generate forms — missing owner fields</p>
+                          <ul className="space-y-0.5">
+                            {ownersMissing!.map((o) => (
+                              <li key={o.partyId}>
+                                <span className="font-medium">{o.partyName}:</span>{' '}
+                                {o.missing.map((f) => OWNER_KYC_REQUIRED_FIELD_LABELS[f]).join(', ')}
+                              </li>
+                            ))}
+                          </ul>
+                          <p className="text-amber-800/80">
+                            Complete these fields on Account &amp; Owners to include this account in the forms package.
+                          </p>
+                        </div>
+                      </div>
+                    )}
                     <ul className="divide-y divide-border">
                       {rows.map((row) => (
                         <li key={row.formId} className="flex items-center gap-3 px-3 py-2.5">
@@ -683,7 +756,7 @@ export function EsignEnvelopeDrawer({
               <div>
                 <p className="text-sm font-medium">Executed firm / custodian forms</p>
                 <p className="text-xs text-muted-foreground mt-1">
-                  Executed copies are available after the envelope is completed in DocuSign. Paper or manually signed
+                  Executed copies are available after the forms package is completed in DocuSign. Paper or manually signed
                   copies are captured in each account&apos;s Documents step.
                 </p>
               </div>
@@ -705,7 +778,7 @@ export function EsignEnvelopeDrawer({
                 <div className="rounded-lg border border-dashed border-border p-4 text-center">
                   <FileText className="mx-auto mb-2 h-8 w-8 text-muted-foreground/50" />
                   <p className="text-sm text-muted-foreground">
-                    Executed forms will appear here after this envelope is completed.
+                    Executed forms will appear here after this forms package is completed.
                   </p>
                 </div>
               ) : (
@@ -754,7 +827,7 @@ export function EsignEnvelopeDrawer({
           <Separator />
 
           <div className="space-y-3">
-            <p className="text-sm font-medium">Envelope signers</p>
+            <p className="text-sm font-medium">Signers</p>
             <p className="text-xs text-muted-foreground">
               Signers are pulled from account owners and deduplicated across accounts. Edit email and phone used for
               delivery and signing notifications.
@@ -805,9 +878,9 @@ export function EsignEnvelopeDrawer({
 
           <div className="space-y-3">
             <div>
-              <p className="text-sm font-medium">Additional files for this envelope</p>
+              <p className="text-sm font-medium">Additional files</p>
               <p className="text-xs text-muted-foreground mt-1">
-                Upload PDFs or images to include in the envelope.
+                Upload PDFs or images to include in the forms package.
               </p>
             </div>
             {local.uploadedFiles.length === 0 ? (
@@ -854,17 +927,28 @@ export function EsignEnvelopeDrawer({
             <Download className="h-4 w-4" />
             Download form list
           </Button>
-          <div className="flex gap-2 justify-end w-full sm:w-auto">
-            <Button type="button" variant="ghost" onClick={() => onOpenChange(false)}>
-              Cancel
-            </Button>
-            <Button type="button" onClick={handleSave}>
-              {!isCreate
-                ? 'Save envelope'
-                : isElectronicSignatureDelivery(local.deliveryMethod)
-                  ? 'Send envelope'
-                  : 'Save envelope'}
-            </Button>
+          <div className="flex flex-col items-end gap-2 w-full sm:w-auto sm:flex-row sm:items-center">
+            {isCreate && singleFlowKyc && sendableAccountCount === 0 && (
+              <p className="text-xs text-amber-700">
+                No sendable accounts — complete required owner fields to enable sending.
+              </p>
+            )}
+            <div className="flex gap-2 justify-end">
+              <Button type="button" variant="ghost" onClick={() => onOpenChange(false)}>
+                Cancel
+              </Button>
+              <Button
+                type="button"
+                onClick={handleSave}
+                disabled={isCreate && singleFlowKyc && sendableAccountCount === 0}
+              >
+                {!isCreate
+                  ? 'Save forms package'
+                  : isElectronicSignatureDelivery(local.deliveryMethod)
+                    ? 'Send forms package'
+                    : 'Save forms package'}
+              </Button>
+            </div>
           </div>
         </SheetFooter>
       </SheetContent>

@@ -13,7 +13,13 @@ import { FundChildFundingForm } from './forms/FundChildFundingForm'
 import { FundingLineSetupForm } from './forms/FundingLineSetupForm'
 import { FundChildFeaturesForm } from './forms/FundChildFeaturesForm'
 import { FeatureServiceLineSetupForm } from './forms/FeatureServiceLineSetupForm'
-import { AcctChildDocumentsReviewForm } from './forms/AcctChildDocumentsReviewForm'
+import {
+  AcctChildDocumentsReviewForm,
+  AcctChildFormsPackageForm,
+  AcctChildSupportingDocumentsForm,
+} from './forms/AcctChildDocumentsReviewForm'
+import { AmlReviewTaskForm } from './forms/AmlReviewTaskForm'
+import { CipReviewTaskForm } from './forms/CipReviewTaskForm'
 
 export const formComponents: Record<string, React.ComponentType> = {
   'existing-accounts': ExistingAccountsForm,
@@ -31,7 +37,11 @@ export const formComponents: Record<string, React.ComponentType> = {
   'funding-line-child-setup': FundingLineSetupForm,
   'acct-child-features-services': FundChildFeaturesForm,
   'feature-service-line-child-setup': FeatureServiceLineSetupForm,
+  'acct-child-forms-package': AcctChildFormsPackageForm,
+  'acct-child-supporting-documents': AcctChildSupportingDocumentsForm,
   'acct-child-documents-review': AcctChildDocumentsReviewForm,
+  'acct-child-aml-review': AmlReviewTaskForm,
+  'acct-child-cip-review': CipReviewTaskForm,
 }
 
 export const taskDescriptions: Partial<Record<string, string>> = {
@@ -65,6 +75,14 @@ export const taskDescriptions: Partial<Record<string, string>> = {
     'Kick off one or more account feature and service workflows—administrative, setup, or lifecycle (not money movements).',
   'feature-service-line-child-setup':
     'Capture status, routing, dates, and notes for this feature or service workflow line.',
+  'acct-child-forms-package':
+    'Review firm and custodian forms for this account, including executed eSign copies and manual uploads.',
+  'acct-child-supporting-documents':
+    'Upload and manage supporting documents for this account when needed for review.',
   'acct-child-documents-review':
     'Finalize account documentation and collect client documents when needed for review.',
+  'acct-child-aml-review':
+    'Review AML screening results for each account participant.',
+  'acct-child-cip-review':
+    'Review CIP verification results for each account participant.',
 }

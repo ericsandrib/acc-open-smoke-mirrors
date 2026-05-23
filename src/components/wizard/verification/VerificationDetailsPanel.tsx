@@ -1,24 +1,20 @@
-import { useWorkflow } from '@/stores/workflowStore'
-import { Button } from '@/components/ui/button'
 import { Separator } from '@/components/ui/separator'
-import {
-  ExternalLink,
-  FileText,
-  Pencil,
-  RefreshCw,
-  Users,
-} from 'lucide-react'
+import { RefreshCw } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import type { OwnerKycReviewState, RelatedParty } from '@/types/workflow'
-import {
-  getRelatedAccountsForParty,
-  getOpenSharedRemediationForParty,
-} from '@/utils/ownerKycReview'
 import { isMeaningfulReviewerMessage } from '@/utils/reviewerStageMessages'
-import { getKycStatusBadge } from '@/utils/kycStatus'
+import {
+  getAmlAutomatedClearDrawerCopy,
+  getAmlDrawerSupportingCopy,
+  getCipSubsystemSupportingCopy,
+  getKycStatusBadge,
+  isAutomatedAmlClearMessage,
+} from '@/utils/kycStatus'
 import { KycStatusPill } from '@/components/wizard/verification/KycStatusPill'
-import { VerificationHistoryPanel } from '@/components/wizard/verification/VerificationHistoryPanel'
 
+function CipSubsystemGuidance({ children }: { children: string }) {
+  return <p className="text-xs text-muted-foreground leading-snug pt-1">{children}</p>
+}
 function formatTimestamp(iso?: string): string {
   if (!iso) return '—'
   const d = new Date(iso)
@@ -29,22 +25,6 @@ function formatTimestamp(iso?: string): string {
     hour: 'numeric',
     minute: '2-digit',
   })
-}
-
-/**
- * Derive a deep-link field hint from the current CIP payload so "Edit owner fields"
- * scroll-highlights the right section on Account & Owners.
- */
-function inferFieldHint(owner?: OwnerKycReviewState): string | undefined {
-  const cip = owner?.cipStatus
-  if (cip?.addressMatch === 'fail') return 'address'
-  if (cip?.dobMatch === 'fail') return 'dob'
-  if (cip?.idVerification === 'fail') return 'tax-id'
-  const mismatches = owner?.cipPayloadDemo?.mismatches ?? []
-  if (mismatches.some((m) => /address/i.test(m))) return 'address'
-  if (mismatches.some((m) => /dob|birth/i.test(m))) return 'dob'
-  if (mismatches.some((m) => /ssn|tin|tax/i.test(m))) return 'tax-id'
-  return undefined
 }
 
 function categorizeWatchlistHit(hit: string): 'Sanctions' | 'PEP' | 'Adverse media' | 'Other' {
@@ -82,9 +62,37 @@ function AmlStatusLabel({ status }: { status?: string }) {
   return <span className="text-muted-foreground">Pending review</span>
 }
 
+/** Tertiary utility control — always available on CIP drawer, quieter when verification passed. */
+function VerificationReRunAction({
+  label,
+  subdued,
+  onClick,
+}: {
+  label: string
+  subdued: boolean
+  onClick: () => void
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={cn(
+        'inline-flex items-center gap-1.5 rounded-md text-xs font-normal transition-colors',
+        'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2',
+        subdued
+          ? 'px-0 py-1 text-muted-foreground/65 hover:text-muted-foreground hover:bg-transparent'
+          : 'px-0 py-1 text-muted-foreground hover:text-foreground/75 hover:bg-muted/30',
+      )}
+    >
+      <RefreshCw className="h-3.5 w-3.5 shrink-0 opacity-70" aria-hidden />
+      {label}
+    </button>
+  )
+}
+
 function CipStatusLabel({ ho, overall }: { ho?: string; overall?: string }) {
   if (ho === 'approved') return <span className="text-green-700 dark:text-green-300">Verified</span>
-  if (ho === 'changes_requested') return <span className="text-amber-800 dark:text-amber-300">Additional documents required</span>
+  if (ho === 'changes_requested') return <span className="text-amber-800 dark:text-amber-300">Additional Information Required</span>
   if (overall === 'fail') return <span className="text-red-700 dark:text-red-300">Failed</span>
   if (overall === 'pass') return <span className="text-green-700 dark:text-green-300">Verified</span>
   return <span className="text-muted-foreground">Pending review</span>
@@ -93,27 +101,23 @@ function CipStatusLabel({ ho, overall }: { ho?: string; overall?: string }) {
 export type VerificationDetailsFocus = 'aml' | 'cip'
 
 export function VerificationDetailsPanel({
-  accountChildId,
   party,
   owner,
   focus,
-  canEditFields,
   onReRun,
-  onNavigateDocuments,
-  onEditFields,
 }: {
   accountChildId: string
   party: RelatedParty
   owner?: OwnerKycReviewState
-  /** Which review task opened this panel — controls re-run label and edit affordance only. */
+  /** Which review task opened this panel — controls re-run label only. */
   focus: VerificationDetailsFocus
-  canEditFields?: boolean
-  onReRun: (partyId: string) => void
-  onNavigateDocuments: () => void
-  onEditFields?: (partyId: string, fieldHint?: string) => void
+  onReRun?: (partyId: string) => void
 }) {
-  const { state } = useWorkflow()
   const badge = getKycStatusBadge(owner, party)
+  const isCompactKycCard = badge.status === 'pass'
+  const amlDrawerGuidance = getAmlDrawerSupportingCopy(owner)
+  const cipGuidance = getCipSubsystemSupportingCopy(owner)
+  const amlAutomatedClearCopy = getAmlAutomatedClearDrawerCopy(owner)
 
   const amlStatus = owner?.amlReview?.status
   const amlPayload = owner?.amlPayloadDemo
@@ -132,75 +136,88 @@ export function VerificationDetailsPanel({
   const cipPayload = owner?.cipPayloadDemo
   const hoStatus = owner?.hoKycReview?.status
   const hoComments = owner?.hoKycReview?.comments
-  const idLabel = cip?.idVerification === 'pass' ? 'Pass' : cip?.idVerification === 'fail' ? 'Fail' : 'Pending'
+  const idLabel = cip?.idVerification === 'pass' ? 'Match' : cip?.idVerification === 'fail' ? 'Mismatch' : 'Pending'
   const addrLabel = cip?.addressMatch === 'pass' ? 'Match' : cip?.addressMatch === 'fail' ? 'Mismatch' : 'Pending'
   const dobLabel = cip?.dobMatch === 'pass' ? 'Match' : cip?.dobMatch === 'fail' ? 'Mismatch' : 'Pending'
 
-  const relatedAccounts = getRelatedAccountsForParty(state, party.id, accountChildId)
-  const sharedRemediation = getOpenSharedRemediationForParty(state, party.id)
-  const hasRelatedAccountIssue =
-    Boolean(sharedRemediation) || relatedAccounts.some((r) => r.hasOpenRemediation)
-
   const reRunLabel = focus === 'aml' ? 'Re-run screening' : 'Re-run verification'
+  const showReRunFooter = focus !== 'aml' && Boolean(onReRun)
 
   return (
     <div className="space-y-4">
-      {/* 1. KYC Status (primary) */}
-      <section className="rounded-lg border border-border/70 bg-card px-3 py-3 space-y-2">
-        <SectionHeader>KYC status</SectionHeader>
-        <div className="flex items-center justify-between gap-2">
-          <KycStatusPill badge={badge} className="text-sm" />
-          {badge.hint && (
-            <span className="text-xs text-muted-foreground text-right">{badge.hint}</span>
-          )}
+      {/* 1. KYC status — label above badge (matches AML status layout) */}
+      <section
+        className={cn(
+          'rounded-lg border border-border/70 bg-card',
+          isCompactKycCard ? 'px-3 py-2' : 'px-3 py-3',
+        )}
+      >
+        <div className={cn(isCompactKycCard ? 'space-y-0.5' : 'space-y-2')}>
+          <SectionHeader>KYC status</SectionHeader>
+          <KycStatusPill badge={badge} className={isCompactKycCard ? 'text-xs' : 'text-sm'} />
         </div>
       </section>
 
-      {/* 2. AML Status */}
-      <section className="space-y-1">
-        <SectionHeader>AML status</SectionHeader>
-        <p className="text-sm">
-          <AmlStatusLabel status={amlStatus} />
-        </p>
-        <div className="grid grid-cols-2 md:grid-cols-3 gap-3 pt-1">
-          <DetailRow label="OFAC matches" value={String(amlPayload?.ofacMatches ?? 0)} />
-          <DetailRow label="PEP / watchlist hits" value={String(watchlistHits.length)} />
-          <DetailRow label="Last screening" value={formatTimestamp(owner?.kycVerificationLastCheckedAt)} />
+      {/* 2. AML status — outcome, then findings, then secondary guidance */}
+      <section className="space-y-3">
+        <div className="space-y-0.5">
+          <SectionHeader>AML status</SectionHeader>
+          <p className="text-sm leading-tight">
+            <AmlStatusLabel status={amlStatus} />
+          </p>
         </div>
-        {watchlistHits.length > 0 && (
-          <ul className="text-xs text-muted-foreground space-y-0.5 pt-1">
-            {Object.entries(watchlistByCategory).map(([cat, list]) => (
-              <li key={cat}>
-                <span className="font-medium text-foreground">{cat}:</span> {list.join('; ')}
-              </li>
-            ))}
-          </ul>
-        )}
-        {isMeaningfulReviewerMessage(amlFindings) && (
-          <p className="text-xs text-red-800 dark:text-red-300 pt-1">
-            <span className="font-medium">Findings:</span> {amlFindings}
+
+        <div className="space-y-1.5">
+          <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
+            <DetailRow label="OFAC matches" value={String(amlPayload?.ofacMatches ?? 0)} />
+            <DetailRow label="PEP / watchlist hits" value={String(watchlistHits.length)} />
+            <DetailRow label="Last screening" value={formatTimestamp(owner?.kycVerificationLastCheckedAt)} />
+          </div>
+          {watchlistHits.length > 0 && (
+            <ul className="text-xs text-muted-foreground space-y-0.5">
+              {Object.entries(watchlistByCategory).map(([cat, list]) => (
+                <li key={cat}>
+                  <span className="font-medium text-foreground">{cat}:</span> {list.join('; ')}
+                </li>
+              ))}
+            </ul>
+          )}
+          {isMeaningfulReviewerMessage(amlFindings) && watchlistHits.length === 0 && (
+            <p className="text-xs text-muted-foreground">
+              <span className="font-medium text-foreground">Findings:</span> {amlFindings}
+            </p>
+          )}
+          {amlAutomatedClearCopy ? (
+            <p className="text-xs text-muted-foreground">{amlAutomatedClearCopy}</p>
+          ) : isMeaningfulReviewerMessage(amlApprovalReason) &&
+            !isAutomatedAmlClearMessage(amlApprovalReason) ? (
+            <p className="text-xs text-muted-foreground">
+              <span className="font-medium text-foreground">Approval note:</span> {amlApprovalReason}
+            </p>
+          ) : null}
+          {isMeaningfulReviewerMessage(amlInfoComments) && (
+            <p className="text-xs text-muted-foreground">
+              <span className="font-medium text-foreground">Information requested:</span> {amlInfoComments}
+            </p>
+          )}
+        </div>
+
+        {amlDrawerGuidance ? (
+          <p className="text-[11px] font-normal text-muted-foreground/80 leading-snug">
+            {amlDrawerGuidance}
           </p>
-        )}
-        {isMeaningfulReviewerMessage(amlApprovalReason) && (
-          <p className="text-xs text-muted-foreground pt-1">
-            <span className="font-medium text-foreground">Approval note:</span> {amlApprovalReason}
-          </p>
-        )}
-        {isMeaningfulReviewerMessage(amlInfoComments) && (
-          <p className="text-xs text-amber-800 dark:text-amber-300 pt-1">
-            <span className="font-medium">Information requested:</span> {amlInfoComments}
-          </p>
-        )}
+        ) : null}
       </section>
 
       <Separator />
 
-      {/* 3. CIP Status */}
+      {/* 3. CIP status — identity verification and CIP-specific guidance */}
       <section className="space-y-1">
         <SectionHeader>CIP status</SectionHeader>
         <p className="text-sm">
           <CipStatusLabel ho={hoStatus} overall={cip?.overallStatus} />
         </p>
+        {cipGuidance ? <CipSubsystemGuidance>{cipGuidance}</CipSubsystemGuidance> : null}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-3 pt-1">
           <DetailRow label="Identity verification" value={idLabel} />
           <DetailRow label="Address match" value={addrLabel} />
@@ -220,17 +237,9 @@ export function VerificationDetailsPanel({
         )}
       </section>
 
-      {/* 4. Failure Reason (only when KYC = fail) */}
-      {badge.status === 'fail' && badge.hint && (
-        <section className="rounded-md border border-red-300/60 bg-red-50/40 dark:border-red-900/40 dark:bg-red-950/20 px-3 py-2 space-y-0.5">
-          <SectionHeader>Failure reason</SectionHeader>
-          <p className="text-sm text-red-800 dark:text-red-300">{badge.hint}</p>
-        </section>
-      )}
-
       <Separator />
 
-      {/* 5. Verification metadata */}
+      {/* 4. Verification metadata */}
       <section className="space-y-1">
         <SectionHeader>Verification metadata</SectionHeader>
         <div className="grid grid-cols-2 md:grid-cols-3 gap-3 pt-1">
@@ -243,86 +252,18 @@ export function VerificationDetailsPanel({
         </div>
       </section>
 
-      {/* 6. Linked supporting documents */}
-      <section className="rounded-md border border-border/70 bg-muted/30 px-3 py-2 space-y-1">
-        <div className="flex items-center justify-between gap-2">
-          <div className="flex items-center gap-1.5 text-xs font-medium">
-            <FileText className="h-3.5 w-3.5 text-muted-foreground" /> Linked supporting documents
+      {showReRunFooter ? (
+        <>
+          <Separator />
+          <div className="pt-2 pb-0.5">
+            <VerificationReRunAction
+              label={reRunLabel}
+              subdued={isCompactKycCard}
+              onClick={() => onReRun!(party.id)}
+            />
           </div>
-          <Button
-            size="sm"
-            variant="ghost"
-            className="h-7 gap-1.5 px-2 text-xs"
-            onClick={onNavigateDocuments}
-          >
-            View in Documents <ExternalLink className="h-3 w-3" />
-          </Button>
-        </div>
-        <p className="text-[11px] text-muted-foreground">
-          Documents linked to this owner are stored once and reused across related accounts.
-        </p>
-      </section>
-
-      {/* Related accounts — context for shared remediation across the household. */}
-      {(relatedAccounts.length > 0 || sharedRemediation) && (
-        <section
-          className={cn(
-            'rounded-md border px-3 py-2 space-y-1',
-            hasRelatedAccountIssue
-              ? 'border-amber-300/60 bg-amber-50/40'
-              : 'border-border/70 bg-muted/20',
-          )}
-        >
-          <div className="flex items-center gap-1.5 text-xs font-medium">
-            <Users className="h-3.5 w-3.5 text-muted-foreground" /> Related accounts for {party.name}
-          </div>
-          {relatedAccounts.length > 0 ? (
-            <ul className="text-xs text-muted-foreground space-y-0.5">
-              {relatedAccounts.map((r) => (
-                <li key={r.accountChildId}>
-                  {r.name}
-                  {r.accountNumber ? ` · #${r.accountNumber}` : ''}
-                  {r.hasOpenRemediation ? (
-                    <span className="font-medium text-amber-800"> · open remediation</span>
-                  ) : null}
-                </li>
-              ))}
-            </ul>
-          ) : (
-            <p className="text-xs text-muted-foreground">Only this account.</p>
-          )}
-          {sharedRemediation && (
-            <p className="text-xs text-amber-800">
-              <span className="font-medium">Shared verification issue:</span> {sharedRemediation}
-            </p>
-          )}
-        </section>
-      )}
-
-      {/* 7. Verification history */}
-      <VerificationHistoryPanel owner={owner} />
-
-      <Separator />
-      <div className="flex flex-wrap gap-2">
-        {canEditFields && onEditFields && (
-          <Button
-            size="sm"
-            variant="ghost"
-            className="h-7 gap-1.5 px-2 text-xs"
-            onClick={() => onEditFields(party.id, inferFieldHint(owner))}
-          >
-            <Pencil className="h-3 w-3" /> Edit owner fields
-          </Button>
-        )}
-        <Button
-          size="sm"
-          variant="ghost"
-          className="h-7 gap-1.5 px-2 text-xs"
-          onClick={() => onReRun(party.id)}
-        >
-          <RefreshCw className="h-3 w-3" /> {reRunLabel}
-        </Button>
-      </div>
+        </>
+      ) : null}
     </div>
   )
 }

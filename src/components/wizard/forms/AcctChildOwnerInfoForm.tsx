@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useWorkflow, useTaskData, useChildActionContext } from '@/stores/workflowStore'
+import { useTheme } from '@/stores/themeStore'
 import { findParentTaskForChild, OPEN_ACCOUNTS_WITH_ANNUITY_FORM_KEY } from '@/utils/openAccountsTaskContext'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -31,6 +32,8 @@ import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from '
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { useOpenAccountsVariant } from '@/components/wizard/openAccountsVariantContext'
 import { cn } from '@/lib/utils'
+import { isEmbeddedAccountOwnerKycEnabled } from '@/utils/ownerKycReview'
+import { OwnerEmbeddedKycSection } from '@/components/wizard/forms/OwnerEmbeddedKycSection'
 
 type OwnerRow = { id: string; type: 'existing'; partyId?: string }
 type BeneficiaryDesignationType = 'primary' | 'contingent'
@@ -100,7 +103,12 @@ export function AcctChildOwnerInfoForm() {
     ? state.relatedParties.find((p) => p.id === editingPartyId) ?? null
     : null
 
+  const { kycWorkflowMode, hideKycChildWorkflows } = useTheme()
   const childId = ctx?.child.id ?? ''
+  const singleFlowKyc = isEmbeddedAccountOwnerKycEnabled({
+    kycWorkflowMode,
+    hideKycChildWorkflows,
+  })
   const childMeta = state.taskData[childId] as Record<string, unknown> | undefined
   const childRegType = (childMeta?.registrationType as RegistrationType | undefined) ?? null
   const showBeneficiariesSection =
@@ -159,6 +167,7 @@ export function AcctChildOwnerInfoForm() {
     while (next.length < requiredOwnerSlots) {
       next.push({ id: `owner-${Date.now()}-${next.length + 1}`, type: 'existing' })
     }
+    // Owners are never auto-seeded; the advisor selects each owner explicitly.
     const changed =
       next.length !== owners.length ||
       next.some((row, idx) => owners[idx]?.id !== row.id || owners[idx]?.partyId !== row.partyId)
@@ -169,6 +178,35 @@ export function AcctChildOwnerInfoForm() {
       }
     }
   }, [ctx, owners, requiredOwnerSlots, updateField])
+
+  // Single-flow KYC is no longer auto-triggered on field completion.
+  // KYC runs when the forms package is sent to the client (see saveEnvelopeFromDrawer).
+
+  // Deep-link from CIP Verification & Review: scroll the targeted owner into view + ring-highlight,
+  // then clear the focus after a short delay so the highlight fades out for subsequent navigations.
+  useEffect(() => {
+    const focus = state.ownerFieldFocus
+    if (!focus || !childId || focus.accountChildId !== childId) return
+    const targetId = `owner-${focus.partyId}`
+    const el = typeof document !== 'undefined' ? document.getElementById(targetId) : null
+    if (el) {
+      const scrollContainer = el.closest('main')
+      if (scrollContainer instanceof HTMLElement) {
+        const top =
+          el.getBoundingClientRect().top -
+          scrollContainer.getBoundingClientRect().top +
+          scrollContainer.scrollTop -
+          24
+        scrollContainer.scrollTo({ top: Math.max(0, top), behavior: 'smooth' })
+      } else {
+        el.scrollIntoView({ behavior: 'smooth', block: 'start' })
+      }
+    }
+    const timer = window.setTimeout(() => {
+      dispatch({ type: 'CLEAR_OWNER_FIELD_FOCUS' })
+    }, 2500)
+    return () => window.clearTimeout(timer)
+  }, [state.ownerFieldFocus, childId, dispatch])
 
   useEffect(() => {
     if (!ctx || !trustEntityOwnersOnly) return
@@ -361,40 +399,63 @@ export function AcctChildOwnerInfoForm() {
           </p>
         </div>
 
-        {owners.map((owner, idx) => (
-          <PartySlotCard
-            key={owner.id}
-            title={`Owner ${idx + 1}`}
-            roleLabel="Account owner"
-            selectLabel="Select account owner"
-            partyId={owner.partyId}
-            onPartyIdChange={(v) => selectExistingOwner(owner.id, v)}
-            onRemove={() => updateOwner(owner.id, { partyId: undefined })}
-            parties={state.relatedParties}
-            selectCandidates={accountOwnerCandidates}
-            onOpenAddParty={() => setAddMemberSheetOwnerId(owner.id)}
-            onEditParty={(id) => setEditingPartyId(id)}
-            onDeleteCandidate={deleteOwnerCandidate}
-            canDeleteCandidate={(party) => canDeleteOwnerCandidate(party.id)}
-            addPartyItemLabel={
-              trustEntityOwnersOnly
-                ? 'Search for a trust or create a new trust profile'
-                : allowLegalEntityAsOwner
-                  ? 'Search for an existing client or add a new individual or legal entity'
-                  : 'Search for an existing client or add a new individual'
-            }
-            addPartyItemDescription={
-              trustEntityOwnersOnly
-                ? 'Adds a trust legal entity to this household for use as account owner.'
-                : allowLegalEntityAsOwner
-                  ? 'Adds to this household for use as account owner.'
-                  : 'Adds a person to this household for use as account owner.'
-            }
-            showKycStatus={!kycExternalForThisAccount}
-            showKycAmlSchedule={!kycExternalForThisAccount}
-            onGoToKyc={handleGoToKyc}
-          />
-        ))}
+        {owners.map((owner, idx) => {
+          const party = owner.partyId
+            ? state.relatedParties.find((p) => p.id === owner.partyId)
+            : undefined
+          const anchorId = party ? `owner-${party.id}` : undefined
+          const focusActive =
+            party != null &&
+            state.ownerFieldFocus?.accountChildId === childId &&
+            state.ownerFieldFocus?.partyId === party.id
+          return (
+            <div
+              key={owner.id}
+              id={anchorId}
+              data-owner-id={party?.id}
+              className={cn(
+                'transition-shadow rounded-lg',
+                focusActive &&
+                  'ring-2 ring-amber-400 ring-offset-2 ring-offset-background shadow-md',
+              )}
+            >
+              <PartySlotCard
+                title={`Owner ${idx + 1}`}
+                roleLabel="Account owner"
+                selectLabel="Select account owner"
+                partyId={owner.partyId}
+                onPartyIdChange={(v) => selectExistingOwner(owner.id, v)}
+                onRemove={() => updateOwner(owner.id, { partyId: undefined })}
+                parties={state.relatedParties}
+                selectCandidates={accountOwnerCandidates}
+                onOpenAddParty={() => setAddMemberSheetOwnerId(owner.id)}
+                onEditParty={(id) => setEditingPartyId(id)}
+                onDeleteCandidate={deleteOwnerCandidate}
+                canDeleteCandidate={(party) => canDeleteOwnerCandidate(party.id)}
+                addPartyItemLabel={
+                  trustEntityOwnersOnly
+                    ? 'Search for a trust or create a new trust profile'
+                    : allowLegalEntityAsOwner
+                      ? 'Search for an existing client or add a new individual or legal entity'
+                      : 'Search for an existing client or add a new individual'
+                }
+                addPartyItemDescription={
+                  trustEntityOwnersOnly
+                    ? 'Adds a trust legal entity to this household for use as account owner.'
+                    : allowLegalEntityAsOwner
+                      ? 'Adds to this household for use as account owner.'
+                      : 'Adds a person to this household for use as account owner.'
+                }
+                showKycStatus={!kycExternalForThisAccount && !singleFlowKyc}
+                showKycAmlSchedule={!kycExternalForThisAccount && !singleFlowKyc}
+                onGoToKyc={singleFlowKyc ? undefined : handleGoToKyc}
+              />
+              {singleFlowKyc && party && childId ? (
+                <OwnerEmbeddedKycSection accountChildId={childId} party={party} />
+              ) : null}
+            </div>
+          )
+        })}
 
         {trustEntityOwnersOnly ? (
           <AddClientInfoLegalEntitySheet

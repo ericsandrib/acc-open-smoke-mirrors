@@ -1,6 +1,9 @@
 import type { ChildReviewState } from '@/types/workflow'
-import { ownersPassedOwnerLevelKyc } from '@/utils/ownerKycReview'
+import { ownersAmlScreeningCleared, ownersPassedOwnerLevelKyc } from '@/utils/ownerKycReview'
 import { getStatusSemanticClasses } from '@/utils/statusSemanticColors'
+
+/** Terminal account-opening disposition — raw task status remains `complete`. */
+export const PENDING_RELEASE_STATUS_LABEL = 'Pending Release'
 
 export type ChildDisplayStatus =
   | 'draft'
@@ -93,7 +96,7 @@ export const childStatusConfig: Record<
     className: getStatusSemanticClasses('canceled').pill,
   },
   complete: {
-    label: 'Completed',
+    label: PENDING_RELEASE_STATUS_LABEL,
     className: getStatusSemanticClasses('complete').pill,
     pillVariant: 'completed',
   },
@@ -121,6 +124,11 @@ function isPreSubmitAccountOpening(
   return true
 }
 
+/** Account routed to AML escalation / hold (replaces legacy AML Review label for flagged accounts). */
+export function isAccountOnEscalationHold(reviewState?: ChildReviewState): boolean {
+  return reviewState?.accountWorkflowPhase === 'escalation_hold'
+}
+
 /** Owner-level AML screening returned a hit (single-flow account opening). */
 export function hasOwnerLevelAmlFlag(reviewState?: ChildReviewState): boolean {
   return Object.values(reviewState?.ownerReviews ?? {}).some(
@@ -138,6 +146,7 @@ export function deriveChildDisplayStatus(
 
   if (rawStatus === 'rejected') {
     if (!reviewState) return 'nigo'
+    if (isAccountOnEscalationHold(reviewState)) return 'escalation_hold'
     const docReview = reviewState.documentReview
     const principalReview = reviewState.principalReview
     const amlReview = reviewState.amlReview
@@ -158,7 +167,9 @@ export function deriveChildDisplayStatus(
     if (phase === 'document_review') {
       const docStatus = reviewState.documentReview?.status
       if (docStatus === 'igo') return 'principal_review'
-      if (ownersPassedOwnerLevelKyc(reviewState)) return 'awaiting_review'
+      if (ownersAmlScreeningCleared(reviewState) || ownersPassedOwnerLevelKyc(reviewState)) {
+        return 'awaiting_review'
+      }
       return 'document_review'
     }
     if (phase === 'principal_review') {
@@ -167,8 +178,13 @@ export function deriveChildDisplayStatus(
       }
       return 'principal_review'
     }
-    if (phase === 'escalation_hold') return 'escalation_hold'
-    if (phase === 'pending_release') return 'awaiting_review'
+    if (phase === 'escalation_hold') {
+      if (ownersAmlScreeningCleared(reviewState) && !hasOwnerLevelAmlFlag(reviewState)) {
+        return 'awaiting_review'
+      }
+      return 'escalation_hold'
+    }
+    if (phase === 'pending_release' || phase === 'complete') return 'complete'
     const amlReview = reviewState.amlReview
     const docReview = reviewState.documentReview
     const hoKycReview = reviewState.hoKycReview
@@ -243,6 +259,7 @@ export function isAccountOpeningAwaitingClarification(
   reviewState?: ChildReviewState,
   rawStatus?: string,
 ): boolean {
+  if (isAccountOnEscalationHold(reviewState)) return false
   if (isPreSubmitAccountOpening(reviewState, rawStatus)) {
     return (
       reviewState?.documentReview?.status === 'nigo' ||

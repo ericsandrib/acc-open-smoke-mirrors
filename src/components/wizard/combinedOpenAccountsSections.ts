@@ -1,4 +1,5 @@
 import type { CombinedAccordionKey } from '@/components/wizard/openAccountsVariantContext'
+import { OPEN_ACCOUNTS_NAV_FORMS_PACKAGE_LABEL } from '@/utils/openAccountsTaskContext'
 
 /**
  * Hierarchical sections for the v2+ combined Open Accounts accordions (`OpenAccountsCombinedForm`).
@@ -32,7 +33,7 @@ export const combinedOpenAccountsSections: CombinedAccordionSectionGroup[] = [
     sections: [
       { id: 'oa-accounts', label: 'Accounts' },
       { id: 'oa-kyc', label: 'KYC Verification' },
-      { id: 'oa-esign', label: 'Envelopes' },
+      { id: 'oa-esign', label: OPEN_ACCOUNTS_NAV_FORMS_PACKAGE_LABEL },
     ],
   },
 ]

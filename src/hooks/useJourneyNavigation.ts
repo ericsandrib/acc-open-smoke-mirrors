@@ -7,11 +7,14 @@ import { seededJourneys } from '@/data/servicingSeed'
 import type { Journey } from '@/types/servicing'
 import type { FinancialAccount, RelatedParty } from '@/types/workflow'
 import { getDefaultJourneyEntryTaskId } from '@/utils/journeyEntryTask'
+import { shouldHideKycInOnboardingListings } from '@/utils/onboardingJourneyActionTree'
 import {
   isHoDemoServicingJourneyId,
   JOHN_SMITH_ONBOARDING_JOURNEY_ID,
   JOHN_SMITH_ONBOARDING_JOURNEY_NAME,
+  PRIMARY_ONBOARDING_DEMO_RELATIONSHIP_ID,
 } from '@/data/defaultOnboardingJourney'
+import { hasPersistedWorkflowForSeededJourney } from '@/utils/seededJourneyWorkflow'
 
 const normalize = (v: string) => v.toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim()
 
@@ -20,6 +23,13 @@ function findExactRelationshipForSeededJourney(relationshipName: string) {
   const target = normalize(relationshipName.trim())
   if (!target) return undefined
   return relationships.find((r) => normalize(r.name) === target)
+}
+
+function findRelationshipForSeededJourney(row: Journey) {
+  if (row.id === JOHN_SMITH_ONBOARDING_JOURNEY_ID) {
+    return relationships.find((r) => r.id === PRIMARY_ONBOARDING_DEMO_RELATIONSHIP_ID)
+  }
+  return findExactRelationshipForSeededJourney(row.relationshipName ?? '')
 }
 
 function buildSyntheticInitFromSeededJourney(row: Journey) {
@@ -64,17 +74,20 @@ export function useJourneyNavigation() {
 
   const navigateToServicing = (row: Journey, actionId?: string, childId?: string) => {
     let reinitializedFromTemplate = false
-    const johnSmithRel = findExactRelationshipForSeededJourney(row.relationshipName)
+    const linkedRel = findRelationshipForSeededJourney(row)
     const targetRow =
-      johnSmithRel?.id === 'john-smith-household' && isHoDemoServicingJourneyId(row.id)
+      linkedRel?.id === PRIMARY_ONBOARDING_DEMO_RELATIONSHIP_ID &&
+      isHoDemoServicingJourneyId(row.id)
         ? { ...row, id: JOHN_SMITH_ONBOARDING_JOURNEY_ID, name: JOHN_SMITH_ONBOARDING_JOURNEY_NAME }
         : row
 
-    if (seededJourneyIds.has(targetRow.id)) {
+    const preserveSeededWorkflow = hasPersistedWorkflowForSeededJourney(state, targetRow.id)
+
+    if (seededJourneyIds.has(targetRow.id) && !preserveSeededWorkflow) {
       if (currentLiveJourney && !seededJourneyIds.has(currentLiveJourney.id)) {
         saveCurrentJourney(currentLiveJourney)
       }
-      const exactRel = findExactRelationshipForSeededJourney(targetRow.relationshipName)
+      const exactRel = findRelationshipForSeededJourney(targetRow)
       const init = exactRel
         ? {
             relatedParties: exactRel.relatedParties,
@@ -107,15 +120,32 @@ export function useJourneyNavigation() {
         },
       })
       reinitializedFromTemplate = true
+    } else if (
+      seededJourneyIds.has(targetRow.id) &&
+      preserveSeededWorkflow &&
+      state.journeyId !== targetRow.id &&
+      isHoDemoServicingJourneyId(state.journeyId)
+    ) {
+      /** Only remap legacy HO demo ids — never re-id a user-created `journey-{timestamp}` workflow. */
+      dispatch({
+        type: 'SYNC_SEEDED_JOURNEY_METADATA',
+        journeyId: targetRow.id,
+        journeyName: targetRow.name,
+        assignedTo: targetRow.assignedTo,
+      })
     }
 
     /**
      * Opening the journey root (no action/child drill-in): leave any child workflow still in
-     * memory from before navigating away (e.g. live journey without template re-init, or seeded
-     * journey when relationship template did not match). INITIALIZE_FROM_RELATIONSHIP already
-     * clears child; GO_TO_TASK covers the other paths.
+     * memory from before navigating away. INITIALIZE_FROM_RELATIONSHIP clears children; when
+     * persisting, only reset the parent task entry via GO_TO_TASK.
      */
-    if (!actionId && !childId && !reinitializedFromTemplate && state.journeyId === targetRow.id) {
+    if (
+      !actionId &&
+      !childId &&
+      !reinitializedFromTemplate &&
+      (preserveSeededWorkflow || state.journeyId === targetRow.id)
+    ) {
       const entry = getDefaultJourneyEntryTaskId(state)
       if (entry) dispatch({ type: 'GO_TO_TASK', taskId: entry })
     }
@@ -126,7 +156,7 @@ export function useJourneyNavigation() {
       const strippedActionId = actionId.replace(`${targetRow.id}-`, '')
       if (strippedActionId === 'kyc-child-actions') {
         taskId = 'open-accounts'
-        sectionId = 'oa-kyc'
+        sectionId = shouldHideKycInOnboardingListings() ? 'oa-accounts' : 'oa-kyc'
       } else if (strippedActionId === 'account-opening-child') {
         taskId = 'open-accounts'
         sectionId = 'oa-accounts'

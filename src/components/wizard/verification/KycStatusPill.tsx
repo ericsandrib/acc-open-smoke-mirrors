@@ -7,7 +7,7 @@ function semanticForTone(tone: KycStatusTone): string {
   if (tone === 'success') return 'complete'
   if (tone === 'danger') return 'rejected'
   if (tone === 'warning') return 'escalation_hold'
-  return 'draft' // neutral
+  return 'draft' // neutral — pending review, unverified
 }
 
 const PILL_BASE =
@@ -16,7 +16,7 @@ const PILL_BASE =
 /**
  * Primary KYC disposition badge.
  *
- * Renders the four (+1 future) KYC states with the spec-006 semantic palette so
+ * Renders the four KYC summary states with the spec-006 semantic palette so
  * the same visual language applies across Account & Owners chips and the
  * verification subject rows in the AML / CIP review tasks.
  */

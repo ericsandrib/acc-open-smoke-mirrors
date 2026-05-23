@@ -31,10 +31,24 @@ export function OnboardingContent() {
     return currentLiveJourney?.id
   }, [onboardingJourneys, lastCreatedJourneyId, currentLiveJourney?.id])
 
-  const { showNestedGroups, hideOnboardingJourneyChildWorkflows } = useTheme()
-  const journeyRows = useMemo(() => deriveOnboardingJourneyRows(onboardingJourneys), [onboardingJourneys])
-  const actionRows = useMemo(() => deriveActionRows(onboardingJourneys), [onboardingJourneys])
-  const taskRows = useMemo(() => deriveTaskRows(onboardingJourneys), [onboardingJourneys])
+  const { showNestedGroups, hideKycChildWorkflows } = useTheme()
+  const journeyRows = useMemo(
+    () =>
+      deriveOnboardingJourneyRows(
+        onboardingJourneys,
+        hideKycChildWorkflows,
+        hideKycChildWorkflows,
+      ),
+    [onboardingJourneys, hideKycChildWorkflows],
+  )
+  const actionRows = useMemo(
+    () => deriveActionRows(onboardingJourneys, hideKycChildWorkflows),
+    [onboardingJourneys, hideKycChildWorkflows],
+  )
+  const taskRows = useMemo(
+    () => deriveTaskRows(onboardingJourneys, hideKycChildWorkflows),
+    [onboardingJourneys, hideKycChildWorkflows],
+  )
   const actionPresets = useMemo(() => actionPresetsForDemoView(state.demoViewMode), [state.demoViewMode])
   /** One persist bucket for all reviewer teams so switching views keeps the selected tab. */
   const actionsTablePersistKey =
@@ -78,7 +92,8 @@ export function OnboardingContent() {
                 rows={rows}
                 visibleColumns={visibleColumns}
                 showNestedGroups={showNestedGroups}
-                hideChildWorkflows={hideOnboardingJourneyChildWorkflows}
+                hideKyc={hideKycChildWorkflows}
+                hideAccountChildWorkflows={hideKycChildWorkflows}
               />
             )}
           </TableViewWrapper>
@@ -110,6 +125,8 @@ export function OnboardingContent() {
                     journeys={onboardingJourneys}
                     groupBy={flatStatusTab ? 'none' : (groupBy ?? 'parentJourneyId')}
                     nestRowMode="pipeline"
+                    hideKycChildWorkflows={hideKycChildWorkflows}
+                    pinJourneyId={pinRowId}
                   />
                 )
               }
@@ -123,10 +140,19 @@ export function OnboardingContent() {
                     groupBy={groupBy}
                     nestRowMode="allChildWorkflows"
                     showNestedFundingGroups
+                    hideKycChildWorkflows={hideKycChildWorkflows}
+                    pinJourneyId={pinRowId}
                   />
                 )
               }
-              return <ActionsTable rows={rows} visibleColumns={visibleColumns} groupBy={groupBy} />
+              return (
+                <ActionsTable
+                  rows={rows}
+                  visibleColumns={visibleColumns}
+                  groupBy={groupBy}
+                  pinJourneyId={pinRowId}
+                />
+              )
             }}
           </TableViewWrapper>
         </TabsContent>

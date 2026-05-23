@@ -17,7 +17,9 @@ import {
 import type { Journey, JourneyAction, JourneyStatus } from '@/types/servicing'
 import { childStatusConfig, type ChildDisplayStatus } from '@/utils/childStatusDisplay'
 import { compactNestedActionLabel, shortActionNicknameForTable } from '@/utils/servicingActionLabel'
+import { visibleOnboardingJourneyActions } from '@/utils/onboardingJourneyActionTree'
 import { reviewerQueueLaneForDisplayStatus, type ReviewerQueueLane } from '@/data/servicing-view-presets'
+import { sortJourneyGroupsByCreated } from '@/utils/journeyGroupSort'
 import { Badge } from '@/components/ui/badge'
 import { cn } from '@/lib/utils'
 
@@ -48,7 +50,7 @@ function computeStateModelLabel(action: JourneyAction): string {
     case 'in_progress':
       return 'In Progress'
     case 'complete':
-      return 'Completed'
+      return childStatusConfig.complete.label
     case 'not_started':
       return 'Not Started'
     case 'rejected':
@@ -88,6 +90,8 @@ export interface ActionRow {
   reviewQueueItemType: '' | 'KYC' | 'Account'
   /** Tab filter bucket for All / In Progress / Completed presets. */
   listTab: ActionListTab
+  /** Journey created date (for toolbar sort / group ordering). */
+  createdAt: string
   /** Funding / feature-service group header under an account-opening child. */
   groupType?: 'funding' | 'feature-service'
 }
@@ -155,9 +159,13 @@ export function deriveReviewQueueItemType(action: JourneyAction): 'KYC' | 'Accou
   return ''
 }
 
-export function deriveActionRows(journeys: Journey[]): ActionRow[] {
-  return journeys.flatMap((journey) =>
-    journey.actions.map((action) => {
+export function deriveActionRows(
+  journeys: Journey[],
+  hideKycChildWorkflows = false,
+): ActionRow[] {
+  return journeys.flatMap((journey) => {
+    const actions = visibleOnboardingJourneyActions(journey.actions, hideKycChildWorkflows, false)
+    return actions.map((action) => {
       const complete = action.tasks.filter((t) => t.status === 'complete').length
       return {
         id: action.id,
@@ -168,6 +176,7 @@ export function deriveActionRows(journeys: Journey[]): ActionRow[] {
         parentActionId: action.parentActionId,
         journeyName: journey.name,
         relationshipName: journey.relationshipName,
+        createdAt: journey.createdAt,
         assignedTo: [...new Set(action.tasks.map((t) => t.assignedTo))].join(', '),
         complete,
         total: action.tasks.length,
@@ -181,8 +190,8 @@ export function deriveActionRows(journeys: Journey[]): ActionRow[] {
         listTab: deriveActionListTab(action),
         groupType: action.groupType,
       }
-    }),
-  )
+    })
+  })
 }
 
 /** Open Accounts section action id for deep-linking into a nested funding/feature line. */
@@ -204,10 +213,14 @@ export function resolveAccountSectionActionIdForNavigation(
 
 import type { OnboardingActionsGroupBy } from './table-controls'
 
-export function buildParentJourneyActionGroups(rows: ActionRow[]): {
+export function buildParentJourneyActionGroups(
+  rows: ActionRow[],
+  pinJourneyId?: string,
+): {
   journeyId: string
   journeyName: string
   relationshipName: string
+  createdAt: string
   rows: ActionRow[]
 }[] {
   const map = new Map<string, ActionRow[]>()
@@ -216,23 +229,24 @@ export function buildParentJourneyActionGroups(rows: ActionRow[]): {
     list.push(r)
     map.set(r.journeyId, list)
   }
-  return [...map.entries()]
-    .map(([journeyId, groupRows]) => ({
-      journeyId,
-      journeyName: groupRows[0]?.journeyName ?? journeyId,
-      relationshipName: groupRows[0]?.relationshipName ?? '',
-      rows: groupRows,
-    }))
-    .sort((a, b) => a.journeyName.localeCompare(b.journeyName))
+  const groups = [...map.entries()].map(([journeyId, groupRows]) => ({
+    journeyId,
+    journeyName: groupRows[0]?.journeyName ?? journeyId,
+    relationshipName: groupRows[0]?.relationshipName ?? '',
+    createdAt: groupRows[0]?.createdAt ?? '',
+    rows: groupRows,
+  }))
+  return sortJourneyGroupsByCreated(groups, pinJourneyId)
 }
 
 interface ActionsTableProps {
   rows: ActionRow[]
   visibleColumns: string[]
   groupBy?: OnboardingActionsGroupBy
+  pinJourneyId?: string
 }
 
-export function ActionsTable({ rows, visibleColumns, groupBy = 'none' }: ActionsTableProps) {
+export function ActionsTable({ rows, visibleColumns, groupBy = 'none', pinJourneyId }: ActionsTableProps) {
   const navigate = useNavigate()
 
   const comparators = useMemo(
@@ -262,8 +276,11 @@ export function ActionsTable({ rows, visibleColumns, groupBy = 'none' }: Actions
   const vis = (key: string) => visibleColumns.includes(key)
 
   const journeyGroups = useMemo(
-    () => (groupBy === 'parentJourneyId' ? buildParentJourneyActionGroups(sortedRows) : []),
-    [groupBy, sortedRows],
+    () =>
+      groupBy === 'parentJourneyId'
+        ? buildParentJourneyActionGroups(sortedRows, pinJourneyId)
+        : [],
+    [groupBy, sortedRows, pinJourneyId],
   )
 
   const visibleColCount =

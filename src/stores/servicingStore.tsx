@@ -6,8 +6,14 @@ import { useWorkflow } from './workflowStore'
 import { getActionStatus } from '@/utils/getActionStatus'
 import { getChildTypeConfig, getVisibleChildSubTasks } from '@/utils/childTaskRegistry'
 import { deriveChildDisplayStatus } from '@/utils/childStatusDisplay'
+import { deriveAccountOpeningChildDisplayStatus } from '@/utils/accountOpeningEnvelopeStatus'
 import { formatOpenAccountsChildRowLabel } from '@/utils/openAccountsChildRowLabel'
+import { isSingleFlowKycEnabled } from '@/utils/ownerKycReview'
 import { readLastCreatedJourneyId, writeLastCreatedJourneyId } from '@/utils/lastCreatedJourney'
+import {
+  readSavedOnboardingJourneys,
+  writeSavedOnboardingJourneys,
+} from '@/utils/savedJourneysStorage'
 
 /** Map workflow task status to servicing journey action status (spelling + blocked). */
 function toJourneyActionStatus(s: TaskStatus): JourneyStatus {
@@ -25,7 +31,8 @@ function deriveLiveJourney(state: WorkflowState): Journey | null {
   if (!state.journeyId) return null
 
   const journeyId = state.journeyId
-  const journeyName = state.journeyName ?? 'Client Onboarding'
+  const catalogJourney = seededJourneys.find((j) => j.id === journeyId)
+  const journeyName = catalogJourney?.name ?? state.journeyName ?? 'Client Onboarding'
 
   const journeyActions = state.actions.flatMap((action) => {
     const actionStatus = getActionStatus(state.tasks, action.id)
@@ -62,8 +69,11 @@ function deriveLiveJourney(state: WorkflowState): Journey | null {
     }
 
     // Create a separate JourneyAction for each child with its sub-tasks
+    const singleFlowKyc = isSingleFlowKycEnabled()
     const childActions: JourneyAction[] = actionTasks.flatMap((t) =>
-      (t.children ?? []).map((c): JourneyAction => {
+      (t.children ?? [])
+        .filter((c) => !(singleFlowKyc && c.childType === 'kyc'))
+        .map((c): JourneyAction => {
         const childConfig = getChildTypeConfig(c.childType)
         const isTerminal = c.status === 'complete' || c.status === 'awaiting_review' || c.status === 'canceled'
         const hwm = state.childHighWaterMark?.[c.id] ?? -1
@@ -99,7 +109,10 @@ function deriveLiveJourney(state: WorkflowState): Journey | null {
           }
         }
         const reviewState = state.childReviewsByChildId?.[c.id]
-        const displayStatus = deriveChildDisplayStatus(c.status, reviewState)
+        const displayStatus =
+          c.childType === 'account-opening'
+            ? deriveAccountOpeningChildDisplayStatus(state, c.id, c.status, reviewState)
+            : deriveChildDisplayStatus(c.status, reviewState)
         const taskMeta = state.taskData[c.id] as Record<string, unknown> | undefined
         const nickname =
           c.childType === 'account-opening'
@@ -144,11 +157,17 @@ function deriveLiveJourney(state: WorkflowState): Journey | null {
     const childSectionActions: JourneyAction[] =
       action.id === 'account-opening'
         ? ([
-            {
-              id: `${journeyId}-kyc-child-actions`,
-              title: 'KYC Reviews',
-              children: childActions.filter((childAction) => childAction.parentActionId === `${journeyId}-kyc-child-actions`),
-            },
+            ...(singleFlowKyc
+              ? []
+              : [
+                  {
+                    id: `${journeyId}-kyc-child-actions`,
+                    title: 'KYC Reviews',
+                    children: childActions.filter(
+                      (childAction) => childAction.parentActionId === `${journeyId}-kyc-child-actions`,
+                    ),
+                  },
+                ]),
             {
               id: `${journeyId}-account-opening-child`,
               title: 'Accounts',
@@ -181,7 +200,8 @@ function deriveLiveJourney(state: WorkflowState): Journey | null {
     id: journeyId,
     name: journeyName,
     category: 'Onboarding' as const,
-    relationshipName: primaryParty.name ?? 'Current Journey',
+    relationshipName:
+      catalogJourney?.relationshipName ?? primaryParty.name ?? 'Current Journey',
     status: allComplete ? 'complete' : anyStarted ? 'in_progress' : 'not_started',
     createdAt: state.journeyStartedAt
       ? state.journeyStartedAt.slice(0, 10)
@@ -220,7 +240,7 @@ function applyAssigneeOverride(journey: Journey, assignee: string): Journey {
 
 export function ServicingProvider({ children }: { children: ReactNode }) {
   const { state, dispatch } = useWorkflow()
-  const [savedJourneys, setSavedJourneys] = useState<Journey[]>([])
+  const [savedJourneys, setSavedJourneys] = useState<Journey[]>(readSavedOnboardingJourneys)
   const [assigneeOverrides, setAssigneeOverrides] = useState<Record<string, string>>({})
   const [lastCreatedJourneyId, setLastCreatedJourneyId] = useState(readLastCreatedJourneyId)
 
@@ -232,7 +252,11 @@ export function ServicingProvider({ children }: { children: ReactNode }) {
   const liveJourney = deriveLiveJourney(state)
 
   const saveCurrentJourney = useCallback((journey: Journey) => {
-    setSavedJourneys((prev) => [...prev, journey])
+    setSavedJourneys((prev) => {
+      const next = [...prev.filter((j) => j.id !== journey.id), journey]
+      writeSavedOnboardingJourneys(next)
+      return next
+    })
   }, [])
 
   const updateJourneyAssignee = useCallback((journeyId: string, assignee: string) => {

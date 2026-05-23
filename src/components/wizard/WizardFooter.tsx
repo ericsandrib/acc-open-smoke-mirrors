@@ -14,12 +14,14 @@ import {
 import type { TaskStatus } from '@/types/workflow'
 import { parseChildSubTaskId } from '@/utils/childTaskRegistry'
 import { getOpenAccountsSubmitForReviewBlockers } from '@/utils/openAccountsDocumentValidation'
+import { isSingleFlowKycEnabled } from '@/utils/ownerKycReview'
 import {
   isAnnuityExternalPlatformOpenAccountsTask,
   isOpenAccountsTask,
   OPEN_ACCOUNTS_FORM_KEY,
 } from '@/utils/openAccountsTaskContext'
 import { useOpenAccountsVariant } from '@/components/wizard/openAccountsVariantContext'
+import { handleWizardPanelShellWheel } from '@/utils/wizardScroll'
 
 function getActiveTaskStatus(state: ReturnType<typeof useWorkflow>['state']): TaskStatus {
   // Check parent tasks
@@ -135,8 +137,13 @@ export function WizardFooter() {
     )
   // Annuity Open Accounts submission lives in-page (Netx360HandoffSection); the footer
   // only handles Next/Complete for that task.
+  const esignAutoSubmitsAccountReview =
+    isOnOpenAccountsTask && !isAnnuityOpenAccountsTask && isSingleFlowKycEnabled(state)
   const showsOpenAccountsSubmit =
-    isOnOpenAccountsTask && !isAnnuityOpenAccountsTask && !allAccountChildrenTerminal
+    isOnOpenAccountsTask &&
+    !isAnnuityOpenAccountsTask &&
+    !allAccountChildrenTerminal &&
+    !esignAutoSubmitsAccountReview
   const showsAnnuityComplete =
     isOnOpenAccountsTask && isAnnuityOpenAccountsTask && allAccountChildrenTerminal
   const openAccountsSubmitLabel = 'Submit for Review'
@@ -144,7 +151,10 @@ export function WizardFooter() {
 
   return (
     <>
-    <footer className="border-t border-border bg-background px-8 py-3 min-h-14 flex justify-between items-center shrink-0 box-border">
+    <footer
+      className="border-t border-border bg-background px-8 py-3 min-h-14 flex justify-between items-center shrink-0 box-border"
+      onWheel={handleWizardPanelShellWheel}
+    >
       <div className="max-w-[52.5rem] mx-auto w-full flex items-center justify-between">
         <div>
           {!isFirst && (
@@ -194,7 +204,10 @@ export function WizardFooter() {
               Next
               <ChevronRight className="h-4 w-4" />
             </Button>
-          ) : isV5OrV6 && showsOpenAccountsSubmit ? (
+          ) : isV5OrV6 &&
+            isOnOpenAccountsTask &&
+            !isAnnuityOpenAccountsTask &&
+            !allAccountChildrenTerminal ? (
             <Button variant="outline" onClick={() => dispatch({ type: 'GO_NEXT' })}>
               Next
               <ChevronRight className="h-4 w-4" />

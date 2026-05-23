@@ -1,5 +1,6 @@
 import type { ChildTask, WorkflowState } from '@/types/workflow'
 import { findParentTaskForChild, OPEN_ACCOUNTS_WITH_ANNUITY_FORM_KEY } from '@/utils/openAccountsTaskContext'
+import { isSingleFlowKycEnabled } from '@/utils/ownerKycReview'
 import { mergeFeatureRequests } from '@/types/featureRequests'
 import {
   alternativeStrategyProgressWeight,
@@ -15,6 +16,12 @@ import { getAccountOwnersMissingKyc } from '@/utils/accountOpeningOwnerKyc'
 import { instanceSpecificationComplete } from '@/utils/supportingDocuments'
 import type { SupportingDocumentStatus } from '@/utils/supportingDocuments'
 import { isChildSubTaskVisited } from '@/utils/childSubTaskProgress'
+import { getSubTaskIndexByFormKey } from '@/utils/childTaskRegistry'
+import {
+  legacyAccountOpeningDocumentsTaskId,
+  resolveAccountOpeningFormsPackageTaskId,
+  accountOpeningSupportingDocumentsTaskId,
+} from '@/utils/accountOpeningDocumentTasks'
 
 type DocInstance = {
   id: string
@@ -172,7 +179,8 @@ const ACCOUNT_OPENING_SUFFIXES = [
   'account-owners',
   'funding-transfers',
   'features-services',
-  'documents-review',
+  'forms-package',
+  'supporting-documents',
 ] as const
 
 function accountOpeningProgressSuffixes(): readonly string[] {
@@ -197,9 +205,16 @@ function progressFeaturesHub(state: WorkflowState, accountChildId: string): { fi
   return applySubmittedCap(state, taskId, { filled: 0, total: 1 })
 }
 
-function progressDocuments(state: WorkflowState, accountChildId: string): { filled: number; total: number } {
-  const taskId = `${accountChildId}-documents-review`
-  const docsData = (state.taskData[taskId] as Record<string, unknown> | undefined) ?? {}
+function progressSupportingDocuments(
+  state: WorkflowState,
+  accountChildId: string,
+): { filled: number; total: number } {
+  const taskId = accountOpeningSupportingDocumentsTaskId(accountChildId)
+  const legacyTaskId = legacyAccountOpeningDocumentsTaskId(accountChildId)
+  const docsData =
+    (state.taskData[taskId] as Record<string, unknown> | undefined) ??
+    (state.taskData[legacyTaskId] as Record<string, unknown> | undefined) ??
+    {}
   const parent = findParentTaskForChild(state, accountChildId)
   const openAccountsData = (state.taskData[parent?.id ?? 'open-accounts'] as Record<string, unknown> | undefined) ?? {}
   const localDocs = (docsData['child-local-docs'] as DocInstance[] | undefined) ?? []
@@ -228,8 +243,8 @@ function progressDocuments(state: WorkflowState, accountChildId: string): { fill
     return applySubmittedCap(state, taskId, { filled: reviewRequestedFilled, total: reviewRequestedTotal })
   }
 
-  const documentsReviewIndex = ACCOUNT_OPENING_SUFFIXES.indexOf('documents-review')
-  if (documentsReviewIndex >= 0 && isChildSubTaskVisited(state, accountChildId, documentsReviewIndex)) {
+  const supportingIndex = ACCOUNT_OPENING_SUFFIXES.indexOf('supporting-documents')
+  if (supportingIndex >= 0 && isChildSubTaskVisited(state, accountChildId, supportingIndex)) {
     return applySubmittedCap(state, taskId, { filled: 1, total: 1 })
   }
 
@@ -240,6 +255,42 @@ function progressDocuments(state: WorkflowState, accountChildId: string): { fill
   }, 0)
   const optionalFilled = optionalUploadsCount > 0 || notes > 0 ? 1 : 0
   return applySubmittedCap(state, taskId, { filled: optionalFilled, total: 1 })
+}
+
+function progressFormsPackage(
+  state: WorkflowState,
+  accountChildId: string,
+): { filled: number; total: number } {
+  const taskId = resolveAccountOpeningFormsPackageTaskId(state, accountChildId)
+  const docsData = (state.taskData[taskId] as Record<string, unknown> | undefined) ?? {}
+  const executedEsignForms =
+    (docsData.esignExecutedForms as
+      | Array<{ id?: string; envelopeId?: string; formId?: string }>
+      | undefined) ?? []
+
+  if (executedEsignForms.length > 0) {
+    return applySubmittedCap(state, taskId, { filled: 1, total: 1 })
+  }
+
+  const formsIndex = ACCOUNT_OPENING_SUFFIXES.indexOf('forms-package')
+  if (formsIndex >= 0 && isChildSubTaskVisited(state, accountChildId, formsIndex)) {
+    return applySubmittedCap(state, taskId, { filled: 0, total: 1 })
+  }
+
+  return applySubmittedCap(state, taskId, { filled: 0, total: 1 })
+}
+
+function progressReviewSubTaskOnVisit(
+  state: WorkflowState,
+  accountChildId: string,
+  suffix: 'cip-review' | 'aml-review',
+): { filled: number; total: number } {
+  const taskId = `${accountChildId}-${suffix}`
+  const subTaskIndex = getSubTaskIndexByFormKey('account-opening', `acct-child-${suffix}`)
+  if (subTaskIndex >= 0 && isChildSubTaskVisited(state, accountChildId, subTaskIndex)) {
+    return applySubmittedCap(state, taskId, { filled: 1, total: 1 })
+  }
+  return applySubmittedCap(state, taskId, { filled: 0, total: 1 })
 }
 
 export function getAccountOpeningSubTaskProgress(
@@ -254,8 +305,15 @@ export function getAccountOpeningSubTaskProgress(
       return progressFundingHub(state, accountChildId)
     case 'features-services':
       return progressFeaturesHub(state, accountChildId)
+    case 'forms-package':
+      return progressFormsPackage(state, accountChildId)
+    case 'supporting-documents':
+      return progressSupportingDocuments(state, accountChildId)
     case 'documents-review':
-      return progressDocuments(state, accountChildId)
+      return progressSupportingDocuments(state, accountChildId)
+    case 'cip-review':
+    case 'aml-review':
+      return progressReviewSubTaskOnVisit(state, accountChildId, suffix)
     default:
       return { filled: 0, total: 0 }
   }
@@ -326,14 +384,14 @@ export function getAccountOpeningChildSubmissionIssues(
   }
 
   if (!kycEsignExternal) {
-    const docsTaskId = `${accountChildId}-documents-review`
+    const docsTaskId = resolveAccountOpeningFormsPackageTaskId(state, accountChildId)
     const docsData = (state.taskData[docsTaskId] as Record<string, unknown> | undefined) ?? {}
     const executedEsignForms =
       (docsData.esignExecutedForms as
         | Array<{ id?: string; envelopeId?: string; formId?: string; label?: string; fileName?: string; executedAt?: string }>
         | undefined) ?? []
     if (executedEsignForms.length === 0) {
-      issues.push('Documents: send and complete at least one eSign envelope so signed forms appear in this account.')
+      issues.push('Forms Package: send and complete at least one eSign envelope so signed forms appear for this account.')
     }
   }
 
@@ -350,4 +408,23 @@ export function hasAccountOpeningChildBeenSubmittedForReview(
   accountChildId: string,
 ): boolean {
   return Boolean(state.childReviewsByChildId?.[accountChildId])
+}
+
+export function isAccountOpeningChildDraft(child: ChildTask): boolean {
+  return (
+    child.childType === 'account-opening' &&
+    (child.status === 'not_started' || child.status === 'in_progress')
+  )
+}
+
+/**
+ * Single-flow demo: draft accounts submit via forms-package eSign simulation, not manual advisor submit.
+ */
+export function canAdvisorManuallySubmitAccountOpeningChild(
+  state: WorkflowState,
+  child: ChildTask,
+): boolean {
+  if (child.childType !== 'account-opening') return false
+  if (!isAccountOpeningChildDraft(child)) return true
+  return !isSingleFlowKycEnabled(state)
 }

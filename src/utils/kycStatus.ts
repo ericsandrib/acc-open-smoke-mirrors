@@ -1,13 +1,11 @@
 import type { OwnerKycReviewState, RelatedParty } from '@/types/workflow'
 import { getMissingOwnerKycFields, OWNER_KYC_REQUIRED_FIELD_LABELS } from '@/utils/ownerKycReview'
-import { isMeaningfulReviewerMessage } from '@/utils/reviewerStageMessages'
 
 /**
- * Synthesized primary KYC disposition for a verification subject.
+ * Participant-level verification outcome only — not account workflow routing.
  *
- * The reviewer should immediately understand "can this participant move forward?"
- * by looking at a single status — AML and CIP are supporting evidence inside the
- * side sheet, not competing peer states at the row level.
+ * Workflow states (Escalation / Hold, Document Review, etc.) live on
+ * {@link ChildReviewState.accountWorkflowPhase} and Application Status UI.
  */
 export type KycStatus = 'pass' | 'fail' | 'pending_review' | 'unverified' | 'expired'
 
@@ -17,7 +15,7 @@ export interface KycStatusBadge {
   status: KycStatus
   label: string
   tone: KycStatusTone
-  /** Short operational hint, e.g. "Address mismatch" or "Awaiting AML team review". */
+  /** Short verification hint — only when {@link getKycStatusBadge} is called with `includeHint`. */
   hint?: string
 }
 
@@ -37,15 +35,73 @@ const STATUS_TONES: Record<KycStatus, KycStatusTone> = {
   expired: 'warning',
 }
 
+/** Advisor-facing lines beneath the participant KYC badge (not reviewer findings). */
+const PARTICIPANT_KYC_SUPPORTING_COPY = {
+  amlScreeningMatch:
+    'Potential screening match detected. Additional review or supporting documents may be required.',
+  cipIdentityFail:
+    'Identity verification could not be completed. Supporting documents may be required.',
+  supportingDocuments: 'Supporting documents are required to continue onboarding.',
+  clarification:
+    'Additional clarification is required before verification can be completed.',
+  pendingComplianceReview: 'This participant is currently under compliance review.',
+  verificationInProgress: 'Verification checks are in progress.',
+} as const
+
+type AmlBucket = 'clear' | 'flagged' | 'pending'
+
+function getAmlBucket(owner?: OwnerKycReviewState): AmlBucket {
+  const aml = owner?.amlReview?.status
+  if (aml === 'cleared') return 'clear'
+  if (aml === 'flagged' || aml === 'escalated') return 'flagged'
+  return 'pending'
+}
+
+/** CIP verified — identity checks passed; not blocked on additional documentation. */
+export function isCipVerified(owner?: OwnerKycReviewState): boolean {
+  if (!owner?.autoTriggeredAt) return false
+  if (owner.hoKycReview?.status === 'changes_requested') return false
+  if (owner.cipStatus?.overallStatus === 'fail') return false
+  if (owner.cipStatus?.overallStatus === 'pass' || owner.hoKycReview?.status === 'approved') {
+    return true
+  }
+  return false
+}
+
+function isCipAdditionalInformationRequired(owner?: OwnerKycReviewState): boolean {
+  return (
+    owner?.hoKycReview?.status === 'changes_requested' || owner?.cipStatus?.overallStatus === 'fail'
+  )
+}
+
+function isCipPending(owner?: OwnerKycReviewState): boolean {
+  if (!owner?.autoTriggeredAt) return true
+  if (isCipVerified(owner) || isCipAdditionalInformationRequired(owner)) return false
+  return true
+}
+
+/** AML rejected after reviewer disposition. */
+function isAmlDispositionFailure(owner?: OwnerKycReviewState): boolean {
+  if (!owner) return false
+  const aml = owner.amlReview?.status
+  if (aml === 'escalated') return true
+  if (aml !== 'flagged') return false
+  return (owner.verificationSnapshots ?? []).some((s) => s.eventKind === 'aml_reject')
+}
+
 /**
- * Resolve a party + owner review into one of the five KYC dispositions.
+ * Resolve participant verification outcome (AML + CIP), independent of account workflow phase.
  *
- * Rules (first match wins):
- *   - `unverified` — no autoTriggeredAt OR any required field missing on the party
- *   - `fail`       — AML flagged/escalated OR CIP overallStatus === 'fail'
- *   - `pass`       — AML cleared AND HO KYC approved
- *   - `pending_review` — KYC has run but isn't in pass/fail
- *   - `expired`    — future hook (no current producer)
+ * | AML     | CIP                              | KYC              |
+ * | ------- | -------------------------------- | ---------------- |
+ * | Clear   | Verified                         | Pass             |
+ * | Flagged | Verified                         | Fail             |
+ * | Clear   | Additional Information Required  | Fail             |
+ * | Flagged | Additional Information Required  | Fail             |
+ * | Pending | Verified                         | Pending Review   |
+ * | Pending | Pending                          | Pending Review   |
+ *
+ * Screening not started / missing required fields → Unverified.
  */
 export function getKycStatus(
   owner?: OwnerKycReviewState,
@@ -54,54 +110,105 @@ export function getKycStatus(
   if (party && getMissingOwnerKycFields(party).length > 0) return 'unverified'
   if (!owner?.autoTriggeredAt) return 'unverified'
 
-  const aml = owner.amlReview?.status
-  const ho = owner.hoKycReview?.status
-  const cip = owner.cipStatus
+  if (isAmlDispositionFailure(owner)) return 'fail'
+  if (isCipAdditionalInformationRequired(owner)) return 'fail'
 
-  if (aml === 'flagged' || aml === 'escalated') return 'fail'
-  if (cip?.overallStatus === 'fail') return 'fail'
+  const aml = getAmlBucket(owner)
+  const cipVerified = isCipVerified(owner)
 
-  if (aml === 'cleared' && ho === 'approved') return 'pass'
+  if (aml === 'clear' && cipVerified) return 'pass'
+  if (aml === 'flagged') return 'fail'
 
   return 'pending_review'
 }
 
-function getFailureReason(owner?: OwnerKycReviewState): string | undefined {
-  const aml = owner?.amlReview?.status
+function isCipIdentityVerificationFailed(owner?: OwnerKycReviewState): boolean {
   const cip = owner?.cipStatus
-  const mismatches = owner?.cipPayloadDemo?.mismatches ?? []
-  const findings = owner?.amlReview?.findings
+  if (!cip) return false
+  return (
+    cip.overallStatus === 'fail' ||
+    cip.idVerification === 'fail' ||
+    cip.addressMatch === 'fail' ||
+    cip.dobMatch === 'fail'
+  )
+}
 
-  if (aml === 'escalated') return 'AML escalated to compliance'
-  if (aml === 'flagged') {
-    if (isMeaningfulReviewerMessage(findings)) return findings
-    return 'AML watchlist review required'
+/**
+ * Short, actionable copy under the participant KYC badge for advisors.
+ * Derived from AML/CIP/review state — not workflow queue labels or reviewer notes.
+ */
+export function getParticipantKycSupportingCopy(
+  owner: OwnerKycReviewState | undefined,
+  party: RelatedParty | undefined,
+  status: KycStatus,
+): string | undefined {
+  if (status === 'pass') return undefined
+
+  const aml = owner?.amlReview?.status
+  const ho = owner?.hoKycReview?.status
+
+  if (aml === 'info_requested') {
+    return PARTICIPANT_KYC_SUPPORTING_COPY.clarification
   }
-  if (cip?.overallStatus === 'fail') {
-    if (mismatches[0]) return mismatches[0]
-    if (cip.addressMatch === 'fail') return 'Address mismatch'
-    if (cip.dobMatch === 'fail') return 'DOB mismatch'
-    if (cip.idVerification === 'fail') return 'Identity verification mismatch'
+  if (ho === 'changes_requested') {
+    return PARTICIPANT_KYC_SUPPORTING_COPY.supportingDocuments
   }
+
+  if (status === 'unverified') {
+    return getUnverifiedHint(owner, party)
+  }
+
+  if (status === 'pending_review') {
+    if (isCipPending(owner)) return PARTICIPANT_KYC_SUPPORTING_COPY.verificationInProgress
+    return PARTICIPANT_KYC_SUPPORTING_COPY.pendingComplianceReview
+  }
+
+  if (status === 'fail') {
+    const amlScreeningIssue = aml === 'flagged' || aml === 'escalated'
+    if (amlScreeningIssue) return PARTICIPANT_KYC_SUPPORTING_COPY.amlScreeningMatch
+    if (isCipIdentityVerificationFailed(owner)) {
+      return PARTICIPANT_KYC_SUPPORTING_COPY.cipIdentityFail
+    }
+    if (isAmlDispositionFailure(owner)) {
+      return PARTICIPANT_KYC_SUPPORTING_COPY.clarification
+    }
+    return PARTICIPANT_KYC_SUPPORTING_COPY.amlScreeningMatch
+  }
+
   return undefined
 }
 
-function getPendingHint(owner?: OwnerKycReviewState): string | undefined {
-  const aml = owner?.amlReview?.status
-  const ho = owner?.hoKycReview?.status
-  const cip = owner?.cipStatus
+/** Secondary AML guidance line in the drawer (findings shown above). */
+export function getAmlDrawerSupportingCopy(owner?: OwnerKycReviewState): string | undefined {
+  const guidance = getAmlSubsystemSupportingCopy(owner)
+  if (!guidance) return undefined
+  if (guidance === PARTICIPANT_KYC_SUPPORTING_COPY.amlScreeningMatch) {
+    return 'Additional review or supporting documents may be required.'
+  }
+  return guidance
+}
 
-  if (aml === 'info_requested') {
-    const note = owner?.amlReview?.infoRequestComments
-    return isMeaningfulReviewerMessage(note) ? note : 'AML information requested'
+/** AML subsystem guidance for the verification drawer (not shown under overall KYC status). */
+export function getAmlSubsystemSupportingCopy(owner?: OwnerKycReviewState): string | undefined {
+  const aml = owner?.amlReview?.status
+  if (aml === 'info_requested') return PARTICIPANT_KYC_SUPPORTING_COPY.clarification
+  if (aml === 'flagged' || aml === 'escalated') return PARTICIPANT_KYC_SUPPORTING_COPY.amlScreeningMatch
+  if (aml === 'pending') return PARTICIPANT_KYC_SUPPORTING_COPY.pendingComplianceReview
+  if (isAmlDispositionFailure(owner)) return PARTICIPANT_KYC_SUPPORTING_COPY.clarification
+  return undefined
+}
+
+/** CIP subsystem guidance for the verification drawer (not shown under overall KYC status). */
+export function getCipSubsystemSupportingCopy(owner?: OwnerKycReviewState): string | undefined {
+  if (owner?.hoKycReview?.status === 'changes_requested') {
+    return PARTICIPANT_KYC_SUPPORTING_COPY.supportingDocuments
   }
-  if (ho === 'changes_requested') {
-    const note = owner?.hoKycReview?.comments
-    return isMeaningfulReviewerMessage(note) ? note : 'Document review requested changes'
+  if (isCipIdentityVerificationFailed(owner)) {
+    return PARTICIPANT_KYC_SUPPORTING_COPY.cipIdentityFail
   }
-  if (aml === 'pending') return 'Awaiting AML team review'
-  if (ho === 'pending') return 'Awaiting document review'
-  if (!cip || cip.overallStatus === 'pending') return 'Verification in progress'
+  if (owner?.autoTriggeredAt && isCipPending(owner)) {
+    return PARTICIPANT_KYC_SUPPORTING_COPY.verificationInProgress
+  }
   return undefined
 }
 
@@ -117,31 +224,32 @@ function getUnverifiedHint(
       return `Missing ${labels.join(', ')}${extra}`
     }
   }
-  if (!owner?.autoTriggeredAt) return 'KYC not yet run'
+  if (!owner?.autoTriggeredAt) {
+    return 'Verification will run automatically before final submission.'
+  }
   return undefined
 }
 
 /**
- * Resolve the badge shown on the primary verification surfaces (Account & Owners chip,
- * verification subject rows in the AML and CIP review tasks).
+ * Resolve the badge shown on verification subject rows and Account & Owners surfaces.
  */
 export function getKycStatusBadge(
   owner?: OwnerKycReviewState,
   party?: RelatedParty,
+  options?: { includeHint?: boolean },
 ): KycStatusBadge {
   const status = getKycStatus(owner, party)
   const label = STATUS_LABELS[status]
   const tone = STATUS_TONES[status]
   let hint: string | undefined
-  if (status === 'fail') hint = getFailureReason(owner)
-  else if (status === 'pending_review') hint = getPendingHint(owner)
-  else if (status === 'unverified') hint = getUnverifiedHint(owner, party)
+  if (options?.includeHint) {
+    hint = getParticipantKycSupportingCopy(owner, party, status)
+  }
   return { status, label, tone, hint }
 }
 
 /**
  * Sort priority — lower number = higher operational priority (shown first).
- * Used to surface attention-needing rows in the AML / CIP review tasks.
  */
 export function getKycStatusPriority(status: KycStatus): number {
   switch (status) {
@@ -160,4 +268,19 @@ export function getKycStatusPriority(status: KycStatus): number {
 
 export function isKycStatusAttention(status: KycStatus): boolean {
   return status === 'fail' || status === 'pending_review' || status === 'unverified'
+}
+
+/** AML cleared via automated screening with no watchlist hits (seed / demo copy). */
+export function isAutomatedAmlClearMessage(reason?: string | null): boolean {
+  if (!reason?.trim()) return false
+  return /^automated screening\s*[—–-]\s*no hits$/i.test(reason.trim())
+}
+
+/** Neutral drawer copy for automated AML clears — not framed as a manual approval note. */
+export function getAmlAutomatedClearDrawerCopy(owner?: OwnerKycReviewState): string | undefined {
+  if (owner?.amlReview?.status !== 'cleared') return undefined
+  if (isAutomatedAmlClearMessage(owner.amlReview.approvalReason)) {
+    return 'No matches identified during screening.'
+  }
+  return undefined
 }

@@ -8,6 +8,12 @@ import type { ChildTask, ChildType, ChildReviewState } from '@/types/workflow'
 import { CheckCircle2, XCircle } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useWorkflow } from '@/stores/workflowStore'
+import {
+  buildTimelineDisplaySteps,
+  getActiveDisplayStepIndex,
+} from '@/utils/childTimelineVisibility'
+import { hasOwnerLevelAmlFlag } from '@/utils/childStatusDisplay'
+import { ownersAmlScreeningCleared, ownersPassedOwnerLevelKyc } from '@/utils/ownerKycReview'
 
 interface TimelineStage {
   label: string
@@ -18,16 +24,23 @@ interface TimelineStage {
 const ACCOUNT_OPENING_STAGES: TimelineStage[] = [
   { label: 'Draft', description: 'Capture client & account data, validate, and perform ID verification.', matchStatuses: ['not_started', 'in_progress'] },
   { label: 'Client Signature', description: 'Combined eSign package generated and sent to client for signature.', matchStatuses: [] },
-  { label: 'Submitted', description: 'Account application submitted to Home Office for review.', matchStatuses: ['awaiting_review'] },
+  { label: 'Awaiting Review', description: 'Account application submitted to Home Office for review.', matchStatuses: ['awaiting_review'] },
   {
+    // Off-path: appears between Submitted and the review pipeline when a reviewer sends the
+    // application back to the advisor. Filtered out otherwise.
     label: 'Clarification / Document Required',
     description: 'Review team requested clarification or additional documents from the advisor.',
     matchStatuses: ['ao_clarification_required'],
   },
+  { label: 'AML Review', description: 'AML compliance team screens each owner against sanctions, PEP, and watchlists.', matchStatuses: ['aml_review_pending'] },
   { label: 'Document Review', description: 'Document Review Team verifies completeness of all account documents.', matchStatuses: ['doc_review_pending'] },
-  { label: 'Principal Review', description: 'Principal Review Team performs final approval and oversight.', matchStatuses: ['principal_review_pending', 'rejected'] },
-  { label: 'Pending Release', description: 'Both reviews passed — account approved (IGO). Preparing for release to Pershing.', matchStatuses: [] },
-  { label: 'Complete', description: 'Account opened at Pershing. Confirmation sent to client.', matchStatuses: ['complete'] },
+  { label: 'Principal Review', description: 'Principal Review Team performs final approval and oversight.', matchStatuses: ['principal_review_pending'] },
+  { label: 'Escalation / Hold', description: 'Account placed on hold for compliance escalation.', matchStatuses: ['escalation_hold'] },
+  {
+    label: 'Pending Release',
+    description: 'Both reviews passed — account approved (IGO). Preparing for release to Pershing.',
+    matchStatuses: ['pending_release', 'complete'],
+  },
 ]
 
 const KYC_STAGES: TimelineStage[] = [
@@ -44,19 +57,21 @@ const KYC_STAGES: TimelineStage[] = [
   { label: 'Complete', description: 'Identity verified. No further KYC action required.', matchStatuses: ['complete'] },
 ]
 
-const KYC_AML_STAGE_INDEX = KYC_STAGES.findIndex((s) => s.label === 'AML Review')
-const ACCOUNT_OPENING_DOC_STAGE_INDEX = ACCOUNT_OPENING_STAGES.findIndex((s) => s.label === 'Document Review')
-
-function getStagesForType(childType: ChildType): TimelineStage[] {
-  return childType === 'kyc' ? KYC_STAGES : ACCOUNT_OPENING_STAGES
-}
-
 function deriveEffectiveStatus(
   rawStatus: string,
   childType: ChildType,
   reviewState?: ChildReviewState,
 ): string {
-  if (rawStatus === 'complete') return 'complete'
+  if (rawStatus === 'complete') {
+    if (
+      childType === 'account-opening' ||
+      childType === 'funding-line' ||
+      childType === 'feature-service-line'
+    ) {
+      return 'pending_release'
+    }
+    return 'complete'
+  }
 
   if (childType === 'kyc') {
     const amlStatus = reviewState?.amlReview?.status
@@ -91,6 +106,47 @@ function deriveEffectiveStatus(
     return rawStatus
   }
 
+  // Single-flow account-opening: phase + disposition status together drive the active queue.
+  if (childType === 'account-opening' && reviewState?.accountWorkflowPhase) {
+    const phase = reviewState.accountWorkflowPhase
+    const docStatus = reviewState.documentReview?.status
+    const principalStatus = reviewState.principalReview?.status
+    if (phase === 'aml_review') {
+      return hasOwnerLevelAmlFlag(reviewState) ? 'escalation_hold' : 'aml_review_pending'
+    }
+    if (phase === 'document_review') {
+      if (docStatus === 'igo') return 'principal_review_pending'
+      if (ownersAmlScreeningCleared(reviewState) || ownersPassedOwnerLevelKyc(reviewState)) {
+        return 'awaiting_review'
+      }
+      return 'doc_review_pending'
+    }
+    if (phase === 'principal_review') {
+      if (reviewState.documentReview?.status !== 'igo' && ownersPassedOwnerLevelKyc(reviewState)) {
+        return 'awaiting_review'
+      }
+      if (principalStatus === 'igo') return 'pending_release'
+      return 'principal_review_pending'
+    }
+    if (phase === 'pending_release' || phase === 'complete') return 'pending_release'
+    if (phase === 'escalation_hold') {
+      if (ownersAmlScreeningCleared(reviewState) && !hasOwnerLevelAmlFlag(reviewState)) {
+        return 'awaiting_review'
+      }
+      return 'escalation_hold'
+    }
+    if (phase === 'draft') {
+      // Clarification: an owner has open info-requested / changes-requested state after a reviewer sent it back.
+      const ownerReviews = reviewState.ownerReviews ?? {}
+      const hasOpenClarification = Object.values(ownerReviews).some(
+        (o) =>
+          o.amlReview?.status === 'info_requested' ||
+          o.hoKycReview?.status === 'changes_requested',
+      )
+      if (hasOpenClarification) return 'ao_clarification_required'
+    }
+  }
+
   if (rawStatus !== 'awaiting_review' && rawStatus !== 'rejected' && rawStatus !== 'in_progress' && rawStatus !== 'not_started') {
     return rawStatus
   }
@@ -111,26 +167,25 @@ function deriveEffectiveStatus(
     return 'rejected'
   }
 
-  // Account opening: home office review starts at Document Review (AML is KYC-only in this demo).
+  // Account opening: advisor draft stays on Draft until submit; HO pipeline only after awaiting_review.
   if (childType === 'account-opening') {
-    if (docStatus === 'igo' && principalStatus === 'igo') return 'complete'
+    if (rawStatus === 'in_progress' || rawStatus === 'not_started') {
+      return rawStatus
+    }
+    if (docStatus === 'igo' && principalStatus === 'igo') return 'pending_release'
     if (docStatus === 'igo') return 'principal_review_pending'
+    if (ownersAmlScreeningCleared(reviewState) || ownersPassedOwnerLevelKyc(reviewState)) {
+      return 'awaiting_review'
+    }
     return 'doc_review_pending'
   }
 
   if (amlStatus === 'pending') return 'aml_pending'
   if (amlStatus === 'flagged') return 'aml_flagged'
 
-  if (docStatus === 'igo' && principalStatus === 'igo') return 'complete'
+  if (docStatus === 'igo' && principalStatus === 'igo') return 'pending_release'
   if (docStatus === 'igo') return 'principal_review_pending'
   return 'doc_review_pending'
-}
-
-function getActiveStageIndex(stages: TimelineStage[], status: string): number {
-  for (let i = stages.length - 1; i >= 0; i--) {
-    if (stages[i].matchStatuses.includes(status)) return i
-  }
-  return 0
 }
 
 /**
@@ -143,89 +198,9 @@ export function getActiveStageLabel(
   reviewState?: ChildReviewState,
 ): string {
   const effectiveStatus = deriveEffectiveStatus(rawStatus, childType, reviewState)
-  const stages = getStagesForType(childType)
-  const idx = getActiveStageIndex(stages, effectiveStatus)
-  return stages[idx].label
-}
-
-function getReviewNotesForStage(
-  stageLabel: string,
-  childType: ChildType,
-  reviewState?: ChildReviewState,
-): Array<{ label: string; value: string }> {
-  if (!reviewState) return []
-
-  if (stageLabel === 'Document Review') {
-    if (reviewState.documentReview?.status === 'nigo') {
-      return [
-        reviewState.documentReview.nigoReason
-          ? { label: 'Reason', value: reviewState.documentReview.nigoReason }
-          : null,
-        reviewState.documentReview.nigoFeedback
-          ? { label: 'Feedback', value: reviewState.documentReview.nigoFeedback }
-          : null,
-      ].filter((note): note is { label: string; value: string } => Boolean(note))
-    }
-  }
-
-  if (stageLabel === 'Principal Review' && reviewState.principalReview?.status === 'nigo') {
-    return [
-      reviewState.principalReview.nigoReason
-        ? { label: 'Reason', value: reviewState.principalReview.nigoReason }
-        : null,
-      reviewState.principalReview.nigoFeedback
-        ? { label: 'Feedback', value: reviewState.principalReview.nigoFeedback }
-        : null,
-    ].filter((note): note is { label: string; value: string } => Boolean(note))
-  }
-
-  if (
-    stageLabel === 'AML Review' ||
-    stageLabel === 'Clarification / Document Required'
-  ) {
-    if (reviewState.documentReview?.status === 'nigo') {
-      return [
-        reviewState.documentReview.nigoReason
-          ? { label: 'Reason', value: reviewState.documentReview.nigoReason }
-          : null,
-        reviewState.documentReview.nigoFeedback
-          ? { label: 'Feedback', value: reviewState.documentReview.nigoFeedback }
-          : null,
-      ].filter((note): note is { label: string; value: string } => Boolean(note))
-    }
-
-    if (reviewState.principalReview?.status === 'nigo') {
-      return [
-        reviewState.principalReview.nigoReason
-          ? { label: 'Reason', value: reviewState.principalReview.nigoReason }
-          : null,
-        reviewState.principalReview.nigoFeedback
-          ? { label: 'Feedback', value: reviewState.principalReview.nigoFeedback }
-          : null,
-      ].filter((note): note is { label: string; value: string } => Boolean(note))
-    }
-    if (reviewState.amlReview?.status === 'flagged' && reviewState.amlReview.findings) {
-      return [{ label: 'Correction reason', value: reviewState.amlReview.findings }]
-    }
-
-    if (reviewState.amlReview?.status === 'info_requested' && reviewState.amlReview.infoRequestComments) {
-      return [{ label: 'Request', value: reviewState.amlReview.infoRequestComments }]
-    }
-
-    if (
-      childType === 'kyc' &&
-      reviewState.hoKycReview?.status === 'changes_requested' &&
-      reviewState.hoKycReview.comments
-    ) {
-      return [{ label: 'Reviewer comments', value: reviewState.hoKycReview.comments }]
-    }
-
-    if (reviewState.amlReview?.status === 'escalated' && reviewState.amlReview.reason) {
-      return [{ label: 'Escalation reason', value: reviewState.amlReview.reason }]
-    }
-  }
-
-  return []
+  const steps = buildTimelineDisplaySteps(childType, rawStatus, effectiveStatus, reviewState)
+  const idx = getActiveDisplayStepIndex(steps, effectiveStatus)
+  return steps[idx]?.label ?? 'Draft'
 }
 
 export function ChildActionTimeline({
@@ -240,153 +215,34 @@ export function ChildActionTimeline({
   reviewState?: ChildReviewState
 }) {
   const effectiveStatus = deriveEffectiveStatus(status, childType, reviewState)
-  const stages = getStagesForType(childType)
-  const activeIndex = getActiveStageIndex(stages, effectiveStatus)
+  const steps = buildTimelineDisplaySteps(childType, status, effectiveStatus, reviewState)
+  const activeIndex = getActiveDisplayStepIndex(steps, effectiveStatus)
   const isRejected = effectiveStatus === 'rejected'
-  const isWorkflowComplete = effectiveStatus === 'complete'
-
-  const docReview = reviewState?.documentReview
-  const principalReview = reviewState?.principalReview
-  const amlReview = reviewState?.amlReview
+  const isWorkflowComplete =
+    effectiveStatus === 'complete' || effectiveStatus === 'pending_release'
 
   return (
     <div className="relative">
-      {stages.map((stage, i) => {
+      {steps.map((step, i) => {
         const isActive = i === activeIndex
         const isComplete = i < activeIndex
         const isPending = i > activeIndex
-        const isLast = i === stages.length - 1
-        const isTerminalCompleteChecked = isWorkflowComplete && stage.label === 'Complete'
+        const isLast = i === steps.length - 1
+        const isTerminalCompleteChecked = isWorkflowComplete && step.label === 'Pending Release'
 
-        const hoKycReview = reviewState?.hoKycReview
+        const timelineDetail = step.atLabel ?? null
 
-        let stageAnnotation: string | null = null
-        if (stage.label === 'Document Review') {
-          if (childType === 'kyc' && hoKycReview) {
-            if (hoKycReview.status === 'approved') stageAnnotation = `Approved at ${hoKycReview.decidedAt}`
-            else if (hoKycReview.status === 'changes_requested') stageAnnotation = `Changes requested at ${hoKycReview.decidedAt}`
-          } else if (docReview) {
-            if (docReview.status === 'igo') stageAnnotation = `Accepted at ${docReview.decidedAt}`
-            else if (docReview.status === 'nigo') stageAnnotation = `Rejected at ${docReview.decidedAt}`
-          }
-        }
-        if (stage.label === 'Principal Review' && principalReview) {
-          if (principalReview.status === 'igo') stageAnnotation = `Approved at ${principalReview.decidedAt}`
-          else if (principalReview.status === 'nigo') stageAnnotation = `Rejected at ${principalReview.decidedAt}`
-        }
-        if (stage.label === 'AML Review' && amlReview) {
-          if (amlReview.status === 'cleared') stageAnnotation = `Cleared at ${amlReview.decidedAt}`
-          else if (amlReview.status === 'flagged') stageAnnotation = `Flagged at ${amlReview.decidedAt}`
-          else if (amlReview.status === 'escalated') stageAnnotation = `Rejected at ${amlReview.decidedAt}`
-          else if (amlReview.status === 'info_requested' && amlReview.decidedAt) {
-            stageAnnotation = `Info requested at ${amlReview.decidedAt}`
-          }
-        }
-        if (
-          childType !== 'kyc' &&
-          stage.label === 'Pending Release' &&
-          isComplete &&
-          principalReview?.status === 'igo' &&
-          principalReview.decidedAt
-        ) {
-          stageAnnotation = `Approved for release at ${principalReview.decidedAt}`
-        }
-        if (
-          childType !== 'kyc' &&
-          stage.label === 'Complete' &&
-          isWorkflowComplete &&
-          principalReview?.status === 'igo' &&
-          principalReview.decidedAt
-        ) {
-          stageAnnotation = `Completed at ${principalReview.decidedAt}`
-        }
-        if (
-          childType === 'kyc' &&
-          stage.label === 'Complete' &&
-          isWorkflowComplete &&
-          hoKycReview?.status === 'approved' &&
-          hoKycReview.decidedAt
-        ) {
-          stageAnnotation = `Completed at ${hoKycReview.decidedAt}`
-        }
-
-        const preAml = reviewState?.kycPreAmlTimeline
-        let kycPreAmlAnnotation: string | null = null
-        if (
-          childType === 'kyc' &&
-          preAml &&
-          KYC_AML_STAGE_INDEX >= 0 &&
-          i < KYC_AML_STAGE_INDEX &&
-          isComplete
-        ) {
-          if (stage.label === 'Draft') kycPreAmlAnnotation = `Completed at ${preAml.draftAt} by Jane Advisor`
-          else if (stage.label === 'ID Verification') kycPreAmlAnnotation = `Completed at ${preAml.idVerificationAt} by Jane Advisor`
-          else if (stage.label === 'Submitted') kycPreAmlAnnotation = `Submitted for review at ${preAml.submittedForReviewAt} by Jane Advisor`
-        }
-
-        const aoPre = reviewState?.accountOpeningPreReviewTimeline
-        let accountOpeningPreAnnotation: string | null = null
-        if (
-          childType !== 'kyc' &&
-          aoPre &&
-          ACCOUNT_OPENING_DOC_STAGE_INDEX >= 0 &&
-          i < ACCOUNT_OPENING_DOC_STAGE_INDEX &&
-          isComplete
-        ) {
-          if (stage.label === 'Draft') {
-            accountOpeningPreAnnotation = `Completed at ${aoPre.draftAt} by Jane Advisor`
-          } else if (stage.label === 'Client Signature') {
-            accountOpeningPreAnnotation = `Completed at ${aoPre.clientSignatureAt} by Jane Advisor`
-          } else if (stage.label === 'Submitted') {
-            accountOpeningPreAnnotation = `Submitted for review at ${aoPre.submittedForReviewAt} by Jane Advisor`
-          }
-        }
-
-        let timelineDetail = stageAnnotation ?? kycPreAmlAnnotation ?? accountOpeningPreAnnotation
-
-        const documentReviewStillPending =
-          stage.label === 'Document Review' &&
-          (childType === 'kyc'
-            ? !hoKycReview || hoKycReview.status === 'pending'
-            : !docReview || docReview.status === 'pending')
-
-        const amlReviewStillPending =
-          stage.label === 'AML Review' && (!amlReview || amlReview.status === 'pending')
-
-        const principalReviewStillPending =
-          stage.label === 'Principal Review' &&
-          (!principalReview || principalReview.status === 'pending')
-
-        if (!timelineDetail && (isComplete || isTerminalCompleteChecked)) {
-          const ts =
-            (stage.label === 'AML Review' &&
-              !amlReviewStillPending &&
-              amlReview?.decidedAt) ||
-            (stage.label === 'Document Review' &&
-              !documentReviewStillPending &&
-              (childType === 'kyc' ? hoKycReview?.decidedAt : docReview?.decidedAt)) ||
-            (stage.label === 'Principal Review' &&
-              !principalReviewStillPending &&
-              principalReview?.decidedAt) ||
-            (stage.label === 'Pending Release' && principalReview?.decidedAt) ||
-            (stage.label === 'Complete' &&
-              (childType === 'kyc' ? hoKycReview?.decidedAt : principalReview?.decidedAt))
-          if (ts) timelineDetail = `Recorded at ${ts}`
-        }
-
-        const isNigoStage =
-          (stage.label === 'Document Review' &&
-            ((childType === 'kyc' && hoKycReview?.status === 'changes_requested') ||
-              docReview?.status === 'nigo')) ||
-          (stage.label === 'Principal Review' && principalReview?.status === 'nigo') ||
-          (stage.label === 'AML Review' &&
-            (amlReview?.status === 'flagged' ||
-              amlReview?.status === 'info_requested' ||
-              amlReview?.status === 'escalated'))
-        const reviewNotes = getReviewNotesForStage(stage.label, childType, reviewState)
+        const isClarificationActive =
+          step.isClarification &&
+          isActive &&
+          (effectiveStatus === 'ao_clarification_required' ||
+            effectiveStatus === 'kyc_clarification_required')
+        const isNigoStage = isClarificationActive
+        const showReviewerMessages =
+          step.messages.length > 0 && (isActive || isComplete || isTerminalCompleteChecked)
 
         return (
-          <div key={stage.label} className="relative flex gap-3">
+          <div key={step.id} className="relative flex gap-3">
             {!isLast && (
               <div
                 className={cn(
@@ -419,7 +275,12 @@ export function ChildActionTimeline({
                   isNigoStage && 'text-destructive',
                 )}
               >
-                {stage.label}
+                {step.label}
+                {steps.filter((s) => s.label === step.label).length > 1 && step.isHistorical ? (
+                  <span className="ml-1.5 text-[10px] font-normal text-muted-foreground tabular-nums">
+                    ({steps.slice(0, i + 1).filter((s) => s.label === step.label).length})
+                  </span>
+                ) : null}
               </p>
               {!compact && (
                 <p
@@ -428,7 +289,7 @@ export function ChildActionTimeline({
                     isPending ? 'text-muted-foreground/40' : 'text-muted-foreground',
                   )}
                 >
-                  {stage.description}
+                  {step.description}
                 </p>
               )}
               {timelineDetail && (
@@ -436,16 +297,22 @@ export function ChildActionTimeline({
                   {timelineDetail}
                 </p>
               )}
-              {reviewNotes.length > 0 && (
+              {showReviewerMessages && (
                 <div className="mt-2 space-y-1.5">
-                  {reviewNotes.map((note) => (
-                    <div
-                      key={`${stage.label}-${note.label}`}
-                      className="rounded-md border border-destructive/20 bg-destructive/5 px-2.5 py-2 text-xs"
+                  {step.messages.map((msg) => (
+                    <p
+                      key={`${step.id}-${msg}`}
+                      className={cn(
+                        'rounded-md border px-2.5 py-2 text-xs leading-relaxed',
+                        step.isClarification
+                          ? 'border-destructive/20 bg-destructive/5 text-destructive/90'
+                          : step.label === 'AML Review'
+                            ? 'border-green-200/60 bg-green-50/40 text-green-900 dark:text-green-100'
+                            : 'border-border/80 bg-muted/30 text-foreground/85',
+                      )}
                     >
-                      <p className="font-medium text-destructive">{note.label}</p>
-                      <p className="mt-0.5 leading-relaxed text-destructive/80">{note.value}</p>
-                    </div>
+                      {msg}
+                    </p>
                   ))}
                 </div>
               )}
@@ -468,6 +335,8 @@ export function ChildActionTimelineSheet({ open, onOpenChange, child }: ChildAct
 
   if (!child) return null
 
+  const reviewState = state.childReviewsByChildId?.[child.id]
+
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent side="right" className="sm:max-w-[480px] flex flex-col gap-0 p-0">
@@ -477,11 +346,11 @@ export function ChildActionTimelineSheet({ open, onOpenChange, child }: ChildAct
 
         <div className="flex-1 overflow-y-auto px-6 py-6">
           <div className="rounded-xl bg-muted/30 border border-border p-5">
-            <h3 className="text-sm font-semibold mb-5">Summary</h3>
+            <h3 className="text-sm font-semibold mb-5">Application activity</h3>
             <ChildActionTimeline
               childType={child.childType}
               status={child.status}
-              reviewState={state.childReviewsByChildId?.[child.id]}
+              reviewState={reviewState}
             />
           </div>
         </div>
