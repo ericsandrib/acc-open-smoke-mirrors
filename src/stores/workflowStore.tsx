@@ -75,7 +75,7 @@ import {
   propagateOwnerReviewAcrossAccounts,
 } from '@/utils/ownerKycReview'
 import type { VerificationSnapshot } from '@/types/workflow'
-import { hasOwnerLevelAmlFlag } from '@/utils/childStatusDisplay'
+import { hasOwnerLevelAmlFlag, isAccountInAmlEscalationQueue } from '@/utils/childStatusDisplay'
 import { isMeaningfulReviewerMessage } from '@/utils/reviewerStageMessages'
 import { formatStructuredReviewText } from '@/utils/formatStructuredReviewText'
 import {
@@ -2994,9 +2994,14 @@ export function useAdvisorResubmitEligible(): boolean {
     return false
   }
 
+  const rs = getChildReviewState(state, state.activeChildActionId)
+
+  if (child.childType === 'account-opening' && rs && isAccountInAmlEscalationQueue(rs)) {
+    return false
+  }
+
   if (child.status === 'rejected') return true
 
-  const rs = getChildReviewState(state, state.activeChildActionId)
   if (!rs) return false
 
   if (child.childType === 'kyc') {

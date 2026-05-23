@@ -514,13 +514,7 @@ function ChildReviewStatusActions() {
           AML screening is complete for all participants. This account is awaiting document review.
         </p>
       )
-    } else if (accountPhase !== 'aml_review' && accountPhase !== 'escalation_hold') {
-      helper = (
-        <p className="text-xs text-muted-foreground">
-          AML disposition is available once this account is routed to Escalation / Hold.
-        </p>
-      )
-    } else {
+    } else if (accountPhase === 'aml_review' || accountPhase === 'escalation_hold') {
       actions = (
         <StatusActionGroup>
           <StatusActionButton tone="accept" className="w-full" onClick={() => setDialog('account-aml-approve')}>

@@ -129,6 +129,20 @@ export function isAccountOnEscalationHold(reviewState?: ChildReviewState): boole
   return reviewState?.accountWorkflowPhase === 'escalation_hold'
 }
 
+/**
+ * Account is actively in the AML team's escalation queue — advisor should not resubmit.
+ * Mirrors timeline effective status (`escalation_hold`), not clarification return paths.
+ */
+export function isAccountInAmlEscalationQueue(reviewState?: ChildReviewState): boolean {
+  if (!reviewState) return false
+  const phase = reviewState.accountWorkflowPhase
+  if (phase === 'escalation_hold') {
+    return !(ownersAmlScreeningCleared(reviewState) && !hasOwnerLevelAmlFlag(reviewState))
+  }
+  if (phase === 'aml_review' && hasOwnerLevelAmlFlag(reviewState)) return true
+  return false
+}
+
 /** Owner-level AML screening returned a hit (single-flow account opening). */
 export function hasOwnerLevelAmlFlag(reviewState?: ChildReviewState): boolean {
   return Object.values(reviewState?.ownerReviews ?? {}).some(
