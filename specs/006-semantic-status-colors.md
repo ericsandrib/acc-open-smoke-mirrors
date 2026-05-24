@@ -49,8 +49,8 @@ Bring all status badges and the Application Status widget under one semantic col
 
 ### Phase 4: Populate `/test/application-widget`
 - [ ] Extract widget into a reusable component
-- [ ] Render every status in two variants: terminal (solid filled, reversed icon) and active (faded tinted, colored icon)
-- [ ] Classify each status as terminal vs active and label clearly
+- [ ] Classify each status as terminal vs active. Terminal stages render filled / reversed; active stages render tinted / colored. Treatment is a property of the status, not an axis — there is no "active rendering" of a terminal status, and vice versa.
+- [ ] Render every status in its natural treatment, labeled with stage + bucket + treatment.
 
 ### Phase 5: Code review
 - [ ] Spawn general-purpose subagent to review the branch diff

@@ -6,20 +6,9 @@ import {
   statusSemanticClasses,
 } from '@/utils/statusSemanticColors'
 
-export type ApplicationStatusWidgetVariant = 'auto' | 'terminal' | 'active'
-
 interface ApplicationStatusWidgetProps {
   /** User-visible stage label from `getActiveStageLabel`. */
   stageLabel: string
-  /**
-   * `'auto'` (default) renders the `'terminal'` treatment for the known terminal
-   * stages (Pending Release / Complete / Rejected / Canceled) and `'active'`
-   * for every in-flight stage.
-   *
-   * Pass `'terminal'` or `'active'` directly when you want to force one
-   * treatment — e.g. in the `/test/application-widget` state matrix.
-   */
-  variant?: ApplicationStatusWidgetVariant
   className?: string
 }
 
@@ -28,33 +17,27 @@ interface ApplicationStatusWidgetProps {
  * ChildActionSidebar. Extracted so the same component renders in both the
  * production sidebar and the `/test/application-widget` sandbox.
  *
- * Two visual treatments share one semantic palette:
+ * Each stage has exactly one visual treatment, determined by whether it's
+ * terminal or active:
  *
- *  - **terminal** — solid filled box, icon inverted on the fill. For stages
- *    where the workflow has come to rest (success / failure / canceled).
- *  - **active** — faded tinted box, colored icon on the tint. For every
- *    in-flight or pre-flight stage.
+ *  - **terminal** stages (Pending Release / Complete / Rejected / Canceled)
+ *    render with a solid filled box and a reversed icon.
+ *  - **active** stages (every in-flight or pre-flight stage) render with a
+ *    faded tinted box and a colored icon.
  *
- * Bucket colors all resolve through `statusSemanticClasses` — no hex literals
- * at the call site, no per-stage one-off colors.
+ * Both treatments resolve through `statusSemanticClasses` — no hex literals
+ * or per-stage one-off colors at call sites.
  */
 export function ApplicationStatusWidget({
   stageLabel,
-  variant = 'auto',
   className,
 }: ApplicationStatusWidgetProps) {
   const semantic = getStageLabelSemantic(stageLabel)
   const classes = statusSemanticClasses[semantic]
+  const terminal = isTerminalStageLabel(stageLabel)
 
-  const resolvedVariant: 'terminal' | 'active' =
-    variant === 'auto'
-      ? isTerminalStageLabel(stageLabel)
-        ? 'terminal'
-        : 'active'
-      : variant
-
-  const boxClass = resolvedVariant === 'terminal' ? classes.solid : classes.pill
-  const iconClass = resolvedVariant === 'terminal' ? classes.iconOnSolid : classes.icon
+  const boxClass = terminal ? classes.solid : classes.pill
+  const iconClass = terminal ? classes.iconOnSolid : classes.icon
 
   return (
     <div className={cn('flex min-w-0 items-center gap-2', className)}>
