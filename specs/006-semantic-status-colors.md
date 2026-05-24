@@ -29,6 +29,19 @@ Bring all status badges and the Application Status widget under one semantic col
 | `aml_review`, `document_review`, `ho_kyc_review`, `principal_review` | neutral | in-flight review pipeline |
 | `canceled`, `cancelled` | neutral | intentional, terminal-neutral (label changes from "Declined" to "Canceled") |
 
+## Application Status widget — stage label → color
+
+The widget renders user-visible *stage labels* (from `getActiveStageLabel`), not raw status keys, and uses a slightly different mapping than the badge palette: stages that are actively advancing through the pipeline read as `success` (green) so a healthy in-flight account "looks alive." Only Draft (pre-flight) and Canceled (terminal-intentional) stay neutral. Treatment (terminal filled vs. active tinted) layers on top of the bucket — it's a property of the stage, not an axis you can override.
+
+| Stage label | Bucket | Treatment | Notes |
+| --- | --- | --- | --- |
+| `Pending Release`, `Complete` | success | terminal | workflow concluded positively |
+| `ID Verification`, `Client Signature`, `Submitted`, `Awaiting Review`, `AML Review`, `Document Review`, `Principal Review` | success | active | on-track motion through the pipeline |
+| `Clarification / Document Required`, `Escalation / Hold` | warning | active | human follow-up needed |
+| `Rejected` | danger | terminal | explicit failure |
+| `Draft` | neutral | active | pre-flight, no progress yet to report |
+| `Canceled` | neutral | terminal | intentionally stopped, outside the progress arc |
+
 ## Phases
 
 ### Phase 1: Semantic mapping

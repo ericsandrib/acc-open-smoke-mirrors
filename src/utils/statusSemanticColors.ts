@@ -124,11 +124,27 @@ export function getStatusSemanticClasses(status?: string): StatusSemanticClasses
  * onto a semantic bucket. Stage labels are the user-visible strings shown in
  * the widget — keep this in sync with `buildTimelineDisplaySteps` in
  * `ChildActionTimelineSheet`.
+ *
+ * Note on `success`: the widget treats "moving forward through the pipeline"
+ * and "completed" as the same positive bucket — both read as green. The
+ * terminal-vs-active treatment differentiates the two visually (active stages
+ * are tinted green, terminal stages are filled green). The bucket name is
+ * shared with the badge palette, where `success` is reserved for `complete`
+ * only; widget semantics are intentionally broader.
  */
 export const stageLabelSemantic: Record<string, StatusSemantic> = {
-  // success — workflow concluded positively
+  // success — terminal positive
   'Pending Release': 'success',
   Complete: 'success',
+
+  // success — active in-flight (on-track motion reads as positive)
+  'ID Verification': 'success',
+  'Client Signature': 'success',
+  Submitted: 'success',
+  'Awaiting Review': 'success',
+  'AML Review': 'success',
+  'Document Review': 'success',
+  'Principal Review': 'success',
 
   // warning — human follow-up needed
   'Clarification / Document Required': 'warning',
@@ -137,15 +153,8 @@ export const stageLabelSemantic: Record<string, StatusSemantic> = {
   // danger — explicit failure
   Rejected: 'danger',
 
-  // neutral — pre-flight, in-flight, or terminal-neutral
+  // neutral — pre-flight and terminal-neutral
   Draft: 'neutral',
-  'ID Verification': 'neutral',
-  'Client Signature': 'neutral',
-  Submitted: 'neutral',
-  'Awaiting Review': 'neutral',
-  'AML Review': 'neutral',
-  'Document Review': 'neutral',
-  'Principal Review': 'neutral',
   Canceled: 'neutral',
 }
 
