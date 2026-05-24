@@ -169,7 +169,7 @@
 - [x] Stub /test/application-widget entry
 
 ### Phase 3: Application Status widget icon
-- [ ] Recolor icon to semantic color of current stage
+- [x] Recolor icon to semantic color of current stage
 
 ### Phase 4: Populate /test/application-widget
 - [ ] Extract widget into reusable component

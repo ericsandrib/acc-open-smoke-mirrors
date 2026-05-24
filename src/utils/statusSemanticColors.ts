@@ -116,3 +116,58 @@ export function getStatusSemantic(status?: string): StatusSemantic {
 export function getStatusSemanticClasses(status?: string): StatusSemanticClasses {
   return statusSemanticClasses[getStatusSemantic(status)]
 }
+
+/**
+ * Maps an Application Status widget stage label (from `getActiveStageLabel`)
+ * onto a semantic bucket. Stage labels are the user-visible strings shown in
+ * the widget — keep this in sync with `buildTimelineDisplaySteps` in
+ * `ChildActionTimelineSheet`.
+ */
+export const stageLabelSemantic: Record<string, StatusSemantic> = {
+  // success — workflow concluded positively
+  'Pending Release': 'success',
+  Complete: 'success',
+
+  // warning — human follow-up needed
+  'Clarification / Document Required': 'warning',
+  'Escalation / Hold': 'warning',
+
+  // danger — explicit failure
+  Rejected: 'danger',
+
+  // neutral — pre-flight, in-flight, or terminal-neutral
+  Draft: 'neutral',
+  'ID Verification': 'neutral',
+  'Client Signature': 'neutral',
+  Submitted: 'neutral',
+  'Awaiting Review': 'neutral',
+  'AML Review': 'neutral',
+  'Document Review': 'neutral',
+  'Principal Review': 'neutral',
+  Canceled: 'neutral',
+}
+
+export function getStageLabelSemantic(label?: string): StatusSemantic {
+  if (!label) return 'default'
+  return stageLabelSemantic[label] ?? 'default'
+}
+
+/**
+ * Stage labels whose semantic treatment should render as the *terminal*
+ * variant (solid filled box, reversed icon). Everything else uses the
+ * *active* variant (faded tinted box, colored icon).
+ *
+ * Terminal = the workflow has come to rest at this stage and won't
+ * advance further without external intervention.
+ */
+export const terminalStageLabels = new Set<string>([
+  'Pending Release',
+  'Complete',
+  'Rejected',
+  'Canceled',
+])
+
+export function isTerminalStageLabel(label?: string): boolean {
+  if (!label) return false
+  return terminalStageLabels.has(label)
+}
