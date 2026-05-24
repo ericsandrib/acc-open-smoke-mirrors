@@ -172,9 +172,9 @@
 - [x] Recolor icon to semantic color of current stage
 
 ### Phase 4: Populate /test/application-widget
-- [ ] Extract widget into reusable component
-- [ ] Render every status in terminal + active variants
-- [ ] Classify terminal vs active and label clearly
+- [x] Extract widget into reusable component
+- [x] Render every status in terminal + active variants
+- [x] Classify terminal vs active and label clearly
 
 ### Phase 5: Code review
 - [ ] Spawn subagent code review and resolve findings

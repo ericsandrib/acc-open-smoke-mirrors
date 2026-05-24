@@ -22,7 +22,6 @@ import {
 import { getGenericChildSubTaskProgress } from '@/utils/childSubTaskProgress'
 import type { LucideIcon } from 'lucide-react'
 import {
-  FileText,
   Clock,
   ShieldCheck,
   Wallet,
@@ -46,7 +45,7 @@ import { isChildAwaitingAdvisorClarification } from '@/utils/childStatusDisplay'
 import { getKycValidationErrors, kycChildHasOptionalIdVerification } from './forms/KycChildInfoForm'
 import { JourneyHeader, type WorkflowBreadcrumbItem } from '@/components/wizard/JourneyHeader'
 import { computeOverallJourneyProgressPct } from '@/components/wizard/StepSidebar'
-import { getStageLabelSemantic, statusSemanticClasses } from '@/utils/statusSemanticColors'
+import { ApplicationStatusWidget } from '@/components/wizard/ApplicationStatusWidget'
 import { useTheme } from '@/stores/themeStore'
 import { isSingleFlowKycEnabled } from '@/utils/ownerKycReview'
 import { findParentTaskForChild } from '@/utils/openAccountsTaskContext'
@@ -1424,20 +1423,11 @@ export function ChildActionSidebar() {
             setResubmitOpen(true)
           }
 
-          const stageSemantic = getStageLabelSemantic(stageLabel)
-          const stageIconClass = statusSemanticClasses[stageSemantic].icon
-
           return (
             <div className="shrink-0 p-2 border-t border-border">
               <div className="rounded-xl border border-border/80 bg-card overflow-hidden shadow-sm">
-                <div className="px-3 pb-2 pt-3 flex items-center gap-2">
-                  <div className="h-8 w-8 rounded-lg bg-muted flex items-center justify-center shrink-0">
-                    <FileText className={cn('h-4 w-4', stageIconClass)} />
-                  </div>
-                  <div className="min-w-0">
-                    <p className="text-[11px] font-medium text-muted-foreground leading-none">Application Status</p>
-                    <p className="text-[17px] font-semibold leading-[1.15] truncate">{stageLabel}</p>
-                  </div>
+                <div className="px-3 pb-2 pt-3">
+                  <ApplicationStatusWidget stageLabel={stageLabel} />
                 </div>
                 <div className="px-3 pb-2.5 space-y-3">
                   {clarificationRequired ? (
