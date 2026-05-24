@@ -1,4 +1,5 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
+import { Agentation } from 'agentation'
 import { WorkflowProvider } from '@/stores/workflowStore'
 import { ServicingProvider } from '@/stores/servicingStore'
 import { ThemeProvider } from '@/stores/themeStore'
@@ -43,6 +44,7 @@ export default function App() {
           </WorkflowProvider>
         </AppPasswordGate>
         <Toaster />
+        {import.meta.env.DEV && <Agentation />}
       </>
     </ThemeProvider>
   )

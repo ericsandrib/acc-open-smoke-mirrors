@@ -236,15 +236,10 @@ export function ComposeDialog({ onClose }: ComposeDialogProps) {
         style={{ transform: visible ? 'translateX(0)' : 'translateX(100%)' }}
       >
         {/* Header */}
-        <div className="flex shrink-0 items-start justify-between gap-4 border-b border-border px-6 py-5">
-          <div className="min-w-0 flex-1">
-            <h2 className="text-lg font-semibold text-[var(--text-primary)]">New journey</h2>
-            <p className="mt-1 text-sm text-muted-foreground">
-              {hideActionSettings
-                ? 'Select the relationship and action type, then start.'
-                : 'Select the relationship and action type, then complete any settings that appear for that action before you start.'}
-            </p>
-          </div>
+        <div className="flex h-14 shrink-0 items-center justify-between gap-4 border-b border-border px-6">
+          <h2 className="min-w-0 flex-1 truncate text-lg font-semibold text-[var(--text-primary)]">
+            New journey
+          </h2>
           <Button
             variant="ghost"
             size="icon"
@@ -260,59 +255,51 @@ export function ComposeDialog({ onClose }: ComposeDialogProps) {
           <div className="mx-auto max-w-2xl space-y-8">
             {/* Journey details */}
             <section className="space-y-4">
-              <div>
-                <h3 className="text-sm font-semibold text-foreground">Journey details</h3>
-                <p className="mt-0.5 text-xs text-muted-foreground">
-                  Label this journey, choose the action, and select the client relationship.
-                </p>
+              <div className="space-y-2">
+                <Label htmlFor="journey-name">Journey name</Label>
+                <Input
+                  id="journey-name"
+                  value={journeyName}
+                  onChange={(e) => setJourneyName(e.target.value)}
+                  placeholder="e.g. Smith Family Onboarding"
+                  maxLength={80}
+                />
+                <p className="text-[11px] text-muted-foreground">Optional — defaults to &ldquo;Client Onboarding&rdquo; if empty.</p>
               </div>
-              <div className="space-y-4 rounded-xl border border-border bg-background/80 p-4 shadow-sm sm:p-5">
-                <div className="space-y-2">
-                  <Label htmlFor="journey-name">Journey name</Label>
-                  <Input
-                    id="journey-name"
-                    value={journeyName}
-                    onChange={(e) => setJourneyName(e.target.value)}
-                    placeholder="e.g. Smith Family Onboarding"
-                    maxLength={80}
-                  />
-                  <p className="text-[11px] text-muted-foreground">Optional — defaults to &ldquo;Client Onboarding&rdquo; if empty.</p>
-                </div>
 
-                <div className="space-y-2">
-                  <Label>
-                    Action type
-                    <RequiredMark />
-                  </Label>
-                  <Combobox
-                    options={actionTypeOptions}
-                    value={actionType}
-                    onValueChange={(next) => {
-                      const action = actionTypeByValue.get(next)
-                      if (!action?.enabled) {
-                        toast.message('This action type is coming soon.')
-                        return
-                      }
-                      setActionType(next)
-                    }}
-                    placeholder="Search action type..."
-                    emptyMessage="No action types found."
-                  />
-                </div>
+              <div className="space-y-2">
+                <Label>
+                  Action type
+                  <RequiredMark />
+                </Label>
+                <Combobox
+                  options={actionTypeOptions}
+                  value={actionType}
+                  onValueChange={(next) => {
+                    const action = actionTypeByValue.get(next)
+                    if (!action?.enabled) {
+                      toast.message('This action type is coming soon.')
+                      return
+                    }
+                    setActionType(next)
+                  }}
+                  placeholder="Search action type..."
+                  emptyMessage="No action types found."
+                />
+              </div>
 
-                <div className="space-y-2">
-                  <Label>
-                    Relationship
-                    <RequiredMark />
-                  </Label>
-                  <Combobox
-                    options={relationships.map((r) => ({ value: r.id, label: r.name }))}
-                    value={relationshipId}
-                    onValueChange={setRelationshipId}
-                    placeholder="Search relationship..."
-                    emptyMessage="No relationships found."
-                  />
-                </div>
+              <div className="space-y-2">
+                <Label>
+                  Relationship
+                  <RequiredMark />
+                </Label>
+                <Combobox
+                  options={relationships.map((r) => ({ value: r.id, label: r.name }))}
+                  value={relationshipId}
+                  onValueChange={setRelationshipId}
+                  placeholder="Search relationship..."
+                  emptyMessage="No relationships found."
+                />
               </div>
             </section>
 

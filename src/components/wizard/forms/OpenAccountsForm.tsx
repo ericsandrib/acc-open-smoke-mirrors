@@ -849,12 +849,12 @@ export function OpenAccountsForm() {
               return (
                 <div key={child.id}>
                   {/* Account row */}
-                  <div className="group flex items-center justify-between p-3 hover:bg-muted/50 transition-colors">
+                  <div className="group flex min-h-[72px] items-center justify-between px-3 hover:bg-muted/50 transition-colors">
                     <button
                       onClick={() => dispatch({ type: 'ENTER_CHILD_ACTION', childId: child.id })}
                       className="flex-1 flex items-center gap-3 text-left cursor-pointer min-w-0"
                     >
-                      <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-muted text-sm font-medium">
+                      <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-muted text-sm font-medium">
                         <Wallet className="h-4 w-4" />
                       </div>
                       <span className="text-sm font-medium truncate min-w-0" title={rowLabel}>
@@ -930,10 +930,18 @@ export function OpenAccountsForm() {
                 </div>
               )
             })}
-            <Button variant="ghost" className="w-full" onClick={() => setPickerOpen(true)}>
-              <Plus className="h-4 w-4 mr-2" />
-              Add accounts
-            </Button>
+            <button
+              type="button"
+              onClick={() => setPickerOpen(true)}
+              className="group flex min-h-[72px] w-full items-center gap-3 px-3 text-left transition-colors hover:bg-muted/50"
+            >
+              <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full">
+                <Plus className="h-4 w-4" />
+              </div>
+              <span className="text-sm font-medium text-muted-foreground transition-colors group-hover:text-foreground">
+                Add accounts
+              </span>
+            </button>
           </div>
         ) : (
           <div className="rounded-lg border border-border p-6 text-center">

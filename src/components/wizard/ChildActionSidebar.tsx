@@ -219,11 +219,11 @@ function SubTaskProgressIndicator({
     <Tooltip>
       <TooltipTrigger asChild>
         <span
-          className="shrink-0 inline-flex items-center justify-center h-3.5 w-3.5 text-muted-foreground/85"
+          className="shrink-0 inline-flex items-center justify-center h-4 w-4 text-muted-foreground/85"
           role="img"
           aria-label={tooltipText}
         >
-          <ProgressIcon variant={variant} className="h-3.5 w-3.5" />
+          <ProgressIcon variant={variant} className="h-4 w-4" />
           <span className="sr-only">{tooltipText}</span>
         </span>
       </TooltipTrigger>
@@ -1262,7 +1262,7 @@ export function ChildActionSidebar() {
   return (
     <TooltipProvider delayDuration={300}>
       <nav
-        className="w-[330px] shrink-0 border-r border-sidebar-border bg-sidebar-background text-sidebar-foreground flex flex-col min-h-0 self-stretch h-full"
+        className="w-[330px] shrink-0 border-r border-sidebar-border bg-white text-sidebar-foreground flex flex-col min-h-0 self-stretch h-full"
         onWheel={handleWizardPanelShellWheel}
       >
         <JourneyHeader
@@ -1286,10 +1286,10 @@ export function ChildActionSidebar() {
         />
         <div
           data-wizard-scroll-pane
-          className="flex-1 min-h-0 overflow-y-auto overscroll-y-contain pl-1 pr-2 pt-2"
+          className="flex-1 min-h-0 overflow-y-auto overscroll-y-contain pl-2 pr-2 pt-2"
           onWheel={handleWizardScrollPaneWheel}
         >
-          <div className="mb-4 flex items-start gap-2.5 px-2.5">
+          <div className="mb-4 flex items-start gap-2.5">
             {/* Match StepSidebar spine: line z-0, opaque icon z-10, flex-1 filler; keep this column above the task column if layers overlap at the gutter. */}
             <div className="relative z-20 flex w-7 shrink-0 flex-col items-center self-stretch">
               <span
@@ -1315,7 +1315,13 @@ export function ChildActionSidebar() {
                 }).map((subTask, idx) => {
                   const subTaskId = `${child.id}-${subTask.suffix}`
                   return (
-                    <li key={subTask.suffix}>
+                    <li
+                      key={subTask.suffix}
+                      className={cn(
+                        'group/task-row relative -ml-[38px] rounded-lg pl-[38px]',
+                        idx === subTaskIndex ? 'bg-sidebar-accent' : 'hover:bg-sidebar-accent/70',
+                      )}
+                    >
                       <button
                         type="button"
                         onClick={() => dispatch({ type: 'SET_CHILD_SUB_TASK', index: idx })}
@@ -1323,8 +1329,8 @@ export function ChildActionSidebar() {
                         className={cn(
                           'flex w-full min-w-0 items-center gap-1.5 rounded-lg py-2.5 pl-2 pr-1.5 text-left text-sm font-medium transition-colors',
                           idx === subTaskIndex
-                            ? 'bg-sidebar-accent text-sidebar-accent-foreground'
-                            : 'text-sidebar-foreground hover:bg-sidebar-accent/70 hover:text-sidebar-accent-foreground',
+                            ? 'text-sidebar-accent-foreground'
+                            : 'text-sidebar-foreground group-hover/task-row:text-sidebar-accent-foreground',
                         )}
                       >
                         <span
