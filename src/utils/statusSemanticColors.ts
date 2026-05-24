@@ -5,10 +5,14 @@
  * resolve through this one module so the visual language stays consistent.
  *
  * Buckets:
- *   - success: terminal-positive (only `complete`)
+ *   - success: positive — the workflow is advancing through the pipeline or
+ *     has completed successfully. Covers both in-flight motion and terminal
+ *     completion; treatment (filled vs. tinted) differentiates them visually
+ *     in the Application Status widget.
  *   - warning: human follow-up needed (NIGO / clarification / escalation hold)
  *   - danger: explicit failure or blocked
- *   - neutral: in-flight without judgement, pre-flight, or terminal-neutral
+ *   - neutral: pre-flight (Draft / Ready to Begin) or terminal-neutral
+ *     (Canceled)
  *   - default: black fallback for unknown statuses
  *
  * All classes use Tailwind/shadcn tokens; no hex literals.
@@ -71,8 +75,21 @@ export const statusSemanticClasses: Record<StatusSemantic, StatusSemanticClasses
  * Covers TaskStatus, JourneyStatus, and ChildDisplayStatus (single union of strings).
  */
 export const statusSemantic: Record<string, StatusSemantic> = {
-  // success
+  // success — terminal positive
   complete: 'success',
+
+  // success — in-flight motion through the pipeline reads as "on track."
+  // Only Draft and the explicit pre-flight / terminal-neutral states stay
+  // grey; everything actively moving through review goes green so the
+  // servicing table reads as alive.
+  in_progress: 'success',
+  awaiting_review: 'success',
+  awaiting_client_signature: 'success',
+  awaiting_documents: 'success',
+  aml_review: 'success',
+  document_review: 'success',
+  ho_kyc_review: 'success',
+  principal_review: 'success',
 
   // warning — advisor / compliance action needed
   nigo: 'warning',
@@ -86,25 +103,19 @@ export const statusSemantic: Record<string, StatusSemantic> = {
   rejected: 'danger',
   rejected_aml: 'danger',
 
-  // neutral — pre-flight / in-flight / terminal-neutral
+  // neutral — pre-flight or terminal-neutral
   not_started: 'neutral',
   draft: 'neutral',
-  in_progress: 'neutral',
-  awaiting_review: 'neutral',
-  awaiting_client_signature: 'neutral',
-  awaiting_documents: 'neutral',
-  aml_review: 'neutral',
-  document_review: 'neutral',
-  ho_kyc_review: 'neutral',
-  principal_review: 'neutral',
   canceled: 'neutral',
   cancelled: 'neutral',
 
-  // EsignEnvelopeStatus values — same semantic buckets as above.
-  // 'sent' renders as "Awaiting Client Signature" → neutral (waiting on the client, no firm-side action).
-  // 'completed' is success; 'declined' is danger; 'voided' is neutral (canceled by sender).
-  sent: 'neutral',
-  delivered: 'neutral',
+  // EsignEnvelopeStatus values
+  // 'sent' / 'delivered' = "Awaiting Client Signature" → success (the
+  // envelope is in motion through the client). 'completed' is terminal
+  // success. 'declined' is terminal failure. 'voided' is canceled by the
+  // sender — terminal-neutral.
+  sent: 'success',
+  delivered: 'success',
   completed: 'success',
   declined: 'danger',
   voided: 'neutral',
