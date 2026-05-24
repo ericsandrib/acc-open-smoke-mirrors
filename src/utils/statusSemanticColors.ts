@@ -40,7 +40,9 @@ export const statusSemanticClasses: Record<StatusSemantic, StatusSemanticClasses
   },
   warning: {
     pill: 'border-amber-200 bg-amber-50 text-amber-800 dark:border-amber-800 dark:bg-amber-950/40 dark:text-amber-200',
-    solid: 'border-amber-500 bg-amber-500 text-white dark:border-amber-500 dark:bg-amber-500',
+    // amber-500 + white text fails WCAG (~2.0:1); amber-600 + white reaches
+    // ~4:1 — passes the 3:1 UI / icon threshold and is readable for the label.
+    solid: 'border-amber-600 bg-amber-600 text-white dark:border-amber-600 dark:bg-amber-600',
     icon: 'text-amber-700 dark:text-amber-300',
     iconOnSolid: 'text-white',
   },

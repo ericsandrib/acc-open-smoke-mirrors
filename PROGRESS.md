@@ -177,7 +177,7 @@
 - [x] Classify terminal vs active and label clearly
 
 ### Phase 5: Code review
-- [ ] Spawn subagent code review and resolve findings
+- [x] Spawn subagent code review and resolve findings
 
 ## Spec 007: KYC Status Hierarchy
 
