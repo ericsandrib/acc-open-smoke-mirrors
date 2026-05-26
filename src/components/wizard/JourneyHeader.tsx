@@ -1,5 +1,7 @@
+import { useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Briefcase, ChevronLeft } from 'lucide-react'
+import { ChevronLeft } from 'lucide-react'
+import { PizzaTrackerJourneyIcon } from '@/components/wizard/PizzaTrackerEntityIcons'
 import { Button } from '@/components/ui/button'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import { PizzaTrackerHeaderMenu } from '@/components/wizard/PizzaTrackerHeaderMenu'
@@ -8,7 +10,7 @@ import { PizzaTrackerTaskNameTooltip } from '@/components/wizard/PizzaTrackerTas
 import { JourneyProgressRing } from '@/components/wizard/ProgressIcons'
 import { usePizzaTrackerDisplayPrefs } from '@/components/wizard/usePizzaTrackerDisplayPrefs'
 import { useWorkflow } from '@/stores/workflowStore'
-import { getJourneyDueMeta } from '@/utils/pizzaTrackerMeta'
+import { getJourneyDueMeta, getUniqueAssigneeNames } from '@/utils/pizzaTrackerMeta'
 import { cn } from '@/lib/utils'
 
 export type WorkflowBreadcrumbItem = {
@@ -60,10 +62,15 @@ export function JourneyHeader({
     typeof metaDateLabel === 'string' && metaDateLabel.trim().length > 0
       ? state.journeyDueAt
       : journeyDueMeta.dueAt
-  const assigneeLabel =
+  const assigneeFallback =
     typeof metaAssigneeLabel === 'string' && metaAssigneeLabel.trim().length > 0
       ? metaAssigneeLabel.trim()
       : state.assignedTo
+  const journeyAssigneeNames = useMemo(
+    () => getUniqueAssigneeNames(state.tasks, assigneeFallback),
+    [state.tasks, assigneeFallback],
+  )
+  const journeyAssigneeCount = journeyAssigneeNames.length
 
   const journeyProgressRounded =
     typeof metaProgressPct === 'number' && Number.isFinite(metaProgressPct)
@@ -94,11 +101,11 @@ export function JourneyHeader({
                 type="button"
                 variant="ghost"
                 size="icon"
-                className="h-9 w-9 shrink-0 rounded-md bg-[var(--bg-tertiary)] text-muted-foreground hover:bg-[var(--bg-tertiary)]"
+                className="h-9 w-9 shrink-0 rounded-lg bg-[var(--bg-tertiary)] text-muted-foreground hover:bg-[var(--bg-tertiary)]"
                 onClick={onIconClick}
                 aria-label={iconTooltip ?? 'Onboarding'}
               >
-                <Briefcase className="h-4 w-4" aria-hidden />
+                <PizzaTrackerJourneyIcon />
               </Button>
             </TooltipTrigger>
             <TooltipContent>
@@ -107,10 +114,10 @@ export function JourneyHeader({
           </Tooltip>
         ) : (
           <span
-            className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md bg-[var(--bg-tertiary)] text-muted-foreground"
+            className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-[var(--bg-tertiary)] text-muted-foreground"
             aria-hidden
           >
-            <Briefcase className="h-4 w-4" />
+            <PizzaTrackerJourneyIcon />
           </span>
         )}
         <PizzaTrackerHeaderMenu
@@ -141,8 +148,22 @@ export function JourneyHeader({
           showAssigneeColumn={prefs.showAssignee}
           dateLabel={dateLabel}
           dueAt={dueAt}
-          assigneeLabel={assigneeLabel}
+          assigneeLabel={
+            journeyAssigneeCount === 1
+              ? journeyAssigneeNames[0]
+              : journeyAssigneeCount === 0
+                ? 'Unassigned'
+                : undefined
+          }
+          assigneeCount={journeyAssigneeCount > 1 ? journeyAssigneeCount : undefined}
+          assigneeNames={journeyAssigneeCount > 1 ? journeyAssigneeNames : undefined}
+          assignScopeLabel="journey"
           onAssign={onAssignJourney}
+          successDescription={
+            journeyAssigneeCount > 1
+              ? (name) => `All tasks in this journey assigned to ${name}.`
+              : undefined
+          }
           trailing={
             journeyProgressRounded != null ? (
               <Tooltip>

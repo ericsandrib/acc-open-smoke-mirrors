@@ -26,8 +26,8 @@ import {
   getDisplayTaskNodeProgress,
 } from '@/components/wizard/pizzaTrackerDisplayProgress'
 import { getTaskFieldProgress } from '@/utils/taskFieldProgress'
-import type { LucideIcon } from 'lucide-react'
-import { ChevronDown, Users, Wallet, ListChecks, Circle, Loader, CheckCircle2, Ban, Clock, XCircle } from 'lucide-react'
+import { ChevronDown, Circle, Loader, CheckCircle2, Ban, Clock, XCircle } from 'lucide-react'
+import { PizzaTrackerActionIcon } from '@/components/wizard/PizzaTrackerEntityIcons'
 import { JourneyHeader } from '@/components/wizard/JourneyHeader'
 import { PizzaTrackerRowMeta, PIZZA_TRACKER_META_ROW_PADDING } from '@/components/wizard/PizzaTrackerRowMeta'
 import { PizzaTrackerTaskNameTooltip } from '@/components/wizard/PizzaTrackerTaskNameTooltip'
@@ -46,14 +46,6 @@ import {
   restoreTaskAssignees,
 } from '@/utils/assigneeAssignUndo'
 
-const ACTION_ICONS: Record<string, LucideIcon> = {
-  'collect-client-data': Users,
-  'account-opening': Wallet,
-}
-
-function getActionIcon(actionId: string): LucideIcon {
-  return ACTION_ICONS[actionId] ?? ListChecks
-}
 import {
   Tooltip,
   TooltipContent,
@@ -651,7 +643,6 @@ function StepSidebarInner() {
           onWheel={handleWizardScrollPaneWheel}
         >
           {displayActions.map((action, actionIndex) => {
-            const ActionIcon = getActionIcon(action.id)
             const actionTasks = getActionTasks(state, action.id)
             const actionAssigneeNames = getUniqueAssigneeNames(actionTasks, state.assignedTo)
             const actionAssigneeCount = actionAssigneeNames.length
@@ -670,8 +661,8 @@ function StepSidebarInner() {
                       actionIndex < displayActions.length - 1 ? 'bottom-[-1.25rem]' : 'bottom-0',
                     )}
                   />
-                  <span className="relative z-10 mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-muted text-muted-foreground">
-                    <ActionIcon className="h-3.5 w-3.5" aria-hidden />
+                  <span className="relative z-10 mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-sm bg-[var(--bg-tertiary)] text-muted-foreground">
+                    <PizzaTrackerActionIcon />
                   </span>
                   <div className="min-h-0 w-full flex-1 shrink" aria-hidden />
                 </div>

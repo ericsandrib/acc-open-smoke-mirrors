@@ -39,7 +39,7 @@ export function PizzaTrackerProgressIndicator({
       <TooltipTrigger asChild>
         <span
           className={cn(
-            'inline-flex shrink-0 items-center justify-center text-muted-foreground/85',
+            'inline-flex shrink-0 items-center justify-center text-primary',
             PIZZA_TRACKER_META_ICON_CLASS,
           )}
           role="img"

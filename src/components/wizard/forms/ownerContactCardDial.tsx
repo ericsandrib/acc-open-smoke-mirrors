@@ -8,9 +8,10 @@ export const ownerContactCardDialDefaults = {
   avatarSize: 48,
   headerGap: 8,
   bodyIndent: 8,
-  bodyRowGap: 8,
+  bodyRowGap: 12,
   cardRadius: 12,
   layoutVersion: 'v2',
+  kycStatusVersion: 'v1',
 } as const
 
 export type OwnerContactCardDialValues = {
@@ -23,6 +24,7 @@ export type OwnerContactCardDialValues = {
   bodyRowGap: number
   cardRadius: number
   layoutVersion: 'v1' | 'v2'
+  kycStatusVersion: 'v1' | 'v2'
 }
 
 const OwnerContactCardDialContext =
@@ -36,7 +38,7 @@ function OwnerContactCardDialProvider({ children }: { children: ReactNode }) {
     avatarSize: [48, 32, 64],
     headerGap: [8, 0, 24],
     bodyIndent: [8, 0, 32],
-    bodyRowGap: [8, 0, 24],
+    bodyRowGap: [12, 0, 24],
     cardRadius: [12, 0, 24],
     layoutVersion: {
       type: 'select',
@@ -46,6 +48,14 @@ function OwnerContactCardDialProvider({ children }: { children: ReactNode }) {
       ],
       default: 'v2',
     },
+    kycStatusVersion: {
+      type: 'select',
+      options: [
+        { value: 'v1', label: 'Version 1 — pill badge' },
+        { value: 'v2', label: 'Version 2 — alert banner' },
+      ],
+      default: 'v1',
+    },
   })
 
   return (
@@ -53,6 +63,7 @@ function OwnerContactCardDialProvider({ children }: { children: ReactNode }) {
       value={{
         ...dial,
         layoutVersion: dial.layoutVersion === 'v2' ? 'v2' : 'v1',
+        kycStatusVersion: dial.kycStatusVersion === 'v2' ? 'v2' : 'v1',
       }}
     >
       {children}

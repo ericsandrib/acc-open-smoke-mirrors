@@ -55,6 +55,7 @@ export function PizzaTrackerRowMeta({
   assigneeNames,
   onAssign,
   successDescription,
+  assignScopeLabel = 'action',
   trailing,
 }: {
   /** Reserve the due-date column (may be empty on action rows). */
@@ -72,6 +73,8 @@ export function PizzaTrackerRowMeta({
   /** When set, avatar opens quick-assign search menu. */
   onAssign?: (assignee: string) => void | (() => void)
   successDescription?: (name: string) => string
+  /** Wording for multi-assignee quick-assign menu (e.g. action vs journey). */
+  assignScopeLabel?: 'action' | 'journey'
   trailing?: ReactNode
 }) {
   const showTrailingColumn = reserveTrailingColumn || Boolean(trailing)
@@ -83,7 +86,7 @@ export function PizzaTrackerRowMeta({
         <div
           className={cn(
             'flex shrink-0 items-center justify-end',
-            META_DATE_SLOT,
+            dateLabel ? META_DATE_SLOT : 'w-0',
             META_ROW_MIN_HEIGHT,
           )}
         >
@@ -108,6 +111,7 @@ export function PizzaTrackerRowMeta({
               }
               onAssign={onAssign}
               successDescription={successDescription}
+              assignScopeLabel={assignScopeLabel}
               size="compact"
             />
           ) : null}

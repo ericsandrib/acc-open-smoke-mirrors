@@ -20,14 +20,8 @@ import {
   getAccountOpeningSubTaskProgress,
 } from '@/utils/accountOpeningChildProgress'
 import { getGenericChildSubTaskProgress } from '@/utils/childSubTaskProgress'
-import type { LucideIcon } from 'lucide-react'
 import {
   Clock,
-  ShieldCheck,
-  Wallet,
-  ArrowDownToLine,
-  Cog,
-  ListChecks,
   MessageSquare,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
@@ -87,12 +81,7 @@ import { toast } from 'sonner'
 import { handleWizardPanelShellWheel, handleWizardScrollPaneWheel } from '@/utils/wizardScroll'
 import { formatStructuredReviewText } from '@/utils/formatStructuredReviewText'
 
-const CHILD_TYPE_ICONS: Record<string, LucideIcon> = {
-  'account-opening': Wallet,
-  kyc: ShieldCheck,
-  'funding-line': ArrowDownToLine,
-  'feature-service-line': Cog,
-}
+import { PizzaTrackerActionIcon } from '@/components/wizard/PizzaTrackerEntityIcons'
 
 const reviewDialogContentClass =
   'data-[state=open]:!animate-none data-[state=closed]:!animate-none !duration-0'
@@ -1294,7 +1283,6 @@ function ChildActionSidebarInner() {
     child.childType !== 'kyc' &&
     child.childType !== 'funding-line' &&
     child.childType !== 'feature-service-line'
-  const ChildIcon = CHILD_TYPE_ICONS[child.childType] ?? ListChecks
   const childAssignee = parentTask?.assignedTo ?? state.assignedTo
   const visibleSubTasks = getVisibleChildSubTasks(child.childType, viewMode, child.status, {
     accountWorkflowPhase:
@@ -1340,14 +1328,13 @@ function ChildActionSidebarInner() {
           onWheel={handleWizardScrollPaneWheel}
         >
           <div className="mb-4 flex items-start gap-2.5">
-            {/* Match StepSidebar spine: line z-0, opaque icon z-10, flex-1 filler; keep this column above the task column if layers overlap at the gutter. */}
             <div className="relative z-20 flex w-7 shrink-0 flex-col items-center self-stretch">
               <span
                 aria-hidden
                 className="pointer-events-none absolute bottom-0 left-1/2 top-0 z-0 w-px -translate-x-1/2 bg-sidebar-border"
               />
-              <span className="relative z-10 mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-muted text-muted-foreground">
-                <ChildIcon className="h-3.5 w-3.5" aria-hidden />
+              <span className="relative z-10 mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-sm bg-[var(--bg-tertiary)] text-muted-foreground">
+                <PizzaTrackerActionIcon />
               </span>
               <div className="min-h-0 w-full flex-1 shrink" aria-hidden />
             </div>
@@ -1358,8 +1345,11 @@ function ChildActionSidebarInner() {
                   PIZZA_TRACKER_META_ROW_PADDING,
                 )}
               >
-                <h2 className="min-w-0 flex-1 truncate text-sm font-semibold leading-snug text-foreground">
-                  {child.name}
+                <h2 className="min-w-0 flex-1">
+                  <PizzaTrackerTaskNameTooltip
+                    label={child.name}
+                    className="block text-left text-sm font-semibold leading-snug line-clamp-2 whitespace-normal"
+                  />
                 </h2>
                 <PizzaTrackerRowMeta
                   showDueDateColumn={prefs.showDueDate}
@@ -1389,12 +1379,7 @@ function ChildActionSidebarInner() {
                 />
               </div>
 
-              <div className="relative mt-1 pl-4">
-                <span
-                  aria-hidden
-                  className="pointer-events-none absolute bottom-0 left-0 top-0 z-10 w-px bg-border/70"
-                />
-                <ul className="space-y-1">
+              <ul className="space-y-1">
                 {visibleSubTasks.map((subTask, idx) => {
                   const subTaskDueMeta = getChildSubTaskDueMeta(state, idx, visibleSubTasks.length)
                   const subTaskTitle = getSubTaskDisplayTitle(child.childType, subTask, viewMode)
@@ -1402,7 +1387,7 @@ function ChildActionSidebarInner() {
                     <li
                       key={subTask.suffix}
                       className={cn(
-                        'group/task-row relative rounded-lg',
+                        'group/task-row relative -ml-[38px] rounded-lg pl-[38px]',
                         idx === subTaskIndex ? 'bg-sidebar-accent' : 'hover:bg-sidebar-accent/70',
                       )}
                     >
@@ -1465,8 +1450,7 @@ function ChildActionSidebarInner() {
                     </li>
                   )
                 })}
-                </ul>
-              </div>
+              </ul>
             </div>
           </div>
         </div>

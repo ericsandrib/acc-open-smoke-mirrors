@@ -30,6 +30,9 @@ const PCT_BY_VARIANT: Record<'25' | '33' | '50' | '66' | '75', number> = {
 const RING_RADIUS = 6.665
 const RING_STROKE = 2
 const RING_CIRCUMFERENCE = 2 * Math.PI * RING_RADIUS
+/** Primary dark — in-progress and complete task status icons. */
+const PROGRESS_ICON_COLOR = 'text-primary'
+const NOT_STARTED_ICON_COLOR = 'text-muted-foreground'
 
 function PercentArc({ pct }: { pct: number }) {
   const filled = Math.max(0, Math.min(1, pct)) * RING_CIRCUMFERENCE
@@ -49,7 +52,7 @@ function PercentArc({ pct }: { pct: number }) {
         cy="8"
         r={RING_RADIUS}
         fill="none"
-        stroke="var(--color-fill-success-primary)"
+        stroke="currentColor"
         strokeWidth={RING_STROKE}
         strokeDasharray={`${filled} ${RING_CIRCUMFERENCE}`}
         transform="rotate(-90 8 8)"
@@ -58,6 +61,9 @@ function PercentArc({ pct }: { pct: number }) {
     </>
   )
 }
+
+/** Journey header progress ring — success green, distinct from row-level task icons. */
+const JOURNEY_PROGRESS_COLOR = 'text-text-success-primary'
 
 /** Journey-level progress indicator (sidebar header). Sized to match the task status icons below. */
 export function JourneyProgressRing({
@@ -69,7 +75,7 @@ export function JourneyProgressRing({
 }) {
   return (
     <LoaderCircle
-      className={cn('h-4 w-4 shrink-0 text-muted-foreground/85', className)}
+      className={cn('h-4 w-4 shrink-0', JOURNEY_PROGRESS_COLOR, className)}
       aria-hidden
     />
   )
@@ -88,12 +94,11 @@ export function ProgressIcon({
 
   if (variant === 'done') {
     return (
-      <svg viewBox="0 0 16 16" className={cn('h-4 w-4', className)} aria-hidden>
-        <circle cx="8" cy="8" r="7" fill="var(--color-fill-success-primary)" />
+      <svg viewBox="0 0 16 16" className={cn('h-4 w-4', PROGRESS_ICON_COLOR, className)} aria-hidden>
         <path
-          d="M4.8 8.4 L7 10.6 L11.2 6"
-          stroke="white"
-          strokeWidth="1.6"
+          d="M3 8.25 L6.5 11.75 L13 4.25"
+          stroke="currentColor"
+          strokeWidth="1.15"
           fill="none"
           strokeLinecap="round"
           strokeLinejoin="round"
@@ -106,7 +111,7 @@ export function ProgressIcon({
     return (
       <svg
         viewBox="0 0 16 16"
-        className={cn('h-4 w-4 text-muted-foreground', className)}
+        className={cn('h-4 w-4', NOT_STARTED_ICON_COLOR, className)}
         aria-hidden
       >
         <circle
@@ -126,7 +131,7 @@ export function ProgressIcon({
     return (
       <svg
         viewBox="0 0 16 16"
-        className={cn('h-4 w-4 text-foreground', className)}
+        className={cn('h-4 w-4', PROGRESS_ICON_COLOR, className)}
         aria-hidden
       >
         <circle
@@ -145,7 +150,7 @@ export function ProgressIcon({
   return (
     <svg
       viewBox="0 0 16 16"
-      className={cn('h-4 w-4 text-foreground', className)}
+      className={cn('h-4 w-4', PROGRESS_ICON_COLOR, className)}
       aria-hidden
     >
       <PercentArc pct={PCT_BY_VARIANT[variant]} />

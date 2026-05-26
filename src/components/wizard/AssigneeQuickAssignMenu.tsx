@@ -105,6 +105,7 @@ export function AssigneeQuickAssignMenu({
   align = 'end',
   searchPlaceholder = 'Assign To...',
   successDescription,
+  assignScopeLabel = 'action',
 }: {
   assigneeLabel?: string
   /** When > 1, shows a count badge instead of a single avatar. */
@@ -118,6 +119,7 @@ export function AssigneeQuickAssignMenu({
   align?: 'start' | 'center' | 'end'
   searchPlaceholder?: string
   successDescription?: (name: string) => string
+  assignScopeLabel?: 'action' | 'journey'
 }) {
   const [open, setOpen] = useState(false)
   const trimmed = (assigneeLabel ?? '').trim()
@@ -130,7 +132,7 @@ export function AssigneeQuickAssignMenu({
       : `${assigneeCount} assignees`
 
   const triggerLabel = showCount
-    ? `${countTooltip}. Click to assign entire action to one advisor.`
+    ? `${countTooltip}. Click to assign entire ${assignScopeLabel} to one advisor.`
     : profileName
       ? `Assigned to ${profileName}. Click to change assignee.`
       : 'Unassigned. Click to assign.'

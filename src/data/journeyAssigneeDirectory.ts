@@ -11,14 +11,6 @@ export type JourneyAssigneeRecord = {
 
 export const JOURNEY_ASSIGNEES: ReadonlyArray<JourneyAssigneeRecord> = [
   {
-    id: 'john-smith',
-    name: 'John Smith',
-    initials: 'JS',
-    title: 'Client Service Specialist',
-    email: 'john.smith@example.com',
-    phone: '+1 (555) 555-5555',
-  },
-  {
     id: 'johnathan-doe',
     name: 'Johnathan Doe',
     initials: 'JD',

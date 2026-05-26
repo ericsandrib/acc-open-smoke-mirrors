@@ -16,10 +16,11 @@ import {
 } from '@/components/ui/select'
 import { buildAccountOwnerPreview, buildDesignationPartyPreview } from '@/utils/accountOwnerPreview'
 import { AML_KYC_VALIDITY_DAYS, getAmlRenewalSummary } from '@/utils/amlKycRenewal'
-import { getKycStatusBadge } from '@/utils/kycStatus'
+import { getKycStatusBadge, type KycStatusBadge } from '@/utils/kycStatus'
 import { getOwnerReviewState } from '@/utils/ownerKycReview'
 import { isOpenAccountsTask } from '@/utils/openAccountsTaskContext'
 import { KycStatusPill } from '@/components/wizard/verification/KycStatusPill'
+import { KycStatusContactCardAlert } from '@/components/wizard/verification/KycStatusToastChip'
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
 import { useOwnerContactCardDial } from '@/components/wizard/forms/ownerContactCardDial'
 import { Plus, Trash2, Pencil, AlertTriangle, Info, Star } from 'lucide-react'
@@ -28,6 +29,81 @@ const ADD_PARTY_VALUE = '__add_party__'
 const KYC_STATUS_INFO_TOOLTIP = 'Verification will run automatically before final submission.'
 const CONTACT_CARD_KYC_BADGE_BASE =
   'w-fit max-w-max shrink-0 rounded-full px-2 py-0.5 text-xs font-medium'
+
+function resolveContactCardKycLabel(kycLabel: string | undefined): string {
+  if (!kycLabel || kycLabel === 'Not Started') return 'Unverified'
+  return kycLabel
+}
+
+function resolveFallbackKycTone(label: string): KycStatusBadge['tone'] {
+  if (label === 'Unverified' || label === 'Fail') return 'warning'
+  if (label === 'Verified' || label === 'Pass') return 'success'
+  if (label === 'Pending' || label.includes('Review')) return 'neutral'
+  return 'neutral'
+}
+
+function ContactCardKycStatusValue({
+  version,
+  embeddedKycBadge,
+  kycLabel,
+  kycDisplayStatus,
+  trustOverallKyc,
+}: {
+  version: 'v1' | 'v2'
+  embeddedKycBadge: KycStatusBadge | null
+  kycLabel: string | undefined
+  kycDisplayStatus: { label: string; className?: string } | null
+  trustOverallKyc: { label: string; className?: string } | null | undefined
+}) {
+  const displayLabel = resolveContactCardKycLabel(kycLabel)
+
+  if (version === 'v2') {
+    if (embeddedKycBadge) {
+      return <KycStatusContactCardAlert badge={embeddedKycBadge} className="mt-4 w-full" />
+    }
+    return (
+      <KycStatusContactCardAlert
+        label={displayLabel}
+        tone={resolveFallbackKycTone(displayLabel)}
+        className="mt-4 w-full"
+      />
+    )
+  }
+
+  if (embeddedKycBadge) {
+    if (embeddedKycBadge.status === 'unverified') {
+      return (
+        <Badge variant="warning" className={CONTACT_CARD_KYC_BADGE_BASE}>
+          {embeddedKycBadge.label}
+        </Badge>
+      )
+    }
+    return (
+      <KycStatusPill
+        badge={embeddedKycBadge}
+        className="w-fit max-w-max shrink-0 px-2 py-0.5 text-xs"
+      />
+    )
+  }
+
+  return (
+    <Badge
+      variant={displayLabel === 'Unverified' ? 'warning' : 'outline'}
+      className={cn(
+        CONTACT_CARD_KYC_BADGE_BASE,
+        displayLabel !== 'Unverified' &&
+          cn(
+            'border-0',
+            kycDisplayStatus?.className ??
+              trustOverallKyc?.className ??
+              'bg-foreground/5 text-muted-foreground',
+          ),
+      )}
+    >
+      {displayLabel}
+    </Badge>
+  )
+}
 
 function MetadataRow({
   label,
@@ -44,7 +120,7 @@ function MetadataRow({
 }) {
   if (layout === 'horizontal') {
     return (
-      <div className="flex w-full min-w-0 items-start gap-4 py-1">
+      <div className="flex w-full min-w-0 items-start gap-5 py-1">
         <div className="flex w-36 shrink-0 items-center gap-1">
           <p className="text-sm text-muted-foreground">{label}</p>
           {labelAdornment}
@@ -63,7 +139,7 @@ function MetadataRow({
 
   return (
     <div className="flex w-full min-w-0 py-1">
-      <div className="min-w-0 flex-1">
+      <div className="flex min-w-0 flex-1 flex-col gap-1">
         <div className="flex items-center gap-1">
           <p className="text-xs text-muted-foreground">{label}</p>
           {labelAdornment}
@@ -274,7 +350,7 @@ export function PartySlotCard({
     fieldLabel: string = selectLabel,
     { showRemove = false }: { showRemove?: boolean } = {},
   ) => (
-    <div className="space-y-2">
+    <div className="space-y-3">
       <div className={cn('flex items-center gap-2', showRemove && 'justify-between')}>
         <Label>{fieldLabel}</Label>
         {showRemove && onRemove ? (
@@ -520,8 +596,16 @@ export function PartySlotCard({
           )}
 
         {showKycRow ? (
-          useHorizontalContactFields ? (
-            <div className="flex w-full min-w-0 items-start gap-4 py-1">
+          ownerContactCardDial.kycStatusVersion === 'v2' ? (
+            <ContactCardKycStatusValue
+              version="v2"
+              embeddedKycBadge={embeddedKycBadge}
+              kycLabel={kycLabel}
+              kycDisplayStatus={kycDisplayStatus}
+              trustOverallKyc={trustOverallKyc}
+            />
+          ) : useHorizontalContactFields ? (
+            <div className="flex w-full min-w-0 items-start gap-5 py-1">
               <div className="flex w-36 shrink-0 items-center gap-1">
                 <p className="text-sm text-muted-foreground">KYC Status</p>
                 <TooltipProvider delayDuration={300}>
@@ -542,41 +626,17 @@ export function PartySlotCard({
                 </TooltipProvider>
               </div>
               <div className="min-w-0 flex-1">
-                {embeddedKycBadge ? (
-                  embeddedKycBadge.status === 'unverified' ? (
-                    <Badge variant="warning" className={CONTACT_CARD_KYC_BADGE_BASE}>
-                      {embeddedKycBadge.label}
-                    </Badge>
-                  ) : (
-                    <KycStatusPill
-                      badge={embeddedKycBadge}
-                      className="w-fit max-w-max shrink-0 px-2 py-0.5 text-xs"
-                    />
-                  )
-                ) : (
-                  <Badge
-                    variant={
-                      kycLabel === 'Not Started' || kycLabel === 'Unverified' ? 'warning' : 'outline'
-                    }
-                    className={cn(
-                      CONTACT_CARD_KYC_BADGE_BASE,
-                      kycLabel !== 'Not Started' &&
-                        kycLabel !== 'Unverified' &&
-                        cn(
-                          'border-0',
-                          kycDisplayStatus?.className ??
-                            trustOverallKyc?.className ??
-                            'bg-foreground/5 text-muted-foreground',
-                        ),
-                    )}
-                  >
-                    {kycLabel === 'Not Started' ? 'Unverified' : kycLabel}
-                  </Badge>
-                )}
+                <ContactCardKycStatusValue
+                  version={ownerContactCardDial.kycStatusVersion}
+                  embeddedKycBadge={embeddedKycBadge}
+                  kycLabel={kycLabel}
+                  kycDisplayStatus={kycDisplayStatus}
+                  trustOverallKyc={trustOverallKyc}
+                />
               </div>
             </div>
           ) : (
-          <div className="flex flex-col items-start justify-center gap-1 py-1">
+          <div className="flex flex-col items-start justify-center gap-2 py-1">
             <div className="flex items-center gap-1">
               <p className="text-xs text-muted-foreground">KYC Status</p>
               <TooltipProvider delayDuration={300}>
@@ -596,37 +656,13 @@ export function PartySlotCard({
                 </Tooltip>
               </TooltipProvider>
             </div>
-            {embeddedKycBadge ? (
-              embeddedKycBadge.status === 'unverified' ? (
-                <Badge variant="warning" className={CONTACT_CARD_KYC_BADGE_BASE}>
-                  {embeddedKycBadge.label}
-                </Badge>
-              ) : (
-                <KycStatusPill
-                  badge={embeddedKycBadge}
-                  className="w-fit max-w-max shrink-0 px-2 py-0.5 text-xs"
-                />
-              )
-            ) : (
-              <Badge
-                variant={
-                  kycLabel === 'Not Started' || kycLabel === 'Unverified' ? 'warning' : 'outline'
-                }
-                className={cn(
-                  CONTACT_CARD_KYC_BADGE_BASE,
-                  kycLabel !== 'Not Started' &&
-                    kycLabel !== 'Unverified' &&
-                    cn(
-                      'border-0',
-                      kycDisplayStatus?.className ??
-                        trustOverallKyc?.className ??
-                        'bg-foreground/5 text-muted-foreground',
-                    ),
-                )}
-              >
-                {kycLabel === 'Not Started' ? 'Unverified' : kycLabel}
-              </Badge>
-            )}
+            <ContactCardKycStatusValue
+              version={ownerContactCardDial.kycStatusVersion}
+              embeddedKycBadge={embeddedKycBadge}
+              kycLabel={kycLabel}
+              kycDisplayStatus={kycDisplayStatus}
+              trustOverallKyc={trustOverallKyc}
+            />
           </div>
           )
         ) : null}
