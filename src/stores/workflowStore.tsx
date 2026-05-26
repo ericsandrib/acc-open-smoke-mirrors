@@ -890,6 +890,23 @@ function workflowReducer(state: WorkflowState, action: WorkflowAction): Workflow
       return { ...state, tasks: newTasks, assignedTo: action.assignee }
     }
 
+    case 'SET_TASKS_ASSIGNEE': {
+      const idSet = new Set(action.taskIds)
+      const newTasks = state.tasks.map((t) =>
+        idSet.has(t.id) ? { ...t, assignedTo: action.assignee } : t,
+      )
+      return { ...state, tasks: newTasks }
+    }
+
+    case 'RESTORE_ASSIGNEE_SNAPSHOT': {
+      const newTasks = state.tasks.map((t) =>
+        action.taskAssignees[t.id] != null
+          ? { ...t, assignedTo: action.taskAssignees[t.id] }
+          : t,
+      )
+      return { ...state, tasks: newTasks, assignedTo: action.journeyAssignee }
+    }
+
     case 'SPAWN_CHILD': {
       const config = getChildTypeConfig(action.childType)
       let spawnedChildId = ''

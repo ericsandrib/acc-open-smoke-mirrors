@@ -23,7 +23,7 @@ interface TableViewWrapperProps<T> {
   pinRowId?: string
   /** Enables “Group by” in the toolbar (Onboarding → Actions). */
   showGroupBy?: boolean
-  /** Initial group mode when this wrapper mounts (e.g. journey grouping for Document Review team). */
+  /** Initial group mode when this wrapper mounts (remount when `tableId` / key changes). */
   defaultGroupBy?: OnboardingActionsGroupBy
   children: (props: {
     rows: T[]

@@ -141,6 +141,11 @@ export function TableControls({
               <Button variant="ghost" size="sm" className="gap-1.5">
                 Group by
                 <ChevronDown className="h-3.5 w-3.5" />
+                {groupBy !== 'none' && (
+                  <span className="inline-flex items-center justify-center h-4 min-w-4 px-1 text-[10px] font-medium rounded-full bg-primary text-primary-foreground">
+                    1
+                  </span>
+                )}
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="start">

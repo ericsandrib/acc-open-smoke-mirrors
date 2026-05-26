@@ -443,6 +443,12 @@ export type WorkflowAction =
       journeyOnboardingConfig?: JourneyOnboardingConfig
     }
   | { type: 'SET_JOURNEY_ASSIGNEE'; assignee: string }
+  | { type: 'SET_TASKS_ASSIGNEE'; taskIds: string[]; assignee: string }
+  | {
+      type: 'RESTORE_ASSIGNEE_SNAPSHOT'
+      journeyAssignee: string
+      taskAssignees: Record<string, string>
+    }
   | {
       type: 'SYNC_SEEDED_JOURNEY_METADATA'
       journeyId: string

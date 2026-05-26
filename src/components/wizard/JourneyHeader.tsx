@@ -1,11 +1,14 @@
-import { useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Briefcase, ChevronLeft } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
-import { AssigneeContactHover } from '@/components/wizard/AssigneeContactHover'
+import { PizzaTrackerHeaderMenu } from '@/components/wizard/PizzaTrackerHeaderMenu'
+import { PizzaTrackerRowMeta, PIZZA_TRACKER_META_HEADER_PADDING, PIZZA_TRACKER_META_ICON_CLASS } from '@/components/wizard/PizzaTrackerRowMeta'
+import { PizzaTrackerTaskNameTooltip } from '@/components/wizard/PizzaTrackerTaskNameTooltip'
 import { JourneyProgressRing } from '@/components/wizard/ProgressIcons'
+import { usePizzaTrackerDisplayPrefs } from '@/components/wizard/usePizzaTrackerDisplayPrefs'
 import { useWorkflow } from '@/stores/workflowStore'
+import { getJourneyDueMeta } from '@/utils/pizzaTrackerMeta'
 import { cn } from '@/lib/utils'
 
 export type WorkflowBreadcrumbItem = {
@@ -29,6 +32,7 @@ export function JourneyHeader({
   metaDateLabel,
   metaAssigneeLabel,
   metaProgressPct,
+  onAssignJourney,
 }: {
   onExitWorkflow: () => void
   /** Parent step link(s) under the journey title when drilled into a child (not the current child). */
@@ -42,28 +46,24 @@ export function JourneyHeader({
   metaAssigneeLabel?: string
   /** 0–100: average pizza-tracker completion across sidebar-visible tasks. */
   metaProgressPct?: number
+  onAssignJourney?: (assignee: string) => void | (() => void)
 }) {
   const { state } = useWorkflow()
   const navigate = useNavigate()
+  const { prefs, setShowDueDate, setShowAssignee } = usePizzaTrackerDisplayPrefs()
+  const journeyDueMeta = getJourneyDueMeta(state)
   const dateLabel =
     typeof metaDateLabel === 'string' && metaDateLabel.trim().length > 0
       ? metaDateLabel.trim()
-      : state.journeyDateLabel
+      : journeyDueMeta.dateLabel
+  const dueAt =
+    typeof metaDateLabel === 'string' && metaDateLabel.trim().length > 0
+      ? state.journeyDueAt
+      : journeyDueMeta.dueAt
   const assigneeLabel =
     typeof metaAssigneeLabel === 'string' && metaAssigneeLabel.trim().length > 0
       ? metaAssigneeLabel.trim()
       : state.assignedTo
-
-  const dueDateTooltip = useMemo(() => {
-    if (!dateLabel) return ''
-    if (state.journeyDueAt) {
-      const d = new Date(state.journeyDueAt)
-      if (!Number.isNaN(d.getTime())) {
-        return `Due ${d.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}`
-      }
-    }
-    return `Due ${dateLabel}`
-  }, [dateLabel, state.journeyDueAt])
 
   const journeyProgressRounded =
     typeof metaProgressPct === 'number' && Number.isFinite(metaProgressPct)
@@ -75,7 +75,7 @@ export function JourneyHeader({
 
   return (
     <div>
-      <div className="flex items-center px-[18px] pt-5 pb-5">
+      <div className="flex items-center px-3 pt-5 pb-5">
         <Button
           type="button"
           variant="link"
@@ -86,7 +86,7 @@ export function JourneyHeader({
         </Button>
       </div>
 
-      <div className="flex h-10 items-center justify-between px-[18px]">
+      <div className="flex h-10 items-center justify-between px-3">
         {onIconClick ? (
           <Tooltip>
             <TooltipTrigger asChild>
@@ -113,53 +113,60 @@ export function JourneyHeader({
             <Briefcase className="h-4 w-4" />
           </span>
         )}
+        <PizzaTrackerHeaderMenu
+          showDueDate={prefs.showDueDate}
+          showAssignee={prefs.showAssignee}
+          onShowDueDateChange={setShowDueDate}
+          onShowAssigneeChange={setShowAssignee}
+        />
       </div>
 
-      <div className="flex min-h-[3.25rem] items-center gap-2 border-b border-border px-[18px] py-2">
+      <div
+        className={cn(
+          'flex min-h-[3.25rem] items-center gap-2 border-b border-border py-2 pl-3',
+          PIZZA_TRACKER_META_HEADER_PADDING,
+        )}
+      >
         <div className="flex-1 min-w-0">
-          <h2 className="truncate text-sm font-semibold text-foreground">
-            {state.journeyName ?? 'Client Onboarding'}
+          <h2 className="min-w-0 truncate text-sm font-semibold text-foreground">
+            <PizzaTrackerTaskNameTooltip
+              label={state.journeyName ?? 'Client Onboarding'}
+              className="block truncate"
+            />
           </h2>
           <p className="truncate text-xs text-muted-foreground">{journeySubtitle}</p>
         </div>
-        {dateLabel ? (
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <button
-                type="button"
-                className="shrink-0 cursor-default rounded-sm px-0.5 text-xs font-medium tabular-nums text-muted-foreground outline-none hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring"
-                aria-label={dueDateTooltip}
-              >
-                {dateLabel}
-              </button>
-            </TooltipTrigger>
-            <TooltipContent side="top">
-              <p>{dueDateTooltip}</p>
-            </TooltipContent>
-          </Tooltip>
-        ) : null}
-        <AssigneeContactHover assigneeLabel={assigneeLabel} />
-        {journeyProgressRounded != null ? (
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <span
-                className="-mr-1 inline-flex shrink-0 items-center justify-center"
-                role="img"
-                aria-label={`${journeyProgressRounded}% Complete`}
-              >
-                <JourneyProgressRing pct={metaProgressPct ?? 0} />
-                <span className="sr-only">{journeyProgressRounded}% Complete</span>
-              </span>
-            </TooltipTrigger>
-            <TooltipContent side="top" align="end">
-              <p>{journeyProgressRounded}% Complete</p>
-            </TooltipContent>
-          </Tooltip>
-        ) : null}
+        <PizzaTrackerRowMeta
+          showDueDateColumn={prefs.showDueDate}
+          showAssigneeColumn={prefs.showAssignee}
+          dateLabel={dateLabel}
+          dueAt={dueAt}
+          assigneeLabel={assigneeLabel}
+          onAssign={onAssignJourney}
+          trailing={
+            journeyProgressRounded != null ? (
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <span
+                    className="inline-flex shrink-0 items-center justify-center"
+                    role="img"
+                    aria-label={`${journeyProgressRounded}% Complete`}
+                  >
+                    <JourneyProgressRing pct={metaProgressPct ?? 0} className={PIZZA_TRACKER_META_ICON_CLASS} />
+                    <span className="sr-only">{journeyProgressRounded}% Complete</span>
+                  </span>
+                </TooltipTrigger>
+                <TooltipContent side="top" align="end">
+                  <p>{journeyProgressRounded}% Complete</p>
+                </TooltipContent>
+              </Tooltip>
+            ) : null
+          }
+        />
       </div>
 
       {showWorkflowCrumbs ? (
-        <div className="flex min-h-9 items-center gap-1 px-2 py-2">
+        <div className="flex min-h-9 items-center gap-1 px-3 py-2">
           <Button
             type="button"
             variant="ghost"

@@ -44,18 +44,29 @@ import { getActiveStageLabel } from '@/components/wizard/ChildActionTimelineShee
 import { isChildAwaitingAdvisorClarification } from '@/utils/childStatusDisplay'
 import { getKycValidationErrors, kycChildHasOptionalIdVerification } from './forms/KycChildInfoForm'
 import { JourneyHeader, type WorkflowBreadcrumbItem } from '@/components/wizard/JourneyHeader'
+import { PizzaTrackerRowMeta, PIZZA_TRACKER_META_ROW_PADDING } from '@/components/wizard/PizzaTrackerRowMeta'
+import { PizzaTrackerTaskNameTooltip } from '@/components/wizard/PizzaTrackerTaskNameTooltip'
+import { usePizzaTrackerDisplayPrefs, PizzaTrackerDisplayPrefsProvider } from '@/components/wizard/usePizzaTrackerDisplayPrefs'
 import { computeOverallJourneyProgressPct } from '@/components/wizard/StepSidebar'
+import { getChildSubTaskDueMeta } from '@/utils/pizzaTrackerMeta'
+import {
+  captureJourneyAssigneeSnapshot,
+  captureTaskAssignees,
+  restoreJourneyAssigneeSnapshot,
+  restoreTaskAssignees,
+} from '@/utils/assigneeAssignUndo'
 import { ApplicationStatusWidget } from '@/components/wizard/ApplicationStatusWidget'
 import { useTheme } from '@/stores/themeStore'
 import { isSingleFlowKycEnabled } from '@/utils/ownerKycReview'
 import { findParentTaskForChild } from '@/utils/openAccountsTaskContext'
 import { AssignAllTasksControl } from '@/components/wizard/AssignAllTasksControl'
-import { ProgressIcon, pickVariant } from '@/components/wizard/ProgressIcons'
+import { PizzaTrackerProgressIndicator } from '@/components/wizard/PizzaTrackerProgressIndicator'
+import type { PizzaTrackerRowProgress } from '@/components/wizard/pizzaTrackerDisplayProgress'
 import {
   useOpenAccountsVariant,
   useOpenAccountsVariantControls,
 } from '@/components/wizard/openAccountsVariantContext'
-import type { TaskStatus } from '@/types/workflow'
+import type { ChildTask, TaskStatus, WorkflowState } from '@/types/workflow'
 import { getAccountOwnersMissingKyc } from '@/utils/accountOpeningOwnerKyc'
 import {
   isChildInAmlReviewQueue,
@@ -140,27 +151,18 @@ function getReasonLabel(options: ReviewReasonOption[], value: string): string {
 }
 
 /**
- * Mirrors StepSidebar's TaskProgressIndicator so the sub-task pizza tracker
- * uses the same Figma icon set + tooltip copy as the parent journey.
+ * Mirrors StepSidebar progress signals for child sub-task rows.
  */
-function SubTaskProgressIndicator({
-  subTaskId,
-  formKey,
-  childId,
-  subTaskIndex,
-  accountOpeningChildId,
-  subTaskSuffix,
-}: {
-  subTaskId: string
-  formKey: string
-  childId: string
-  subTaskIndex: number
-  accountOpeningChildId?: string
-  subTaskSuffix?: string
-}) {
-  const { state } = useWorkflow()
+function getChildSubTaskNavProgress(
+  state: WorkflowState,
+  child: ChildTask,
+  subTask: { suffix: string; formKey: string },
+  subTaskIndex: number,
+): PizzaTrackerRowProgress {
+  const subTaskId = `${child.id}-${subTask.suffix}`
   const hasData = !!state.taskData[subTaskId] && Object.keys(state.taskData[subTaskId]).length > 0
-  const isSubmitted = state.submittedTaskIds.includes(subTaskId)
+  const accountOpeningChildId = child.childType === 'account-opening' ? child.id : undefined
+  const subTaskSuffix = child.childType === 'account-opening' ? subTask.suffix : undefined
 
   const accountChild = accountOpeningChildId
     ? state.tasks.flatMap((t) => t.children ?? []).find((c) => c.id === accountOpeningChildId)
@@ -181,56 +183,82 @@ function SubTaskProgressIndicator({
   } else {
     const progress = getGenericChildSubTaskProgress(state, {
       subTaskId,
-      formKey,
-      childId,
+      formKey: subTask.formKey,
+      childId: child.id,
       subTaskIndex,
     })
     filled = progress.filled
     total = progress.total
   }
+
   const pct = Math.min(1, Math.max(0, filled / total))
   const edited = hasData
   const status: TaskStatus = isCanceled
     ? 'canceled'
     : pct >= 1
-    ? 'complete'
-    : 'in_progress'
+      ? 'complete'
+      : 'in_progress'
 
-  const variant = pickVariant({ pct, total, edited, status })
-  const displayPct = Math.max(0, Math.min(100, Math.round(pct * 100)))
-  const tooltipText =
-    variant === 'canceled'
-      ? 'Canceled'
-      : variant === 'done'
-      ? edited
-        ? 'Pending Release · Edited'
-        : 'Pending Release'
-      : variant === 'ambiguous'
-      ? 'No progress to report'
-      : displayPct === 0
-      ? edited
-        ? 'Not Started · Edited'
-        : 'Not Started'
-      : edited
-      ? `${displayPct}% complete · Edited`
-      : `${displayPct}% complete`
+  return { pct, total, edited, status }
+}
+
+function computeChildSubTasksProgress(
+  state: WorkflowState,
+  child: ChildTask,
+  visibleSubTasks: ReadonlyArray<{ suffix: string; formKey: string }>,
+): PizzaTrackerRowProgress {
+  if (visibleSubTasks.length === 0) {
+    return { pct: 0, total: 0, edited: false, status: 'not_started' }
+  }
+
+  const nodeProgress = visibleSubTasks.map((subTask, idx) =>
+    getChildSubTaskNavProgress(state, child, subTask, idx),
+  )
+  const measurable = nodeProgress.filter((p) => p.total > 0)
+  const pct =
+    measurable.length > 0
+      ? measurable.reduce((sum, p) => sum + p.pct, 0) / measurable.length
+      : 0
+  const edited = nodeProgress.some((p) => p.edited)
+  const status: TaskStatus =
+    child.status === 'canceled'
+      ? 'canceled'
+      : pct >= 1
+        ? 'complete'
+        : 'in_progress'
+
+  return { pct, total: measurable.length > 0 ? 1 : 0, edited, status }
+}
+
+function SubTaskProgressIndicator({
+  formKey,
+  childId,
+  subTaskIndex,
+  subTaskSuffix,
+}: {
+  formKey: string
+  childId: string
+  subTaskIndex: number
+  subTaskSuffix: string
+}) {
+  const { state } = useWorkflow()
+  const child = state.tasks.flatMap((t) => t.children ?? []).find((c) => c.id === childId)
+  if (!child) return null
+
+  const progress = getChildSubTaskNavProgress(
+    state,
+    child,
+    { suffix: subTaskSuffix, formKey },
+    subTaskIndex,
+  )
 
   return (
-    <Tooltip>
-      <TooltipTrigger asChild>
-        <span
-          className="shrink-0 inline-flex items-center justify-center h-4 w-4 text-muted-foreground/85"
-          role="img"
-          aria-label={tooltipText}
-        >
-          <ProgressIcon variant={variant} className="h-4 w-4" />
-          <span className="sr-only">{tooltipText}</span>
-        </span>
-      </TooltipTrigger>
-      <TooltipContent side="right">
-        <p>{tooltipText}</p>
-      </TooltipContent>
-    </Tooltip>
+    <PizzaTrackerProgressIndicator
+      pct={progress.pct}
+      total={progress.total}
+      edited={progress.edited}
+      status={progress.status}
+    />
   )
 }
 
@@ -1151,6 +1179,14 @@ function ChildReviewStatusActions() {
 }
 
 export function ChildActionSidebar() {
+  return (
+    <PizzaTrackerDisplayPrefsProvider>
+      <ChildActionSidebarInner />
+    </PizzaTrackerDisplayPrefsProvider>
+  )
+}
+
+function ChildActionSidebarInner() {
   const { state, dispatch } = useWorkflow()
   const { hideKycChildWorkflows } = useTheme()
   const hideKycPage = hideKycChildWorkflows
@@ -1175,6 +1211,7 @@ export function ChildActionSidebar() {
   )
   const [exitToOnboardingOpen, setExitToOnboardingOpen] = useState(false)
   const [resubmitOpen, setResubmitOpen] = useState(false)
+  const { prefs } = usePizzaTrackerDisplayPrefs()
   const advisorResubmitEligible = useAdvisorResubmitEligible()
 
   const parentTask = useMemo(() => {
@@ -1258,6 +1295,14 @@ export function ChildActionSidebar() {
     child.childType !== 'funding-line' &&
     child.childType !== 'feature-service-line'
   const ChildIcon = CHILD_TYPE_ICONS[child.childType] ?? ListChecks
+  const childAssignee = parentTask?.assignedTo ?? state.assignedTo
+  const visibleSubTasks = getVisibleChildSubTasks(child.childType, viewMode, child.status, {
+    accountWorkflowPhase:
+      child.childType === 'account-opening'
+        ? getAccountWorkflowPhase(state, child.id)
+        : undefined,
+  })
+  const childProgress = computeChildSubTasksProgress(state, child, visibleSubTasks)
 
   return (
     <TooltipProvider delayDuration={300}>
@@ -1283,10 +1328,15 @@ export function ChildActionSidebar() {
           metaDateLabel={state.journeyDateLabel}
           metaAssigneeLabel={state.assignedTo}
           metaProgressPct={journeyProgressPct}
+          onAssignJourney={(assignee) => {
+            const snapshot = captureJourneyAssigneeSnapshot(state)
+            dispatch({ type: 'SET_JOURNEY_ASSIGNEE', assignee })
+            return restoreJourneyAssigneeSnapshot(dispatch, snapshot)
+          }}
         />
         <div
           data-wizard-scroll-pane
-          className="flex-1 min-h-0 overflow-y-auto overscroll-y-contain pl-2 pr-2 pt-2"
+          className="flex-1 min-h-0 overflow-y-auto overscroll-y-contain pl-3 pr-3 pt-2"
           onWheel={handleWizardScrollPaneWheel}
         >
           <div className="mb-4 flex items-start gap-2.5">
@@ -1302,23 +1352,57 @@ export function ChildActionSidebar() {
               <div className="min-h-0 w-full flex-1 shrink" aria-hidden />
             </div>
             <div className="min-w-0 flex-1">
-              <div className="mb-1.5 flex min-h-9 items-center">
-                <h2 className="truncate text-sm font-semibold leading-snug text-foreground">{child.name}</h2>
+              <div
+                className={cn(
+                  'mb-1.5 flex min-h-9 items-center gap-2',
+                  PIZZA_TRACKER_META_ROW_PADDING,
+                )}
+              >
+                <h2 className="min-w-0 flex-1 truncate text-sm font-semibold leading-snug text-foreground">
+                  {child.name}
+                </h2>
+                <PizzaTrackerRowMeta
+                  showDueDateColumn={prefs.showDueDate}
+                  showAssigneeColumn={prefs.showAssignee}
+                  assigneeLabel={childAssignee}
+                  onAssign={
+                    parentTask
+                      ? (assignee) => {
+                          const snapshot = captureTaskAssignees([parentTask])
+                          dispatch({
+                            type: 'SET_TASKS_ASSIGNEE',
+                            taskIds: [parentTask.id],
+                            assignee,
+                          })
+                          return restoreTaskAssignees(dispatch, snapshot)
+                        }
+                      : undefined
+                  }
+                  trailing={
+                    <PizzaTrackerProgressIndicator
+                      pct={childProgress.pct}
+                      total={childProgress.total}
+                      edited={childProgress.edited}
+                      status={childProgress.status}
+                    />
+                  }
+                />
               </div>
 
-              <ul className="space-y-1">
-                {getVisibleChildSubTasks(child.childType, viewMode, child.status, {
-                  accountWorkflowPhase:
-                    child.childType === 'account-opening'
-                      ? getAccountWorkflowPhase(state, child.id)
-                      : undefined,
-                }).map((subTask, idx) => {
-                  const subTaskId = `${child.id}-${subTask.suffix}`
+              <div className="relative mt-1 pl-4">
+                <span
+                  aria-hidden
+                  className="pointer-events-none absolute bottom-0 left-0 top-0 z-10 w-px bg-border/70"
+                />
+                <ul className="space-y-1">
+                {visibleSubTasks.map((subTask, idx) => {
+                  const subTaskDueMeta = getChildSubTaskDueMeta(state, idx, visibleSubTasks.length)
+                  const subTaskTitle = getSubTaskDisplayTitle(child.childType, subTask, viewMode)
                   return (
                     <li
                       key={subTask.suffix}
                       className={cn(
-                        'group/task-row relative -ml-[38px] rounded-lg pl-[38px]',
+                        'group/task-row relative rounded-lg',
                         idx === subTaskIndex ? 'bg-sidebar-accent' : 'hover:bg-sidebar-accent/70',
                       )}
                     >
@@ -1327,7 +1411,7 @@ export function ChildActionSidebar() {
                         onClick={() => dispatch({ type: 'SET_CHILD_SUB_TASK', index: idx })}
                         aria-current={idx === subTaskIndex ? 'page' : undefined}
                         className={cn(
-                          'flex w-full min-w-0 items-center gap-1.5 rounded-lg py-2.5 pl-2 pr-1.5 text-left text-sm font-medium transition-colors',
+                          'flex w-full min-w-0 items-center gap-2 rounded-lg py-2.5 pl-0 pr-1.5 text-left text-sm font-medium transition-colors min-h-9',
                           idx === subTaskIndex
                             ? 'text-sidebar-accent-foreground'
                             : 'text-sidebar-foreground group-hover/task-row:text-sidebar-accent-foreground',
@@ -1344,25 +1428,45 @@ export function ChildActionSidebar() {
                               {idx + 1}.
                             </span>
                           )}
-                          <span className="min-w-0 flex-1 truncate text-left leading-snug">
-                            {getSubTaskDisplayTitle(child.childType, subTask, viewMode)}
-                          </span>
-                        </span>
-                        <span className="flex shrink-0 items-center">
-                          <SubTaskProgressIndicator
-                            subTaskId={subTaskId}
-                            formKey={subTask.formKey}
-                            childId={child.id}
-                            subTaskIndex={idx}
-                            accountOpeningChildId={child.childType === 'account-opening' ? child.id : undefined}
-                            subTaskSuffix={child.childType === 'account-opening' ? subTask.suffix : undefined}
+                          <PizzaTrackerTaskNameTooltip
+                            label={subTaskTitle}
+                            className="flex-1 text-left leading-snug"
                           />
                         </span>
+                        <PizzaTrackerRowMeta
+                          showDueDateColumn={prefs.showDueDate}
+                          showAssigneeColumn={prefs.showAssignee}
+                          dateLabel={subTaskDueMeta.dateLabel}
+                          dueAt={subTaskDueMeta.dueAt}
+                          assigneeLabel={childAssignee}
+                          onAssign={
+                            parentTask
+                              ? (assignee) => {
+                                  const snapshot = captureTaskAssignees([parentTask])
+                                  dispatch({
+                                    type: 'SET_TASKS_ASSIGNEE',
+                                    taskIds: [parentTask.id],
+                                    assignee,
+                                  })
+                                  return restoreTaskAssignees(dispatch, snapshot)
+                                }
+                              : undefined
+                          }
+                          trailing={
+                            <SubTaskProgressIndicator
+                              formKey={subTask.formKey}
+                              childId={child.id}
+                              subTaskIndex={idx}
+                              subTaskSuffix={subTask.suffix}
+                            />
+                          }
+                        />
                       </button>
                     </li>
                   )
                 })}
-              </ul>
+                </ul>
+              </div>
             </div>
           </div>
         </div>

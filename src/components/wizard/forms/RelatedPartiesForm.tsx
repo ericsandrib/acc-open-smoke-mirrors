@@ -770,7 +770,7 @@ export function RelatedPartiesForm() {
             </p>
           </div>
 
-          <div className="rounded-lg border border-border p-1">
+          <div className="flex flex-col gap-1 rounded-lg border border-border p-1">
             <div>
               {trustOrganizations.length === 0 ? (
                 <EmptyState message="No trusts added yet." />

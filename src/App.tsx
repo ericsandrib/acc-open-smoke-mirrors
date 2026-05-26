@@ -1,5 +1,7 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import { Agentation } from 'agentation'
+import { DialRoot } from 'dialkit'
+import 'dialkit/styles.css'
 import { WorkflowProvider } from '@/stores/workflowStore'
 import { ServicingProvider } from '@/stores/servicingStore'
 import { ThemeProvider } from '@/stores/themeStore'
@@ -47,6 +49,7 @@ export default function App() {
           </WorkflowProvider>
         </AppPasswordGate>
         <Toaster />
+        <DialRoot />
         {import.meta.env.DEV && <Agentation />}
       </>
     </ThemeProvider>

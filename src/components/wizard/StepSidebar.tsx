@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { Fragment, useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useWorkflow } from '@/stores/workflowStore'
 import { useServicing } from '@/stores/servicingStore'
@@ -20,11 +20,31 @@ import {
   useOpenAccountsVariant,
   useOpenAccountsVariantControls,
 } from '@/components/wizard/openAccountsVariantContext'
-import { ProgressIcon, pickVariant } from '@/components/wizard/ProgressIcons'
+import { PizzaTrackerProgressIndicator } from '@/components/wizard/PizzaTrackerProgressIndicator'
+import {
+  computeDisplayTasksProgress,
+  getDisplayTaskNodeProgress,
+} from '@/components/wizard/pizzaTrackerDisplayProgress'
+import { getTaskFieldProgress } from '@/utils/taskFieldProgress'
 import type { LucideIcon } from 'lucide-react'
 import { ChevronDown, Users, Wallet, ListChecks, Circle, Loader, CheckCircle2, Ban, Clock, XCircle } from 'lucide-react'
 import { JourneyHeader } from '@/components/wizard/JourneyHeader'
+import { PizzaTrackerRowMeta, PIZZA_TRACKER_META_ROW_PADDING } from '@/components/wizard/PizzaTrackerRowMeta'
+import { PizzaTrackerTaskNameTooltip } from '@/components/wizard/PizzaTrackerTaskNameTooltip'
+import { usePizzaTrackerDisplayPrefs, PizzaTrackerDisplayPrefsProvider } from '@/components/wizard/usePizzaTrackerDisplayPrefs'
 import { handleWizardPanelShellWheel, handleWizardScrollPaneWheel } from '@/utils/wizardScroll'
+import {
+  getActionTasks,
+  getAggregatedTaskDueMeta,
+  getUniqueAssigneeNames,
+  resolveAggregatedAssignee,
+} from '@/utils/pizzaTrackerMeta'
+import {
+  captureJourneyAssigneeSnapshot,
+  captureTaskAssignees,
+  restoreJourneyAssigneeSnapshot,
+  restoreTaskAssignees,
+} from '@/utils/assigneeAssignUndo'
 
 const ACTION_ICONS: Record<string, LucideIcon> = {
   'collect-client-data': Users,
@@ -97,113 +117,11 @@ export function StatusBadge({ status, className }: { status: TaskStatus; classNa
   )
 }
 
-export function getTaskFieldProgress(state: WorkflowState, task: Task): { filled: number; total: number } {
-  switch (task.formKey) {
-    case 'related-parties': {
-      const members = state.relatedParties.filter(
-        (p) => p.type === 'household_member' && !p.isHidden,
-      )
-      const total = members.length * 2
-      let filled = 0
-      for (const m of members) {
-        if (m.email?.trim()) filled++
-        if (m.phone?.trim()) filled++
-      }
-      return { filled, total }
-    }
-    case 'existing-accounts':
-      return {
-        filled: state.financialAccounts.length > 0 ? 1 : 0,
-        total: 1,
-      }
-    case 'kyc': {
-      const members = state.relatedParties.filter(
-        (p) => p.type === 'household_member' && !p.isHidden,
-      )
-      const needsKyc = members.filter((m) => m.kycStatus !== 'verified')
-      const children = task.children ?? []
-      const total = Math.max(needsKyc.length, 1)
-      const filled = Math.min(
-        children.filter((c) => c.status === 'complete').length,
-        total,
-      )
-      return { filled, total }
-    }
-    case 'open-accounts': {
-      const accountChildren = (task.children ?? []).filter((c) => c.childType === 'account-opening')
-      const kycTask = state.tasks.find((t) => t.formKey === 'kyc')
-      const kycChildren = (kycTask?.children ?? []).filter((c) => c.childType === 'kyc')
-      const taskData = (state.taskData[task.id] as Record<string, unknown> | undefined) ?? {}
-      const envelopes = Array.isArray(taskData.esignEnvelopes) ? taskData.esignEnvelopes : []
-
-      let filled = 0
-      if (accountChildren.length > 0) filled++
-      if (kycChildren.length > 0) filled++
-      if (envelopes.length > 0) filled++
-
-      return { filled, total: 3 }
-    }
-    case 'open-accounts-with-annuity': {
-      const accountChildren = (task.children ?? []).filter((c) => c.childType === 'account-opening')
-      return {
-        filled: accountChildren.length > 0 ? 1 : 0,
-        total: 1,
-      }
-    }
-    default:
-      if (isOpenAccountsFormKey(task.formKey)) return { filled: 0, total: 1 }
-      return { filled: 0, total: 0 }
-  }
-}
+export { getTaskFieldProgress } from '@/utils/taskFieldProgress'
 
 function getTaskNavLabel(label: string): string {
   if (label === 'Accounts to Be Opened') return 'Accounts'
   return label
-}
-
-function TaskProgressIndicator({
-  pct,
-  total,
-  edited,
-  status,
-}: {
-  pct: number
-  total: number
-  edited: boolean
-  status: TaskStatus
-}) {
-  const variant = pickVariant({ pct, total, edited, status })
-  const displayPct = Math.max(0, Math.min(100, Math.round(pct * 100)))
-  const tooltipText =
-    variant === 'canceled'
-      ? 'Canceled'
-      : variant === 'done'
-        ? edited ? 'Pending Release · Edited' : 'Pending Release'
-        : variant === 'ambiguous'
-          ? 'No progress to report'
-          : displayPct === 0
-            ? edited ? 'Not Started · Edited' : 'Not Started'
-            : edited
-              ? `${displayPct}% complete · Edited`
-              : `${displayPct}% complete`
-
-  return (
-    <Tooltip>
-      <TooltipTrigger asChild>
-        <span
-          className="shrink-0 inline-flex items-center justify-center h-4 w-4 text-muted-foreground/85"
-          role="img"
-          aria-label={tooltipText}
-        >
-          <ProgressIcon variant={variant} className="h-4 w-4" />
-          <span className="sr-only">{tooltipText}</span>
-        </span>
-      </TooltipTrigger>
-      <TooltipContent side="right">
-        <p>{tooltipText}</p>
-      </TooltipContent>
-    </Tooltip>
-  )
 }
 
 type DisplayTaskNode = {
@@ -227,6 +145,13 @@ type DisplayActionNode = {
   id: string
   title: string
   taskRows: DisplayTaskRow[]
+}
+
+function computeDisplayActionProgress(state: WorkflowState, action: DisplayActionNode) {
+  const displayTasks = action.taskRows.flatMap((row) =>
+    row.type === 'task' ? [row.task] : row.tasks,
+  )
+  return computeDisplayTasksProgress(state, displayTasks)
 }
 
 /** Parent Supporting Documents nav — CIP uploads are on KYC children, not this parent page. */
@@ -545,7 +470,7 @@ export function computeOverallJourneyProgressPct(
   return (valid.reduce((a, b) => a + b, 0) / valid.length) * 100
 }
 
-export function StepSidebar() {
+function StepSidebarInner() {
   const { state, dispatch } = useWorkflow()
   const { hideKycChildWorkflows } = useTheme()
   const { journeys } = useServicing()
@@ -560,6 +485,7 @@ export function StepSidebar() {
   const [exitToOnboardingOpen, setExitToOnboardingOpen] = useState(false)
   /** v5 collapsible task sections in the pizza tracker; default expanded */
   const [v5GroupOpen, setV5GroupOpen] = useState<Record<string, boolean>>({})
+  const { prefs } = usePizzaTrackerDisplayPrefs()
   const displayActions = useMemo(
     () => buildDisplayActions(state, selectedVariant, hideKycPage),
     [state, selectedVariant, hideKycPage],
@@ -607,24 +533,20 @@ export function StepSidebar() {
     const underlyingTasks = displayTask.underlyingTaskIds
       .map((id) => state.tasks.find((t) => t.id === id))
       .filter((t): t is Task => Boolean(t))
-    const progressTotals = underlyingTasks
-      .map((t) => getTaskFieldProgress(state, t))
-      .reduce(
-        (acc, p) => ({ filled: acc.filled + p.filled, total: acc.total + p.total }),
-        { filled: 0, total: 0 },
-      )
-    const pct = progressTotals.total > 0 ? progressTotals.filled / progressTotals.total : 0
-    const aggregatedEdited = underlyingTasks.some((t) => !!t.edited)
-    const aggregatedStatus: TaskStatus =
-      underlyingTasks.length > 0 && underlyingTasks.every((t) => t.status === 'canceled')
-        ? 'canceled'
-        : (underlyingTasks[0]?.status ?? 'not_started')
+    const { filled, total, pct, edited, status } = getDisplayTaskNodeProgress(state, displayTask)
+    const progressTotals = { filled, total }
+    const aggregatedEdited = edited
+    const aggregatedStatus = status
+    const taskDueMeta = getAggregatedTaskDueMeta(state, underlyingTasks)
+    const taskAssignee = resolveAggregatedAssignee(underlyingTasks, state.assignedTo)
     const isActiveTask = isDisplayTaskNodeActive(displayTask, state)
+    const rowGutter = nested ? '-ml-[54px] pl-[54px]' : '-ml-[38px] pl-[38px]'
     return (
       <li
         key={displayTask.id}
         className={cn(
-          'group/task-row relative -ml-[38px] rounded-lg pl-[38px]',
+          'group/task-row relative rounded-lg',
+          rowGutter,
           isActiveTask ? 'bg-sidebar-accent' : 'hover:bg-sidebar-accent/70',
           displayTask.id === 'v6-annuity-accounts-setup' ||
             displayTask.id === 'v5-annuity-accounts-setup'
@@ -654,28 +576,43 @@ export function StepSidebar() {
           }}
           aria-current={isActiveTask ? 'page' : undefined}
           className={cn(
-            // Shared row geometry: same horizontal padding for active/inactive so the progress column
-            // stays on one vertical axis; active state only changes surface color/weight.
-            'grid w-full min-w-0 grid-cols-[minmax(0,1fr)_auto] items-center gap-1.5 rounded-lg py-2.5 pr-1.5 text-left text-sm font-medium transition-colors',
-            nested ? 'pl-6' : 'pl-2',
+            'flex w-full min-w-0 items-center gap-2 rounded-lg py-2.5 pl-0 pr-1.5 text-left text-sm font-medium transition-colors min-h-9',
             isActiveTask
               ? 'text-sidebar-accent-foreground'
               : 'text-sidebar-foreground group-hover/task-row:text-sidebar-accent-foreground',
           )}
         >
-          <span
+          <PizzaTrackerTaskNameTooltip
+            label={getTaskNavLabel(displayTask.label)}
+            tooltipLabel={displayTask.label}
             className={cn(
-              'min-w-0 truncate text-left leading-snug',
+              'flex-1 text-left leading-snug',
               isActiveTask ? 'font-semibold' : '',
             )}
-          >
-            {getTaskNavLabel(displayTask.label)}
-          </span>
-          <TaskProgressIndicator
-            pct={pct}
-            total={progressTotals.total}
-            edited={aggregatedEdited}
-            status={aggregatedStatus}
+          />
+          <PizzaTrackerRowMeta
+            showDueDateColumn={prefs.showDueDate}
+            showAssigneeColumn={prefs.showAssignee}
+            dateLabel={taskDueMeta.dateLabel}
+            dueAt={taskDueMeta.dueAt}
+            assigneeLabel={taskAssignee}
+            onAssign={(assignee) => {
+              const snapshot = captureTaskAssignees(underlyingTasks)
+              dispatch({
+                type: 'SET_TASKS_ASSIGNEE',
+                taskIds: displayTask.underlyingTaskIds,
+                assignee,
+              })
+              return restoreTaskAssignees(dispatch, snapshot)
+            }}
+            trailing={
+              <PizzaTrackerProgressIndicator
+                pct={pct}
+                total={progressTotals.total}
+                edited={aggregatedEdited}
+                status={aggregatedStatus}
+              />
+            }
           />
         </button>
       </li>
@@ -702,14 +639,23 @@ export function StepSidebar() {
           metaDateLabel={state.journeyDateLabel}
           metaAssigneeLabel={state.assignedTo}
           metaProgressPct={overallProgressPct}
+          onAssignJourney={(assignee) => {
+            const snapshot = captureJourneyAssigneeSnapshot(state)
+            dispatch({ type: 'SET_JOURNEY_ASSIGNEE', assignee })
+            return restoreJourneyAssigneeSnapshot(dispatch, snapshot)
+          }}
         />
         <div
           data-wizard-scroll-pane
-          className="flex-1 min-h-0 overflow-y-auto overscroll-y-contain pl-2 pr-2 pt-2"
+          className="flex-1 min-h-0 overflow-y-auto overscroll-y-contain pl-3 pr-3 pt-2"
           onWheel={handleWizardScrollPaneWheel}
         >
           {displayActions.map((action, actionIndex) => {
             const ActionIcon = getActionIcon(action.id)
+            const actionTasks = getActionTasks(state, action.id)
+            const actionAssigneeNames = getUniqueAssigneeNames(actionTasks, state.assignedTo)
+            const actionAssigneeCount = actionAssigneeNames.length
+            const actionProgress = computeDisplayActionProgress(state, action)
             return (
               <div
                 key={action.id}
@@ -730,8 +676,52 @@ export function StepSidebar() {
                   <div className="min-h-0 w-full flex-1 shrink" aria-hidden />
                 </div>
                 <div className="relative z-[1] min-w-0 flex-1">
-                  <div className="mb-1.5 flex min-h-9 items-center">
-                    <h3 className="truncate text-sm font-medium leading-snug text-foreground">{action.title}</h3>
+                  <div
+                    className={cn(
+                      'mb-1.5 flex min-h-9 items-center gap-2',
+                      PIZZA_TRACKER_META_ROW_PADDING,
+                    )}
+                  >
+                    <h3 className="min-w-0 flex-1 truncate text-sm font-medium leading-snug text-foreground">
+                      {action.title}
+                    </h3>
+                    <PizzaTrackerRowMeta
+                      showDueDateColumn={prefs.showDueDate}
+                      showAssigneeColumn={prefs.showAssignee}
+                      assigneeLabel={
+                        actionAssigneeCount === 1
+                          ? actionAssigneeNames[0]
+                          : actionAssigneeCount === 0
+                            ? 'Unassigned'
+                            : undefined
+                      }
+                      assigneeCount={actionAssigneeCount > 1 ? actionAssigneeCount : undefined}
+                      assigneeNames={
+                        actionAssigneeCount > 1 ? actionAssigneeNames : undefined
+                      }
+                      onAssign={(assignee) => {
+                        const snapshot = captureTaskAssignees(actionTasks)
+                        dispatch({
+                          type: 'SET_TASKS_ASSIGNEE',
+                          taskIds: actionTasks.map((t) => t.id),
+                          assignee,
+                        })
+                        return restoreTaskAssignees(dispatch, snapshot)
+                      }}
+                      successDescription={
+                        actionAssigneeCount > 1
+                          ? (name) => `All tasks in this action assigned to ${name}.`
+                          : undefined
+                      }
+                      trailing={
+                        <PizzaTrackerProgressIndicator
+                          pct={actionProgress.pct}
+                          total={actionProgress.total}
+                          edited={actionProgress.edited}
+                          status={actionProgress.status}
+                        />
+                      }
+                    />
                   </div>
                   <ul className="space-y-1">
                       {action.taskRows.map((row) => {
@@ -740,30 +730,49 @@ export function StepSidebar() {
                         }
                         const expanded = isV5GroupOpen(row.id)
                         return (
-                          <li key={row.id} className="space-y-1">
-                            <button
-                              type="button"
-                              onClick={() => toggleV5Group(row.id)}
-                              aria-expanded={expanded}
-                              className="flex min-h-9 w-full items-center justify-start rounded-lg px-2.5 py-2 text-left text-sm font-medium text-muted-foreground transition-colors hover:bg-muted/50 hover:text-muted-foreground"
+                          <Fragment key={row.id}>
+                            <li
+                              className={cn(
+                                '-ml-[38px] rounded-lg pl-[38px] transition-colors hover:bg-muted/50',
+                              )}
                             >
-                              <span className="inline-flex min-w-0 max-w-full items-center gap-1">
-                                <span className="min-w-0 truncate leading-snug">{row.label}</span>
-                                <ChevronDown
-                                  className={cn(
-                                    'h-3.5 w-3.5 shrink-0 text-muted-foreground/90 transition-transform',
-                                    !expanded && '-rotate-90',
-                                  )}
-                                  aria-hidden
+                              <button
+                                type="button"
+                                onClick={() => toggleV5Group(row.id)}
+                                aria-expanded={expanded}
+                                className="flex w-full min-w-0 items-center gap-2 rounded-lg py-2.5 pl-0 pr-1.5 text-left text-sm font-medium text-foreground transition-colors min-h-9"
+                              >
+                                <span className="inline-flex min-w-0 flex-1 items-center gap-1">
+                                  <span className="min-w-0 truncate leading-snug">{row.label}</span>
+                                  <ChevronDown
+                                    className={cn(
+                                      'h-3.5 w-3.5 shrink-0 text-muted-foreground/90 transition-transform',
+                                      !expanded && '-rotate-90',
+                                    )}
+                                    aria-hidden
+                                  />
+                                </span>
+                                <PizzaTrackerRowMeta
+                                  showDueDateColumn={prefs.showDueDate}
+                                  showAssigneeColumn={prefs.showAssignee}
+                                  reserveTrailingColumn
                                 />
-                              </span>
-                            </button>
+                              </button>
+                            </li>
                             {expanded ? (
-                              <ul className="mt-1 space-y-1">
-                                {row.tasks.map((t) => renderTaskNavListItem(t, true))}
-                              </ul>
+                              <li>
+                                <div className="relative mt-1 pl-4">
+                                  <span
+                                    aria-hidden
+                                    className="pointer-events-none absolute bottom-0 left-0 top-0 z-10 w-px bg-border/70"
+                                  />
+                                  <ul className="space-y-1">
+                                    {row.tasks.map((t) => renderTaskNavListItem(t, true))}
+                                  </ul>
+                                </div>
+                              </li>
                             ) : null}
-                          </li>
+                          </Fragment>
                         )
                       })}
                     </ul>
@@ -804,5 +813,13 @@ export function StepSidebar() {
         </DialogContent>
       </Dialog>
     </TooltipProvider>
+  )
+}
+
+export function StepSidebar() {
+  return (
+    <PizzaTrackerDisplayPrefsProvider>
+      <StepSidebarInner />
+    </PizzaTrackerDisplayPrefsProvider>
   )
 }

@@ -25,6 +25,7 @@ import {
 import { AccountOwnerPartySheet } from '@/components/wizard/forms/AccountOwnerPartySheet'
 import { EditLegalEntitySheet } from '@/components/wizard/forms/EditLegalEntitySheet'
 import { PartySlotCard } from '@/components/wizard/forms/PartySlotCard'
+import { OwnerContactCardDialRoot } from '@/components/wizard/forms/ownerContactCardDial'
 import { AccountFeatureRequestsSection } from '@/components/wizard/forms/AccountFeatureRequestsSection'
 import { toast } from 'sonner'
 import { isTrustEntityParty } from '@/utils/trustEntityParty'
@@ -33,7 +34,6 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { useOpenAccountsVariant } from '@/components/wizard/openAccountsVariantContext'
 import { cn } from '@/lib/utils'
 import { isEmbeddedAccountOwnerKycEnabled } from '@/utils/ownerKycReview'
-import { OwnerEmbeddedKycSection } from '@/components/wizard/forms/OwnerEmbeddedKycSection'
 
 type OwnerRow = { id: string; type: 'existing'; partyId?: string }
 type BeneficiaryDesignationType = 'primary' | 'contingent'
@@ -90,8 +90,19 @@ export function AcctChildOwnerInfoForm() {
     ? 'text-sm font-semibold uppercase tracking-wide'
     : 'text-base font-semibold leading-snug text-foreground'
   const childSectionBodyClass = isCardVariant
-    ? 'text-sm text-muted-foreground mt-2'
-    : 'text-[14px] text-muted-foreground mt-2 leading-normal'
+    ? 'text-sm text-muted-foreground'
+    : 'text-[14px] text-muted-foreground leading-normal'
+  const childSectionHeaderClass = cn(
+    'mb-2',
+    isCardVariant &&
+      cn(
+        '-mx-6 -mt-6 mb-8 px-6 py-4',
+        isVersion2 && 'border-b border-border/60 bg-[#F5F5F4]',
+        isVersion4 && 'border-b border-border/60',
+        isVersion3 && 'mx-0 mt-0 px-0 pt-0 pb-4 border-b border-border/60',
+        isVersion4 && 'bg-[#F5F5F4]',
+      ),
+  )
   const ctx = useChildActionContext()
   const taskId = ctx?.subTaskId ?? ''
   const { data, updateField } = useTaskData(taskId || '__no_child__')
@@ -363,42 +374,7 @@ export function AcctChildOwnerInfoForm() {
               ),
           )}
         >
-        <div
-          className={cn(
-            'mb-6',
-            isCardVariant &&
-              cn(
-                '-mx-6 -mt-6 mb-8 px-6 py-4',
-                isVersion2 && 'border-b border-border/60 bg-[#F5F5F4]',
-                isVersion4 && 'border-b border-border/60',
-                    isVersion3 && 'mx-0 mt-0 px-0 pt-0 pb-4 border-b border-border/60',
-                isVersion4 && 'bg-[#F5F5F4]',
-              ),
-          )}
-        >
-          <h3 className={childSectionTitleClass}>
-            Owners & Participants
-          </h3>
-          <p className={childSectionBodyClass}>
-            {trustEntityOwnersOnly ? (
-              <>
-                Add the trust legal entity for this registration. Search for an existing trust or create one if needed.
-                Individuals cannot be account owners on trust registrations.
-              </>
-            ) : allowLegalEntityAsOwner ? (
-              <>
-                Add the owner(s) for this account. You may assign natural persons or eligible legal entities from this
-                client record.
-              </>
-            ) : (
-              <>
-                Add the owner(s) for this account. Only natural persons may be owners for this registration—select an
-                existing household member or create a new individual.
-              </>
-            )}
-          </p>
-        </div>
-
+        <OwnerContactCardDialRoot>
         {owners.map((owner, idx) => {
           const party = owner.partyId
             ? state.relatedParties.find((p) => p.id === owner.partyId)
@@ -446,16 +422,15 @@ export function AcctChildOwnerInfoForm() {
                       ? 'Adds to this household for use as account owner.'
                       : 'Adds a person to this household for use as account owner.'
                 }
-                showKycStatus={!kycExternalForThisAccount && !singleFlowKyc}
+                showKycStatus={!kycExternalForThisAccount}
                 showKycAmlSchedule={!kycExternalForThisAccount && !singleFlowKyc}
+                accountChildId={singleFlowKyc && childId ? childId : undefined}
                 onGoToKyc={singleFlowKyc ? undefined : handleGoToKyc}
               />
-              {singleFlowKyc && party && childId ? (
-                <OwnerEmbeddedKycSection accountChildId={childId} party={party} />
-              ) : null}
             </div>
           )
         })}
+        </OwnerContactCardDialRoot>
 
         {trustEntityOwnersOnly ? (
           <AddClientInfoLegalEntitySheet
@@ -530,18 +505,7 @@ export function AcctChildOwnerInfoForm() {
               ),
           )}
         >
-        <div
-          className={cn(
-            isCardVariant &&
-              cn(
-                '-mx-6 -mt-6 mb-8 px-6 py-4',
-                isVersion2 && 'border-b border-border/60 bg-[#F5F5F4]',
-                isVersion4 && 'border-b border-border/60',
-                    isVersion3 && 'mx-0 mt-0 px-0 pt-0 pb-4 border-b border-border/60',
-                isVersion4 && 'bg-[#F5F5F4]',
-              ),
-          )}
-        >
+        <div className={childSectionHeaderClass}>
           <h3 className={childSectionTitleClass}>
             Beneficiaries
           </h3>
@@ -839,18 +803,7 @@ export function AcctChildOwnerInfoForm() {
               ),
           )}
         >
-        <div
-          className={cn(
-            isCardVariant &&
-              cn(
-                '-mx-6 -mt-6 mb-8 px-6 py-4',
-                isVersion2 && 'border-b border-border/60 bg-[#F5F5F4]',
-                isVersion4 && 'border-b border-border/60',
-                    isVersion3 && 'mx-0 mt-0 px-0 pt-0 pb-4 border-b border-border/60',
-                isVersion4 && 'bg-[#F5F5F4]',
-              ),
-          )}
-        >
+        <div className={childSectionHeaderClass}>
           <h3 className={childSectionTitleClass}>
             Account Information
           </h3>
@@ -883,18 +836,7 @@ export function AcctChildOwnerInfoForm() {
                 ),
             )}
           >
-            <div
-              className={cn(
-                isCardVariant &&
-                  cn(
-                    '-mx-6 -mt-6 mb-8 px-6 py-4',
-                    isVersion2 && 'border-b border-border/60 bg-[#F5F5F4]',
-                    isVersion4 && 'border-b border-border/60',
-                    isVersion3 && 'mx-0 mt-0 px-0 pt-0 pb-4 border-b border-border/60',
-                    isVersion4 && 'bg-[#F5F5F4]',
-                  ),
-              )}
-            >
+            <div className={childSectionHeaderClass}>
               <h3 className={childSectionTitleClass}>
                 Investment Elections
               </h3>

@@ -77,27 +77,74 @@ function CardBody({ profile }: { profile: NonNullable<ReturnType<typeof resolveJ
   )
 }
 
-function AvatarGlyph({ name, unassigned }: { name?: string; unassigned?: boolean }) {
+export function AvatarGlyph({
+  name,
+  unassigned,
+  size = 'default',
+}: {
+  name?: string
+  unassigned?: boolean
+  size?: 'default' | 'compact'
+}) {
   const initials = name ? getAssigneeInitials(name) : ''
+  const avatarSize =
+    size === 'compact'
+      ? 'box-border flex h-5 w-5 shrink-0 items-center justify-center rounded-full border-2'
+      : 'box-border flex h-6 w-6 shrink-0 items-center justify-center rounded-full border-2'
+  const userIconClass = size === 'compact' ? 'h-2.5 w-2.5' : 'h-3 w-3'
+  const initialsClass = size === 'compact' ? 'text-[9px]' : 'text-[10px]'
+
   if (unassigned) {
     return (
       <span
         className={cn(
-          'flex h-6 w-6 shrink-0 items-center justify-center rounded-full',
-          'border-2 border-dashed border-muted-foreground/50 bg-muted/15',
+          avatarSize,
+          'border-dashed border-muted-foreground/50 bg-muted/15',
         )}
         aria-hidden
       >
-        <User className="h-3 w-3 text-muted-foreground" />
+        <User className={cn(userIconClass, 'text-muted-foreground')} />
       </span>
     )
   }
   return (
     <span
-      className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-primary/10 text-[10px] font-semibold text-primary"
+      className={cn(
+        avatarSize,
+        'border-transparent bg-primary/10 font-semibold text-primary',
+        initialsClass,
+      )}
       aria-hidden
     >
-      {initials || <User className="h-3 w-3" />}
+      {initials || <User className={userIconClass} />}
+    </span>
+  )
+}
+
+/** Compact count badge when an action has multiple distinct assignees across tasks. */
+export function MultiAssigneeCountGlyph({
+  count,
+  size = 'default',
+}: {
+  count: number
+  size?: 'default' | 'compact'
+}) {
+  const avatarSize =
+    size === 'compact'
+      ? 'box-border flex h-5 w-5 shrink-0 items-center justify-center rounded-full border-2'
+      : 'box-border flex h-6 w-6 shrink-0 items-center justify-center rounded-full border-2'
+  const countClass = size === 'compact' ? 'text-[9px]' : 'text-[10px]'
+
+  return (
+    <span
+      className={cn(
+        avatarSize,
+        'border-transparent bg-primary/10 font-semibold tabular-nums text-primary',
+        countClass,
+      )}
+      aria-hidden
+    >
+      {count}
     </span>
   )
 }
@@ -105,7 +152,13 @@ function AvatarGlyph({ name, unassigned }: { name?: string; unassigned?: boolean
 /**
  * Journey header assignee chip: small avatar + Basis-style contact card on hover (pointer/desktop).
  */
-export function AssigneeContactHover({ assigneeLabel }: { assigneeLabel?: string }) {
+export function AssigneeContactHover({
+  assigneeLabel,
+  size = 'default',
+}: {
+  assigneeLabel?: string
+  size?: 'default' | 'compact'
+}) {
   const trimmed = (assigneeLabel ?? '').trim()
   const profile = resolveJourneyAssignee(assigneeLabel)
 
@@ -117,7 +170,7 @@ export function AssigneeContactHover({ assigneeLabel }: { assigneeLabel?: string
         aria-label={trimmed && trimmed !== 'Unassigned' ? `Assigned to ${trimmed}` : 'Unassigned'}
         title={trimmed && trimmed !== 'Unassigned' ? trimmed : 'Unassigned'}
       >
-        <AvatarGlyph unassigned />
+        <AvatarGlyph unassigned size={size} />
       </span>
     )
   }
@@ -130,7 +183,7 @@ export function AssigneeContactHover({ assigneeLabel }: { assigneeLabel?: string
           className="inline-flex shrink-0 rounded-full ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
           aria-label={`Assigned to ${profile.name}. Hover for contact details.`}
         >
-          <AvatarGlyph name={profile.name} />
+          <AvatarGlyph name={profile.name} size={size} />
         </button>
       </HoverCardTrigger>
       <HoverCardContent side="bottom" align="end" className="p-5">
