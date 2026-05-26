@@ -8,27 +8,13 @@ import {
 } from '@/utils/statusSemanticColors'
 import type { JourneyStatus } from '@/types/servicing'
 
-export type OnboardingActionStatusKey = ChildDisplayStatus | 'pending_release' | 'unknown'
-
-export type SummaryBucket =
-  | 'danger'
-  | 'warningHigh'
-  | 'warning'
-  | 'inReview'
-  | 'draft'
-  | 'complete'
-  | 'canceled'
+export type OnboardingActionStatusKey =
+  | ChildDisplayStatus
+  | 'pending_release'
+  | 'submitted'
   | 'unknown'
 
-export type OnboardingParentOperationalState =
-  | 'escalationHold'
-  | 'clarificationRequired'
-  | 'awaitingDocuments'
-  | 'inReview'
-  | 'draft'
-  | 'complete'
-  | 'canceled'
-  | 'unknown'
+export type SummaryBucket = 'danger' | 'warning' | 'inReview' | 'draft' | 'complete' | 'canceled' | 'unknown'
 
 export type OnboardingActionStatusDisplay = {
   key: OnboardingActionStatusKey
@@ -63,6 +49,7 @@ const STATUS_LABELS: Record<OnboardingActionStatusKey, string> = {
   awaiting_documents: childStatusConfig.awaiting_documents.label,
   escalation_hold: childStatusConfig.escalation_hold.label,
   rejected_aml: 'Rejected',
+  submitted: 'Submitted',
   pending_release: 'Pending Release',
   complete: 'Complete',
   canceled: 'Canceled',
@@ -73,10 +60,10 @@ const SUMMARY_BUCKET_BY_STATUS: Record<OnboardingActionStatusKey, SummaryBucket>
   rejected_aml: 'danger',
   escalation_hold: 'danger',
 
-  clarification_required: 'warningHigh',
-  nigo: 'warningHigh',
-  nigo_document: 'warningHigh',
-  nigo_principal: 'warningHigh',
+  clarification_required: 'warning',
+  nigo: 'warning',
+  nigo_document: 'warning',
+  nigo_principal: 'warning',
   awaiting_documents: 'warning',
 
   awaiting_review: 'inReview',
@@ -84,8 +71,9 @@ const SUMMARY_BUCKET_BY_STATUS: Record<OnboardingActionStatusKey, SummaryBucket>
   document_review: 'inReview',
   ho_kyc_review: 'inReview',
   principal_review: 'inReview',
+  submitted: 'inReview',
+  awaiting_client_signature: 'inReview',
   draft: 'draft',
-  awaiting_client_signature: 'draft',
 
   pending_release: 'complete',
   complete: 'complete',
@@ -96,7 +84,6 @@ const SUMMARY_BUCKET_BY_STATUS: Record<OnboardingActionStatusKey, SummaryBucket>
 
 const STATUS_SEMANTIC_BY_BUCKET: Record<SummaryBucket, StatusSemantic> = {
   danger: 'danger',
-  warningHigh: 'warning',
   warning: 'warning',
   inReview: 'success',
   draft: 'neutral',
@@ -110,8 +97,6 @@ const STATUS_PILL_VARIANT_BY_STATUS: Partial<
 > = {
   draft: 'draft',
   rejected_aml: 'declined',
-  pending_release: 'completed',
-  complete: 'completed',
 }
 
 const GENERIC_STATUS_LABELS: Partial<Record<JourneyStatus | 'canceled', string>> = {
@@ -124,73 +109,34 @@ const GENERIC_STATUS_LABELS: Partial<Record<JourneyStatus | 'canceled', string>>
   rejected: 'Rejected',
 }
 
-const PARENT_OPERATIONAL_TIERS: Array<{
-  state: OnboardingParentOperationalState
-  buckets: SummaryBucket[]
-  label: string
-  semanticColor: StatusSemantic
-  pillVariant?: 'draft' | 'completed' | 'declined'
-}> = [
-  {
-    state: 'escalationHold',
-    buckets: ['danger'],
-    label: 'Escalation / Hold',
-    semanticColor: 'danger',
-  },
-  {
-    state: 'clarificationRequired',
-    buckets: ['warningHigh'],
-    label: 'Clarification / Document Required',
-    semanticColor: 'warning',
-  },
-  {
-    state: 'awaitingDocuments',
-    buckets: ['warning'],
-    label: 'Awaiting Documents',
-    semanticColor: 'warning',
-  },
-  {
-    state: 'inReview',
-    buckets: ['inReview'],
-    label: 'In Review',
-    semanticColor: 'success',
-  },
-  {
-    state: 'draft',
-    buckets: ['draft'],
-    label: 'Draft',
-    semanticColor: 'neutral',
-    pillVariant: 'draft',
-  },
-  {
-    state: 'complete',
-    buckets: ['complete'],
-    label: 'Complete',
-    semanticColor: 'neutral',
-    pillVariant: 'completed',
-  },
-  {
-    state: 'canceled',
-    buckets: ['canceled'],
-    label: 'Canceled',
-    semanticColor: 'danger',
-  },
-]
-
 const KNOWN_STATUS_KEYS = new Set<OnboardingActionStatusKey>(
   Object.keys(STATUS_LABELS) as OnboardingActionStatusKey[],
 )
 
-const BUCKET_DISPLAY_ORDER: SummaryBucket[] = [
-  'danger',
-  'warningHigh',
-  'warning',
-  'inReview',
+const PARENT_STATUS_PRIORITY: OnboardingActionStatusKey[] = [
+  'escalation_hold',
+  'rejected_aml',
+  'clarification_required',
+  'nigo',
+  'nigo_document',
+  'nigo_principal',
+  'awaiting_documents',
+  'principal_review',
+  'document_review',
+  'ho_kyc_review',
+  'aml_review',
+  'awaiting_review',
+  'awaiting_client_signature',
+  'submitted',
   'draft',
+  'pending_release',
   'complete',
   'canceled',
-  'unknown',
 ]
+
+const PARENT_STATUS_PRIORITY_INDEX = new Map(
+  PARENT_STATUS_PRIORITY.map((status, index) => [status, index] as const),
+)
 
 function normalizeStatusKey(status?: string): OnboardingActionStatusKey {
   if (!status) return 'unknown'
@@ -218,60 +164,73 @@ function bucketForSource(source: StatusSource): SummaryBucket {
     label.includes('document required') ||
     label.includes('nigo')
   ) {
-    return 'warningHigh'
-  }
-  if (label.includes('review') || label.includes('kyc review')) {
-    return 'inReview'
+    return 'warning'
   }
   if (
-    label.includes('draft') ||
+    label.includes('review') ||
+    label.includes('kyc review') ||
+    label.includes('submitted') ||
     label.includes('signature') ||
-    label.includes('submitted')
+    label.includes('progress')
   ) {
+    return 'inReview'
+  }
+  if (label.includes('draft')) {
     return 'draft'
   }
-  if (label.includes('complete') || label.includes('pending release')) {
+  if (
+    label.includes('complete') ||
+    label.includes('pending release') ||
+    label.includes('approved') ||
+    label.includes('verified') ||
+    label.includes('pass') ||
+    label.includes('clear') ||
+    label.includes('scheduled')
+  ) {
     return 'complete'
   }
-  if (label.includes('cancel')) return 'canceled'
-  if (label.includes('progress')) return 'inReview'
+  if (label.includes('cancel') || label.includes('declin')) return 'canceled'
   return 'unknown'
 }
 
-function countBuckets(rows: StatusSource[]): Map<SummaryBucket, number> {
-  const counts = new Map<SummaryBucket, number>()
-  for (const row of rows) {
-    const bucket = bucketForSource(row)
-    counts.set(bucket, (counts.get(bucket) ?? 0) + 1)
-  }
-  return counts
-}
+function parentPriorityKeyForSource(source: StatusSource): OnboardingActionStatusKey {
+  const knownKey = normalizeStatusKey(source.displayStatus)
+  if (knownKey !== 'unknown') return knownKey
 
-function bucketTotal(counts: Map<SummaryBucket, number>, buckets: SummaryBucket[]): number {
-  return buckets.reduce((sum, bucket) => sum + (counts.get(bucket) ?? 0), 0)
-}
-
-function formatBucketLabel(bucket: SummaryBucket, count: number): string {
-  switch (bucket) {
-    case 'danger':
-      return count === 1 ? '1 Escalated / Rejected' : `${count} Escalated / Rejected`
-    case 'warningHigh':
-      return count === 1
-        ? '1 Clarification / Document Required'
-        : `${count} Clarification / Document Required`
-    case 'warning':
-      return count === 1 ? '1 Awaiting Documents' : `${count} Awaiting Documents`
-    case 'inReview':
-      return count === 1 ? '1 In Review' : `${count} In Review`
-    case 'draft':
-      return count === 1 ? '1 Draft' : `${count} Draft`
-    case 'complete':
-      return count === 1 ? '1 Complete' : `${count} Complete`
-    case 'canceled':
-      return count === 1 ? '1 Canceled' : `${count} Canceled`
-    case 'unknown':
-      return count === 1 ? '1 Unknown' : `${count} Unknown`
+  const label = source.stateModelStatus?.trim().toLowerCase() ?? ''
+  if (!label) return 'unknown'
+  if (label.includes('escalat') || label.includes('hold')) return 'escalation_hold'
+  if (label.includes('reject')) return 'rejected_aml'
+  if (
+    label.includes('clarification') ||
+    label.includes('document required') ||
+    label.includes('nigo') ||
+    label.includes('needs attention')
+  ) {
+    return 'clarification_required'
   }
+  if (label.includes('awaiting documents')) return 'awaiting_documents'
+  if (label.includes('principal review')) return 'principal_review'
+  if (label.includes('document review')) return 'document_review'
+  if (label.includes('kyc review')) return 'ho_kyc_review'
+  if (label.includes('aml review')) return 'aml_review'
+  if (label.includes('awaiting review') || label.includes('in review')) return 'awaiting_review'
+  if (label.includes('signature')) return 'awaiting_client_signature'
+  if (label.includes('submitted')) return 'submitted'
+  if (label.includes('draft')) return 'draft'
+  if (label.includes('pending release')) return 'pending_release'
+  if (
+    label.includes('complete') ||
+    label.includes('approved') ||
+    label.includes('verified') ||
+    label.includes('pass') ||
+    label.includes('clear') ||
+    label.includes('scheduled')
+  ) {
+    return 'complete'
+  }
+  if (label.includes('cancel') || label.includes('declin')) return 'canceled'
+  return 'unknown'
 }
 
 export function getOnboardingActionStatusDisplay(
@@ -288,9 +247,7 @@ export function getOnboardingActionStatusDisplay(
   const pillVariant =
     key !== 'unknown'
       ? STATUS_PILL_VARIANT_BY_STATUS[key]
-      : bucket === 'complete'
-        ? 'completed'
-        : bucket === 'danger'
+      : bucket === 'danger'
           ? 'declined'
           : bucket === 'draft' || label.toLowerCase().includes('draft')
             ? 'draft'
@@ -307,41 +264,52 @@ export function getOnboardingActionStatusDisplay(
 
 export function deriveOnboardingParentOperationalSummary(
   rows: StatusSource[],
-): {
-  state: OnboardingParentOperationalState
-  label: string
-  className: string
-  pillVariant?: 'draft' | 'completed' | 'declined'
-} | null {
+): OnboardingActionStatusDisplay | null {
   if (rows.length === 0) return null
 
-  const counts = countBuckets(rows)
-  for (const tier of PARENT_OPERATIONAL_TIERS) {
-    if (bucketTotal(counts, tier.buckets) === 0) continue
-    return {
-      state: tier.state,
-      label: tier.label,
-      className: semanticPill(tier.semanticColor),
-      pillVariant: tier.pillVariant,
+  let bestMatch:
+    | {
+        priority: number
+        display: OnboardingActionStatusDisplay
+      }
+    | undefined
+
+  for (const row of rows) {
+    const priorityKey = parentPriorityKeyForSource(row)
+    if (priorityKey === 'unknown') continue
+    const priority = PARENT_STATUS_PRIORITY_INDEX.get(priorityKey)
+    if (priority === undefined) continue
+
+    const display = getOnboardingActionStatusDisplay(row.displayStatus, row.stateModelStatus)
+    if (!bestMatch || priority < bestMatch.priority) {
+      bestMatch = { priority, display }
     }
   }
 
-  if ((counts.get('unknown') ?? 0) > 0) {
-    return {
-      state: 'unknown',
-      label: 'Unknown',
-      className: semanticPill('default'),
-    }
-  }
-
-  return null
+  return bestMatch?.display ?? null
 }
 
 export function formatOnboardingWorkflowBreakdownLine(rows: StatusSource[]): string | null {
-  const counts = countBuckets(rows)
-  const parts = BUCKET_DISPLAY_ORDER
-    .filter((bucket) => (counts.get(bucket) ?? 0) > 0)
-    .map((bucket) => formatBucketLabel(bucket, counts.get(bucket) ?? 0))
+  const countsByLabel = new Map<string, { count: number; priority: number }>()
+
+  for (const row of rows) {
+    const display = getOnboardingActionStatusDisplay(row.displayStatus, row.stateModelStatus)
+    const priorityKey = parentPriorityKeyForSource(row)
+    const priority =
+      priorityKey === 'unknown'
+        ? Number.MAX_SAFE_INTEGER
+        : (PARENT_STATUS_PRIORITY_INDEX.get(priorityKey) ?? Number.MAX_SAFE_INTEGER)
+    const existing = countsByLabel.get(display.label)
+    countsByLabel.set(display.label, {
+      count: (existing?.count ?? 0) + 1,
+      priority: existing ? Math.min(existing.priority, priority) : priority,
+    })
+  }
+
+  const parts = [...countsByLabel.entries()]
+    .sort((a, b) => a[1].priority - b[1].priority)
+    .map(([label, meta]) => `${meta.count} ${label}`)
+
   return parts.length <= 1 ? null : parts.join(' · ')
 }
 

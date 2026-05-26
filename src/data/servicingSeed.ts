@@ -459,7 +459,7 @@ export const seededJourneys: Journey[] = [
         nickname: 'Rivera / Kim — Daniel Kim KYC',
         lineKey: 'line-rivera-kyc-daniel',
         childId: 'ho-demo-child-rivera-kyc-daniel',
-        displayStatus: 'aml_review',
+        displayStatus: 'escalation_hold',
       },
       {
         section: 'kyc',
@@ -534,7 +534,7 @@ export const seededJourneys: Journey[] = [
 
   /**
    * AML / Document / Principal reviewer queues (Actions tab) use account child `displayStatus`
-   * when KYC rows are hidden (single-flow). Use `escalation_hold` / `aml_review` on account lines
+   * when KYC rows are hidden (single-flow). Use `escalation_hold` / `rejected_aml` on account lines
    * for AML; `awaiting_documents` / `nigo_*` for Document Review; `principal_review` for Principal.
    */
   /** AML team queue — KYC child workflows in AML / rejection stages (accounts follow after KYC clears). */
@@ -552,7 +552,7 @@ export const seededJourneys: Journey[] = [
         nickname: 'NorthPoint — Elena North KYC',
         lineKey: 'line-np-kyc-elena',
         childId: 'ho-demo-child-np-kyc-elena',
-        displayStatus: 'aml_review',
+        displayStatus: 'escalation_hold',
       },
       {
         section: 'kyc',
@@ -560,7 +560,7 @@ export const seededJourneys: Journey[] = [
         nickname: 'NorthPoint — Marcus North KYC',
         lineKey: 'line-np-kyc-marcus',
         childId: 'ho-demo-child-np-kyc-marcus',
-        displayStatus: 'aml_review',
+        displayStatus: 'escalation_hold',
       },
       {
         section: 'kyc',
@@ -576,7 +576,7 @@ export const seededJourneys: Journey[] = [
         nickname: 'NorthPoint — BVI beneficial owner KYC',
         lineKey: 'line-np-kyc-bvi',
         childId: 'ho-demo-child-np-kyc-bvi',
-        displayStatus: 'aml_review',
+        displayStatus: 'escalation_hold',
       },
       {
         section: 'accounts',
@@ -590,7 +590,7 @@ export const seededJourneys: Journey[] = [
         title: 'Custodial UTMA',
         lineKey: 'line-np-utma',
         childId: 'ho-demo-child-np-utma',
-        displayStatus: 'aml_review',
+        displayStatus: 'escalation_hold',
       },
     ],
   ),
@@ -608,7 +608,7 @@ export const seededJourneys: Journey[] = [
         nickname: 'Santos — Isabel Santos KYC',
         lineKey: 'line-santos-kyc-isabel',
         childId: 'ho-demo-child-santos-kyc-isabel',
-        displayStatus: 'aml_review',
+        displayStatus: 'escalation_hold',
       },
       {
         section: 'kyc',
@@ -616,7 +616,7 @@ export const seededJourneys: Journey[] = [
         nickname: 'Santos — Carlos Santos KYC',
         lineKey: 'line-santos-kyc-carlos',
         childId: 'ho-demo-child-santos-kyc-carlos',
-        displayStatus: 'aml_review',
+        displayStatus: 'escalation_hold',
       },
       {
         section: 'accounts',
@@ -1052,7 +1052,7 @@ export const seededJourneys: Journey[] = [
         nickname: 'Crescent — Priya Mehta KYC',
         lineKey: 'line-cres-kyc-priya',
         childId: 'ho-demo-child-cres-kyc-priya',
-        displayStatus: 'aml_review',
+        displayStatus: 'escalation_hold',
       },
       {
         section: 'kyc',
@@ -1060,7 +1060,7 @@ export const seededJourneys: Journey[] = [
         nickname: 'Crescent — Jonah Crescent KYC',
         lineKey: 'line-cres-kyc-jonah',
         childId: 'ho-demo-child-cres-kyc-jonah',
-        displayStatus: 'aml_review',
+        displayStatus: 'escalation_hold',
       },
       {
         section: 'kyc',
@@ -1108,7 +1108,7 @@ export const seededJourneys: Journey[] = [
         nickname: 'Piedmont — Lena Hart KYC',
         lineKey: 'line-pied-kyc-lena',
         childId: 'ho-demo-child-pied-kyc-lena',
-        displayStatus: 'aml_review',
+        displayStatus: 'escalation_hold',
       },
       {
         section: 'kyc',
