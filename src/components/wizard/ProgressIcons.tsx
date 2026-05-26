@@ -1,4 +1,4 @@
-import { CircleAlert } from 'lucide-react'
+import { CircleAlert, LoaderCircle } from 'lucide-react'
 import type { TaskStatus } from '@/types/workflow'
 import { cn } from '@/lib/utils'
 
@@ -59,19 +59,19 @@ function PercentArc({ pct }: { pct: number }) {
   )
 }
 
-/** Continuous 0–100% ring for journey-level progress (sidebar header). */
+/** Journey-level progress indicator (sidebar header). Sized to match the task status icons below. */
 export function JourneyProgressRing({
-  pct,
+  pct: _pct,
   className,
 }: {
   pct: number
   className?: string
 }) {
-  const clamped = Math.max(0, Math.min(100, Number.isFinite(pct) ? pct : 0)) / 100
   return (
-    <svg viewBox="0 0 16 16" className={cn('h-5 w-5 shrink-0 text-foreground', className)} aria-hidden>
-      <PercentArc pct={clamped} />
-    </svg>
+    <LoaderCircle
+      className={cn('h-4 w-4 shrink-0 text-muted-foreground/85', className)}
+      aria-hidden
+    />
   )
 }
 

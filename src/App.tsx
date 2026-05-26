@@ -1,4 +1,5 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
+import { Agentation } from 'agentation'
 import { WorkflowProvider } from '@/stores/workflowStore'
 import { ServicingProvider } from '@/stores/servicingStore'
 import { ThemeProvider } from '@/stores/themeStore'
@@ -11,6 +12,7 @@ import { OnboardingJourneyDetailPage } from '@/pages/OnboardingJourneyDetailPage
 import { SettingsPage } from '@/pages/SettingsPage'
 import { TestsIndexPage } from '@/pages/tests/TestsIndexPage'
 import { ProgressIndicatorTestPage } from '@/pages/tests/ProgressIndicatorTestPage'
+import { TestSandboxPage } from '@/pages/test/TestSandboxPage'
 import { Toaster } from '@/components/ui/sonner'
 import { AppPasswordGate } from '@/components/AppPasswordGate'
 import { OpenAccountsVariantAndFocusProvider } from '@/components/wizard/openAccountsVariantContext'
@@ -35,6 +37,8 @@ export default function App() {
                     <Route path="/settings" element={<SettingsPage />} />
                     <Route path="/tests" element={<TestsIndexPage />} />
                     <Route path="/tests/progress-indicator" element={<ProgressIndicatorTestPage />} />
+                    <Route path="/test" element={<TestSandboxPage />} />
+                    <Route path="/test/:slug" element={<TestSandboxPage />} />
                     <Route path="*" element={<Navigate to="/" replace />} />
                   </Routes>
                 </BrowserRouter>
@@ -43,6 +47,7 @@ export default function App() {
           </WorkflowProvider>
         </AppPasswordGate>
         <Toaster />
+        {import.meta.env.DEV && <Agentation />}
       </>
     </ThemeProvider>
   )

@@ -371,7 +371,11 @@ export function VerticalNav({
             style={{ width: navWidth }}
           />
           <nav
-            className="flex flex-col h-screen fixed top-0 left-0 transition-[width,background-color] duration-200 bg-sidebar border-r border-sidebar-border"
+            className={`flex flex-col h-screen fixed top-0 left-0 transition-[width,background-color,border-color] duration-200 border-r ${
+              isExpanded
+                ? 'bg-[#F9F9F9] border-transparent'
+                : 'bg-sidebar border-sidebar-border'
+            }`}
             style={{ width: navWidth }}
             role="navigation"
             aria-label="Main navigation"

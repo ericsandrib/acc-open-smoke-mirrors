@@ -164,20 +164,20 @@
 - [x] Update icons to inherit currentColor
 
 ### Phase 2: /test route scaffold
-- [ ] Add /test route + persistent sidebar
-- [ ] Data-driven sidebar entries
-- [ ] Stub /test/application-widget entry
+- [x] Add /test route + persistent sidebar
+- [x] Data-driven sidebar entries
+- [x] Stub /test/application-widget entry
 
 ### Phase 3: Application Status widget icon
-- [ ] Recolor icon to semantic color of current stage
+- [x] Recolor icon to semantic color of current stage
 
 ### Phase 4: Populate /test/application-widget
-- [ ] Extract widget into reusable component
-- [ ] Render every status in terminal + active variants
-- [ ] Classify terminal vs active and label clearly
+- [x] Extract widget into reusable component
+- [x] Render every status in terminal + active variants
+- [x] Classify terminal vs active and label clearly
 
 ### Phase 5: Code review
-- [ ] Spawn subagent code review and resolve findings
+- [x] Spawn subagent code review and resolve findings
 
 ## Spec 007: KYC Status Hierarchy
 
