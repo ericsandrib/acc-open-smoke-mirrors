@@ -444,7 +444,7 @@ export const seededJourneys: Journey[] = [
         nickname: 'Rivera / Kim — Sofia Rivera KYC',
         lineKey: 'line-rivera-kyc',
         childId: 'ho-demo-child-rivera-kyc',
-        displayStatus: 'document_review',
+        displayStatus: 'awaiting_documents',
       },
       {
         section: 'accounts',
@@ -494,7 +494,7 @@ export const seededJourneys: Journey[] = [
         nickname: 'Okonkwo Trust — Ifeoma Okonkwo KYC',
         lineKey: 'line-okonkwo-ifeoma',
         childId: 'ho-demo-child-okonkwo-ifeoma',
-        displayStatus: 'document_review',
+        displayStatus: 'awaiting_documents',
       },
     ],
   ),
@@ -535,7 +535,7 @@ export const seededJourneys: Journey[] = [
   /**
    * AML / Document / Principal reviewer queues (Actions tab) use account child `displayStatus`
    * when KYC rows are hidden (single-flow). Use `escalation_hold` / `aml_review` on account lines
-   * for AML; `document_review` / `nigo_*` for Document Review; `principal_review` for Principal.
+   * for AML; `awaiting_documents` / `nigo_*` for Document Review; `principal_review` for Principal.
    */
   /** AML team queue — KYC child workflows in AML / rejection stages (accounts follow after KYC clears). */
   buildDocumentReviewDemoJourney(
@@ -659,14 +659,14 @@ export const seededJourneys: Journey[] = [
         nickname: 'Summit — Jordan Lee KYC',
         lineKey: 'line-summit-jordan',
         childId: 'ho-demo-child-summit-jordan',
-        displayStatus: 'document_review',
+        displayStatus: 'awaiting_documents',
       },
       {
         section: 'accounts',
         title: 'Operating partnership account',
         lineKey: 'line-summit-op',
         childId: 'ho-demo-child-summit-op',
-        displayStatus: 'document_review',
+        displayStatus: 'awaiting_documents',
       },
       {
         section: 'accounts',
@@ -734,7 +734,7 @@ export const seededJourneys: Journey[] = [
         title: 'Joint taxable brokerage',
         lineKey: 'line-hargrove-joint',
         childId: 'ho-demo-child-hargrove-joint',
-        displayStatus: 'document_review',
+        displayStatus: 'awaiting_documents',
       },
       {
         section: 'accounts',
@@ -885,7 +885,7 @@ export const seededJourneys: Journey[] = [
         nickname: 'Chestnut — Taylor Reed KYC',
         lineKey: 'line-chestnut-reed',
         childId: 'ho-demo-child-chestnut-reed',
-        displayStatus: 'document_review',
+        displayStatus: 'awaiting_documents',
       },
       {
         section: 'kyc',
@@ -900,7 +900,7 @@ export const seededJourneys: Journey[] = [
         title: 'Consolidated advisory SMA',
         lineKey: 'line-chestnut-sma',
         childId: 'ho-demo-child-chestnut-sma',
-        displayStatus: 'document_review',
+        displayStatus: 'awaiting_documents',
       },
       {
         section: 'accounts',
@@ -925,14 +925,14 @@ export const seededJourneys: Journey[] = [
         nickname: 'Perimeter — Nina Cho KYC',
         lineKey: 'line-perim-cho',
         childId: 'ho-demo-child-perim-cho',
-        displayStatus: 'document_review',
+        displayStatus: 'awaiting_documents',
       },
       {
         section: 'accounts',
         title: 'Side pocket — Series D',
         lineKey: 'line-perim-side',
         childId: 'ho-demo-child-perim-side',
-        displayStatus: 'document_review',
+        displayStatus: 'awaiting_documents',
       },
       {
         section: 'accounts',
@@ -1076,7 +1076,7 @@ export const seededJourneys: Journey[] = [
         nickname: 'Crescent — Authorized signer KYC',
         lineKey: 'line-cres-kyc-signer',
         childId: 'ho-demo-child-cres-kyc-signer',
-        displayStatus: 'document_review',
+        displayStatus: 'awaiting_documents',
       },
       {
         section: 'accounts',

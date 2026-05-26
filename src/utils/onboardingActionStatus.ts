@@ -12,6 +12,7 @@ export type OnboardingActionStatusKey = ChildDisplayStatus | 'pending_release' |
 
 export type SummaryBucket =
   | 'danger'
+  | 'warningHigh'
   | 'warning'
   | 'inReview'
   | 'draft'
@@ -21,6 +22,7 @@ export type SummaryBucket =
 
 export type OnboardingParentOperationalState =
   | 'escalationHold'
+  | 'clarificationRequired'
   | 'awaitingDocuments'
   | 'inReview'
   | 'draft'
@@ -71,10 +73,10 @@ const SUMMARY_BUCKET_BY_STATUS: Record<OnboardingActionStatusKey, SummaryBucket>
   rejected_aml: 'danger',
   escalation_hold: 'danger',
 
-  clarification_required: 'warning',
-  nigo: 'warning',
-  nigo_document: 'warning',
-  nigo_principal: 'warning',
+  clarification_required: 'warningHigh',
+  nigo: 'warningHigh',
+  nigo_document: 'warningHigh',
+  nigo_principal: 'warningHigh',
   awaiting_documents: 'warning',
 
   awaiting_review: 'inReview',
@@ -94,6 +96,7 @@ const SUMMARY_BUCKET_BY_STATUS: Record<OnboardingActionStatusKey, SummaryBucket>
 
 const STATUS_SEMANTIC_BY_BUCKET: Record<SummaryBucket, StatusSemantic> = {
   danger: 'danger',
+  warningHigh: 'warning',
   warning: 'warning',
   inReview: 'neutral',
   draft: 'neutral',
@@ -135,6 +138,12 @@ const PARENT_OPERATIONAL_TIERS: Array<{
     semanticColor: 'danger',
   },
   {
+    state: 'clarificationRequired',
+    buckets: ['warningHigh'],
+    label: 'Clarification / Document Required',
+    semanticColor: 'warning',
+  },
+  {
     state: 'awaitingDocuments',
     buckets: ['warning'],
     label: 'Awaiting Documents',
@@ -174,6 +183,7 @@ const KNOWN_STATUS_KEYS = new Set<OnboardingActionStatusKey>(
 
 const BUCKET_DISPLAY_ORDER: SummaryBucket[] = [
   'danger',
+  'warningHigh',
   'warning',
   'inReview',
   'draft',
@@ -199,13 +209,16 @@ function bucketForSource(source: StatusSource): SummaryBucket {
   if (label.includes('reject') || label.includes('escalat') || label.includes('hold')) {
     return 'danger'
   }
+  if (label.includes('awaiting documents')) {
+    return 'warning'
+  }
   if (
     label.includes('needs attention') ||
     label.includes('clarification') ||
     label.includes('document required') ||
-    label.includes('awaiting documents')
+    label.includes('nigo')
   ) {
-    return 'warning'
+    return 'warningHigh'
   }
   if (label.includes('review') || label.includes('kyc review')) {
     return 'inReview'
@@ -242,8 +255,12 @@ function formatBucketLabel(bucket: SummaryBucket, count: number): string {
   switch (bucket) {
     case 'danger':
       return count === 1 ? '1 Escalated / Rejected' : `${count} Escalated / Rejected`
+    case 'warningHigh':
+      return count === 1
+        ? '1 Clarification / Document Required'
+        : `${count} Clarification / Document Required`
     case 'warning':
-      return count === 1 ? '1 Awaiting Documents / Attention' : `${count} Awaiting Documents / Attention`
+      return count === 1 ? '1 Awaiting Documents' : `${count} Awaiting Documents`
     case 'inReview':
       return count === 1 ? '1 In Review' : `${count} In Review`
     case 'draft':
