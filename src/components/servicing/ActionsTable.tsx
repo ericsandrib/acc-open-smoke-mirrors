@@ -22,6 +22,8 @@ import { reviewerQueueLaneForDisplayStatus, type ReviewerQueueLane } from '@/dat
 import { sortJourneyGroupsByCreated } from '@/utils/journeyGroupSort'
 import { Badge } from '@/components/ui/badge'
 import { cn } from '@/lib/utils'
+import { OperationalStatusPill } from './operationalStatusPill'
+import { getOnboardingActionStatusDisplay } from '@/utils/onboardingActionStatus'
 
 const REVIEW_QUEUE_TYPE_PILL: Record<'KYC' | 'Account', string> = {
   KYC: 'bg-sky-50 text-sky-800 border-sky-200 shadow-none dark:bg-sky-950/45 dark:text-sky-200 dark:border-sky-800',
@@ -242,11 +244,18 @@ export function buildParentJourneyActionGroups(
 interface ActionsTableProps {
   rows: ActionRow[]
   visibleColumns: string[]
+  statusMode?: 'default' | 'onboarding'
   groupBy?: OnboardingActionsGroupBy
   pinJourneyId?: string
 }
 
-export function ActionsTable({ rows, visibleColumns, groupBy = 'none', pinJourneyId }: ActionsTableProps) {
+export function ActionsTable({
+  rows,
+  visibleColumns,
+  statusMode = 'default',
+  groupBy = 'none',
+  pinJourneyId,
+}: ActionsTableProps) {
   const navigate = useNavigate()
 
   const comparators = useMemo(
@@ -256,7 +265,11 @@ export function ActionsTable({ rows, visibleColumns, groupBy = 'none', pinJourne
       journeyName: compareString<ActionRow>((r) => r.journeyName),
       relationshipName: compareString<ActionRow>((r) => r.relationshipName),
       status: compareStatus<ActionRow>((r) => r.status, journeyStatusOrder),
-      stateModelStatus: compareString<ActionRow>((r) => r.stateModelStatus),
+      stateModelStatus: compareString<ActionRow>((r) =>
+        statusMode === 'onboarding'
+          ? getOnboardingActionStatusDisplay(r.displayStatus, r.stateModelStatus).label
+          : r.stateModelStatus,
+      ),
       reviewQueueItemType: compareString<ActionRow>((r) => r.reviewQueueItemType),
       reviewerQueueLane: compareString<ActionRow>((r) => r.reviewerQueueLane),
       assignedTo: compareString<ActionRow>((r) => r.assignedTo),
@@ -265,7 +278,7 @@ export function ActionsTable({ rows, visibleColumns, groupBy = 'none', pinJourne
         (r) => r.total,
       ),
     }),
-    [],
+    [statusMode],
   )
 
   const { sortedRows, sortKey, sortDirection, onSort } = useSortableTable(rows, comparators)
@@ -294,14 +307,20 @@ export function ActionsTable({ rows, visibleColumns, groupBy = 'none', pinJourne
     (vis('assignedTo') ? 1 : 0) +
     (vis('tasksComplete') ? 1 : 0)
 
-  const renderDataRow = (row: ActionRow) => (
-    <DataTableRow
-      key={row.id}
-      className="cursor-pointer"
-      onClick={() =>
-        navigate(row.parentActionId ? `/servicing/${row.journeyId}/action/${row.id}` : `/servicing/${row.journeyId}`)
-      }
-    >
+  const renderDataRow = (row: ActionRow) => {
+    const onboardingDisplay =
+      statusMode === 'onboarding'
+        ? getOnboardingActionStatusDisplay(row.displayStatus, row.stateModelStatus)
+        : null
+
+    return (
+      <DataTableRow
+        key={row.id}
+        className="cursor-pointer"
+        onClick={() =>
+          navigate(row.parentActionId ? `/servicing/${row.journeyId}/action/${row.id}` : `/servicing/${row.journeyId}`)
+        }
+      >
       {vis('nickname') && (
         <DataTableCell type="primary" className="min-w-0 max-w-[12rem] font-medium">
           {row.isChildWorkflow
@@ -333,18 +352,41 @@ export function ActionsTable({ rows, visibleColumns, groupBy = 'none', pinJourne
       )}
       {vis('status') && (
         <DataTableCell type="badge">
-          <StatusBadge status={row.status} />
+          {onboardingDisplay ? (
+            <OperationalStatusPill
+              label={onboardingDisplay.label}
+              className={onboardingDisplay.className}
+              variant={onboardingDisplay.pillVariant}
+              showIcon={Boolean(onboardingDisplay.pillVariant)}
+            />
+          ) : (
+            <StatusBadge status={row.status} />
+          )}
         </DataTableCell>
       )}
-      {vis('stateModelStatus') && <DataTableCell type="secondary">{row.stateModelStatus}</DataTableCell>}
+      {vis('stateModelStatus') && (
+        <DataTableCell type={statusMode === 'onboarding' ? 'badge' : 'secondary'}>
+          {onboardingDisplay ? (
+            <OperationalStatusPill
+              label={onboardingDisplay.label}
+              className={onboardingDisplay.className}
+              variant={onboardingDisplay.pillVariant}
+              showIcon={Boolean(onboardingDisplay.pillVariant)}
+            />
+          ) : (
+            row.stateModelStatus
+          )}
+        </DataTableCell>
+      )}
       {vis('assignedTo') && <DataTableCell>{row.assignedTo}</DataTableCell>}
       {vis('tasksComplete') && (
         <DataTableCell align="end" type="secondary">
           {row.complete}/{row.total}
         </DataTableCell>
       )}
-    </DataTableRow>
-  )
+      </DataTableRow>
+    )
+  }
 
   return (
     <DataTable>

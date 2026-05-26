@@ -1,5 +1,5 @@
 import { useMemo, useState, type ReactNode } from 'react'
-import type { Journey } from '@/types/servicing'
+import type { Journey, JourneyAction } from '@/types/servicing'
 import { useJourneyNavigation } from '@/hooks/useJourneyNavigation'
 import {
   DataTable,
@@ -7,7 +7,6 @@ import {
   DataTableRow,
   DataTableCell,
 } from '@/components/ui/data-table'
-import { StatusBadge } from './StatusBadge'
 import { OperationalStatusPill } from './operationalStatusPill'
 import { useSortableTable } from '@/hooks/useSortableTable'
 import {
@@ -17,9 +16,13 @@ import {
   journeyStatusOrder,
 } from '@/lib/sort-comparators'
 import { ChevronRight, ChevronDown, GitBranch, Link2, ShieldCheck, Briefcase } from 'lucide-react'
-import { childStatusConfig, type ChildDisplayStatus } from '@/utils/childStatusDisplay'
 import { visibleOnboardingJourneyActions } from '@/utils/onboardingJourneyActionTree'
 import { cn } from '@/lib/utils'
+import {
+  deriveOnboardingParentOperationalSummary,
+  getOnboardingActionStatusDisplay,
+  getOnboardingGenericStatusDisplay,
+} from '@/utils/onboardingActionStatus'
 
 export type OnboardingJourneyRow = Journey & { totalTasks: number; progressedTasks: number }
 
@@ -113,6 +116,38 @@ function ProgressBar({ value, className }: { value: number; className?: string }
   )
 }
 
+function renderOnboardingStatusPill({
+  label,
+  className,
+  pillVariant,
+}: {
+  label: string
+  className: string
+  pillVariant?: 'draft' | 'completed' | 'declined'
+}) {
+  return (
+    <OperationalStatusPill
+      variant={pillVariant}
+      label={label}
+      className={className}
+      showIcon={Boolean(pillVariant)}
+    />
+  )
+}
+
+function isDescendantOfAction(
+  candidate: JourneyAction,
+  ancestorId: string,
+  actionsById: Map<string, JourneyAction>,
+): boolean {
+  let currentParentId = candidate.parentActionId
+  while (currentParentId) {
+    if (currentParentId === ancestorId) return true
+    currentParentId = actionsById.get(currentParentId)?.parentActionId
+  }
+  return false
+}
+
 export function OnboardingJourneysTable({
   rows,
   visibleColumns,
@@ -201,6 +236,10 @@ export function OnboardingJourneysTable({
             hideKyc,
             hideAccountChildWorkflows,
           )
+          const actionsById = new Map(actions.map((action) => [action.id, action] as const))
+          const journeyLeafRows = actions.filter((action) => action.childId)
+          const journeySummary = deriveOnboardingParentOperationalSummary(journeyLeafRows)
+          const journeyStatusDisplay = journeySummary ?? getOnboardingGenericStatusDisplay(row.status)
           return [
             /* ── Journey row ─────────────────────────────────── */
             <DataTableRow
@@ -242,7 +281,7 @@ export function OnboardingJourneysTable({
               )}
               {vis('status') && (
                 <DataTableCell type="badge" onClick={() => navigateToServicing(row)}>
-                  <StatusBadge status={row.status} />
+                  {renderOnboardingStatusPill(journeyStatusDisplay)}
                 </DataTableCell>
               )}
               {vis('assignedTo') && (
@@ -272,6 +311,12 @@ export function OnboardingJourneysTable({
                   .filter((action) => !action.parentActionId)
                   .flatMap((action) => {
                     const childActions = actions.filter((a) => a.parentActionId === action.id)
+                    const actionLeafRows = actions.filter(
+                      (candidate) => candidate.childId && isDescendantOfAction(candidate, action.id, actionsById),
+                    )
+                    const actionStatusDisplay =
+                      deriveOnboardingParentOperationalSummary(actionLeafRows) ??
+                      getOnboardingGenericStatusDisplay(action.status)
                     const actionTotal = action.tasks.length
                     const actionDone = action.tasks.filter((t) => t.status !== 'not_started').length
                     const actionPct = actionTotal > 0 ? actionDone / actionTotal : 0
@@ -317,7 +362,7 @@ export function OnboardingJourneysTable({
                         {vis('relationshipName') && <DataTableCell />}
                         {vis('status') && (
                           <DataTableCell type="badge">
-                            <StatusBadge status={action.status} />
+                            {renderOnboardingStatusPill(actionStatusDisplay)}
                           </DataTableCell>
                         )}
                         {vis('assignedTo') && <DataTableCell />}
@@ -359,9 +404,10 @@ export function OnboardingJourneysTable({
 
                           /* ── Sub-workflow rows (accounts / kyc) ───── */
                           ...grandchildActions.flatMap((gc) => {
-                            const cfg = gc.displayStatus
-                              ? childStatusConfig[gc.displayStatus as ChildDisplayStatus]
-                              : undefined
+                            const statusDisplay = getOnboardingActionStatusDisplay(
+                              gc.displayStatus,
+                              gc.status === 'complete' ? 'Complete' : undefined,
+                            )
                             const gcGroups = actions.filter((a) => a.parentActionId === gc.id && a.groupType)
                             return [
                               <DataTableRow
@@ -380,16 +426,7 @@ export function OnboardingJourneysTable({
                                 {vis('relationshipName') && <DataTableCell />}
                                 {vis('status') && (
                                   <DataTableCell type="badge">
-                                    {cfg ? (
-                                      <OperationalStatusPill
-                                        variant={cfg.pillVariant}
-                                        label={cfg.label}
-                                        className={cfg.className}
-                                        showIcon={Boolean(cfg.pillVariant)}
-                                      />
-                                    ) : (
-                                      <StatusBadge status={gc.status} />
-                                    )}
+                                    {renderOnboardingStatusPill(statusDisplay)}
                                   </DataTableCell>
                                 )}
                                 {vis('assignedTo') && <DataTableCell />}
@@ -447,9 +484,10 @@ export function OnboardingJourneysTable({
 
                                   /* ── Expanded group children ──────────── */
                                   ...(isGroupExpanded ? groupChildren.map((gc2) => {
-                                    const gc2Cfg = gc2.displayStatus
-                                      ? childStatusConfig[gc2.displayStatus as ChildDisplayStatus]
-                                      : undefined
+                                    const gc2StatusDisplay = getOnboardingActionStatusDisplay(
+                                      gc2.displayStatus,
+                                      gc2.status === 'complete' ? 'Complete' : undefined,
+                                    )
                                     return (
                                       <DataTableRow
                                         key={`${row.id}-action-${gc2.id}`}
@@ -467,16 +505,7 @@ export function OnboardingJourneysTable({
                                         {vis('relationshipName') && <DataTableCell />}
                                         {vis('status') && (
                                           <DataTableCell type="badge">
-                                            {gc2Cfg ? (
-                                              <OperationalStatusPill
-                                                variant={gc2Cfg.pillVariant}
-                                                label={gc2Cfg.label}
-                                                className={gc2Cfg.className}
-                                                showIcon={Boolean(gc2Cfg.pillVariant)}
-                                              />
-                                            ) : (
-                                              <StatusBadge status={gc2.status} />
-                                            )}
+                                            {renderOnboardingStatusPill(gc2StatusDisplay)}
                                           </DataTableCell>
                                         )}
                                         {vis('assignedTo') && <DataTableCell />}
@@ -539,9 +568,10 @@ export function OnboardingJourneysTable({
                               </DataTableRow>,
 
                               ...(isGroupExpanded ? groupChildren.map((gc2) => {
-                                const gc2Cfg = gc2.displayStatus
-                                  ? childStatusConfig[gc2.displayStatus as ChildDisplayStatus]
-                                  : undefined
+                            const gc2StatusDisplay = getOnboardingActionStatusDisplay(
+                              gc2.displayStatus,
+                              gc2.status === 'complete' ? 'Complete' : undefined,
+                            )
                                 return (
                                   <DataTableRow
                                     key={`${row.id}-action-${gc2.id}`}
@@ -559,16 +589,7 @@ export function OnboardingJourneysTable({
                                     {vis('relationshipName') && <DataTableCell />}
                                     {vis('status') && (
                                       <DataTableCell type="badge">
-                                        {gc2Cfg ? (
-                                          <OperationalStatusPill
-                                            variant={gc2Cfg.pillVariant}
-                                            label={gc2Cfg.label}
-                                            className={gc2Cfg.className}
-                                            showIcon={Boolean(gc2Cfg.pillVariant)}
-                                          />
-                                        ) : (
-                                          <StatusBadge status={gc2.status} />
-                                        )}
+                                        {renderOnboardingStatusPill(gc2StatusDisplay)}
                                       </DataTableCell>
                                     )}
                                     {vis('assignedTo') && <DataTableCell />}

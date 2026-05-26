@@ -16,6 +16,11 @@ import {
   deriveParentOperationalSummary,
   formatWorkflowBreakdownLine,
 } from '@/utils/workflowSummary'
+import {
+  deriveOnboardingParentOperationalSummary,
+  formatOnboardingWorkflowBreakdownLine,
+  getOnboardingActionStatusDisplay,
+} from '@/utils/onboardingActionStatus'
 import { OperationalStatusPill } from './operationalStatusPill'
 import { cn } from '@/lib/utils'
 import {
@@ -144,7 +149,29 @@ function ReviewStatusBadge({
   )
 }
 
-function StateModelCell({ row, variant = 'default' }: { row: ActionRow; variant?: 'default' | 'detail' }) {
+function StateModelCell({
+  row,
+  variant = 'default',
+  statusMode = 'default',
+}: {
+  row: ActionRow
+  variant?: 'default' | 'detail'
+  statusMode?: 'default' | 'onboarding'
+}) {
+  if (statusMode === 'onboarding') {
+    const onboardingDisplay = getOnboardingActionStatusDisplay(
+      row.displayStatus,
+      row.stateModelStatus,
+    )
+    return (
+      <ReviewStatusBadge
+        label={onboardingDisplay.label}
+        className={onboardingDisplay.className}
+        variant={variant}
+        pillVariant={onboardingDisplay.pillVariant}
+      />
+    )
+  }
   const ds = row.displayStatus
   const cfg =
     ds && ds in childStatusConfig ? childStatusConfig[ds as ChildDisplayStatus] : undefined
@@ -165,15 +192,27 @@ function StateModelCell({ row, variant = 'default' }: { row: ActionRow; variant?
   )
 }
 
-function ParentOperationalStatusBadge({ allChildRows }: { allChildRows: ActionRow[] }) {
+function ParentOperationalStatusBadge({
+  allChildRows,
+  statusMode = 'default',
+}: {
+  allChildRows: ActionRow[]
+  statusMode?: 'default' | 'onboarding'
+}) {
   if (allChildRows.length === 0) {
     return <span className="text-sm text-muted-foreground">—</span>
   }
-  const summary = deriveParentOperationalSummary(allChildRows)
+  const summary =
+    statusMode === 'onboarding'
+      ? deriveOnboardingParentOperationalSummary(allChildRows)
+      : deriveParentOperationalSummary(allChildRows)
   if (!summary) {
     return <span className="text-sm text-muted-foreground">—</span>
   }
-  const breakdownLine = formatWorkflowBreakdownLine(allChildRows)
+  const breakdownLine =
+    statusMode === 'onboarding'
+      ? formatOnboardingWorkflowBreakdownLine(allChildRows)
+      : formatWorkflowBreakdownLine(allChildRows)
   const title = breakdownLine ? `${summary.label} · ${breakdownLine}` : summary.label
   return (
     <ReviewStatusBadge
@@ -189,6 +228,7 @@ interface DocumentReviewActionsTableProps {
   rows: ActionRow[]
   visibleColumns: string[]
   journeys: Journey[]
+  statusMode?: 'default' | 'onboarding'
   /** When omitted (e.g. Servicing), defaults to journey grouping. */
   groupBy?: OnboardingActionsGroupBy
   /**
@@ -262,6 +302,7 @@ export function DocumentReviewActionsTable({
   rows,
   visibleColumns,
   journeys,
+  statusMode = 'default',
   groupBy,
   nestRowMode = 'pipeline',
   showNestedFundingGroups = false,
@@ -453,7 +494,11 @@ export function DocumentReviewActionsTable({
             {isGroup ? (
               <span className="text-sm text-muted-foreground">—</span>
             ) : (
-              <StateModelCell row={row} variant="detail" />
+              <StateModelCell
+                row={row}
+                variant={statusMode === 'onboarding' ? 'default' : 'detail'}
+                statusMode={statusMode}
+              />
             )}
           </DataTableCell>
         )}
@@ -547,7 +592,11 @@ export function DocumentReviewActionsTable({
                 )}
                 {vis('stateModelStatus') && (
                   <DataTableCell type="badge">
-                    <StateModelCell row={row} variant="detail" />
+                    <StateModelCell
+                      row={row}
+                      variant={statusMode === 'onboarding' ? 'default' : 'detail'}
+                      statusMode={statusMode}
+                    />
                   </DataTableCell>
                 )}
                 {vis('assignedTo') && <DataTableCell>{row.assignedTo}</DataTableCell>}
@@ -622,7 +671,10 @@ export function DocumentReviewActionsTable({
                   )}
                   {vis('stateModelStatus') && (
                     <DataTableCell type="badge" className="align-middle">
-                      <ParentOperationalStatusBadge allChildRows={allChildRows} />
+                      <ParentOperationalStatusBadge
+                        allChildRows={allChildRows}
+                        statusMode={statusMode}
+                      />
                     </DataTableCell>
                   )}
                   {vis('assignedTo') && (

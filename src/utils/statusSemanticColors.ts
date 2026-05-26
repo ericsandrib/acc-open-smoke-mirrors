@@ -5,13 +5,10 @@
  * resolve through this one module so the visual language stays consistent.
  *
  * Buckets:
- *   - success: positive — the workflow is advancing through the pipeline or
- *     has completed successfully. Covers both in-flight motion and terminal
- *     completion; treatment (filled vs. tinted) differentiates them visually
- *     in the Application Status widget.
- *   - warning: human follow-up needed (NIGO / clarification / escalation hold)
- *   - danger: explicit failure or blocked
- *   - neutral: pre-flight (Draft / Ready to Begin) or terminal-neutral
+ *   - success: positive completed / approved outcomes
+ *   - warning: human follow-up needed
+ *   - danger: explicit failure, hard stop, or escalation
+ *   - neutral: in-flight without judgement, pre-flight, or terminal-neutral
  *     (Canceled)
  *   - default: black fallback for unknown statuses
  *
@@ -74,34 +71,42 @@ export const statusSemanticClasses: Record<StatusSemantic, StatusSemanticClasses
  * Status name → semantic bucket.
  * Covers TaskStatus, JourneyStatus, and ChildDisplayStatus (single union of strings).
  */
-export const statusSemantic: Record<string, StatusSemantic> = {
+export const STATUS_SEMANTIC: Record<string, StatusSemantic> = {
   // success — terminal positive
   complete: 'success',
+  approved: 'success',
+  verified: 'success',
+  pass: 'success',
+  clear: 'success',
 
-  // success — in-flight motion through the pipeline reads as "on track."
-  // Only Draft and the explicit pre-flight / terminal-neutral states stay
-  // grey; everything actively moving through review goes green so the
-  // servicing table reads as alive.
-  in_progress: 'success',
-  awaiting_review: 'success',
-  awaiting_client_signature: 'success',
-  awaiting_documents: 'success',
-  aml_review: 'success',
-  document_review: 'success',
-  ho_kyc_review: 'success',
-  principal_review: 'success',
+  // success — explicitly positive / approved outcomes
+  pending_release: 'success',
+
+  // neutral — in-flight operational states without judgement
+  submitted: 'neutral',
+  in_review: 'neutral',
+  in_progress: 'neutral',
+  awaiting_review: 'neutral',
+  awaiting_client_signature: 'neutral',
+  aml_review: 'neutral',
+  document_review: 'neutral',
+  ho_kyc_review: 'neutral',
+  principal_review: 'neutral',
 
   // warning — advisor / compliance action needed
   nigo: 'warning',
   nigo_document: 'warning',
   nigo_principal: 'warning',
   clarification_required: 'warning',
-  escalation_hold: 'warning',
+  needs_attention: 'warning',
+  awaiting_documents: 'warning',
 
-  // danger — explicit failure or workflow halted
+  // danger — explicit failure, escalation, or workflow halted
   blocked: 'danger',
+  hard_stop: 'danger',
   rejected: 'danger',
   rejected_aml: 'danger',
+  escalation_hold: 'danger',
 
   // neutral — pre-flight or terminal-neutral
   not_started: 'neutral',
@@ -110,20 +115,30 @@ export const statusSemantic: Record<string, StatusSemantic> = {
   cancelled: 'neutral',
 
   // EsignEnvelopeStatus values
-  // 'sent' / 'delivered' = "Awaiting Client Signature" → success (the
-  // envelope is in motion through the client). 'completed' is terminal
-  // success. 'declined' is terminal failure. 'voided' is canceled by the
-  // sender — terminal-neutral.
-  sent: 'success',
-  delivered: 'success',
+  // 'sent' / 'delivered' / 'viewed' = "Awaiting Client Signature" → neutral.
+  // 'completed' is terminal success. 'declined' is terminal failure.
+  // 'voided' is canceled by the sender — terminal-neutral.
+  sent: 'neutral',
+  delivered: 'neutral',
+  viewed: 'neutral',
   completed: 'success',
   declined: 'danger',
   voided: 'neutral',
+
+  // fallback-friendly explicit status token
+  unknown: 'default',
+}
+
+export const statusSemantic = STATUS_SEMANTIC
+
+function isSemanticToken(value: string): value is StatusSemantic {
+  return value in statusSemanticClasses
 }
 
 export function getStatusSemantic(status?: string): StatusSemantic {
   if (!status) return 'default'
-  return statusSemantic[status] ?? 'default'
+  if (isSemanticToken(status)) return status
+  return STATUS_SEMANTIC[status] ?? 'default'
 }
 
 export function getStatusSemanticClasses(status?: string): StatusSemanticClasses {
@@ -148,18 +163,18 @@ export const stageLabelSemantic: Record<string, StatusSemantic> = {
   'Pending Release': 'success',
   Complete: 'success',
 
-  // success — active in-flight (on-track motion reads as positive)
-  'ID Verification': 'success',
-  'Client Signature': 'success',
-  Submitted: 'success',
-  'Awaiting Review': 'success',
-  'AML Review': 'success',
-  'Document Review': 'success',
-  'Principal Review': 'success',
+  // neutral — active in-flight workflow states without judgement
+  'ID Verification': 'neutral',
+  'Client Signature': 'neutral',
+  Submitted: 'neutral',
+  'Awaiting Review': 'neutral',
+  'AML Review': 'neutral',
+  'Document Review': 'neutral',
+  'Principal Review': 'neutral',
 
   // warning — human follow-up needed
   'Clarification / Document Required': 'warning',
-  'Escalation / Hold': 'warning',
+  'Escalation / Hold': 'danger',
 
   // danger — explicit failure
   Rejected: 'danger',

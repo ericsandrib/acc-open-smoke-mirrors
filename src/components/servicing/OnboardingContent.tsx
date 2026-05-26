@@ -23,6 +23,7 @@ import {
 export function OnboardingContent() {
   const { onboardingJourneys, currentLiveJourney, lastCreatedJourneyId } = useServicing()
   const { state } = useWorkflow()
+  const onboardingActionsHiddenColumns = useMemo(() => new Set(['reviewQueueItemType']), [])
 
   const pinRowId = useMemo(() => {
     if (onboardingJourneys.some((j) => j.id === lastCreatedJourneyId)) {
@@ -50,6 +51,27 @@ export function OnboardingContent() {
     [onboardingJourneys, hideKycChildWorkflows],
   )
   const actionPresets = useMemo(() => actionPresetsForDemoView(state.demoViewMode), [state.demoViewMode])
+  const onboardingActionColumns = useMemo(
+    () => actionColumns.filter((column) => !onboardingActionsHiddenColumns.has(column.key)),
+    [onboardingActionsHiddenColumns],
+  )
+  const onboardingActionPresets = useMemo(
+    () =>
+      actionPresets.map((preset) => ({
+        ...preset,
+        visibleColumns: preset.visibleColumns.filter(
+          (columnKey) => !onboardingActionsHiddenColumns.has(columnKey),
+        ),
+      })),
+    [actionPresets, onboardingActionsHiddenColumns],
+  )
+  const onboardingJourneyGroupedActionColumns = useMemo(
+    () =>
+      actionVisibleColumnsJourneyGroupedShell.filter(
+        (columnKey) => !onboardingActionsHiddenColumns.has(columnKey),
+      ),
+    [onboardingActionsHiddenColumns],
+  )
   /** One persist bucket for all reviewer teams so switching views keeps the selected tab. */
   const actionsTablePersistKey =
     (state.demoViewMode ?? 'advisor') === 'advisor' ? 'advisor' : 'reviewer'
@@ -101,14 +123,17 @@ export function OnboardingContent() {
         <TabsContent value="actions">
           <TableViewWrapper
             tableId={`onboarding-actions-${actionsTablePersistKey}`}
-            presets={actionPresets}
-            columns={actionColumns}
+            presets={onboardingActionPresets}
+            columns={onboardingActionColumns}
             allRows={actionRows}
             defaultRelationshipScope="all"
             showGroupBy
             defaultGroupBy={defaultActionsGroupBy}
           >
             {({ rows, visibleColumns, activeViewId, groupBy }) => {
+              const onboardingVisibleColumns = visibleColumns.filter(
+                (columnKey) => !onboardingActionsHiddenColumns.has(columnKey),
+              )
               const reviewerQueue = Boolean(activeViewId && isReviewerWorkQueuePresetId(activeViewId))
               const advisorJourneyGrouped = isAdvisor && groupBy === 'parentJourneyId'
 
@@ -121,8 +146,9 @@ export function OnboardingContent() {
                 return (
                   <DocumentReviewActionsTable
                     rows={reviewerRows}
-                    visibleColumns={visibleColumns}
+                    visibleColumns={onboardingVisibleColumns}
                     journeys={onboardingJourneys}
+                    statusMode="onboarding"
                     groupBy={flatStatusTab ? 'none' : (groupBy ?? 'parentJourneyId')}
                     nestRowMode="pipeline"
                     hideKycChildWorkflows={hideKycChildWorkflows}
@@ -135,8 +161,9 @@ export function OnboardingContent() {
                 return (
                   <DocumentReviewActionsTable
                     rows={rows}
-                    visibleColumns={actionVisibleColumnsJourneyGroupedShell}
+                    visibleColumns={onboardingJourneyGroupedActionColumns}
                     journeys={onboardingJourneys}
+                    statusMode="onboarding"
                     groupBy={groupBy}
                     nestRowMode="allChildWorkflows"
                     showNestedFundingGroups
@@ -148,7 +175,8 @@ export function OnboardingContent() {
               return (
                 <ActionsTable
                   rows={rows}
-                  visibleColumns={visibleColumns}
+                  visibleColumns={onboardingVisibleColumns}
+                  statusMode="onboarding"
                   groupBy={groupBy}
                   pinJourneyId={pinRowId}
                 />

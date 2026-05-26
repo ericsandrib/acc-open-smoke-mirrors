@@ -24,9 +24,9 @@ export type ChildDisplayStatus =
   | 'complete'
 
 /** Parent rollup "Needs attention" — warning bucket. */
-export const NEEDS_ATTENTION_PILL = getStatusSemanticClasses('escalation_hold').pill
+export const NEEDS_ATTENTION_PILL = getStatusSemanticClasses('clarification_required').pill
 
-/** Awaiting documents — neutral grey. */
+/** Awaiting documents — warning yellow. */
 export const AWAITING_DOCUMENTS_PILL = getStatusSemanticClasses('awaiting_documents').pill
 
 export const childStatusConfig: Record<
