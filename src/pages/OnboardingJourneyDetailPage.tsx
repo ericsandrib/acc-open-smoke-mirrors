@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react'
-import { useParams, useNavigate, Link } from 'react-router-dom'
+import { useParams, Link } from 'react-router-dom'
 import { AppShell } from '@/components/layout/AppShell'
 import { PageTitle } from '@/components/page-title'
 import { useServicing } from '@/stores/servicingStore'
@@ -7,7 +7,7 @@ import { useTheme } from '@/stores/themeStore'
 import { useJourneyNavigation } from '@/hooks/useJourneyNavigation'
 import { deriveOnboardingJourneyRows } from '@/components/servicing/OnboardingJourneysTable'
 import { visibleOnboardingJourneyActions } from '@/utils/onboardingJourneyActionTree'
-import { OperationalStatusPill } from '@/components/servicing/operationalStatusPill'
+import { StatusBadge } from '@/components/servicing/StatusBadge'
 import { cn } from '@/lib/utils'
 import { ChevronRight, ChevronDown } from 'lucide-react'
 import {
@@ -17,12 +17,6 @@ import {
   DataTableCell,
 } from '@/components/ui/data-table'
 import { AdvisorReviewerPerspectiveCard } from '@/components/wizard/AdvisorReviewerPerspectiveCard'
-import type { JourneyAction, JourneyStatus } from '@/types/servicing'
-import {
-  deriveOnboardingParentOperationalSummary,
-  getOnboardingActionStatusDisplay,
-  getOnboardingGenericStatusDisplay,
-} from '@/utils/onboardingActionStatus'
 
 function ProgressBar({ value, className }: { value: number; className?: string }) {
   const pct = Math.max(0, Math.min(100, Math.round(value * 100)))
@@ -38,41 +32,8 @@ function ProgressBar({ value, className }: { value: number; className?: string }
 
 const allColumns = ['name', 'relationshipName', 'status', 'assignedTo', 'createdAt', 'progress']
 
-function renderOnboardingStatusPill({
-  label,
-  className,
-  pillVariant,
-}: {
-  label: string
-  className: string
-  pillVariant?: 'draft' | 'completed' | 'declined'
-}) {
-  return (
-    <OperationalStatusPill
-      variant={pillVariant}
-      label={label}
-      className={className}
-      showIcon={Boolean(pillVariant)}
-    />
-  )
-}
-
-function isDescendantOfAction(
-  candidate: JourneyAction,
-  ancestorId: string,
-  actionsById: Map<string, JourneyAction>,
-): boolean {
-  let currentParentId = candidate.parentActionId
-  while (currentParentId) {
-    if (currentParentId === ancestorId) return true
-    currentParentId = actionsById.get(currentParentId)?.parentActionId
-  }
-  return false
-}
-
 export function OnboardingJourneyDetailPage() {
   const { journeyId } = useParams<{ journeyId: string }>()
-  const navigate = useNavigate()
   const { onboardingJourneys } = useServicing()
   const { showNestedGroups, hideKycChildWorkflows } = useTheme()
   const { navigateToServicing } = useJourneyNavigation()
@@ -120,11 +81,6 @@ export function OnboardingJourneyDetailPage() {
     hideKycChildWorkflows,
     hideKycChildWorkflows,
   )
-  const actionsById = new Map(actions.map((action) => [action.id, action] as const))
-  const journeyLeafRows = actions.filter((action) => action.childId)
-  const journeyStatusDisplay =
-    deriveOnboardingParentOperationalSummary(journeyLeafRows) ??
-    getOnboardingGenericStatusDisplay(row.status as JourneyStatus)
 
   return (
     <>
@@ -146,7 +102,7 @@ export function OnboardingJourneyDetailPage() {
             subHead={`${row.relationshipName} · ${row.assignedTo}`}
           />
           <div className="flex items-center gap-3">
-            {renderOnboardingStatusPill(journeyStatusDisplay)}
+            <StatusBadge status={row.status} iconPosition="right" scheme="journeyWorkflow" />
             <div className="flex items-center gap-2 text-sm text-muted-foreground">
               <span className="font-medium text-foreground">{row.progressedTasks}/{row.totalTasks}</span>
               <ProgressBar value={journeyPct} />
@@ -170,12 +126,6 @@ export function OnboardingJourneyDetailPage() {
               .filter((action) => !action.parentActionId)
               .flatMap((action) => {
                 const childActions = actions.filter((a) => a.parentActionId === action.id)
-                const actionLeafRows = actions.filter(
-                  (candidate) => candidate.childId && isDescendantOfAction(candidate, action.id, actionsById),
-                )
-                const actionStatusDisplay =
-                  deriveOnboardingParentOperationalSummary(actionLeafRows) ??
-                  getOnboardingGenericStatusDisplay(action.status)
                 const actionTotal = action.tasks.length
                 const actionDone = action.tasks.filter((t) => t.status !== 'not_started').length
                 const actionPct = actionTotal > 0 ? actionDone / actionTotal : 0
@@ -197,10 +147,6 @@ export function OnboardingJourneyDetailPage() {
                       </tr>,
 
                       ...grandchildActions.flatMap((gc) => {
-                        const gcStatusDisplay = getOnboardingActionStatusDisplay(
-                          gc.displayStatus,
-                          gc.status === 'complete' ? 'Complete' : undefined,
-                        )
                         const gcGroups = actions.filter((a) => a.parentActionId === gc.id && a.groupType)
                         return [
                           <DataTableRow
@@ -214,7 +160,11 @@ export function OnboardingJourneyDetailPage() {
                             </DataTableCell>
                             <DataTableCell />
                             <DataTableCell type="badge">
-                              {renderOnboardingStatusPill(gcStatusDisplay)}
+                              <StatusBadge
+                                status={gc.status}
+                                iconPosition="right"
+                                scheme="journeyWorkflow"
+                              />
                             </DataTableCell>
                             <DataTableCell />
                             <DataTableCell />
@@ -263,10 +213,6 @@ export function OnboardingJourneyDetailPage() {
                               </DataTableRow>,
 
                               ...(isGroupExpanded ? groupChildren.map((gc2) => {
-                                const gc2StatusDisplay = getOnboardingActionStatusDisplay(
-                                  gc2.displayStatus,
-                                  gc2.status === 'complete' ? 'Complete' : undefined,
-                                )
                                 return (
                                   <DataTableRow
                                     key={`action-${gc2.id}`}
@@ -279,7 +225,11 @@ export function OnboardingJourneyDetailPage() {
                                     </DataTableCell>
                                     <DataTableCell />
                                     <DataTableCell type="badge">
-                                      {renderOnboardingStatusPill(gc2StatusDisplay)}
+                                      <StatusBadge
+                                        status={gc2.status}
+                                        iconPosition="right"
+                                        scheme="journeyWorkflow"
+                                      />
                                     </DataTableCell>
                                     <DataTableCell />
                                     <DataTableCell />
@@ -334,10 +284,6 @@ export function OnboardingJourneyDetailPage() {
                           </DataTableRow>,
 
                           ...(isGroupExpanded ? groupChildren.map((gc2) => {
-                            const gc2StatusDisplay = getOnboardingActionStatusDisplay(
-                              gc2.displayStatus,
-                              gc2.status === 'complete' ? 'Complete' : undefined,
-                            )
                             return (
                               <DataTableRow
                                 key={`action-${gc2.id}`}
@@ -350,7 +296,11 @@ export function OnboardingJourneyDetailPage() {
                                 </DataTableCell>
                                 <DataTableCell />
                                 <DataTableCell type="badge">
-                                  {renderOnboardingStatusPill(gc2StatusDisplay)}
+                                  <StatusBadge
+                                    status={gc2.status}
+                                    iconPosition="right"
+                                    scheme="journeyWorkflow"
+                                  />
                                 </DataTableCell>
                                 <DataTableCell />
                                 <DataTableCell />
@@ -380,7 +330,11 @@ export function OnboardingJourneyDetailPage() {
                     </DataTableCell>
                     <DataTableCell />
                     <DataTableCell type="badge">
-                      {renderOnboardingStatusPill(actionStatusDisplay)}
+                      <StatusBadge
+                        status={action.status}
+                        iconPosition="right"
+                        scheme="journeyWorkflow"
+                      />
                     </DataTableCell>
                     <DataTableCell />
                     <DataTableCell />

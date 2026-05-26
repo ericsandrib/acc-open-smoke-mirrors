@@ -138,6 +138,7 @@ export function OperationalStatusPill({
   className,
   title,
   showIcon = true,
+  iconPosition = 'left',
 }: {
   status?: OperationalStatusKey
   variant?: OperationalPillVariant
@@ -146,6 +147,7 @@ export function OperationalStatusPill({
   className?: string
   title?: string
   showIcon?: boolean
+  iconPosition?: 'left' | 'right'
 }) {
   const resolved =
     (variant ? variantAppearance[variant] : undefined) ??
@@ -155,7 +157,10 @@ export function OperationalStatusPill({
   const icon = resolved?.icon
 
   return (
-    <span title={title} className={cn(pillBase, styles)}>
+    <span
+      title={title}
+      className={cn(pillBase, iconPosition === 'right' && 'flex-row-reverse', styles)}
+    >
       {showIcon && icon}
       {text}
     </span>

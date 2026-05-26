@@ -98,10 +98,10 @@ const STATUS_SEMANTIC_BY_BUCKET: Record<SummaryBucket, StatusSemantic> = {
   danger: 'danger',
   warningHigh: 'warning',
   warning: 'warning',
-  inReview: 'neutral',
+  inReview: 'success',
   draft: 'neutral',
-  complete: 'success',
-  canceled: 'neutral',
+  complete: 'neutral',
+  canceled: 'danger',
   unknown: 'default',
 }
 
@@ -153,7 +153,7 @@ const PARENT_OPERATIONAL_TIERS: Array<{
     state: 'inReview',
     buckets: ['inReview'],
     label: 'In Review',
-    semanticColor: 'neutral',
+    semanticColor: 'success',
   },
   {
     state: 'draft',
@@ -166,14 +166,14 @@ const PARENT_OPERATIONAL_TIERS: Array<{
     state: 'complete',
     buckets: ['complete'],
     label: 'Complete',
-    semanticColor: 'success',
+    semanticColor: 'neutral',
     pillVariant: 'completed',
   },
   {
     state: 'canceled',
     buckets: ['canceled'],
     label: 'Canceled',
-    semanticColor: 'neutral',
+    semanticColor: 'danger',
   },
 ]
 

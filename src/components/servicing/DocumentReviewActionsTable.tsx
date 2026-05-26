@@ -144,7 +144,7 @@ function ReviewStatusBadge({
       variant={pillVariant}
       label={label}
       className={cn(variant === 'detail' && 'opacity-[0.88] ring-1 ring-border/40', className)}
-      showIcon={Boolean(pillVariant)}
+      showIcon={false}
     />
   )
 }

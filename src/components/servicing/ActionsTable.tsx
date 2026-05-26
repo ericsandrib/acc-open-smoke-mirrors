@@ -357,7 +357,7 @@ export function ActionsTable({
               label={onboardingDisplay.label}
               className={onboardingDisplay.className}
               variant={onboardingDisplay.pillVariant}
-              showIcon={Boolean(onboardingDisplay.pillVariant)}
+              showIcon={false}
             />
           ) : (
             <StatusBadge status={row.status} />
@@ -371,7 +371,7 @@ export function ActionsTable({
               label={onboardingDisplay.label}
               className={onboardingDisplay.className}
               variant={onboardingDisplay.pillVariant}
-              showIcon={Boolean(onboardingDisplay.pillVariant)}
+              showIcon={false}
             />
           ) : (
             row.stateModelStatus
