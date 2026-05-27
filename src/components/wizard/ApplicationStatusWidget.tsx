@@ -43,17 +43,17 @@ export function ApplicationStatusWidget({
     <div className={cn('flex min-w-0 items-center gap-2', className)}>
       <div
         className={cn(
-          'flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border',
+          'flex h-11 w-11 shrink-0 items-center justify-center rounded-lg border',
           boxClass,
         )}
       >
         <FileText className={cn('h-4 w-4', iconClass)} />
       </div>
       <div className="min-w-0">
-        <p className="text-[11px] font-medium leading-none text-muted-foreground">
+        <p className="text-[12px] font-medium leading-[16px] text-muted-foreground">
           Application Status
         </p>
-        <p className="truncate text-[17px] font-semibold leading-[1.15] text-foreground">
+        <p className="truncate text-[16px] font-semibold leading-[24px] text-foreground">
           {stageLabel}
         </p>
       </div>

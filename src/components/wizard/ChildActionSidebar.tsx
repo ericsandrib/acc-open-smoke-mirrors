@@ -1514,14 +1514,14 @@ function ChildActionSidebarInner() {
           return (
             <div className="shrink-0 p-2 border-t border-border">
               <div className="rounded-xl border border-border/80 bg-card overflow-hidden shadow-sm">
-                <div className="px-3 pb-2 pt-3">
+                <div className="px-4 pb-2 pt-3">
                   <ApplicationStatusWidget stageLabel={stageLabel} />
                 </div>
-                <div className="px-3 pb-2.5 space-y-3">
+                <div className="px-4 pb-4 space-y-3">
                   {clarificationRequired ? (
                     <p className="text-sm text-foreground leading-snug">{statusSentence}</p>
                   ) : (
-                    <p className="text-[12.5px] font-normal text-muted-foreground/85 leading-snug">
+                    <p className="text-[16px] font-normal text-primary leading-snug">
                       {statusSentence}
                       {detailSentence ? (
                         <>
