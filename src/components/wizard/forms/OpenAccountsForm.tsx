@@ -1533,7 +1533,7 @@ export function OpenAccountsForm() {
           </div>
         ) : null}
         {esignEnvelopes.length === 0 ? (
-          <div className="rounded-lg border border-dashed border-border p-6 text-center">
+          <div className="rounded-lg border border-dashed border-border px-6 py-20 text-center">
             <FileSignature className="mx-auto mb-2 h-8 w-8 text-muted-foreground/50" />
             <p className="text-sm font-medium text-muted-foreground mb-4">No forms packages created yet.</p>
             <Button type="button" variant="secondary" onClick={openNewEnvelopeDrawer}>
@@ -1547,7 +1547,7 @@ export function OpenAccountsForm() {
               {esignEnvelopes.map((env) => (
                 <li
                   key={env.id}
-                  className="group flex cursor-pointer items-center justify-between rounded-xl p-3 transition-colors hover:bg-muted/50"
+                  className="group flex min-h-[72px] cursor-pointer items-center justify-between rounded-xl px-3 transition-colors hover:bg-muted/50"
                   role="button"
                   tabIndex={0}
                   onClick={() => openEditEnvelopeDrawer(env)}
@@ -1559,7 +1559,7 @@ export function OpenAccountsForm() {
                   }}
                 >
                   <div className="flex min-w-0 flex-1 items-center gap-3">
-                    <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-muted text-sm font-medium">
+                    <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-muted text-sm font-medium">
                       <FileSignature className="h-4 w-4" />
                     </div>
                     <div className="min-w-0 space-y-1">
@@ -1595,10 +1595,18 @@ export function OpenAccountsForm() {
                 </li>
               ))}
             </ul>
-            <Button type="button" variant="ghost" className="w-full gap-1.5" onClick={openNewEnvelopeDrawer}>
-              <Plus className="h-4 w-4" />
-              Add forms package
-            </Button>
+            <button
+              type="button"
+              onClick={openNewEnvelopeDrawer}
+              className="group flex min-h-[72px] w-full items-center gap-3 rounded-xl px-3 text-left transition-colors hover:bg-muted/50"
+            >
+              <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full">
+                <Plus className="h-4 w-4" />
+              </div>
+              <span className="text-sm font-medium text-muted-foreground transition-colors group-hover:text-foreground">
+                Add forms package
+              </span>
+            </button>
           </div>
         )}
       </section>
