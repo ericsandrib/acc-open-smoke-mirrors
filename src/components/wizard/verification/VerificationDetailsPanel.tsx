@@ -147,7 +147,7 @@ export function VerificationDetailsPanel({
     <div className="space-y-4">
       {/* 1. KYC status — mirrors the PartySlotCard contact-card alert (icon +
           title + supporting copy on a toned container). */}
-      <KycStatusContactCardAlert badge={badge} />
+      <KycStatusContactCardAlert badge={badge} variant="reviewer" />
 
       {/* 2. AML status — outcome, then findings, then secondary guidance */}
       <section className="space-y-3">

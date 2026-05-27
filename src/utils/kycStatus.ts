@@ -270,6 +270,45 @@ export function isKycStatusAttention(status: KycStatus): boolean {
   return status === 'fail' || status === 'pending_review' || status === 'unverified'
 }
 
+/**
+ * Advisor owner card: show warning banner only after screening surfaces an issue.
+ * `unverified` (not run / pre-send) is hidden — same as pass (no banner, no status label).
+ */
+export function ownerRequiresAdditionalVerification(
+  owner?: OwnerKycReviewState,
+  party?: RelatedParty,
+): boolean {
+  const status = getKycStatus(owner, party)
+  return status === 'fail' || status === 'pending_review' || status === 'expired'
+}
+
+export const ADVISOR_OWNER_VERIFICATION_BANNER = {
+  title: 'Additional verification required',
+  description:
+    'Supporting documents may be required before this account can be approved.',
+  linkLabel: 'Review accepted supporting documents',
+} as const
+
+/** Advisor inline banner copy — no compliance status labels. */
+export function getAdvisorOwnerVerificationBannerCopy(
+  owner?: OwnerKycReviewState,
+  party?: RelatedParty,
+): { title: string; description: string } {
+  const missing = party ? getMissingOwnerKycFields(party) : []
+  if (missing.length > 0 && !owner?.autoTriggeredAt) {
+    const labels = missing.slice(0, 2).map((k) => OWNER_KYC_REQUIRED_FIELD_LABELS[k])
+    const extra = missing.length > 2 ? ` (+${missing.length - 2} more)` : ''
+    return {
+      title: ADVISOR_OWNER_VERIFICATION_BANNER.title,
+      description: `Complete ${labels.join(', ')}${extra} before verification can run. Supporting documents may be required before this account can be approved.`,
+    }
+  }
+  return {
+    title: ADVISOR_OWNER_VERIFICATION_BANNER.title,
+    description: ADVISOR_OWNER_VERIFICATION_BANNER.description,
+  }
+}
+
 /** AML cleared via automated screening with no watchlist hits (seed / demo copy). */
 export function isAutomatedAmlClearMessage(reason?: string | null): boolean {
   if (!reason?.trim()) return false

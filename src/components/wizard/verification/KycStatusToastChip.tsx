@@ -1,6 +1,14 @@
-import { AlertTriangle, CheckCircle2, Clock } from 'lucide-react'
+import { AlertTriangle, CheckCircle2, Clock, ExternalLink } from 'lucide-react'
 import { cn } from '@/lib/utils'
-import type { KycStatus, KycStatusBadge, KycStatusTone } from '@/utils/kycStatus'
+import {
+  ADVISOR_OWNER_VERIFICATION_BANNER,
+  getAdvisorOwnerVerificationBannerCopy,
+  type KycStatus,
+  type KycStatusBadge,
+  type KycStatusTone,
+} from '@/utils/kycStatus'
+import type { OwnerKycReviewState, RelatedParty } from '@/types/workflow'
+import { KYC_ACCEPTED_SUPPORTING_DOCUMENTS_GUIDE_URL } from '@/utils/formsPackageKycReview'
 
 const DEFAULT_UNVERIFIED_DESCRIPTION =
   'Verification will run automatically before final submission.'
@@ -50,12 +58,12 @@ function alertVisualForTone(tone: KycStatusTone, status?: KycStatus, label?: str
   }
 }
 
-function resolveAlertTitle(label: string): string {
+function resolveReviewerAlertTitle(label: string): string {
   if (label === 'Unverified' || label === 'Not Started') return 'KYC Unverified'
   return `KYC ${label}`
 }
 
-function resolveAlertDescription(
+function resolveReviewerAlertDescription(
   badge: KycStatusBadge | undefined,
   label: string,
   status?: KycStatus,
@@ -80,24 +88,89 @@ function resolveAlertDescription(
 }
 
 /**
- * Figma contact-card KYC alert (Working File node 306:20747) — DialKit v2.
+ * Advisor owner card — warning-only inline banner; hidden when verification is clear.
+ */
+export function OwnerVerificationAdvisorBanner({
+  owner,
+  party,
+  className,
+  showResourceLink = true,
+}: {
+  owner?: OwnerKycReviewState
+  party?: RelatedParty
+  className?: string
+  showResourceLink?: boolean
+}) {
+  const { title, description } = getAdvisorOwnerVerificationBannerCopy(owner, party)
+
+  return (
+    <div
+      className={cn(
+        'flex w-full items-start gap-3 rounded-lg bg-amber-500/[0.08] p-4',
+        className,
+      )}
+      role="status"
+      aria-label={`${title}. ${description}`}
+    >
+      <div className="flex shrink-0 flex-col items-start justify-center pt-0.5">
+        <AlertTriangle
+          className="h-4 w-4 text-amber-700 dark:text-amber-400"
+          aria-hidden
+        />
+      </div>
+      <div className="min-w-0 flex-1 space-y-2">
+        <div className="space-y-1">
+          <p className="text-sm font-medium leading-5 text-amber-700 dark:text-amber-300">
+            {title}
+          </p>
+          <p className="text-sm font-normal leading-5 text-muted-foreground">{description}</p>
+        </div>
+        {showResourceLink ? (
+          <a
+            href={KYC_ACCEPTED_SUPPORTING_DOCUMENTS_GUIDE_URL}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center gap-1.5 text-sm font-medium text-primary hover:underline"
+          >
+            {ADVISOR_OWNER_VERIFICATION_BANNER.linkLabel}
+            <ExternalLink className="h-3.5 w-3.5" aria-hidden />
+          </a>
+        ) : null}
+      </div>
+    </div>
+  )
+}
+
+/**
+ * Contact-card / reviewer verification alert.
+ * Advisors should use {@link OwnerVerificationAdvisorBanner} instead.
  */
 export function KycStatusContactCardAlert({
   badge,
   label,
   tone = 'neutral',
+  variant = 'reviewer',
+  owner,
+  party,
   className,
 }: {
   badge?: KycStatusBadge
   label?: string
   tone?: KycStatusTone
+  variant?: 'advisor' | 'reviewer'
+  owner?: OwnerKycReviewState
+  party?: RelatedParty
   className?: string
 }) {
+  if (variant === 'advisor') {
+    return <OwnerVerificationAdvisorBanner owner={owner} party={party} className={className} />
+  }
+
   const resolvedLabel = badge?.label ?? label ?? 'Unverified'
   const resolvedTone = badge?.tone ?? tone
   const visual = alertVisualForTone(resolvedTone, badge?.status, resolvedLabel)
-  const title = resolveAlertTitle(resolvedLabel)
-  const description = resolveAlertDescription(badge, resolvedLabel, badge?.status)
+  const title = resolveReviewerAlertTitle(resolvedLabel)
+  const description = resolveReviewerAlertDescription(badge, resolvedLabel, badge?.status)
   const { Icon } = visual
 
   return (

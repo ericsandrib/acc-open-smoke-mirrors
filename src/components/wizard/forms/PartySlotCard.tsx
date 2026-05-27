@@ -16,17 +16,18 @@ import {
 } from '@/components/ui/select'
 import { buildAccountOwnerPreview, buildDesignationPartyPreview } from '@/utils/accountOwnerPreview'
 import { AML_KYC_VALIDITY_DAYS, getAmlRenewalSummary } from '@/utils/amlKycRenewal'
-import { getKycStatusBadge, type KycStatusBadge } from '@/utils/kycStatus'
+import {
+  getKycStatusBadge,
+  ownerRequiresAdditionalVerification,
+  type KycStatusBadge,
+} from '@/utils/kycStatus'
 import { getOwnerReviewState } from '@/utils/ownerKycReview'
 import { isOpenAccountsTask } from '@/utils/openAccountsTaskContext'
-import { KycStatusPill } from '@/components/wizard/verification/KycStatusPill'
-import { KycStatusContactCardAlert } from '@/components/wizard/verification/KycStatusToastChip'
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
+import { OwnerVerificationAdvisorBanner } from '@/components/wizard/verification/KycStatusToastChip'
 import { useOwnerContactCardDial } from '@/components/wizard/forms/ownerContactCardDial'
 import { Plus, Trash2, Pencil, AlertTriangle, Info, Star } from 'lucide-react'
 
 const ADD_PARTY_VALUE = '__add_party__'
-const KYC_STATUS_INFO_TOOLTIP = 'Verification will run automatically before final submission.'
 const CONTACT_CARD_KYC_BADGE_BASE =
   'w-fit max-w-max shrink-0 rounded-full px-2 py-0.5 text-xs font-medium'
 
@@ -35,53 +36,46 @@ function resolveContactCardKycLabel(kycLabel: string | undefined): string {
   return kycLabel
 }
 
-function resolveFallbackKycTone(label: string): KycStatusBadge['tone'] {
-  if (label === 'Unverified' || label === 'Fail') return 'warning'
-  if (label === 'Verified' || label === 'Pass') return 'success'
-  if (label === 'Pending' || label.includes('Review')) return 'neutral'
-  return 'neutral'
-}
-
 function ContactCardKycStatusValue({
   version,
   embeddedKycBadge,
   kycLabel,
   kycDisplayStatus,
   trustOverallKyc,
+  ownerReview,
+  matchedParty,
+  requiresAdditionalVerification,
 }: {
   version: 'v1' | 'v2'
   embeddedKycBadge: KycStatusBadge | null
   kycLabel: string | undefined
   kycDisplayStatus: { label: string; className?: string } | null
   trustOverallKyc: { label: string; className?: string } | null | undefined
+  ownerReview?: ReturnType<typeof getOwnerReviewState>
+  matchedParty?: RelatedParty
+  requiresAdditionalVerification: boolean
 }) {
   const displayLabel = resolveContactCardKycLabel(kycLabel)
 
   if (version === 'v2') {
-    if (embeddedKycBadge) {
-      return <KycStatusContactCardAlert badge={embeddedKycBadge} className="mt-4 w-full" />
-    }
+    if (!requiresAdditionalVerification) return null
     return (
-      <KycStatusContactCardAlert
-        label={displayLabel}
-        tone={resolveFallbackKycTone(displayLabel)}
+      <OwnerVerificationAdvisorBanner
+        owner={ownerReview}
+        party={matchedParty}
         className="mt-4 w-full"
       />
     )
   }
 
   if (embeddedKycBadge) {
-    if (embeddedKycBadge.status === 'unverified') {
-      return (
-        <Badge variant="warning" className={CONTACT_CARD_KYC_BADGE_BASE}>
-          {embeddedKycBadge.label}
-        </Badge>
-      )
-    }
+    if (!requiresAdditionalVerification) return null
     return (
-      <KycStatusPill
-        badge={embeddedKycBadge}
-        className="w-fit max-w-max shrink-0 px-2 py-0.5 text-xs"
+      <OwnerVerificationAdvisorBanner
+        owner={ownerReview}
+        party={matchedParty}
+        className="w-fit max-w-full"
+        showResourceLink={false}
       />
     )
   }
@@ -485,10 +479,19 @@ export function PartySlotCard({
         ? trustOverallKyc?.label
         : embeddedKycBadge?.label ?? kycDisplayStatus?.label ?? 'Unverified'
 
+    const requiresAdditionalVerification =
+      matchedParty.type !== 'related_organization' &&
+      Boolean(
+        embeddedKycBadge &&
+          ownerRequiresAdditionalVerification(ownerReview, matchedParty),
+      )
+
     const showKycRow =
       showKycStatus &&
       !isDesignationPreview &&
-      (matchedParty.type !== 'related_organization' || Boolean(kycLabel))
+      (matchedParty.type === 'related_organization'
+        ? Boolean(kycLabel)
+        : requiresAdditionalVerification)
 
     return (
       <div className="flex flex-col" style={{ gap: ownerContactCardDial.headerBodyGap }}>
@@ -604,74 +607,31 @@ export function PartySlotCard({
           )}
 
         {showKycRow ? (
-          ownerContactCardDial.kycStatusVersion === 'v2' ? (
-            <ContactCardKycStatusValue
-              version="v2"
-              embeddedKycBadge={embeddedKycBadge}
-              kycLabel={kycLabel}
-              kycDisplayStatus={kycDisplayStatus}
-              trustOverallKyc={trustOverallKyc}
-            />
-          ) : useHorizontalContactFields ? (
-            <div className="flex w-full min-w-0 items-start gap-5 py-1">
-              <div className="flex w-36 shrink-0 items-center gap-1">
-                <p className="text-sm text-muted-foreground">KYC Status</p>
-                <TooltipProvider delayDuration={300}>
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <button
-                        type="button"
-                        className="inline-flex items-center text-muted-foreground hover:text-foreground"
-                        aria-label={KYC_STATUS_INFO_TOOLTIP}
-                      >
-                        <Info className="h-3 w-3" aria-hidden />
-                      </button>
-                    </TooltipTrigger>
-                    <TooltipContent side="top" className="max-w-[16rem] text-center">
-                      {KYC_STATUS_INFO_TOOLTIP}
-                    </TooltipContent>
-                  </Tooltip>
-                </TooltipProvider>
-              </div>
-              <div className="min-w-0 flex-1">
-                <ContactCardKycStatusValue
-                  version={ownerContactCardDial.kycStatusVersion}
-                  embeddedKycBadge={embeddedKycBadge}
-                  kycLabel={kycLabel}
-                  kycDisplayStatus={kycDisplayStatus}
-                  trustOverallKyc={trustOverallKyc}
-                />
-              </div>
+          matchedParty.type === 'related_organization' ? (
+            <div className="flex flex-col items-start justify-center gap-2 py-1">
+              <p className="text-xs text-muted-foreground">Verification</p>
+              <Badge
+                variant="outline"
+                className={cn(
+                  CONTACT_CARD_KYC_BADGE_BASE,
+                  'border-0',
+                  trustOverallKyc?.className ?? 'bg-foreground/5 text-muted-foreground',
+                )}
+              >
+                {kycLabel}
+              </Badge>
             </div>
           ) : (
-          <div className="flex flex-col items-start justify-center gap-2 py-1">
-            <div className="flex items-center gap-1">
-              <p className="text-xs text-muted-foreground">KYC Status</p>
-              <TooltipProvider delayDuration={300}>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <button
-                      type="button"
-                      className="inline-flex items-center text-muted-foreground hover:text-foreground"
-                      aria-label={KYC_STATUS_INFO_TOOLTIP}
-                    >
-                      <Info className="h-3 w-3" aria-hidden />
-                    </button>
-                  </TooltipTrigger>
-                  <TooltipContent side="top" className="max-w-[16rem] text-center">
-                    {KYC_STATUS_INFO_TOOLTIP}
-                  </TooltipContent>
-                </Tooltip>
-              </TooltipProvider>
-            </div>
             <ContactCardKycStatusValue
               version={ownerContactCardDial.kycStatusVersion}
               embeddedKycBadge={embeddedKycBadge}
               kycLabel={kycLabel}
               kycDisplayStatus={kycDisplayStatus}
               trustOverallKyc={trustOverallKyc}
+              ownerReview={ownerReview}
+              matchedParty={matchedParty}
+              requiresAdditionalVerification={requiresAdditionalVerification}
             />
-          </div>
           )
         ) : null}
 
