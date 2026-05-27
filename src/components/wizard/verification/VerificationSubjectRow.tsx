@@ -24,10 +24,10 @@ export function VerificationSubjectRow({
           onClick()
         }
       }}
-      className="flex w-full cursor-pointer items-center justify-between rounded-lg p-3 hover:bg-muted/50 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+      className="group flex min-h-[72px] w-full cursor-pointer items-center justify-between rounded-lg px-3 hover:bg-muted/50 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
     >
       <div className="flex min-w-0 items-center gap-3">
-        <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary/10 text-xs font-medium text-primary">
+        <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-primary/10 text-sm font-medium text-primary">
           {getSubjectInitials(name)}
         </div>
         <span className="truncate text-sm font-medium">{name}</span>

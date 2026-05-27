@@ -10,7 +10,7 @@ import {
   getKycStatusBadge,
   isAutomatedAmlClearMessage,
 } from '@/utils/kycStatus'
-import { KycStatusPill } from '@/components/wizard/verification/KycStatusPill'
+import { KycStatusContactCardAlert } from '@/components/wizard/verification/KycStatusToastChip'
 
 function CipSubsystemGuidance({ children }: { children: string }) {
   return <p className="text-xs text-muted-foreground leading-snug pt-1">{children}</p>
@@ -46,10 +46,10 @@ function SectionHeader({ children }: { children: React.ReactNode }) {
 function DetailRow({ label, value }: { label: string; value?: string | null }) {
   return (
     <div className="flex flex-col gap-0.5 min-w-[8rem]">
-      <span className="text-[10px] font-medium uppercase tracking-wide text-muted-foreground">
+      <span className="text-[14px] font-medium leading-[20px] text-muted-foreground">
         {label}
       </span>
-      <span className="text-xs text-foreground">{value ?? '—'}</span>
+      <span className="text-[14px] leading-[20px] text-foreground">{value ?? '—'}</span>
     </div>
   )
 }
@@ -145,18 +145,9 @@ export function VerificationDetailsPanel({
 
   return (
     <div className="space-y-4">
-      {/* 1. KYC status — label above badge (matches AML status layout) */}
-      <section
-        className={cn(
-          'rounded-lg border border-border/70 bg-card',
-          isCompactKycCard ? 'px-3 py-2' : 'px-3 py-3',
-        )}
-      >
-        <div className={cn(isCompactKycCard ? 'space-y-0.5' : 'space-y-2')}>
-          <SectionHeader>KYC status</SectionHeader>
-          <KycStatusPill badge={badge} className={isCompactKycCard ? 'text-xs' : 'text-sm'} />
-        </div>
-      </section>
+      {/* 1. KYC status — mirrors the PartySlotCard contact-card alert (icon +
+          title + supporting copy on a toned container). */}
+      <KycStatusContactCardAlert badge={badge} />
 
       {/* 2. AML status — outcome, then findings, then secondary guidance */}
       <section className="space-y-3">
@@ -209,7 +200,7 @@ export function VerificationDetailsPanel({
         ) : null}
       </section>
 
-      <Separator />
+      <Separator className="!my-7" />
 
       {/* 3. CIP status — identity verification and CIP-specific guidance */}
       <section className="space-y-1">
@@ -237,7 +228,7 @@ export function VerificationDetailsPanel({
         )}
       </section>
 
-      <Separator />
+      <Separator className="!my-7" />
 
       {/* 4. Verification metadata */}
       <section className="space-y-1">
@@ -254,7 +245,7 @@ export function VerificationDetailsPanel({
 
       {showReRunFooter ? (
         <>
-          <Separator />
+          <Separator className="!my-7" />
           <div className="pt-2 pb-0.5">
             <VerificationReRunAction
               label={reRunLabel}
