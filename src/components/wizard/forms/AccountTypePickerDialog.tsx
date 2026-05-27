@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import type { RegistrationType } from '@/utils/registrationDocuments'
 import { registrationTypeLabels } from '@/utils/registrationDocuments'
 import { Button } from '@/components/ui/button'
@@ -52,6 +52,20 @@ export function AccountTypePickerDialog({ open, onOpenChange, onConfirm }: Accou
   const [officeCode, setOfficeCode] = useState('')
   const [investmentProfessionalId, setInvestmentProfessionalId] = useState('')
 
+  // Refs to each row's registration-type SelectTrigger so we can focus the new
+  // row's select after "Add another registration type".
+  const registrationTriggerRefs = useRef<Map<string, HTMLButtonElement>>(new Map())
+  const pendingFocusRowId = useRef<string | null>(null)
+
+  useEffect(() => {
+    if (!pendingFocusRowId.current) return
+    const trigger = registrationTriggerRefs.current.get(pendingFocusRowId.current)
+    if (trigger) {
+      trigger.focus()
+      pendingFocusRowId.current = null
+    }
+  }, [rows])
+
   const officeOptions = [...new Set(teamMembers.map((m) => m.officeCode))]
     .sort()
     .map((code) => ({ value: code, label: `Product ${code}` }))
@@ -79,7 +93,11 @@ export function AccountTypePickerDialog({ open, onOpenChange, onConfirm }: Accou
     })
   }
 
-  const addRow = () => setRows((prev) => [...prev, createRow()])
+  const addRow = () => {
+    const next = createRow()
+    pendingFocusRowId.current = next.id
+    setRows((prev) => [...prev, next])
+  }
 
   const validRows = rows.filter((r) => r.registrationType !== '')
 
@@ -196,7 +214,13 @@ export function AccountTypePickerDialog({ open, onOpenChange, onConfirm }: Accou
                     value={row.registrationType || undefined}
                     onValueChange={(v) => updateRow(row.id, { registrationType: v as RegistrationType })}
                   >
-                    <SelectTrigger className="h-9 w-full text-left [&>span]:line-clamp-2 [&>span]:text-left">
+                    <SelectTrigger
+                      ref={(el) => {
+                        if (el) registrationTriggerRefs.current.set(row.id, el)
+                        else registrationTriggerRefs.current.delete(row.id)
+                      }}
+                      className="h-9 w-full text-left [&>span]:line-clamp-2 [&>span]:text-left"
+                    >
                       <SelectValue placeholder="Select registration type…" />
                     </SelectTrigger>
                     <SelectContent className="max-h-[min(24rem,70vh)] w-[var(--radix-select-trigger-width)] max-w-[var(--radix-select-trigger-width)] min-w-0">
