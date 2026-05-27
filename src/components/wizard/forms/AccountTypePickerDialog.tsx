@@ -59,11 +59,16 @@ export function AccountTypePickerDialog({ open, onOpenChange, onConfirm }: Accou
 
   useEffect(() => {
     if (!pendingFocusRowId.current) return
-    const trigger = registrationTriggerRefs.current.get(pendingFocusRowId.current)
-    if (trigger) {
+    const id = pendingFocusRowId.current
+    pendingFocusRowId.current = null
+    // Defer one frame so Radix Select's listeners are attached to the freshly
+    // mounted trigger before we synthesize a click to open the popover.
+    requestAnimationFrame(() => {
+      const trigger = registrationTriggerRefs.current.get(id)
+      if (!trigger) return
       trigger.focus()
-      pendingFocusRowId.current = null
-    }
+      trigger.click()
+    })
   }, [rows])
 
   const officeOptions = [...new Set(teamMembers.map((m) => m.officeCode))]
