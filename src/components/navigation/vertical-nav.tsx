@@ -26,6 +26,7 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
+import { GuardianLogo } from "@/components/navigation/guardian-logo";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -340,7 +341,7 @@ export function VerticalNav({
               aria-label="Main navigation"
             >
               <div className="h-14 px-4 flex items-center shrink-0">
-                <span className="text-lg font-bold tracking-tight">G</span>
+                <GuardianLogo className="h-6 w-auto" />
               </div>
 
               <NavigationContent
@@ -386,7 +387,7 @@ export function VerticalNav({
             <div className="h-14 px-4 flex items-center shrink-0 justify-between">
               {isExpanded ? (
                 <>
-                  <span className="text-lg font-bold tracking-tight">G</span>
+                  <GuardianLogo className="h-6 w-auto" />
                   <Tooltip>
                     <TooltipTrigger asChild>
                       <Button
@@ -412,13 +413,11 @@ export function VerticalNav({
                 </>
               ) : (
                 <>
-                  <span
-                    className={`text-lg font-bold tracking-tight mx-auto pointer-events-none ${
+                  <GuardianLogo
+                    className={`h-6 w-auto mx-auto pointer-events-none ${
                       isCollapsedHovered ? "invisible" : ""
                     }`}
-                  >
-                    G
-                  </span>
+                  />
                   {isCollapsedHovered && (
                     <div className="absolute inset-x-0 top-0 h-14 flex items-center justify-center pointer-events-none">
                       <div className="pointer-events-auto">

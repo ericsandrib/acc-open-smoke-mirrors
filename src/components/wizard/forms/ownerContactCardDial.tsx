@@ -11,7 +11,7 @@ export const ownerContactCardDialDefaults = {
   bodyRowGap: 12,
   cardRadius: 12,
   layoutVersion: 'v2',
-  kycStatusVersion: 'v1',
+  kycStatusVersion: 'v2',
 } as const
 
 export type OwnerContactCardDialValues = {
@@ -54,7 +54,7 @@ function OwnerContactCardDialProvider({ children }: { children: ReactNode }) {
         { value: 'v1', label: 'Version 1 — pill badge' },
         { value: 'v2', label: 'Version 2 — alert banner' },
       ],
-      default: 'v1',
+      default: 'v2',
     },
   })
 
