@@ -15,6 +15,14 @@ export interface WetSignedFirmUpload {
 
 export const WET_SIGNED_FIRM_UPLOADS_KEY = 'wet-signed-firm-uploads'
 
+/** Session preview key for manual forms-package uploads on the open-accounts task. */
+export function buildWetSignedFirmUploadPreviewKey(
+  openAccountsTaskId: string,
+  uploadId: string,
+): string {
+  return `${openAccountsTaskId}::wet-signed-firm::${uploadId}`
+}
+
 function isNonEmptyString(v: unknown): v is string {
   return typeof v === 'string' && v.trim().length > 0
 }

@@ -7,7 +7,7 @@ import {
   WIZARD_RIGHT_RAIL_WIDTH_CLASS,
 } from '@/components/wizard/wizardRightPanelContext'
 import { ChildActionTimeline } from '@/components/wizard/ChildActionTimelineSheet'
-import { JourneySupportingDocumentsPanel } from '@/components/wizard/JourneySupportingDocumentsPanel'
+import { ChildActionDocumentsPanel } from '@/components/wizard/ChildActionDocumentsPanel'
 import {
   handleWizardIsolatedPanelShellWheel,
   handleWizardIsolatedScrollPaneWheel,
@@ -26,18 +26,15 @@ const TAB_META: Record<WizardRightPanelTab, { label: string }> = {
  * Collapse animation matches the main journey right rail: width + border
  * transition together, content opacity fades with a delay only when opening.
  * Toggle lives in the wizard accessory bar (`RightSidebarToggle`) — this panel
- * doesn't render its own. The Documents tab is shown only when `demoViewMode`
- * is a reviewer mode (set and not `advisor`).
+ * doesn't render its own. Documents tab lists supporting uploads and executed forms
+ * for the active child workflow (all demo perspectives).
  */
 export function ChildActionRightSidebar() {
   const ctx = useChildActionContext()
   const { state } = useWorkflow()
   const { collapsed, activeTab, setActiveTab } = useWizardRightPanel()
 
-  const showDocumentsTab =
-    state.demoViewMode != null &&
-    state.demoViewMode !== 'advisor' &&
-    state.demoViewMode !== 'ho-principal'
+  const showDocumentsTab = true
 
   const tabOrder = useMemo(
     () =>
@@ -132,7 +129,7 @@ export function ChildActionRightSidebar() {
           )}
           {showDocumentsTab && activeTab === 'documents' && (
             <div className="flex min-h-0 flex-1 flex-col overflow-hidden px-3 pb-3 pt-2">
-              <JourneySupportingDocumentsPanel />
+              <ChildActionDocumentsPanel />
             </div>
           )}
         </div>

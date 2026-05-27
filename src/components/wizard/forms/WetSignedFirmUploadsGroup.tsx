@@ -6,8 +6,9 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
+import { useSupportingDocumentPreview } from '@/components/wizard/supportingDocumentPreviewContext'
 import type { WetSignedFirmUpload } from '@/utils/wetSignedFirmUploads'
-import { newWetSignedFirmUploadRow } from '@/utils/wetSignedFirmUploads'
+import { buildWetSignedFirmUploadPreviewKey, newWetSignedFirmUploadRow } from '@/utils/wetSignedFirmUploads'
 import { Paperclip, Plus, Trash2, Upload, X } from 'lucide-react'
 
 export interface WetSignedAccountOption {
@@ -23,6 +24,8 @@ interface WetSignedFirmUploadsGroupProps {
   onChange: (next: WetSignedFirmUpload[]) => void
   /** Prefills new rows (e.g. current account-opening child). */
   defaultAccountChildId?: string
+  /** Open Accounts task id — registers in-session preview URLs for the Documents tab. */
+  openAccountsTaskId?: string
 }
 
 export function WetSignedFirmUploadsGroup({
@@ -31,7 +34,10 @@ export function WetSignedFirmUploadsGroup({
   uploads,
   onChange,
   defaultAccountChildId,
+  openAccountsTaskId,
 }: WetSignedFirmUploadsGroupProps) {
+  const { registerPreview } = useSupportingDocumentPreview()
+
   const syncAccountNumberFromChild = (childId: string | undefined) => {
     if (!childId) return undefined
     return accountOptions.find((a) => a.childId === childId)?.accountNumber
@@ -75,7 +81,12 @@ export function WetSignedFirmUploadsGroup({
     input.accept = '.pdf,.jpg,.jpeg,.png'
     input.onchange = (e) => {
       const file = (e.target as HTMLInputElement).files?.[0]
-      if (file) updateRow(rowId, { fileName: file.name })
+      if (file) {
+        if (openAccountsTaskId) {
+          registerPreview(buildWetSignedFirmUploadPreviewKey(openAccountsTaskId, rowId), file)
+        }
+        updateRow(rowId, { fileName: file.name })
+      }
     }
     input.click()
   }

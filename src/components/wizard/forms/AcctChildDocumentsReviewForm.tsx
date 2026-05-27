@@ -345,6 +345,7 @@ export function AcctChildDocumentsReviewForm({
                   uploads={wetSignedFirmUploadsForChild}
                   onChange={mergeWetSignedFirmUploadsForChild}
                   defaultAccountChildId={ctx.child.id}
+                  openAccountsTaskId={openAccountsParentId}
                 />
               </div>
             </>
