@@ -1,5 +1,4 @@
 import { createContext, useContext, type ReactNode } from 'react'
-import { useDialKit } from 'dialkit'
 
 export const ownerContactCardDialDefaults = {
   cardPadding: 20,
@@ -8,10 +7,10 @@ export const ownerContactCardDialDefaults = {
   avatarSize: 48,
   headerGap: 8,
   bodyIndent: 8,
-  bodyRowGap: 12,
+  bodyRowGap: 4,
   cardRadius: 12,
   layoutVersion: 'v2',
-  kycStatusVersion: 'v1',
+  kycStatusVersion: 'v2',
 } as const
 
 export type OwnerContactCardDialValues = {
@@ -30,53 +29,14 @@ export type OwnerContactCardDialValues = {
 const OwnerContactCardDialContext =
   createContext<OwnerContactCardDialValues>(ownerContactCardDialDefaults)
 
-function OwnerContactCardDialProvider({ children }: { children: ReactNode }) {
-  const dial = useDialKit('Owner contact card', {
-    cardPadding: [20, 0, 40],
-    titleCardGap: [8, 0, 24],
-    headerBodyGap: [12, 0, 32],
-    avatarSize: [48, 32, 64],
-    headerGap: [8, 0, 24],
-    bodyIndent: [8, 0, 32],
-    bodyRowGap: [12, 0, 24],
-    cardRadius: [12, 0, 24],
-    layoutVersion: {
-      type: 'select',
-      options: [
-        { value: 'v1', label: 'Version 1 — stacked fields' },
-        { value: 'v2', label: 'Version 2 — horizontal fields' },
-      ],
-      default: 'v2',
-    },
-    kycStatusVersion: {
-      type: 'select',
-      options: [
-        { value: 'v1', label: 'Version 1 — pill badge' },
-        { value: 'v2', label: 'Version 2 — alert banner' },
-      ],
-      default: 'v1',
-    },
-  })
-
-  return (
-    <OwnerContactCardDialContext.Provider
-      value={{
-        ...dial,
-        layoutVersion: dial.layoutVersion === 'v2' ? 'v2' : 'v1',
-        kycStatusVersion: dial.kycStatusVersion === 'v2' ? 'v2' : 'v1',
-      }}
-    >
-      {children}
-    </OwnerContactCardDialContext.Provider>
-  )
-}
-
+/**
+ * Previously wrapped children in a DialKit-powered provider so designers could
+ * tune the contact card live. The dials have been removed in favor of fixed
+ * defaults — this stays as a passthrough so existing call sites keep working
+ * and we can reintroduce live tuning later without touching consumers.
+ */
 export function OwnerContactCardDialRoot({ children }: { children: ReactNode }) {
-  if (!import.meta.env.DEV) {
-    return children
-  }
-
-  return <OwnerContactCardDialProvider>{children}</OwnerContactCardDialProvider>
+  return <>{children}</>
 }
 
 export function useOwnerContactCardDial() {

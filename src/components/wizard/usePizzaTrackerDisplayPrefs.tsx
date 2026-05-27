@@ -16,8 +16,8 @@ export type PizzaTrackerDisplayPrefs = {
 }
 
 const DEFAULT_PREFS: PizzaTrackerDisplayPrefs = {
-  showDueDate: true,
-  showAssignee: true,
+  showDueDate: false,
+  showAssignee: false,
 }
 
 function readStoredPrefs(): PizzaTrackerDisplayPrefs {

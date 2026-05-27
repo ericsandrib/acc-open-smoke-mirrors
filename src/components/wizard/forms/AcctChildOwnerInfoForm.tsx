@@ -88,7 +88,7 @@ export function AcctChildOwnerInfoForm() {
   const isCardVariant = isVersion2 || isVersion3 || isVersion4
   const childSectionTitleClass = isCardVariant
     ? 'text-sm font-semibold uppercase tracking-wide'
-    : 'text-base font-semibold leading-snug text-foreground'
+    : 'text-[20px] font-semibold leading-snug text-foreground mt-6'
   const childSectionBodyClass = isCardVariant
     ? 'text-sm text-muted-foreground'
     : 'text-[14px] text-muted-foreground leading-normal'

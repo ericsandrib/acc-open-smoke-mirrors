@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import type { RegistrationType } from '@/utils/registrationDocuments'
 import { registrationTypeLabels } from '@/utils/registrationDocuments'
 import { Button } from '@/components/ui/button'
@@ -52,6 +52,25 @@ export function AccountTypePickerDialog({ open, onOpenChange, onConfirm }: Accou
   const [officeCode, setOfficeCode] = useState('')
   const [investmentProfessionalId, setInvestmentProfessionalId] = useState('')
 
+  // Refs to each row's registration-type SelectTrigger so we can focus the new
+  // row's select after "Add another registration type".
+  const registrationTriggerRefs = useRef<Map<string, HTMLButtonElement>>(new Map())
+  const pendingFocusRowId = useRef<string | null>(null)
+
+  useEffect(() => {
+    if (!pendingFocusRowId.current) return
+    const id = pendingFocusRowId.current
+    pendingFocusRowId.current = null
+    // Defer one frame so Radix Select's listeners are attached to the freshly
+    // mounted trigger before we synthesize a click to open the popover.
+    requestAnimationFrame(() => {
+      const trigger = registrationTriggerRefs.current.get(id)
+      if (!trigger) return
+      trigger.focus()
+      trigger.click()
+    })
+  }, [rows])
+
   const officeOptions = [...new Set(teamMembers.map((m) => m.officeCode))]
     .sort()
     .map((code) => ({ value: code, label: `Product ${code}` }))
@@ -79,7 +98,11 @@ export function AccountTypePickerDialog({ open, onOpenChange, onConfirm }: Accou
     })
   }
 
-  const addRow = () => setRows((prev) => [...prev, createRow()])
+  const addRow = () => {
+    const next = createRow()
+    pendingFocusRowId.current = next.id
+    setRows((prev) => [...prev, next])
+  }
 
   const validRows = rows.filter((r) => r.registrationType !== '')
 
@@ -124,17 +147,17 @@ export function AccountTypePickerDialog({ open, onOpenChange, onConfirm }: Accou
         side="right"
         className="flex h-full w-[min(560px,calc(100vw-1rem))] max-w-[min(560px,calc(100vw-1rem))] flex-col gap-0 p-0 sm:max-w-[min(560px,calc(100vw-1rem))]"
       >
-        <SheetHeader className="px-6 pt-6 pb-4 border-b border-border shrink-0">
+        <SheetHeader className="flex h-14 flex-row items-center justify-between space-y-0 px-6 shrink-0">
           <SheetTitle>Add accounts</SheetTitle>
-          <SheetDescription>
-            Choose registration types for accounts to open (individual, joint, retirement, trust, entity, and other
-            custodian offerings). Each row is one or more parallel account-opening workflows—use quantity when you need
-            the same registration type more than once.
-          </SheetDescription>
         </SheetHeader>
+        <SheetDescription className="px-6 pb-4 shrink-0">
+          Choose registration types for accounts to open (individual, joint, retirement, trust, entity, and other
+          custodian offerings). Each row is one or more parallel account-opening workflows—use quantity when you need
+          the same registration type more than once.
+        </SheetDescription>
 
         <div className="flex-1 overflow-y-auto px-6 py-5 space-y-4">
-          <div className="rounded-lg border border-border p-4 space-y-4">
+          <div className="space-y-4">
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               <div className="space-y-1.5">
                 <Label>
@@ -196,7 +219,13 @@ export function AccountTypePickerDialog({ open, onOpenChange, onConfirm }: Accou
                     value={row.registrationType || undefined}
                     onValueChange={(v) => updateRow(row.id, { registrationType: v as RegistrationType })}
                   >
-                    <SelectTrigger className="h-9 w-full text-left [&>span]:line-clamp-2 [&>span]:text-left">
+                    <SelectTrigger
+                      ref={(el) => {
+                        if (el) registrationTriggerRefs.current.set(row.id, el)
+                        else registrationTriggerRefs.current.delete(row.id)
+                      }}
+                      className="h-9 w-full text-left [&>span]:line-clamp-2 [&>span]:text-left"
+                    >
                       <SelectValue placeholder="Select registration type…" />
                     </SelectTrigger>
                     <SelectContent className="max-h-[min(24rem,70vh)] w-[var(--radix-select-trigger-width)] max-w-[var(--radix-select-trigger-width)] min-w-0">

@@ -22,7 +22,7 @@ export function AssignAllTasksControl({ className }: AssignAllTasksControlProps)
   return (
     <div
       className={cn(
-        'w-full min-w-0 border-t border-border px-3 py-3 shrink-0 mt-auto bg-background',
+        'w-full min-w-0 border-t border-border px-3 py-3.5 shrink-0 mt-auto bg-background',
         className,
       )}
     >
