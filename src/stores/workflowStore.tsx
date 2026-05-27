@@ -2366,6 +2366,39 @@ function workflowReducer(state: WorkflowState, action: WorkflowAction): Workflow
       })
     }
 
+    case 'LOG_FORMS_PACKAGE_KYC_ACK': {
+      const acknowledgedAt = new Date().toISOString()
+      const ack = {
+        id: `fpka-${Date.now()}`,
+        acknowledgedAt,
+        acknowledgedBy: action.acknowledgedBy,
+        envelopeId: action.envelopeId,
+        participants: action.participants,
+      }
+      let next: WorkflowState = {
+        ...state,
+        formsPackageKycAcknowledgments: [...(state.formsPackageKycAcknowledgments ?? []), ack],
+      }
+      for (const participant of action.participants) {
+        const ownerOnFirstAccount =
+          next.childReviewsByChildId?.[participant.accountChildIds[0]]?.ownerReviews?.[
+            participant.partyId
+          ]
+        for (const accountChildId of participant.accountChildIds) {
+          next = appendOwnerVerificationSnapshot(next, accountChildId, participant.partyId, {
+            ranAt: acknowledgedAt,
+            eventKind: 'forms_package_kyc_ack',
+            runBy: action.acknowledgedBy,
+            triggerSource: 'Send forms package',
+            amlOutcome: ownerOnFirstAccount?.amlReview?.status,
+            cipOutcome: ownerOnFirstAccount?.cipStatus?.overallStatus,
+            note: `Advisor acknowledged KYC review warning (AML: ${participant.amlLabel}, CIP: ${participant.cipLabel}).`,
+          })
+        }
+      }
+      return next
+    }
+
     case 'OWNER_AML_REVIEW_CLEAR': {
       const ts = new Date().toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })
       let next = patchAccountOwnerReviews(state, action.accountChildId, action.partyId, {

@@ -69,6 +69,7 @@ import {
   isChildInPrincipalReviewQueue,
 } from '@/utils/childReviewQueue'
 import { NigoDialog } from './NigoDialog'
+import { RejectAccountOpeningDialog } from '@/components/wizard/RejectAccountOpeningDialog'
 import {
   Dialog,
   DialogContent,
@@ -97,20 +98,6 @@ const AML_REJECTION_REASONS: ReviewReasonOption[] = [
   { value: 'business-activity-risk', label: 'Occupation, employer, or business activity risk' },
   { value: 'identity-data-inconsistency', label: 'Identity data inconsistency requires review' },
   { value: 'other', label: 'Other AML concern' },
-]
-
-/** Account-opening AML reject disposition — required structured reason + optional notes. */
-const ACCOUNT_OPENING_AML_REJECTION_REASONS: ReviewReasonOption[] = [
-  { value: 'potential-pep-match', label: 'Potential PEP match' },
-  { value: 'ofac-sanctions-match', label: 'OFAC / sanctions match' },
-  { value: 'adverse-media-findings', label: 'Adverse media findings' },
-  { value: 'identity-mismatch', label: 'Identity mismatch' },
-  { value: 'fraud-concern', label: 'Fraud concern' },
-  { value: 'unable-to-verify-identity', label: 'Unable to verify identity' },
-  { value: 'insufficient-supporting-documentation', label: 'Insufficient supporting documentation' },
-  { value: 'duplicate-suspicious-activity', label: 'Duplicate / suspicious account activity' },
-  { value: 'compliance-policy-restriction', label: 'Compliance policy restriction' },
-  { value: 'other', label: 'Other' },
 ]
 
 const DOCUMENT_REVIEW_REJECTION_REASONS: ReviewReasonOption[] = [
@@ -990,31 +977,15 @@ function ChildReviewStatusActions() {
         }}
       />
 
-      <ReviewTextDialog
+      <RejectAccountOpeningDialog
         open={dialog === 'account-aml-reject'}
-        title="Reject Account Opening"
-        description="Reject this account opening due to AML findings. The advisor will be notified and onboarding will be closed."
-        reasonLabel="Rejection reason"
-        reasonOptions={ACCOUNT_OPENING_AML_REJECTION_REASONS}
-        reasonValue={selectedReason}
-        onReasonChange={setSelectedReason}
-        label="Reviewer notes"
-        placeholder="Add additional compliance findings or review notes..."
-        value={comments}
-        requireNotesWhenReasonValue="other"
-        notesValidationMessage="Additional details are required when selecting Other."
-        confirmLabel="Reject"
-        confirmTone="destructive"
-        onChange={setComments}
         onCancel={closeDialog}
-        onConfirm={() => {
-          const rejectionReason = getReasonLabel(ACCOUNT_OPENING_AML_REJECTION_REASONS, selectedReason)
-          const reviewerNotes = comments.trim() || undefined
+        onConfirm={({ reasonCode, reasonLabel, reviewerNotes }) => {
           dispatch({
             type: 'ACCOUNT_AML_REJECT_ALL',
             accountChildId: child.id,
-            rejectionReasonCode: selectedReason,
-            rejectionReason,
+            rejectionReasonCode: reasonCode,
+            rejectionReason: reasonLabel,
             reviewerNotes,
           })
           closeDialog()

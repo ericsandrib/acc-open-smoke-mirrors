@@ -256,6 +256,22 @@ export interface OwnerKycReviewState {
   screeningFingerprint?: string
 }
 
+/** Advisor acknowledgment before sending a forms package when KYC screening needs review. */
+export interface FormsPackageKycAcknowledgment {
+  id: string
+  acknowledgedAt: string
+  acknowledgedBy: string
+  envelopeId?: string
+  participants: Array<{
+    partyId: string
+    partyName: string
+    amlLabel: string
+    cipLabel: string
+    kycStatus: string
+    accountChildIds: string[]
+  }>
+}
+
 /**
  * Person-level verification profile reused across account-opening workflows.
  * Account workflow phases remain independent; only AML/CIP disposition is shared.
@@ -295,6 +311,7 @@ export interface VerificationSnapshot {
     | 'cip_approve'
     | 'cip_reject'
     | 'cip_request_info'
+    | 'forms_package_kyc_ack'
   /** Provider / orchestrator label (e.g. "LexisNexis InstantID"). */
   provider?: string
   runType?: 'Automated' | 'Re-run' | 'Manual'
@@ -374,6 +391,8 @@ export interface WorkflowState {
   childReviewsByChildId?: Record<string, ChildReviewState>
   /** Reusable participant-level AML/CIP verification profiles (keyed by {@link RelatedParty.id}). */
   participantVerificationsByPartyId?: Record<string, ParticipantVerificationProfile>
+  /** Audit trail when an advisor sends a forms package after acknowledging KYC review warnings. */
+  formsPackageKycAcknowledgments?: FormsPackageKycAcknowledgment[]
   /**
    * One-shot: after leaving a child workflow via breadcrumb, StepSidebar should select this
    * parent form section id (e.g. oa-kyc). Cleared when applied or invalid.
@@ -512,6 +531,12 @@ export type WorkflowAction =
       partyId: string
       reRunReason?: string
       runBy?: string
+    }
+  | {
+      type: 'LOG_FORMS_PACKAGE_KYC_ACK'
+      envelopeId: string
+      acknowledgedBy: string
+      participants: FormsPackageKycAcknowledgment['participants']
     }
   | { type: 'OWNER_AML_REVIEW_CLEAR'; accountChildId: string; partyId: string; approvalReason?: string }
   | { type: 'OWNER_AML_REVIEW_FLAG'; accountChildId: string; partyId: string; findings?: string }

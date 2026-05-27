@@ -75,6 +75,15 @@ import {
   type SupportingDocumentStatus,
 } from '@/utils/supportingDocuments'
 import { CompleteAccountOpeningConfirmModal } from '@/components/wizard/WizardFooter'
+import { KycReviewRequiredDialog } from '@/components/wizard/KycReviewRequiredDialog'
+import {
+  buildImpactedParticipantsForFormsPackage,
+  envelopeRequiresKycReviewAcknowledgment,
+  includedAccountChildIdsFromEnvelope,
+  simulateFormsPackageKycScreening,
+  type FormsPackageImpactedParticipant,
+  type FormsPackageParticipantKycSummary,
+} from '@/utils/formsPackageKycReview'
 import { Netx360HandoffSection, Netx360SubmitSection } from './Netx360HandoffSection'
 import { DocumentUploadInstancesTable } from './DocumentUploadInstancesTable'
 import {
@@ -261,6 +270,11 @@ export function OpenAccountsForm() {
   const [netx360Submitted, setNetx360Submitted] = useState(false)
   /** Bumps when the drawer opens so the sheet remounts with fresh local state from `envelopeDraft`. */
   const [envelopeDrawerMountKey, setEnvelopeDrawerMountKey] = useState(0)
+  const [kycReviewRequired, setKycReviewRequired] = useState<{
+    envelope: EsignEnvelope
+    participants: FormsPackageParticipantKycSummary[]
+    impactedParticipants: FormsPackageImpactedParticipant[]
+  } | null>(null)
 
   const kycParentTask = externalAnnuityPlatform
     ? state.tasks.find((t) => t.formKey === 'kyc')
@@ -428,7 +442,17 @@ export function OpenAccountsForm() {
     setEnvelopeDrawerOpen(true)
   }
 
-  const saveEnvelopeFromDrawer = (env: EsignEnvelope) => {
+  const dispatchFormsPackageOwnerKyc = (env: EsignEnvelope) => {
+    const accountChildIds = includedAccountChildIdsFromEnvelope(env)
+    for (const accountChildId of accountChildIds) {
+      const parties = getAccountPartiesRequiringKyc(state, accountChildId)
+      for (const party of parties) {
+        dispatch({ type: 'AUTO_RUN_OWNER_KYC', accountChildId, partyId: party.id, runBy: 'advisor' })
+      }
+    }
+  }
+
+  const commitEnvelopeFromDrawer = (env: EsignEnvelope) => {
     const now = new Date().toISOString()
     const sendingToClient =
       envelopeDrawerCreate && isElectronicSignatureDelivery(env.deliveryMethod)
@@ -484,26 +508,58 @@ export function OpenAccountsForm() {
     setEnvelopeDrawerOpen(false)
 
     // Single-flow KYC: trigger owner KYC when the envelope is sent to the client.
-    // Gated on the "Hide KYC child workflows" setting; only fires on initial create + eSignature delivery.
     if (
       envelopeDrawerCreate &&
       isEmbeddedAccountOwnerKycEnabled() &&
       isElectronicSignatureDelivery(normalized.deliveryMethod)
     ) {
-      const accountChildIds = Array.from(
-        new Set(
-          normalized.formSelections
-            .filter((s) => s.included)
-            .map((s) => s.accountChildId),
-        ),
+      dispatchFormsPackageOwnerKyc(normalized)
+    }
+  }
+
+  const saveEnvelopeFromDrawer = (env: EsignEnvelope) => {
+    const sendingToClient =
+      envelopeDrawerCreate && isElectronicSignatureDelivery(env.deliveryMethod)
+    const shouldScreenOnSend =
+      sendingToClient && envelopeDrawerCreate && isEmbeddedAccountOwnerKycEnabled()
+
+    if (shouldScreenOnSend) {
+      const accountChildIds = includedAccountChildIdsFromEnvelope(env)
+      const { participants } = simulateFormsPackageKycScreening(state, accountChildIds)
+      const alreadyAcknowledged = (state.formsPackageKycAcknowledgments ?? []).some(
+        (ack) => ack.envelopeId === env.id,
       )
-      for (const accountChildId of accountChildIds) {
-        const parties = getAccountPartiesRequiringKyc(state, accountChildId)
-        for (const party of parties) {
-          dispatch({ type: 'AUTO_RUN_OWNER_KYC', accountChildId, partyId: party.id })
-        }
+      if (envelopeRequiresKycReviewAcknowledgment(participants) && !alreadyAcknowledged) {
+        dispatchFormsPackageOwnerKyc(env)
+        setKycReviewRequired({
+          envelope: env,
+          participants,
+          impactedParticipants: buildImpactedParticipantsForFormsPackage(participants),
+        })
+        return
       }
     }
+
+    commitEnvelopeFromDrawer(env)
+  }
+
+  const confirmKycReviewAcknowledgment = () => {
+    if (!kycReviewRequired) return
+    const { envelope, participants } = kycReviewRequired
+    dispatch({
+      type: 'LOG_FORMS_PACKAGE_KYC_ACK',
+      envelopeId: envelope.id,
+      acknowledgedBy: state.assignedTo?.trim() || 'Advisor',
+      participants: participants.map((p) => ({
+        partyId: p.partyId,
+        partyName: p.partyName,
+        amlLabel: p.amlLabel,
+        cipLabel: p.cipLabel,
+        kycStatus: p.kycStatus,
+        accountChildIds: p.accountChildIds,
+      })),
+    })
+    setKycReviewRequired(null)
   }
 
   const statusBadgeClass = (status: EsignEnvelopeStatus) =>
@@ -1619,13 +1675,23 @@ export function OpenAccountsForm() {
           open={envelopeDrawerOpen}
           onOpenChange={(o) => {
             setEnvelopeDrawerOpen(o)
-            if (!o) setEnvelopeDraft(null)
+            if (!o) {
+              setEnvelopeDraft(null)
+              setKycReviewRequired(null)
+            }
           }}
           envelope={envelopeDraft}
           onSave={saveEnvelopeFromDrawer}
           isCreate={envelopeDrawerCreate}
         />
       ) : null}
+
+      <KycReviewRequiredDialog
+        open={kycReviewRequired !== null}
+        impactedParticipants={kycReviewRequired?.impactedParticipants ?? []}
+        onCancel={() => setKycReviewRequired(null)}
+        onConfirm={confirmKycReviewAcknowledgment}
+      />
 
       <Dialog open={historyEnvelopeId !== null} onOpenChange={(open) => !open && setHistoryEnvelopeId(null)}>
         <DialogContent className="sm:max-w-2xl">

@@ -72,6 +72,8 @@ export const relationships: Relationship[] = [
         dob: '1977-08-22',
         kycStatus: 'needs_kyc',
         clientId: 'CLN-7482911',
+        taxId: '987-65-4321',
+        demoForceFlagAml: true,
         accountOwnerIndividual: {
           middleName: 'Marie',
           legalStreet: '2450 North Lakeview Avenue',
