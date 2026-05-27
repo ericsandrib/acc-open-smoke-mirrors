@@ -944,7 +944,7 @@ export function OpenAccountsForm() {
             </button>
           </div>
         ) : (
-          <div className="rounded-lg border border-border p-6 text-center">
+          <div className="rounded-lg border border-border px-6 py-20 text-center">
             <Wallet className="mx-auto mb-2 h-8 w-8 text-muted-foreground/50" />
             <p className="text-sm text-muted-foreground mb-3">
               No accounts added yet. Add the account types you want to open.

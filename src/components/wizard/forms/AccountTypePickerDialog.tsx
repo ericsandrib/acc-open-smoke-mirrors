@@ -124,17 +124,17 @@ export function AccountTypePickerDialog({ open, onOpenChange, onConfirm }: Accou
         side="right"
         className="flex h-full w-[min(560px,calc(100vw-1rem))] max-w-[min(560px,calc(100vw-1rem))] flex-col gap-0 p-0 sm:max-w-[min(560px,calc(100vw-1rem))]"
       >
-        <SheetHeader className="px-6 pt-6 pb-4 border-b border-border shrink-0">
+        <SheetHeader className="flex h-14 flex-row items-center justify-between space-y-0 px-6 shrink-0">
           <SheetTitle>Add accounts</SheetTitle>
-          <SheetDescription>
-            Choose registration types for accounts to open (individual, joint, retirement, trust, entity, and other
-            custodian offerings). Each row is one or more parallel account-opening workflows—use quantity when you need
-            the same registration type more than once.
-          </SheetDescription>
         </SheetHeader>
+        <SheetDescription className="px-6 pb-4 shrink-0">
+          Choose registration types for accounts to open (individual, joint, retirement, trust, entity, and other
+          custodian offerings). Each row is one or more parallel account-opening workflows—use quantity when you need
+          the same registration type more than once.
+        </SheetDescription>
 
         <div className="flex-1 overflow-y-auto px-6 py-5 space-y-4">
-          <div className="rounded-lg border border-border p-4 space-y-4">
+          <div className="space-y-4">
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               <div className="space-y-1.5">
                 <Label>
