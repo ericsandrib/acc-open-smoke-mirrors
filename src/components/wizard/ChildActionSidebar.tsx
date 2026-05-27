@@ -307,7 +307,7 @@ function StatusActionButton({
 }
 
 function StatusActionGroup({ children }: { children: ReactNode }) {
-  return <div className="space-y-1 px-3 pb-2.5">{children}</div>
+  return <div className="space-y-1 px-4 pb-4">{children}</div>
 }
 
 function SecondaryActionRow({ children }: { children: ReactNode }) {
@@ -1521,7 +1521,7 @@ function ChildActionSidebarInner() {
                   {clarificationRequired ? (
                     <p className="text-sm text-foreground leading-snug">{statusSentence}</p>
                   ) : (
-                    <p className="text-[16px] font-normal text-primary leading-snug">
+                    <p className="text-[14px] font-normal text-primary leading-snug">
                       {statusSentence}
                       {detailSentence ? (
                         <>

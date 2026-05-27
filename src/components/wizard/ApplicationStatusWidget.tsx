@@ -38,22 +38,25 @@ export function ApplicationStatusWidget({
 
   const boxClass = terminal ? classes.solid : classes.pill
   const iconClass = terminal ? classes.iconOnSolid : classes.icon
+  // Text/label always use the semantic-colored icon class (not the inverted
+  // on-solid variant) so they remain legible on the card's neutral background.
+  const textClass = classes.icon
 
   return (
     <div className={cn('flex min-w-0 items-center gap-2', className)}>
       <div
         className={cn(
-          'flex h-11 w-11 shrink-0 items-center justify-center rounded-lg border',
+          'flex h-11 w-11 shrink-0 items-center justify-center rounded-lg',
           boxClass,
         )}
       >
         <FileText className={cn('h-4 w-4', iconClass)} />
       </div>
       <div className="min-w-0">
-        <p className="text-[12px] font-medium leading-[16px] text-muted-foreground">
+        <p className={cn('text-[12px] font-medium leading-[16px]', textClass)}>
           Application Status
         </p>
-        <p className="truncate text-[16px] font-semibold leading-[24px] text-foreground">
+        <p className={cn('truncate text-[16px] font-semibold leading-[24px]', textClass)}>
           {stageLabel}
         </p>
       </div>
