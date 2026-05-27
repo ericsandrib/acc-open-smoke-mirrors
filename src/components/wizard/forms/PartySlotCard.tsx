@@ -499,13 +499,13 @@ export function PartySlotCard({
               {getInitials(matchedParty.name)}
             </div>
             <div className="min-w-0">
-              <p className="truncate text-sm font-medium text-foreground">{matchedParty.name}</p>
+              <p className="truncate text-[18px] font-medium text-foreground">{matchedParty.name}</p>
               {ownerRoleLabel ? (
                 <div className="flex items-center gap-1 py-0.5">
                   {matchedParty.isPrimary ? (
                     <Star className="h-3 w-3 shrink-0 text-muted-foreground" aria-hidden />
                   ) : null}
-                  <span className="text-sm text-muted-foreground">{ownerRoleLabel}</span>
+                  <span className="text-xs text-muted-foreground">{ownerRoleLabel}</span>
                 </div>
               ) : null}
             </div>

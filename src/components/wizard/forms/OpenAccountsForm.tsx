@@ -199,8 +199,8 @@ export function OpenAccountsForm() {
   const isCardVariant = isVersion2 || isColoredBackgroundVariant
   const subsectionTitleClass =
     openAccountsVariant === 'v5'
-      ? 'text-base font-semibold leading-snug'
-      : 'text-base font-semibold'
+      ? 'text-[20px] font-semibold leading-snug mt-6'
+      : 'text-[20px] font-semibold mt-6'
   const cardGroupHeadingClass =
     openAccountsVariant === 'v5'
       ? 'text-lg font-semibold'
