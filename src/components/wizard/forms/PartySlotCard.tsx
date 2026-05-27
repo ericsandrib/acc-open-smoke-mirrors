@@ -127,11 +127,13 @@ function MetadataRow({
         </div>
         <p
           className={cn(
-            'min-w-0 flex-1 text-sm font-medium break-words',
-            missing ? 'text-muted-foreground' : 'text-foreground',
+            'min-w-0 flex-1 text-sm break-words',
+            missing
+              ? 'font-normal text-muted-foreground/60'
+              : 'font-medium text-foreground',
           )}
         >
-          {missing ? '-----------' : value}
+          {missing ? 'Missing' : value}
         </p>
       </div>
     )
@@ -146,11 +148,13 @@ function MetadataRow({
         </div>
         <p
           className={cn(
-            'text-sm font-medium break-words',
-            missing ? 'text-muted-foreground' : 'text-foreground',
+            'text-sm break-words',
+            missing
+              ? 'font-normal text-muted-foreground/60'
+              : 'font-medium text-foreground',
           )}
         >
-          {missing ? '-----------' : value}
+          {missing ? 'Missing' : value}
         </p>
       </div>
     </div>
@@ -158,7 +162,11 @@ function MetadataRow({
 }
 
 function formatPreviewLabel(label: string): string {
-  if (label === 'Tax ID (SSN / TIN)') return 'Tax ID'
+  // Individuals carry their SSN under the upstream "Tax ID (SSN / TIN)" label.
+  // The displayed value is already masked to the last 4 by maskTaxIdForPreview,
+  // so we just relabel the row "SSN" on the card. Entities use a separate
+  // "Tax ID / EIN" label which we leave alone.
+  if (label === 'Tax ID (SSN / TIN)') return 'SSN'
   if (label === 'Legal address') return 'Legal Address'
   if (label === 'Suitability snapshot') return 'Suitability snapshot'
   return label

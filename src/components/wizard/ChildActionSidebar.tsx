@@ -1514,7 +1514,7 @@ function ChildActionSidebarInner() {
           return (
             <div className="shrink-0 p-2 border-t border-border">
               <div className="rounded-xl border border-border/80 bg-card overflow-hidden shadow-sm">
-                <div className="px-4 pb-2 pt-3">
+                <div className="px-4 pb-2 pt-4">
                   <ApplicationStatusWidget stageLabel={stageLabel} />
                 </div>
                 <div className="px-4 pb-4 space-y-3">
@@ -1538,7 +1538,7 @@ function ChildActionSidebarInner() {
                   ) : null}
                 </div>
                 <ChildReviewStatusActions />
-                <div className="border-t border-border/60 bg-muted/35 px-3 flex items-center" style={{ minHeight: '44px' }}>
+                <div className="border-t border-border/60 bg-muted/35 px-4 flex items-center" style={{ minHeight: '44px' }}>
                   <button
                     type="button"
                     aria-expanded={!rightPanelCollapsed && rightPanelActiveTab === 'activity'}
