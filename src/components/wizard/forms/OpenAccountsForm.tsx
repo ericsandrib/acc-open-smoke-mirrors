@@ -1,4 +1,5 @@
 import { useState, useMemo, useRef, useEffect } from 'react'
+import { toast } from 'sonner'
 import { useWorkflow, useTaskData } from '@/stores/workflowStore'
 import { useTheme } from '@/stores/themeStore'
 import { useSupportingDocumentPreview } from '@/components/wizard/supportingDocumentPreviewContext'
@@ -270,6 +271,12 @@ export function OpenAccountsForm() {
   const [netx360Submitted, setNetx360Submitted] = useState(false)
   /** Bumps when the drawer opens so the sheet remounts with fresh local state from `envelopeDraft`. */
   const [envelopeDrawerMountKey, setEnvelopeDrawerMountKey] = useState(0)
+
+  useEffect(() => {
+    if (envelopeDrawerOpen || !envelopeDraft) return
+    const timer = window.setTimeout(() => setEnvelopeDraft(null), 320)
+    return () => window.clearTimeout(timer)
+  }, [envelopeDrawerOpen, envelopeDraft])
   const [kycReviewRequired, setKycReviewRequired] = useState<{
     envelope: EsignEnvelope
     participants: FormsPackageParticipantKycSummary[]
@@ -504,7 +511,6 @@ export function OpenAccountsForm() {
         esignEnvelopes.map((e) => (e.id === env.id ? normalized : e)),
       )
     }
-    setEnvelopeDraft(null)
     setEnvelopeDrawerOpen(false)
 
     // Single-flow KYC: trigger owner KYC when the envelope is sent to the client.
@@ -559,7 +565,9 @@ export function OpenAccountsForm() {
         accountChildIds: p.accountChildIds,
       })),
     })
+    commitEnvelopeFromDrawer(envelope)
     setKycReviewRequired(null)
+    toast.success('Forms package sent to client.')
   }
 
   const statusBadgeClass = (status: EsignEnvelopeStatus) =>
@@ -1676,7 +1684,6 @@ export function OpenAccountsForm() {
           onOpenChange={(o) => {
             setEnvelopeDrawerOpen(o)
             if (!o) {
-              setEnvelopeDraft(null)
               setKycReviewRequired(null)
             }
           }}

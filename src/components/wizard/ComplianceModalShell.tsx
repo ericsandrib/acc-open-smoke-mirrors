@@ -24,10 +24,12 @@ const iconWrapToneClass: Record<ComplianceModalTone, string> = {
 interface ComplianceModalShellProps {
   open: boolean
   onOpenChange: (open: boolean) => void
-  tone: ComplianceModalTone
-  icon: ReactNode
+  /** Tinted header background and icon ring; use `plain` for a standard dialog title bar. */
+  headerVariant?: 'tinted' | 'plain'
+  tone?: ComplianceModalTone
+  icon?: ReactNode
   title: string
-  description: ReactNode
+  description?: ReactNode
   children: ReactNode
   footer: ReactNode
   contentClassName?: string
@@ -37,7 +39,8 @@ interface ComplianceModalShellProps {
 export function ComplianceModalShell({
   open,
   onOpenChange,
-  tone,
+  headerVariant = 'tinted',
+  tone = 'warning',
   icon,
   title,
   description,
@@ -45,6 +48,10 @@ export function ComplianceModalShell({
   footer,
   contentClassName,
 }: ComplianceModalShellProps) {
+  const isTintedHeader = headerVariant === 'tinted'
+  const showIcon = icon != null
+  const showDescription = description != null
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent
@@ -53,23 +60,41 @@ export function ComplianceModalShell({
           contentClassName,
         )}
       >
-        <div className={cn('px-6 py-5', headerToneClass[tone])}>
+        <div
+          className={cn(
+            isTintedHeader ? 'px-6 py-5' : 'px-6 pt-5 pb-3',
+            isTintedHeader && headerToneClass[tone],
+          )}
+        >
           <DialogHeader className="space-y-3 text-left">
-            <div className="flex items-start gap-3">
-              <div className={iconWrapToneClass[tone]} aria-hidden>
-                {icon}
+            {showIcon ? (
+              <div className="flex items-center gap-3">
+                <div className={iconWrapToneClass[tone]} aria-hidden>
+                  {icon}
+                </div>
+                <div className="space-y-1.5 min-w-0">
+                  <DialogTitle className="text-base font-semibold text-foreground">{title}</DialogTitle>
+                  {showDescription ? (
+                    <DialogDescription className="text-sm text-foreground/80 leading-relaxed">
+                      {description}
+                    </DialogDescription>
+                  ) : null}
+                </div>
               </div>
+            ) : (
               <div className="space-y-1.5 min-w-0">
                 <DialogTitle className="text-base font-semibold text-foreground">{title}</DialogTitle>
-                <DialogDescription className="text-sm text-foreground/80 leading-relaxed">
-                  {description}
-                </DialogDescription>
+                {showDescription ? (
+                  <DialogDescription className="text-sm text-foreground/80 leading-relaxed">
+                    {description}
+                  </DialogDescription>
+                ) : null}
               </div>
-            </div>
+            )}
           </DialogHeader>
         </div>
 
-        <div className="space-y-5 px-6 py-5">{children}</div>
+        <div className={cn('space-y-5 px-6 pb-5', isTintedHeader ? 'pt-5' : 'pt-3')}>{children}</div>
 
         <DialogFooter className="border-t border-border bg-muted/20 px-6 py-4 sm:justify-end gap-2">
           {footer}

@@ -204,7 +204,6 @@ function buildImpactedParticipantFromSummary(
   }
 
   if (complianceNeedsReview && !cipNeedsReview) {
-    guidanceLines.push('Additional verification may be required before this account can be approved.')
     recommendedDocuments.add('Government-issued ID')
     recommendedDocuments.add('Proof of address')
     showHomeOfficeNote = true
@@ -213,7 +212,6 @@ function buildImpactedParticipantFromSummary(
   }
 
   if (guidanceLines.length === 0) {
-    guidanceLines.push('Additional verification may be required before this account can be approved.')
     recommendedDocuments.add('Government-issued ID')
     recommendedDocuments.add('Proof of address')
     showHomeOfficeNote = true

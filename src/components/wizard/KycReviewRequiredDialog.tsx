@@ -34,39 +34,39 @@ export function KycReviewRequiredDialog({
       onOpenChange={(next) => {
         if (!next) onCancel()
       }}
+      headerVariant="plain"
       tone="warning"
       icon={<AlertTriangle className="h-5 w-5 text-amber-700" />}
       title="Additional Verification May Be Required"
-      description="Some participants could not be automatically verified. Additional supporting documents may be required before this account can be approved."
       footer={
         <>
           <Button type="button" variant="outline" onClick={onCancel}>
             Cancel
           </Button>
           <Button type="button" onClick={onConfirm} disabled={!acknowledged}>
-            Confirm
+            Send Forms Package
           </Button>
         </>
       }
     >
-      <p className="text-sm text-muted-foreground leading-relaxed">
+      <p className="text-sm text-foreground leading-relaxed">
         You can still send the forms package to the client and upload documents afterward if needed.
       </p>
 
       {impactedParticipants.length > 0 ? (
-        <div className="rounded-md border border-border bg-muted/30 divide-y divide-border">
+        <div className="rounded-md border border-border divide-y divide-border">
           {impactedParticipants.map((participant) => (
             <div key={participant.partyId} className="px-4 py-3 space-y-2">
-              <p className="text-sm font-medium text-foreground">{participant.partyName}</p>
+              <p className="text-sm font-semibold text-foreground">{participant.partyName}</p>
               {participant.guidanceLines.map((line) => (
-                <p key={line} className="text-sm text-muted-foreground leading-relaxed">
+                <p key={line} className="text-sm text-foreground leading-relaxed">
                   {line}
                 </p>
               ))}
               {participant.recommendedDocuments.length > 0 ? (
                 <div className="space-y-1">
-                  <p className="text-sm text-muted-foreground">Recommended supporting documents:</p>
-                  <ul className="text-sm text-muted-foreground list-disc pl-5 space-y-0.5">
+                  <p className="text-sm text-foreground">Recommended supporting documents:</p>
+                  <ul className="text-sm text-foreground list-disc pl-5 space-y-0.5">
                     {participant.recommendedDocuments.map((doc) => (
                       <li key={doc}>{doc}</li>
                     ))}
@@ -74,7 +74,7 @@ export function KycReviewRequiredDialog({
                 </div>
               ) : null}
               {participant.showHomeOfficeNote ? (
-                <p className="text-xs text-muted-foreground">
+                <p className="mt-2 text-xs text-foreground">
                   Additional Home Office review may be required.
                 </p>
               ) : null}
@@ -93,7 +93,7 @@ export function KycReviewRequiredDialog({
         <ExternalLink className="h-3.5 w-3.5" aria-hidden />
       </a>
 
-      <div className="flex items-start gap-3 rounded-md border border-amber-200/60 bg-amber-50/50 px-3 py-3">
+      <div className="flex items-start gap-3">
         <Checkbox
           id="kyc-review-ack"
           checked={acknowledged}
