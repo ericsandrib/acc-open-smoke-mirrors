@@ -1,9 +1,10 @@
 import { useMemo } from 'react'
-import { ExternalLink, FileDown } from 'lucide-react'
+import { Download, ExternalLink, FileText } from 'lucide-react'
 import { useChildActionContext, useWorkflow } from '@/stores/workflowStore'
 import { useSupportingDocumentPreview } from '@/components/wizard/supportingDocumentPreviewContext'
 import { resolveEsignFormSampleWithFallback } from '@/constants/esignFormSamples'
 import { resolveSupportingDocumentPreviewSrc } from '@/utils/supportingDocumentPreviewResolve'
+import { cn } from '@/lib/utils'
 import {
   collectChildActionDocumentSections,
   type ChildActionDocumentListRow,
@@ -28,7 +29,8 @@ function ChildActionDocumentRow({ row }: { row: ChildActionDocumentListRow }) {
 
   if (!href) {
     return (
-      <li className="flex items-center gap-3 px-3 py-2.5">
+      <li className="flex items-center gap-3 py-2">
+        <FileText className="h-4 w-4 shrink-0 text-muted-foreground" aria-hidden />
         <div className="min-w-0 flex-1">
           <span className="block truncate text-sm text-foreground">{row.label}</span>
           {row.contextLabel ? (
@@ -40,27 +42,30 @@ function ChildActionDocumentRow({ row }: { row: ChildActionDocumentListRow }) {
   }
 
   return (
-    <li className="flex items-center gap-3 px-3 py-2.5">
-      <a
-        href={href}
-        target="_blank"
-        rel="noreferrer"
-        className="min-w-0 flex-1 inline-flex items-center gap-1.5 text-sm font-medium text-primary hover:underline underline-offset-2"
-      >
-        <span className="truncate">{linkLabel}</span>
-        <ExternalLink className="h-3.5 w-3.5 shrink-0 text-primary" aria-hidden />
-        <span className="sr-only">(opens in a new tab)</span>
-      </a>
-      {row.contextLabel ? (
-        <span className="min-w-0 shrink text-xs text-muted-foreground truncate">{row.contextLabel}</span>
-      ) : null}
+    <li className="flex items-center gap-3 py-2">
+      <FileText className="h-4 w-4 shrink-0 text-muted-foreground" aria-hidden />
+      <div className="min-w-0 flex-1">
+        <a
+          href={href}
+          target="_blank"
+          rel="noreferrer"
+          className="inline-flex max-w-full items-center gap-1.5 text-sm font-medium text-primary hover:underline underline-offset-2"
+        >
+          <span className="truncate">{linkLabel}</span>
+          <ExternalLink className="h-3.5 w-3.5 shrink-0 text-primary" aria-hidden />
+          <span className="sr-only">(opens in a new tab)</span>
+        </a>
+        {row.contextLabel ? (
+          <p className="mt-0.5 truncate text-xs text-muted-foreground">{row.contextLabel}</p>
+        ) : null}
+      </div>
       <a
         href={href}
         download={downloadName}
         title="Download"
         className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-md border border-border bg-card text-foreground shadow-sm transition-colors hover:bg-muted focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
       >
-        <FileDown className="h-4 w-4" aria-hidden />
+        <Download className="h-4 w-4" aria-hidden />
         <span className="sr-only">Download {downloadName}</span>
       </a>
     </li>
@@ -77,12 +82,12 @@ function DocumentListSection({
   emptyMessage: string
 }) {
   return (
-    <div className="rounded-lg border border-border p-3 space-y-2">
-      <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">{title}</p>
+    <div className="space-y-2">
+      <p className="text-sm font-semibold text-foreground">{title}</p>
       {rows.length === 0 ? (
-        <p className="text-sm text-muted-foreground leading-relaxed px-2 py-1">{emptyMessage}</p>
+        <p className="text-sm text-muted-foreground leading-relaxed">{emptyMessage}</p>
       ) : (
-        <ul>
+        <ul className="m-0 list-none p-0">
           {rows.map((row) => (
             <ChildActionDocumentRow key={row.rowKey} row={row} />
           ))}
@@ -92,10 +97,8 @@ function DocumentListSection({
   )
 }
 
-/**
- * Child-action Documents tab: supporting uploads + executed forms package rows.
- */
-export function ChildActionDocumentsPanel() {
+/** Supporting + forms package lists for the active child action. */
+export function ChildActionDocumentLists({ className }: { className?: string }) {
   const { state } = useWorkflow()
   const ctx = useChildActionContext()
   const sections = useMemo(
@@ -106,6 +109,31 @@ export function ChildActionDocumentsPanel() {
     [state, ctx],
   )
 
+  if (!ctx) return null
+
+  return (
+    <div className={cn('flex flex-col gap-4', className)}>
+      <DocumentListSection
+        title="Supporting Documents"
+        rows={sections.supportingDocuments}
+        emptyMessage="No supporting documents uploaded yet. Files added in the Supporting Documents step will appear here."
+      />
+      <div className="border-t border-border" aria-hidden />
+      <DocumentListSection
+        title="Forms Package"
+        rows={sections.formsPackage}
+        emptyMessage="No executed forms yet. Completed forms from the Forms Package step will appear here after eSign."
+      />
+    </div>
+  )
+}
+
+/**
+ * Child-action Documents tab: supporting uploads + executed forms package rows.
+ */
+export function ChildActionDocumentsPanel() {
+  const ctx = useChildActionContext()
+
   if (!ctx) {
     return (
       <p className="text-sm text-muted-foreground px-1">
@@ -115,17 +143,8 @@ export function ChildActionDocumentsPanel() {
   }
 
   return (
-    <div className="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto py-1">
-      <DocumentListSection
-        title="Supporting Documents"
-        rows={sections.supportingDocuments}
-        emptyMessage="No supporting documents uploaded yet. Files added in the Supporting Documents step will appear here."
-      />
-      <DocumentListSection
-        title="Forms packages"
-        rows={sections.formsPackage}
-        emptyMessage="No executed forms yet. Completed forms from the Forms Package step will appear here after eSign."
-      />
+    <div className="flex min-h-0 flex-1 flex-col overflow-y-auto py-1">
+      <ChildActionDocumentLists />
     </div>
   )
 }

@@ -1,4 +1,4 @@
-import { useEffect, useMemo } from 'react'
+import { useEffect } from 'react'
 import { cn } from '@/lib/utils'
 import { useChildActionContext, useWorkflow, getChildReviewState } from '@/stores/workflowStore'
 import {
@@ -6,49 +6,37 @@ import {
   type WizardRightPanelTab,
   WIZARD_RIGHT_RAIL_WIDTH_CLASS,
 } from '@/components/wizard/wizardRightPanelContext'
+import { ChildActionDetailsPanel } from '@/components/wizard/ChildActionDetailsPanel'
 import { ChildActionTimeline } from '@/components/wizard/ChildActionTimelineSheet'
-import { ChildActionDocumentsPanel } from '@/components/wizard/ChildActionDocumentsPanel'
 import {
   handleWizardIsolatedPanelShellWheel,
   handleWizardIsolatedScrollPaneWheel,
 } from '@/utils/wizardScroll'
 
-const TAB_ORDER_FULL: WizardRightPanelTab[] = ['details', 'activity', 'comments', 'documents']
+const CHILD_TAB_ORDER: WizardRightPanelTab[] = ['details', 'comments', 'activity']
 
-const TAB_META: Record<WizardRightPanelTab, { label: string }> = {
-  details: { label: 'Info' },
-  activity: { label: 'Activity' },
+const CHILD_TAB_META: Record<(typeof CHILD_TAB_ORDER)[number], { label: string }> = {
+  details: { label: 'Details' },
   comments: { label: 'Comments' },
-  documents: { label: 'Documents' },
+  activity: { label: 'Activity' },
 }
 
 /**
  * Collapse animation matches the main journey right rail: width + border
  * transition together, content opacity fades with a delay only when opening.
  * Toggle lives in the wizard accessory bar (`RightSidebarToggle`) — this panel
- * doesn't render its own. Documents tab lists supporting uploads and executed forms
- * for the active child workflow (all demo perspectives).
+ * doesn't render its own.
  */
 export function ChildActionRightSidebar() {
   const ctx = useChildActionContext()
   const { state } = useWorkflow()
   const { collapsed, activeTab, setActiveTab } = useWizardRightPanel()
 
-  const showDocumentsTab = true
-
-  const tabOrder = useMemo(
-    () =>
-      showDocumentsTab
-        ? TAB_ORDER_FULL
-        : TAB_ORDER_FULL.filter((t) => t !== 'documents'),
-    [showDocumentsTab],
-  )
-
   useEffect(() => {
-    if (!showDocumentsTab && activeTab === 'documents') {
+    if (activeTab === 'documents') {
       setActiveTab('details')
     }
-  }, [showDocumentsTab, activeTab, setActiveTab])
+  }, [activeTab, setActiveTab])
 
   if (!ctx) return null
 
@@ -78,8 +66,8 @@ export function ChildActionRightSidebar() {
           role="tablist"
           aria-label="Right panel"
         >
-          {tabOrder.map((tab) => {
-            const { label } = TAB_META[tab]
+          {CHILD_TAB_ORDER.map((tab) => {
+            const { label } = CHILD_TAB_META[tab]
             const selected = activeTab === tab
             return (
               <button
@@ -106,8 +94,11 @@ export function ChildActionRightSidebar() {
           data-wizard-scroll-pane
           className={cn(
             'flex flex-1 min-h-0 flex-col overscroll-y-contain',
-            activeTab === 'activity' ? 'overflow-y-auto p-4' : 'overflow-hidden p-4',
-            showDocumentsTab && activeTab === 'documents' && 'overflow-hidden p-0',
+            activeTab === 'activity'
+              ? 'overflow-y-auto p-4'
+              : activeTab === 'details'
+                ? 'overflow-y-auto p-3'
+                : 'overflow-hidden p-4',
           )}
           onWheel={handleWizardIsolatedScrollPaneWheel}
         >
@@ -121,16 +112,9 @@ export function ChildActionRightSidebar() {
               />
             </>
           )}
-          {activeTab === 'details' && (
-            <p className="text-sm text-muted-foreground">No details available.</p>
-          )}
+          {activeTab === 'details' && <ChildActionDetailsPanel />}
           {activeTab === 'comments' && (
             <p className="text-sm text-muted-foreground">No comments yet.</p>
-          )}
-          {showDocumentsTab && activeTab === 'documents' && (
-            <div className="flex min-h-0 flex-1 flex-col overflow-hidden px-3 pb-3 pt-2">
-              <ChildActionDocumentsPanel />
-            </div>
           )}
         </div>
       </div>

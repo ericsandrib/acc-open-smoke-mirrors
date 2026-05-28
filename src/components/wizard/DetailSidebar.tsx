@@ -3,6 +3,7 @@ import { cn } from '@/lib/utils'
 import { useWizardRightPanel, WIZARD_RIGHT_RAIL_WIDTH_CLASS } from '@/components/wizard/wizardRightPanelContext'
 import { JourneySupportingDocumentsPanel } from '@/components/wizard/JourneySupportingDocumentsPanel'
 import { ParentActionDocumentsPanel } from '@/components/wizard/ParentActionDocumentsPanel'
+import { ParentJourneyDetailsPanel } from '@/components/wizard/ParentJourneyDetailsPanel'
 import { useWorkflow } from '@/stores/workflowStore'
 import { parseChildSubTaskId, getSubTaskDisplayTitle } from '@/utils/childTaskRegistry'
 import {
@@ -30,7 +31,7 @@ export function DetailSidebar() {
   const isOpenAccountsParentTask = activeTask?.id === 'open-accounts'
 
   const showDocumentsTab =
-    isOpenAccountsParentTask || (state.demoViewMode != null && state.demoViewMode !== 'advisor')
+    !isOpenAccountsParentTask && state.demoViewMode != null && state.demoViewMode !== 'advisor'
 
   useEffect(() => {
     if (!showDocumentsTab && activeTab === 'documents') {
@@ -75,13 +76,13 @@ export function DetailSidebar() {
           collapsed ? 'opacity-0' : 'opacity-100 delay-200',
         )}
       >
-        {showDocumentsTab ? (
+        {showDocumentsTab || isOpenAccountsParentTask ? (
           <div
             className="flex h-14 shrink-0 flex-nowrap items-center gap-1 overflow-x-auto border-b border-border px-3"
             role="tablist"
             aria-label="Right panel"
           >
-            {JOURNEY_TAB_ORDER.map((tab) => {
+            {(showDocumentsTab ? JOURNEY_TAB_ORDER : (['details'] as const)).map((tab) => {
               const { label } = JOURNEY_TAB_META[tab]
               const selected = displayTab === tab
               return (
@@ -114,11 +115,18 @@ export function DetailSidebar() {
           data-wizard-scroll-pane
           className={cn(
             'flex flex-1 min-h-0 flex-col overscroll-y-contain text-sm',
-            displayTab === 'documents' ? 'overflow-hidden' : 'overflow-y-auto p-4',
+            displayTab === 'documents'
+              ? 'overflow-hidden'
+              : isOpenAccountsParentTask
+                ? 'overflow-y-auto p-3'
+                : 'overflow-y-auto p-4',
           )}
           onWheel={handleWizardIsolatedScrollPaneWheel}
         >
-          {displayTab === 'details' && (
+          {displayTab === 'details' && isOpenAccountsParentTask && activeTask ? (
+            <ParentJourneyDetailsPanel parentTaskId={activeTask.id} />
+          ) : null}
+          {displayTab === 'details' && !isOpenAccountsParentTask && (
             <>
               {activeTask && (
                 <div className="space-y-3">
