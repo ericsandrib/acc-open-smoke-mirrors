@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button'
 import { Checkbox } from '@/components/ui/checkbox'
 import { Label } from '@/components/ui/label'
 import { ComplianceModalShell } from '@/components/wizard/ComplianceModalShell'
+import { getAssigneeInitials } from '@/data/journeyAssigneeDirectory'
 import {
   KYC_ACCEPTED_SUPPORTING_DOCUMENTS_GUIDE_URL,
   type FormsPackageImpactedParticipant,
@@ -37,7 +38,7 @@ export function KycReviewRequiredDialog({
       headerVariant="plain"
       tone="warning"
       icon={<AlertTriangle className="h-5 w-5 text-amber-700" />}
-      title="Additional Verification May Be Required"
+      title="Send without supporting documents?"
       footer={
         <>
           <Button type="button" variant="outline" onClick={onCancel}>
@@ -50,48 +51,60 @@ export function KycReviewRequiredDialog({
       }
     >
       <p className="text-sm text-foreground leading-relaxed">
-        You can still send the forms package to the client and upload documents afterward if needed.
+        The following clients may be subject to additional verification. Adding supporting documents will reduce the chance of downstream requests.
       </p>
 
       {impactedParticipants.length > 0 ? (
         <div className="rounded-md border border-border divide-y divide-border">
           {impactedParticipants.map((participant) => (
-            <div key={participant.partyId} className="px-4 py-3 space-y-2">
-              <p className="text-sm font-semibold text-foreground">{participant.partyName}</p>
-              {participant.guidanceLines.map((line) => (
-                <p key={line} className="text-sm text-foreground leading-relaxed">
-                  {line}
-                </p>
-              ))}
-              {participant.recommendedDocuments.length > 0 ? (
-                <div className="space-y-1">
-                  <p className="text-sm text-foreground">Recommended supporting documents:</p>
-                  <ul className="text-sm text-foreground list-disc pl-5 space-y-0.5">
-                    {participant.recommendedDocuments.map((doc) => (
-                      <li key={doc}>{doc}</li>
-                    ))}
-                  </ul>
+            <div key={participant.partyId} className="space-y-2 px-4 py-3">
+              <div className="flex items-center gap-3">
+                <div
+                  className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-primary/10 text-xs font-semibold text-primary"
+                  aria-hidden
+                >
+                  {getAssigneeInitials(participant.partyName)}
                 </div>
-              ) : null}
-              {participant.showHomeOfficeNote ? (
-                <p className="mt-2 text-xs text-foreground">
-                  Additional Home Office review may be required.
-                </p>
-              ) : null}
+                <p className="min-w-0 flex-1 text-sm font-semibold text-foreground">{participant.partyName}</p>
+              </div>
+              <div className="space-y-2 pl-12">
+                {participant.guidanceLines.map((line) => (
+                  <p key={line} className="text-sm text-foreground leading-relaxed">
+                    {line}
+                  </p>
+                ))}
+                {participant.recommendedDocuments.length > 0 ? (
+                  <div className="space-y-1">
+                    <p className="text-sm text-foreground">Recommended supporting documents:</p>
+                    <ul className="text-sm text-foreground list-disc pl-5 space-y-0.5">
+                      {participant.recommendedDocuments.map((doc) => (
+                        <li key={doc}>{doc}</li>
+                      ))}
+                    </ul>
+                  </div>
+                ) : null}
+                {participant.showHomeOfficeNote ? (
+                  <p className="mt-2 text-xs text-foreground">
+                    Additional Home Office review may be required.
+                  </p>
+                ) : null}
+              </div>
             </div>
           ))}
         </div>
       ) : null}
 
-      <a
-        href={KYC_ACCEPTED_SUPPORTING_DOCUMENTS_GUIDE_URL}
-        target="_blank"
-        rel="noopener noreferrer"
-        className="inline-flex items-center gap-1.5 text-sm font-medium text-primary hover:underline"
-      >
-        Review accepted supporting documents
-        <ExternalLink className="h-3.5 w-3.5" aria-hidden />
-      </a>
+      <div className="rounded-md border border-border bg-muted/50 px-4 py-3">
+        <a
+          href={KYC_ACCEPTED_SUPPORTING_DOCUMENTS_GUIDE_URL}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="inline-flex items-center gap-1.5 text-sm font-semibold text-primary hover:underline underline-offset-2"
+        >
+          Review accepted supporting documents
+          <ExternalLink className="h-4 w-4 shrink-0" aria-hidden />
+        </a>
+      </div>
 
       <div className="flex items-start gap-3">
         <Checkbox
