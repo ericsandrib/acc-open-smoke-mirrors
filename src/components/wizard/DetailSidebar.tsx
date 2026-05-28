@@ -2,6 +2,7 @@ import { useEffect } from 'react'
 import { cn } from '@/lib/utils'
 import { useWizardRightPanel, WIZARD_RIGHT_RAIL_WIDTH_CLASS } from '@/components/wizard/wizardRightPanelContext'
 import { JourneySupportingDocumentsPanel } from '@/components/wizard/JourneySupportingDocumentsPanel'
+import { ParentActionDocumentsPanel } from '@/components/wizard/ParentActionDocumentsPanel'
 import { useWorkflow } from '@/stores/workflowStore'
 import { parseChildSubTaskId, getSubTaskDisplayTitle } from '@/utils/childTaskRegistry'
 import {
@@ -25,9 +26,11 @@ const JOURNEY_TAB_META: Record<JourneyRailTab, { label: string }> = {
 export function DetailSidebar() {
   const { state } = useWorkflow()
   const { collapsed, activeTab, setActiveTab } = useWizardRightPanel()
+  const activeTask = state.tasks.find((t) => t.id === state.activeTaskId)
+  const isOpenAccountsParentTask = activeTask?.id === 'open-accounts'
 
   const showDocumentsTab =
-    state.demoViewMode != null && state.demoViewMode !== 'advisor'
+    isOpenAccountsParentTask || (state.demoViewMode != null && state.demoViewMode !== 'advisor')
 
   useEffect(() => {
     if (!showDocumentsTab && activeTab === 'documents') {
@@ -38,7 +41,6 @@ export function DetailSidebar() {
   const displayTab: JourneyRailTab =
     showDocumentsTab && activeTab === 'documents' ? 'documents' : 'details'
 
-  const activeTask = state.tasks.find((t) => t.id === state.activeTaskId)
   const activeChild = state.tasks
     .flatMap((t) => t.children ?? [])
     .find((c) => c.id === state.activeTaskId)
@@ -178,7 +180,11 @@ export function DetailSidebar() {
           )}
           {displayTab === 'documents' && (
             <div className="flex min-h-0 flex-1 flex-col overflow-hidden px-3 pb-3 pt-2">
-              <JourneySupportingDocumentsPanel />
+              {isOpenAccountsParentTask ? (
+                <ParentActionDocumentsPanel parentTaskId={activeTask.id} />
+              ) : (
+                <JourneySupportingDocumentsPanel />
+              )}
             </div>
           )}
         </div>

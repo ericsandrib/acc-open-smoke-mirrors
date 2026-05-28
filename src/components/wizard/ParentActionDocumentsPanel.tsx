@@ -1,15 +1,15 @@
 import { useMemo } from 'react'
 import { ExternalLink, FileDown } from 'lucide-react'
-import { useChildActionContext, useWorkflow } from '@/stores/workflowStore'
+import { useWorkflow } from '@/stores/workflowStore'
 import { useSupportingDocumentPreview } from '@/components/wizard/supportingDocumentPreviewContext'
 import { resolveEsignFormSampleWithFallback } from '@/constants/esignFormSamples'
 import { resolveSupportingDocumentPreviewSrc } from '@/utils/supportingDocumentPreviewResolve'
 import {
-  collectChildActionDocumentSections,
+  collectParentActionDocumentSections,
   type ChildActionDocumentListRow,
 } from '@/utils/childActionDocumentsPanel'
 
-function ChildActionDocumentRow({ row }: { row: ChildActionDocumentListRow }) {
+function ParentActionDocumentRow({ row }: { row: ChildActionDocumentListRow }) {
   const { getPreviewUrl } = useSupportingDocumentPreview()
 
   let href: string | undefined
@@ -67,7 +67,7 @@ function ChildActionDocumentRow({ row }: { row: ChildActionDocumentListRow }) {
   )
 }
 
-function DocumentListSection({
+function ParentDocumentListSection({
   title,
   rows,
   emptyMessage,
@@ -84,7 +84,7 @@ function DocumentListSection({
       ) : (
         <ul>
           {rows.map((row) => (
-            <ChildActionDocumentRow key={row.rowKey} row={row} />
+            <ParentActionDocumentRow key={row.rowKey} row={row} />
           ))}
         </ul>
       )}
@@ -93,38 +93,26 @@ function DocumentListSection({
 }
 
 /**
- * Child-action Documents tab: supporting uploads + executed forms package rows.
+ * Parent Open Accounts documents tab: rolls up uploads/forms across all account children.
  */
-export function ChildActionDocumentsPanel() {
+export function ParentActionDocumentsPanel({ parentTaskId }: { parentTaskId: string }) {
   const { state } = useWorkflow()
-  const ctx = useChildActionContext()
   const sections = useMemo(
-    () =>
-      ctx
-        ? collectChildActionDocumentSections(state, ctx.child.id)
-        : { supportingDocuments: [], formsPackage: [] },
-    [state, ctx],
+    () => collectParentActionDocumentSections(state, parentTaskId),
+    [state, parentTaskId],
   )
-
-  if (!ctx) {
-    return (
-      <p className="text-sm text-muted-foreground px-1">
-        Open a child workflow step to see uploaded documents here.
-      </p>
-    )
-  }
 
   return (
     <div className="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto py-1">
-      <DocumentListSection
+      <ParentDocumentListSection
         title="Supporting Documents"
         rows={sections.supportingDocuments}
-        emptyMessage="No supporting documents uploaded yet. Files added in the Supporting Documents step will appear here."
+        emptyMessage="No supporting documents uploaded yet across account child actions."
       />
-      <DocumentListSection
+      <ParentDocumentListSection
         title="Forms packages"
         rows={sections.formsPackage}
-        emptyMessage="No executed forms yet. Completed forms from the Forms Package step will appear here after eSign."
+        emptyMessage="No forms package documents yet across account child actions."
       />
     </div>
   )

@@ -21,12 +21,15 @@ export type ChildActionDocumentListRow = {
   fileName?: string
   formIdOrDocId?: string
   esignViewMode?: 'signed' | 'preview'
+  contextLabel?: string
 }
 
 export type ChildActionDocumentSections = {
   supportingDocuments: ChildActionDocumentListRow[]
   formsPackage: ChildActionDocumentListRow[]
 }
+
+type ParentActionDocumentSections = ChildActionDocumentSections
 
 type DocInstanceLike = {
   id?: string
@@ -122,6 +125,56 @@ export function collectChildActionDocumentSections(
 
   supportingDocuments.sort((a, b) => a.label.localeCompare(b.label) || a.fileName!.localeCompare(b.fileName!))
   formsPackage.sort((a, b) => a.label.localeCompare(b.label))
+
+  return { supportingDocuments, formsPackage }
+}
+
+/**
+ * Parent Open Accounts documents: aggregate all child-account uploads and forms package docs.
+ */
+export function collectParentActionDocumentSections(
+  state: WorkflowState,
+  parentTaskId: string,
+): ParentActionDocumentSections {
+  const parent = state.tasks.find((task) => task.id === parentTaskId)
+  if (!parent) return { supportingDocuments: [], formsPackage: [] }
+
+  const accountChildren = (parent.children ?? []).filter((child) => child.childType === 'account-opening')
+  const supportingDocuments: ChildActionDocumentListRow[] = []
+  const formsPackage: ChildActionDocumentListRow[] = []
+
+  for (const child of accountChildren) {
+    const childSections = collectChildActionDocumentSections(state, child.id)
+    const contextLabel = child.name
+
+    supportingDocuments.push(
+      ...childSections.supportingDocuments.map((row) => ({
+        ...row,
+        rowKey: `${child.id}::supporting::${row.rowKey}`,
+        contextLabel,
+      })),
+    )
+
+    formsPackage.push(
+      ...childSections.formsPackage.map((row) => ({
+        ...row,
+        rowKey: `${child.id}::forms::${row.rowKey}`,
+        contextLabel,
+      })),
+    )
+  }
+
+  supportingDocuments.sort((a, b) => {
+    const account = (a.contextLabel ?? '').localeCompare(b.contextLabel ?? '')
+    if (account !== 0) return account
+    return (a.fileName ?? a.label).localeCompare(b.fileName ?? b.label)
+  })
+
+  formsPackage.sort((a, b) => {
+    const account = (a.contextLabel ?? '').localeCompare(b.contextLabel ?? '')
+    if (account !== 0) return account
+    return (a.fileName ?? a.label).localeCompare(b.fileName ?? b.label)
+  })
 
   return { supportingDocuments, formsPackage }
 }
