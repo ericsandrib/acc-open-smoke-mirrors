@@ -22,7 +22,6 @@ import {
 import { getGenericChildSubTaskProgress } from '@/utils/childSubTaskProgress'
 import {
   Clock,
-  ChevronRight,
   MessageSquare,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
@@ -316,7 +315,7 @@ function StatusActionButton({
       disabled={disabled}
       onClick={onClick}
       className={cn(
-        'h-8 justify-center rounded-md px-2.5 text-xs font-medium active:scale-[0.99] transition-transform',
+        'h-8 justify-center rounded-md px-2.5 text-xs font-medium shadow-none active:scale-[0.99] transition-transform',
         tone === 'primary' &&
           'border-foreground bg-foreground text-background hover:bg-foreground/90 hover:text-background focus-visible:text-background',
         tone === 'accept' && 'border-emerald-700/80 bg-emerald-700 text-white hover:bg-emerald-800',
@@ -331,11 +330,11 @@ function StatusActionButton({
 }
 
 function StatusActionGroup({ children }: { children: ReactNode }) {
-  return <div className="space-y-1 px-4 pb-4">{children}</div>
+  return <div className="space-y-2 px-4 pb-4">{children}</div>
 }
 
 function SecondaryActionRow({ children }: { children: ReactNode }) {
-  return <div className="space-y-1">{children}</div>
+  return <div className="space-y-2">{children}</div>
 }
 
 const STATUS_OVERFLOW_MENU_ITEM_CLASS =
@@ -374,20 +373,17 @@ function StatusActionLayout({ actions }: { actions: ReviewAction[] }) {
                 type="button"
                 size="sm"
                 variant="ghost"
-                className="h-8 w-full justify-center rounded-md border-0 bg-[rgba(105,105,105,0.051)] px-2.5 text-xs font-medium text-foreground shadow-none hover:bg-[rgba(105,105,105,0.08)] active:scale-[0.99] transition-transform"
+                className="h-8 w-full justify-center rounded-md border-0 px-2.5 text-xs font-medium text-foreground shadow-none active:scale-[0.99] transition-transform"
               >
-                <span className="inline-flex items-center gap-1">
-                  More actions
-                  <ChevronRight className="h-3.5 w-3.5 shrink-0 opacity-70" strokeWidth={2} />
-                </span>
+                More Actions…
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent
-              side="right"
-              align="start"
+              side="top"
+              align="center"
               sideOffset={6}
               collisionPadding={12}
-              className="z-[100] min-w-[10rem] w-max rounded-lg border border-border/80 bg-popover p-1 shadow-md duration-150 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 data-[side=right]:slide-in-from-left-1"
+              className="z-[100] min-w-[10rem] w-max rounded-lg border border-border/80 bg-popover p-1 shadow-md duration-150 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 data-[side=top]:slide-in-from-bottom-1"
             >
               {overflowActions.map((action) => (
                 <DropdownMenuItem
