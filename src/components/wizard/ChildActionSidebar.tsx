@@ -22,9 +22,16 @@ import {
 import { getGenericChildSubTaskProgress } from '@/utils/childSubTaskProgress'
 import {
   Clock,
+  ChevronRight,
   MessageSquare,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu'
 import { Label } from '@/components/ui/label'
 import {
   Select,
@@ -88,6 +95,13 @@ const reviewDialogContentClass =
   'data-[state=open]:!animate-none data-[state=closed]:!animate-none !duration-0'
 
 type ReviewReasonOption = { value: string; label: string }
+type ReviewAction = {
+  id: string
+  label: string
+  tone: 'accept' | 'reject' | 'secondary'
+  placement: 'primary' | 'inline' | 'overflow'
+  onClick: () => void
+}
 
 /** Escalation / legacy AML return flows — not used for account-opening rejection modal. */
 const AML_REJECTION_REASONS: ReviewReasonOption[] = [
@@ -120,6 +134,29 @@ const CIP_REJECTION_REASONS: ReviewReasonOption[] = [
   { value: 'unacceptable-id', label: 'Submitted ID is unacceptable for CIP' },
   { value: 'ineligible-subject', label: 'Subject is ineligible for account opening' },
   { value: 'other', label: 'Other CIP rejection reason' },
+]
+
+const HOLD_REASONS: ReviewReasonOption[] = [
+  { value: 'awaiting-documents', label: 'Awaiting supporting documents' },
+  { value: 'client-unavailable', label: 'Client unavailable' },
+  { value: 'external-dependency', label: 'External dependency / third-party review' },
+  { value: 'operational-capacity', label: 'Operational capacity constraints' },
+  { value: 'other', label: 'Other' },
+]
+
+const HOLD_EXPIRATION_OPTIONS = [
+  { value: '15m', label: '15 minutes', ms: 15 * 60 * 1000 },
+  { value: '1h', label: '1 hour', ms: 60 * 60 * 1000 },
+  { value: '1d', label: '1 day', ms: 24 * 60 * 60 * 1000 },
+] as const
+
+const DELEGATE_TARGET_OPTIONS: Array<{
+  value: 'aml' | 'ho-principal' | 'ho-documents'
+  label: string
+}> = [
+  { value: 'aml', label: 'AML Review' },
+  { value: 'ho-principal', label: 'Principal Review' },
+  { value: 'ho-documents', label: 'Document Review' },
 ]
 
 function getReasonLabel(options: ReviewReasonOption[], value: string): string {
@@ -301,6 +338,80 @@ function SecondaryActionRow({ children }: { children: ReactNode }) {
   return <div className="space-y-1">{children}</div>
 }
 
+const STATUS_OVERFLOW_MENU_ITEM_CLASS =
+  'flex cursor-pointer items-center gap-2 rounded-sm py-2 pl-3 pr-4 text-sm outline-none focus:bg-muted data-[highlighted]:bg-muted'
+
+function StatusActionLayout({ actions }: { actions: ReviewAction[] }) {
+  const approveAction = actions.find((a) => a.id.includes('approve')) ?? actions.find((a) => a.placement === 'primary')
+  const rejectAction = actions.find((a) => a.id.includes('reject')) ?? actions.find((a) => a.tone === 'reject')
+  const escalateAction = actions.find((a) => a.placement === 'inline')
+  const overflowActions = actions.filter((a) => a.placement === 'overflow')
+
+  if (!approveAction && !rejectAction && !escalateAction && overflowActions.length === 0) return null
+
+  return (
+    <StatusActionGroup>
+      {approveAction ? (
+        <StatusActionButton tone="accept" className="w-full" onClick={approveAction.onClick}>
+          {approveAction.label}
+        </StatusActionButton>
+      ) : null}
+      <SecondaryActionRow>
+        {rejectAction ? (
+          <StatusActionButton tone="reject" className="w-full" onClick={rejectAction.onClick}>
+            {rejectAction.label}
+          </StatusActionButton>
+        ) : null}
+        {escalateAction ? (
+          <StatusActionButton tone="secondary" className="w-full" onClick={escalateAction.onClick}>
+            {escalateAction.label}
+          </StatusActionButton>
+        ) : null}
+        {overflowActions.length > 0 ? (
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button
+                type="button"
+                size="sm"
+                variant="ghost"
+                className="h-8 w-full justify-center rounded-md border-0 bg-[rgba(105,105,105,0.051)] px-2.5 text-xs font-medium text-foreground shadow-none hover:bg-[rgba(105,105,105,0.08)] active:scale-[0.99] transition-transform"
+              >
+                <span className="inline-flex items-center gap-1">
+                  More actions
+                  <ChevronRight className="h-3.5 w-3.5 shrink-0 opacity-70" strokeWidth={2} />
+                </span>
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent
+              side="right"
+              align="start"
+              sideOffset={6}
+              collisionPadding={12}
+              className="z-[100] min-w-[10rem] w-max rounded-lg border border-border/80 bg-popover p-1 shadow-md duration-150 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 data-[side=right]:slide-in-from-left-1"
+            >
+              {overflowActions.map((action) => (
+                <DropdownMenuItem
+                  key={action.id}
+                  className={STATUS_OVERFLOW_MENU_ITEM_CLASS}
+                  onSelect={action.onClick}
+                >
+                  <span
+                    className="flex w-4 shrink-0 items-center justify-center text-[22px] font-bold leading-none text-foreground"
+                    aria-hidden
+                  >
+                    •
+                  </span>
+                  <span>{action.label}</span>
+                </DropdownMenuItem>
+              ))}
+            </DropdownMenuContent>
+          </DropdownMenu>
+        ) : null}
+      </SecondaryActionRow>
+    </StatusActionGroup>
+  )
+}
+
 function ReviewTextDialog({
   open,
   title,
@@ -473,6 +584,17 @@ function ChildReviewStatusActions() {
   const [showNigoModal, setShowNigoModal] = useState<'document' | 'principal' | null>(null)
   const [comments, setComments] = useState('')
   const [selectedReason, setSelectedReason] = useState('')
+  const [holdOpen, setHoldOpen] = useState(false)
+  const [holdReason, setHoldReason] = useState('')
+  const [holdNotes, setHoldNotes] = useState('')
+  const [holdExpiration, setHoldExpiration] = useState<(typeof HOLD_EXPIRATION_OPTIONS)[number]['value']>('1h')
+  const [cancelOpen, setCancelOpen] = useState(false)
+  const [cancelNotes, setCancelNotes] = useState('')
+  const [delegateOpen, setDelegateOpen] = useState(false)
+  const [delegateTarget, setDelegateTarget] = useState<'aml' | 'ho-principal' | 'ho-documents'>('aml')
+  const [escalateOpen, setEscalateOpen] = useState(false)
+  const [escalateReason, setEscalateReason] = useState('')
+  const [escalateComments, setEscalateComments] = useState('')
 
   if (!ctx) return null
 
@@ -494,6 +616,55 @@ function ChildReviewStatusActions() {
     setDialog(null)
     setComments('')
     setSelectedReason('')
+  }
+
+  const applyOnHold = () => {
+    if (!ctx || !holdReason) return
+    const expiration = HOLD_EXPIRATION_OPTIONS.find((x) => x.value === holdExpiration)
+    const isAccountChild = ctx.child.childType === 'account-opening' && isSingleFlowKycEnabled(state)
+    if (isAccountChild) {
+      const previousPhase = getAccountWorkflowPhase(state, ctx.child.id)
+      dispatch({ type: 'SET_ACCOUNT_WORKFLOW_PHASE', accountChildId: ctx.child.id, phase: 'escalation_hold' })
+      if (expiration) {
+        window.setTimeout(() => {
+          dispatch({ type: 'SET_ACCOUNT_WORKFLOW_PHASE', accountChildId: ctx.child.id, phase: previousPhase })
+        }, expiration.ms)
+      }
+    } else {
+      dispatch({ type: 'SET_CHILD_TASK_STATUS', childId: ctx.child.id, status: 'blocked' })
+      if (expiration) {
+        window.setTimeout(() => {
+          dispatch({ type: 'SET_CHILD_TASK_STATUS', childId: ctx.child.id, status: 'in_progress' })
+        }, expiration.ms)
+      }
+    }
+    setHoldOpen(false)
+    setHoldReason('')
+    setHoldNotes('')
+  }
+
+  const applyCancel = () => {
+    if (!ctx) return
+    dispatch({ type: 'SET_CHILD_TASK_STATUS', childId: ctx.child.id, status: 'canceled' })
+    setCancelOpen(false)
+    setCancelNotes('')
+  }
+
+  const applyDelegate = () => {
+    dispatch({ type: 'SET_DEMO_VIEW', mode: delegateTarget })
+    setDelegateOpen(false)
+  }
+
+  const applyEscalate = () => {
+    dispatch({
+      type: 'AML_ESCALATE_SAR',
+      reason:
+        formatStructuredReviewText(getReasonLabel(AML_REJECTION_REASONS, escalateReason), escalateComments) ||
+        undefined,
+    })
+    setEscalateOpen(false)
+    setEscalateReason('')
+    setEscalateComments('')
   }
 
   if (!hasReviewerActions) return null
@@ -519,18 +690,15 @@ function ChildReviewStatusActions() {
         </p>
       )
     } else if (accountPhase === 'aml_review' || accountPhase === 'escalation_hold') {
-      actions = (
-        <StatusActionGroup>
-          <StatusActionButton tone="accept" className="w-full" onClick={() => setDialog('account-aml-approve')}>
-            Approve AML
-          </StatusActionButton>
-          <SecondaryActionRow>
-            <StatusActionButton tone="reject" className="w-full" onClick={() => setDialog('account-aml-reject')}>
-              Reject
-            </StatusActionButton>
-          </SecondaryActionRow>
-        </StatusActionGroup>
-      )
+      const reviewActions: ReviewAction[] = [
+        { id: 'approve-aml', label: 'Approve AML', tone: 'accept', placement: 'primary', onClick: () => setDialog('account-aml-approve') },
+        { id: 'reject-aml', label: 'Reject', tone: 'reject', placement: 'primary', onClick: () => setDialog('account-aml-reject') },
+        { id: 'on-hold', label: 'On Hold', tone: 'secondary', placement: 'overflow', onClick: () => setHoldOpen(true) },
+        { id: 'cancelled', label: 'Cancelled', tone: 'secondary', placement: 'overflow', onClick: () => setCancelOpen(true) },
+        { id: 'escalate', label: 'Escalate', tone: 'secondary', placement: 'inline', onClick: () => setEscalateOpen(true) },
+        { id: 'delegate', label: 'Delegate', tone: 'secondary', placement: 'overflow', onClick: () => setDelegateOpen(true) },
+      ]
+      actions = <StatusActionLayout actions={reviewActions} />
     }
   } else if (isSingleFlowAccountChild && mode === 'ho-principal') {
     if (accountPhase !== 'principal_review') {
@@ -548,21 +716,16 @@ function ChildReviewStatusActions() {
         )
       }
     } else {
-      actions = (
-        <StatusActionGroup>
-          <StatusActionButton tone="accept" className="w-full" onClick={() => setDialog('account-principal-approve')}>
-            Approve Review
-          </StatusActionButton>
-          <SecondaryActionRow>
-            <StatusActionButton tone="reject" className="w-full" onClick={() => setDialog('account-principal-reject')}>
-              Reject Review
-            </StatusActionButton>
-            <StatusActionButton tone="secondary" className="w-full" onClick={() => setDialog('account-principal-request')}>
-              Request Information
-            </StatusActionButton>
-          </SecondaryActionRow>
-        </StatusActionGroup>
-      )
+      const reviewActions: ReviewAction[] = [
+        { id: 'approve-principal', label: 'Approve Review', tone: 'accept', placement: 'primary', onClick: () => setDialog('account-principal-approve') },
+        { id: 'reject-principal', label: 'Reject', tone: 'reject', placement: 'primary', onClick: () => setDialog('account-principal-reject') },
+        { id: 'request-info', label: 'Request Information', tone: 'secondary', placement: 'overflow', onClick: () => setDialog('account-principal-request') },
+        { id: 'on-hold', label: 'On Hold', tone: 'secondary', placement: 'overflow', onClick: () => setHoldOpen(true) },
+        { id: 'cancelled', label: 'Cancelled', tone: 'secondary', placement: 'overflow', onClick: () => setCancelOpen(true) },
+        { id: 'escalate', label: 'Escalate', tone: 'secondary', placement: 'inline', onClick: () => setEscalateOpen(true) },
+        { id: 'delegate', label: 'Delegate', tone: 'secondary', placement: 'overflow', onClick: () => setDelegateOpen(true) },
+      ]
+      actions = <StatusActionLayout actions={reviewActions} />
     }
   } else if (
     isSingleFlowAccountChild &&
@@ -577,18 +740,15 @@ function ChildReviewStatusActions() {
         )
       }
     } else {
-      actions = (
-        <StatusActionGroup>
-          <StatusActionButton tone="accept" className="w-full" onClick={() => setDialog('account-cip-approve')}>
-            Approve Review
-          </StatusActionButton>
-          <SecondaryActionRow>
-            <StatusActionButton tone="secondary" className="w-full" onClick={() => setDialog('account-cip-request')}>
-              Request Information
-            </StatusActionButton>
-          </SecondaryActionRow>
-        </StatusActionGroup>
-      )
+      const reviewActions: ReviewAction[] = [
+        { id: 'approve-doc', label: 'Approve Review', tone: 'accept', placement: 'primary', onClick: () => setDialog('account-cip-approve') },
+        { id: 'reject-doc', label: 'Reject', tone: 'reject', placement: 'primary', onClick: () => setDialog('account-cip-request') },
+        { id: 'on-hold', label: 'On Hold', tone: 'secondary', placement: 'overflow', onClick: () => setHoldOpen(true) },
+        { id: 'cancelled', label: 'Cancelled', tone: 'secondary', placement: 'overflow', onClick: () => setCancelOpen(true) },
+        { id: 'escalate', label: 'Escalate', tone: 'secondary', placement: 'inline', onClick: () => setEscalateOpen(true) },
+        { id: 'delegate', label: 'Delegate', tone: 'secondary', placement: 'overflow', onClick: () => setDelegateOpen(true) },
+      ]
+      actions = <StatusActionLayout actions={reviewActions} />
     }
   } else if (mode === 'aml') {
     if (!isChildInAmlReviewQueue(child, reviewState)) {
@@ -596,21 +756,15 @@ function ChildReviewStatusActions() {
     } else {
     const terminal = amlReview?.status && amlReview.status !== 'pending'
     if (!terminal) {
-      actions = (
-        <StatusActionGroup>
-          <StatusActionButton tone="accept" className="w-full" onClick={() => setDialog('aml-approve')}>
-            Approve
-          </StatusActionButton>
-          <SecondaryActionRow>
-            <StatusActionButton tone="reject" className="w-full" onClick={() => setDialog('aml-escalate')}>
-              Escalate
-            </StatusActionButton>
-            <StatusActionButton tone="secondary" className="w-full" onClick={() => setDialog('aml-return')}>
-              Request Information
-            </StatusActionButton>
-          </SecondaryActionRow>
-        </StatusActionGroup>
-      )
+      const reviewActions: ReviewAction[] = [
+        { id: 'approve', label: 'Approve', tone: 'accept', placement: 'primary', onClick: () => setDialog('aml-approve') },
+        { id: 'reject', label: 'Reject', tone: 'reject', placement: 'primary', onClick: () => setDialog('aml-return') },
+        { id: 'on-hold', label: 'On Hold', tone: 'secondary', placement: 'overflow', onClick: () => setHoldOpen(true) },
+        { id: 'cancelled', label: 'Cancelled', tone: 'secondary', placement: 'overflow', onClick: () => setCancelOpen(true) },
+        { id: 'escalate', label: 'Escalate', tone: 'secondary', placement: 'inline', onClick: () => setEscalateOpen(true) },
+        { id: 'delegate', label: 'Delegate', tone: 'secondary', placement: 'overflow', onClick: () => setDelegateOpen(true) },
+      ]
+      actions = <StatusActionLayout actions={reviewActions} />
     }
     }
   } else if (
@@ -629,21 +783,16 @@ function ChildReviewStatusActions() {
       if (!inHoKycQueue) {
         actions = null
       } else {
-        actions = (
-          <StatusActionGroup>
-            <StatusActionButton tone="accept" className="w-full" onClick={() => setDialog('ho-kyc-approve')}>
-              Approve
-            </StatusActionButton>
-            <SecondaryActionRow>
-              <StatusActionButton tone="reject" className="w-full" onClick={() => setDialog('ho-kyc-reject')}>
-                Reject
-              </StatusActionButton>
-              <StatusActionButton tone="secondary" className="w-full" onClick={() => setDialog('ho-kyc-request')}>
-                Request Information
-              </StatusActionButton>
-            </SecondaryActionRow>
-          </StatusActionGroup>
-        )
+        const reviewActions: ReviewAction[] = [
+          { id: 'approve', label: 'Approve', tone: 'accept', placement: 'primary', onClick: () => setDialog('ho-kyc-approve') },
+          { id: 'reject', label: 'Reject', tone: 'reject', placement: 'primary', onClick: () => setDialog('ho-kyc-reject') },
+          { id: 'request-info', label: 'Request Information', tone: 'secondary', placement: 'overflow', onClick: () => setDialog('ho-kyc-request') },
+          { id: 'on-hold', label: 'On Hold', tone: 'secondary', placement: 'overflow', onClick: () => setHoldOpen(true) },
+          { id: 'cancelled', label: 'Cancelled', tone: 'secondary', placement: 'overflow', onClick: () => setCancelOpen(true) },
+          { id: 'escalate', label: 'Escalate', tone: 'secondary', placement: 'inline', onClick: () => setEscalateOpen(true) },
+          { id: 'delegate', label: 'Delegate', tone: 'secondary', placement: 'overflow', onClick: () => setDelegateOpen(true) },
+        ]
+        actions = <StatusActionLayout actions={reviewActions} />
       }
     }
   } else if (mode === 'ho-documents') {
@@ -671,18 +820,16 @@ function ChildReviewStatusActions() {
       if (!inDocQueue) {
         actions = null
       } else {
-        actions = (
-          <StatusActionGroup>
-            <StatusActionButton tone="accept" className="w-full" onClick={() => setDialog('doc-accept')}>
-              Approve Review
-            </StatusActionButton>
-            <SecondaryActionRow>
-              <StatusActionButton tone="secondary" className="w-full" onClick={() => setDialog('doc-request')}>
-                Request Information
-              </StatusActionButton>
-            </SecondaryActionRow>
-          </StatusActionGroup>
-        )
+        const reviewActions: ReviewAction[] = [
+          { id: 'approve', label: 'Approve Review', tone: 'accept', placement: 'primary', onClick: () => setDialog('doc-accept') },
+          { id: 'reject', label: 'Reject', tone: 'reject', placement: 'primary', onClick: () => setShowNigoModal('document') },
+          { id: 'request-info', label: 'Request Information', tone: 'secondary', placement: 'overflow', onClick: () => setDialog('doc-request') },
+          { id: 'on-hold', label: 'On Hold', tone: 'secondary', placement: 'overflow', onClick: () => setHoldOpen(true) },
+          { id: 'cancelled', label: 'Cancelled', tone: 'secondary', placement: 'overflow', onClick: () => setCancelOpen(true) },
+          { id: 'escalate', label: 'Escalate', tone: 'secondary', placement: 'inline', onClick: () => setEscalateOpen(true) },
+          { id: 'delegate', label: 'Delegate', tone: 'secondary', placement: 'overflow', onClick: () => setDelegateOpen(true) },
+        ]
+        actions = <StatusActionLayout actions={reviewActions} />
       }
     }
   } else if (mode === 'ho-principal') {
@@ -713,19 +860,17 @@ function ChildReviewStatusActions() {
     if (!terminal) {
       actions = (
         !blocked ? (
-          <StatusActionGroup>
-            <StatusActionButton tone="accept" className="w-full" onClick={() => setDialog('principal-approve')}>
-              Approve Review
-            </StatusActionButton>
-            <SecondaryActionRow>
-              <StatusActionButton tone="reject" className="w-full" onClick={() => setShowNigoModal('principal')}>
-                Reject Review
-              </StatusActionButton>
-              <StatusActionButton tone="secondary" className="w-full" onClick={() => setDialog('principal-request')}>
-                Request Information
-              </StatusActionButton>
-            </SecondaryActionRow>
-          </StatusActionGroup>
+          <StatusActionLayout
+            actions={[
+              { id: 'approve', label: 'Approve Review', tone: 'accept', placement: 'primary', onClick: () => setDialog('principal-approve') },
+              { id: 'reject', label: 'Reject', tone: 'reject', placement: 'primary', onClick: () => setShowNigoModal('principal') },
+              { id: 'request-info', label: 'Request Information', tone: 'secondary', placement: 'overflow', onClick: () => setDialog('principal-request') },
+              { id: 'on-hold', label: 'On Hold', tone: 'secondary', placement: 'overflow', onClick: () => setHoldOpen(true) },
+              { id: 'cancelled', label: 'Cancelled', tone: 'secondary', placement: 'overflow', onClick: () => setCancelOpen(true) },
+              { id: 'escalate', label: 'Escalate', tone: 'secondary', placement: 'inline', onClick: () => setEscalateOpen(true) },
+              { id: 'delegate', label: 'Delegate', tone: 'secondary', placement: 'overflow', onClick: () => setDelegateOpen(true) },
+            ]}
+          />
         ) : null
       )
     }
@@ -1106,6 +1251,131 @@ function ChildReviewStatusActions() {
           closeDialog()
         }}
       />
+
+      <ReviewTextDialog
+        open={escalateOpen}
+        title="Escalate"
+        description="Escalate this workflow for additional compliance review."
+        reasonLabel="Escalation reason"
+        reasonOptions={AML_REJECTION_REASONS}
+        reasonValue={escalateReason}
+        onReasonChange={setEscalateReason}
+        label="Additional comments"
+        placeholder="Provide escalation context..."
+        value={escalateComments}
+        confirmLabel="Escalate"
+        confirmTone="destructive"
+        onChange={setEscalateComments}
+        onCancel={() => setEscalateOpen(false)}
+        onConfirm={applyEscalate}
+      />
+
+      <Dialog open={holdOpen} onOpenChange={setHoldOpen}>
+        <DialogContent className={cn('max-w-md', reviewDialogContentClass)}>
+          <DialogHeader>
+            <DialogTitle>Place On Hold</DialogTitle>
+            <DialogDescription>
+              Pause this workflow and return it to the prior stage when the hold expires.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-2">
+            <Label className="text-sm">Hold reason</Label>
+            <Select value={holdReason} onValueChange={setHoldReason}>
+              <SelectTrigger>
+                <SelectValue placeholder="Select a reason..." />
+              </SelectTrigger>
+              <SelectContent className="z-[70]">
+                {HOLD_REASONS.map((reason) => (
+                  <SelectItem key={reason.value} value={reason.value}>
+                    {reason.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="space-y-2">
+            <Label className="text-sm">Expiration timeframe</Label>
+            <Select value={holdExpiration} onValueChange={(v) => setHoldExpiration(v as '15m' | '1h' | '1d')}>
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent className="z-[70]">
+                {HOLD_EXPIRATION_OPTIONS.map((option) => (
+                  <SelectItem key={option.value} value={option.value}>
+                    {option.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="space-y-2">
+            <Label className="text-sm">Hold notes</Label>
+            <textarea
+              value={holdNotes}
+              onChange={(e) => setHoldNotes(e.target.value)}
+              placeholder="Add optional hold details..."
+              className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm min-h-[88px] resize-none focus:outline-none focus:ring-2 focus:ring-ring"
+            />
+          </div>
+          <DialogFooter>
+            <Button type="button" variant="outline" onClick={() => setHoldOpen(false)}>
+              Cancel
+            </Button>
+            <Button type="button" onClick={applyOnHold} disabled={!holdReason}>
+              Confirm Hold
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <ReviewTextDialog
+        open={cancelOpen}
+        title="Cancel Workflow"
+        description="Cancel this workflow. Application data remains available for resubmission within the timeout window."
+        label="Cancellation notes"
+        placeholder="Add optional cancellation notes..."
+        value={cancelNotes}
+        confirmLabel="Cancel Workflow"
+        confirmTone="destructive"
+        onChange={setCancelNotes}
+        onCancel={() => setCancelOpen(false)}
+        onConfirm={applyCancel}
+      />
+
+      <Dialog open={delegateOpen} onOpenChange={setDelegateOpen}>
+        <DialogContent className={cn('max-w-md', reviewDialogContentClass)}>
+          <DialogHeader>
+            <DialogTitle>Delegate Review</DialogTitle>
+            <DialogDescription>Route this review to another team queue.</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-2">
+            <Label className="text-sm">Route to</Label>
+            <Select
+              value={delegateTarget}
+              onValueChange={(value) => setDelegateTarget(value as 'aml' | 'ho-principal' | 'ho-documents')}
+            >
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent className="z-[70]">
+                {DELEGATE_TARGET_OPTIONS.map((target) => (
+                  <SelectItem key={target.value} value={target.value}>
+                    {target.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <DialogFooter>
+            <Button type="button" variant="outline" onClick={() => setDelegateOpen(false)}>
+              Cancel
+            </Button>
+            <Button type="button" onClick={applyDelegate}>
+              Delegate
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       <NigoDialog
         open={showNigoModal === 'document'}

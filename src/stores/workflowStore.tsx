@@ -810,6 +810,17 @@ function workflowReducer(state: WorkflowState, action: WorkflowAction): Workflow
       return { ...state, tasks: newTasks }
     }
 
+    case 'SET_CHILD_TASK_STATUS': {
+      const newTasks = state.tasks.map((t) => {
+        if (!t.children) return t
+        const newChildren = t.children.map((c) =>
+          c.id === action.childId ? { ...c, status: action.status } : c,
+        )
+        return { ...t, children: newChildren }
+      })
+      return { ...state, tasks: newTasks }
+    }
+
     case 'CONFIRM_TASK': {
       const newSubmitted = state.submittedTaskIds.includes(action.taskId)
         ? state.submittedTaskIds

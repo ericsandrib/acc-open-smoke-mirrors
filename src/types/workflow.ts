@@ -437,6 +437,7 @@ export type WorkflowAction =
   /** Leave any child / drill-in flow and open a top-level task from {@link WorkflowState.flatTaskOrder}. */
   | { type: 'GO_TO_TASK'; taskId: string }
   | { type: 'SET_TASK_STATUS'; taskId: string; status: TaskStatus }
+  | { type: 'SET_CHILD_TASK_STATUS'; childId: string; status: TaskStatus }
   | { type: 'CONFIRM_TASK'; taskId: string }
   | { type: 'REOPEN_TASK'; taskId: string }
   | { type: 'SPAWN_CHILD'; parentTaskId: string; childName: string; childType: ChildType; metadata?: Record<string, unknown> }
