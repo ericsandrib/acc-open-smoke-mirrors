@@ -11,18 +11,21 @@ import {
   handleWizardIsolatedScrollPaneWheel,
 } from '@/utils/wizardScroll'
 
-const JOURNEY_TAB_ORDER = ['details', 'documents'] as const
-type JourneyRailTab = (typeof JOURNEY_TAB_ORDER)[number]
+type JourneyRailTab = 'details' | 'comments' | 'documents'
 
-const JOURNEY_TAB_META: Record<JourneyRailTab, { label: string }> = {
-  details: { label: 'Info' },
-  documents: { label: 'Documents' },
+const JOURNEY_TAB_LABELS: Record<JourneyRailTab, string> = {
+  details: 'Details',
+  comments: 'Comments',
+  documents: 'Documents',
+}
+
+function journeyTabOrder(showDocumentsTab: boolean): JourneyRailTab[] {
+  return showDocumentsTab ? ['details', 'comments', 'documents'] : ['details', 'comments']
 }
 
 /**
- * Main-journey right rail: same collapse shell as {@link ChildActionRightSidebar},
- * with Info + Documents text tabs only (Activity/Comments live on the child rail).
- * Documents tab is reviewer-only (when `demoViewMode` is set and not `advisor`).
+ * Main-journey right rail: Details + Comments; Documents when reviewer-only
+ * (`demoViewMode` set and not `advisor`). Activity lives on the child rail.
  */
 export function DetailSidebar() {
   const { state } = useWorkflow()
@@ -32,15 +35,20 @@ export function DetailSidebar() {
 
   const showDocumentsTab =
     !isOpenAccountsParentTask && state.demoViewMode != null && state.demoViewMode !== 'advisor'
+  const tabOrder = journeyTabOrder(showDocumentsTab)
 
   useEffect(() => {
-    if (!showDocumentsTab && activeTab === 'documents') {
+    if (activeTab === 'documents' && !showDocumentsTab) {
+      setActiveTab('details')
+    }
+    if (activeTab === 'activity') {
       setActiveTab('details')
     }
   }, [showDocumentsTab, activeTab, setActiveTab])
 
-  const displayTab: JourneyRailTab =
-    showDocumentsTab && activeTab === 'documents' ? 'documents' : 'details'
+  const displayTab: JourneyRailTab = tabOrder.includes(activeTab as JourneyRailTab)
+    ? (activeTab as JourneyRailTab)
+    : 'details'
 
   const activeChild = state.tasks
     .flatMap((t) => t.children ?? [])
@@ -76,40 +84,34 @@ export function DetailSidebar() {
           collapsed ? 'opacity-0' : 'opacity-100 delay-200',
         )}
       >
-        {showDocumentsTab || isOpenAccountsParentTask ? (
-          <div
-            className="flex h-14 shrink-0 flex-nowrap items-center gap-1 overflow-x-auto border-b border-border px-3"
-            role="tablist"
-            aria-label="Right panel"
-          >
-            {(showDocumentsTab ? JOURNEY_TAB_ORDER : (['details'] as const)).map((tab) => {
-              const { label } = JOURNEY_TAB_META[tab]
-              const selected = displayTab === tab
-              return (
-                <button
-                  key={tab}
-                  type="button"
-                  role="tab"
-                  aria-selected={selected}
-                  aria-label={label}
-                  onClick={() => setActiveTab(tab)}
-                  className={cn(
-                    'px-3 py-1.5 rounded-md text-sm font-medium transition-colors shrink-0',
-                    selected
-                      ? 'bg-muted text-foreground'
-                      : 'text-muted-foreground hover:bg-muted/50 hover:text-foreground',
-                  )}
-                >
-                  {label}
-                </button>
-              )
-            })}
-          </div>
-        ) : (
-          <div className="flex h-14 items-center border-b border-border px-3 shrink-0">
-            <h3 className="text-sm font-semibold text-foreground truncate">Info</h3>
-          </div>
-        )}
+        <div
+          className="flex h-14 shrink-0 flex-nowrap items-center gap-1 overflow-x-auto border-b border-border px-3"
+          role="tablist"
+          aria-label="Right panel"
+        >
+          {tabOrder.map((tab) => {
+            const label = JOURNEY_TAB_LABELS[tab]
+            const selected = displayTab === tab
+            return (
+              <button
+                key={tab}
+                type="button"
+                role="tab"
+                aria-selected={selected}
+                aria-label={label}
+                onClick={() => setActiveTab(tab)}
+                className={cn(
+                  'px-3 py-1.5 rounded-md text-sm font-medium transition-colors shrink-0',
+                  selected
+                    ? 'bg-muted text-foreground'
+                    : 'text-muted-foreground hover:bg-muted/50 hover:text-foreground',
+                )}
+              >
+                {label}
+              </button>
+            )
+          })}
+        </div>
 
         <div
           data-wizard-scroll-pane
@@ -117,7 +119,7 @@ export function DetailSidebar() {
             'flex flex-1 min-h-0 flex-col overscroll-y-contain text-sm',
             displayTab === 'documents'
               ? 'overflow-hidden'
-              : isOpenAccountsParentTask
+              : displayTab === 'details' && isOpenAccountsParentTask
                 ? 'overflow-y-auto p-3'
                 : 'overflow-y-auto p-4',
           )}
@@ -126,6 +128,9 @@ export function DetailSidebar() {
           {displayTab === 'details' && isOpenAccountsParentTask && activeTask ? (
             <ParentJourneyDetailsPanel parentTaskId={activeTask.id} />
           ) : null}
+          {displayTab === 'comments' && (
+            <p className="text-sm text-muted-foreground">No comments yet.</p>
+          )}
           {displayTab === 'details' && !isOpenAccountsParentTask && (
             <>
               {activeTask && (

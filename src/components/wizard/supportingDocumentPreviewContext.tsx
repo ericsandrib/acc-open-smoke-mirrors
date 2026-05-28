@@ -9,7 +9,7 @@ import {
 } from 'react'
 import { useWorkflow } from '@/stores/workflowStore'
 import { collectJourneySupportingDocumentRows } from '@/utils/journeySupportingDocuments'
-import { resolveSupportingDocumentDemoPdfHref } from '@/utils/supportingDocumentPreviewResolve'
+import { resolveSupportingDocumentDemoHref } from '@/utils/supportingDocumentPreviewResolve'
 
 export type SupportingDocumentPreviewApi = {
   registerPreview: (key: string, file: File) => void
@@ -58,7 +58,7 @@ export function SupportingDocumentPreviewProvider({ children }: { children: Reac
     const activeKeys = new Set(rows.map((r) => r.previewKey))
 
     for (const row of rows) {
-      const demoHref = resolveSupportingDocumentDemoPdfHref(row.fileName)
+      const demoHref = resolveSupportingDocumentDemoHref(row.fileName)
       if (!demoHref) continue
       const existing = map.get(row.previewKey)
       if (existing && isBlobPreviewUrl(existing)) continue

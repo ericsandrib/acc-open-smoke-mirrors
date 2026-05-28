@@ -13,7 +13,7 @@ import {
   handleWizardIsolatedScrollPaneWheel,
 } from '@/utils/wizardScroll'
 
-const CHILD_TAB_ORDER: WizardRightPanelTab[] = ['details', 'comments', 'activity']
+const CHILD_TAB_ORDER = ['details', 'comments', 'activity'] as const satisfies readonly WizardRightPanelTab[]
 
 const CHILD_TAB_META: Record<(typeof CHILD_TAB_ORDER)[number], { label: string }> = {
   details: { label: 'Details' },

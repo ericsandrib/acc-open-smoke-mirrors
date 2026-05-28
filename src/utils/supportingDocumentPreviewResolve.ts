@@ -11,10 +11,16 @@ export function isPreviewableImageFileName(fileName: string): boolean {
   return /\.(png|jpe?g|gif|webp)$/i.test(n)
 }
 
-/** Demo placeholder PDF when session blob previews are unavailable (e.g. after submit / reload). */
-export function resolveSupportingDocumentDemoPdfHref(fileName: string): string | undefined {
-  if (!isPreviewablePdfFileName(fileName)) return undefined
+/** Demo placeholder when session blob previews are unavailable (e.g. after reload). */
+export function resolveSupportingDocumentDemoHref(fileName: string): string | undefined {
+  const n = fileName.trim().toLowerCase()
+  if (!n || n === 'no file uploaded') return undefined
   return DEFAULT_ESIGN_DEMO_PDF_HREF
+}
+
+/** @deprecated Use {@link resolveSupportingDocumentDemoHref} */
+export function resolveSupportingDocumentDemoPdfHref(fileName: string): string | undefined {
+  return resolveSupportingDocumentDemoHref(fileName)
 }
 
 export function pdfViewerEmbedSrc(href: string): string {
@@ -29,5 +35,5 @@ export function resolveSupportingDocumentPreviewSrc(
 ): string | undefined {
   const blob = getPreviewUrl(previewKey)
   if (blob) return blob
-  return resolveSupportingDocumentDemoPdfHref(fileName)
+  return resolveSupportingDocumentDemoHref(fileName)
 }
