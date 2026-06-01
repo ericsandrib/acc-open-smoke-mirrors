@@ -14,7 +14,23 @@ import { seededJourneys } from '@/data/servicingSeed'
 import { MEETINGS } from '@/data/zions/meetingsSeed'
 
 export interface DetailAccount { system: string; domain: string; label: string; value?: number; affiliate?: string; externalId: string }
-export interface DetailMember { id: string; name: string; role: string; isPrimary?: boolean; descriptor?: string }
+export interface DetailMember {
+  id: string
+  name: string
+  role: string
+  isPrimary?: boolean
+  descriptor?: string
+  preferredName?: string
+  status?: string
+  dob?: string
+  age?: number
+  ssnMasked?: string
+  email?: string
+  phone?: string
+  address?: string
+  clientPortalRegistered?: boolean
+  clientPortalLastLogin?: string
+}
 export interface DetailOrg { id: string; name: string; role: string }
 export interface DetailAction { name: string; category: string; status: string; date?: string }
 export interface DetailTask { name: string; status: string; owner?: string; nextStep?: string }
@@ -72,6 +88,23 @@ function entityAccounts(e: LegalEntity): DetailAccount[] {
     affiliate: id.affiliate ? AFFILIATE_LABEL[id.affiliate] : undefined,
     externalId: id.externalId,
   }))
+}
+
+// Per-member detail (synthetic) for the cross-silo personas; others fall back to descriptor-parsed age.
+const MEMBER_DETAILS: Record<string, Partial<DetailMember>> = {
+  'Ralph Whitmore': { preferredName: 'Ralph', status: 'Client · Active', dob: '1962-09-14', age: 63, ssnMasked: '***-**-4471', email: 'ralph.whitmore@example.com', phone: '(801) 555-0142', address: '2280 Walker Lane, Salt Lake City, UT 84117', clientPortalRegistered: true, clientPortalLastLogin: 'May 28, 2026' },
+  'Diane Whitmore': { preferredName: 'Diane', status: 'Spouse · Active', dob: '1964-03-02', age: 61, ssnMasked: '***-**-7790', email: 'diane.whitmore@example.com', phone: '(801) 555-0143', address: '2280 Walker Lane, Salt Lake City, UT 84117', clientPortalRegistered: true, clientPortalLastLogin: 'May 12, 2026' },
+  'Marcus Hale': { preferredName: 'Marcus', status: 'Prospect', dob: '1971-06-20', age: 54, email: 'mhale@cedarfalls.gov', phone: '(319) 555-0110', address: '14 Municipal Plaza, Cedar Falls, IA 50613', clientPortalRegistered: false },
+  'Janet Cole': { preferredName: 'Janet', status: 'Prospect', dob: '1968-11-05', age: 57, email: 'janet@cedarridgeholdings.com', phone: '(720) 555-0188', address: '880 Vine Street, Denver, CO 80206', clientPortalRegistered: false },
+}
+
+function parseAge(descriptor?: string): number | undefined {
+  const m = descriptor?.match(/age (\d+)/)
+  return m ? Number(m[1]) : undefined
+}
+
+function enrichMember(m: DetailMember): DetailMember {
+  return { ...m, age: m.age ?? parseAge(m.descriptor), ...MEMBER_DETAILS[m.name] }
 }
 
 export function getRelationshipDetail(relId: string): RelationshipDetail | null {
@@ -156,7 +189,7 @@ export function getRelationshipDetail(relId: string): RelationshipDetail | null 
     lastMeeting: meetings[0]?.date,
     nextMeeting: rel.type === 'Prospective' ? undefined : 'In 2 weeks',
     alert: opportunities.length ? `${opportunities.length} cross-silo opportunity${opportunities.length > 1 ? 'ies' : ''}` : undefined,
-    members,
+    members: members.map(enrichMember),
     relatedContacts: [],
     relatedOrgs,
     accounts,

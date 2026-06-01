@@ -13,3 +13,4 @@ Specs are numbered sequentially to show the order in which features were designe
 | 005 | [Port Filter Sidebar](005-port-filter-sidebar.md) | In Progress |
 | 006 | [Custodian Selection + Schwab Native Forms](006-custodian-schwab-forms.md) | Complete |
 | 007 | [Zions POC Instance](007-zions-poc-instance.md) | In Progress |
+| 008 | [Relationship Detail Port](008-relationship-detail-port.md) | In Progress |
