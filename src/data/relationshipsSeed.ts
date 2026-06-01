@@ -1,20 +1,14 @@
-// Relationships dashboard seed data.
+// Relationships overview seed — Zions POC instance (Spec 007 Phase 3).
 //
-// 2026-04-28 working session w/ Chris Radzinski & Wes Hawkins:
-//   • RENAME relationship → household (advisor language; row is household-level)
-//   • REMOVE firm column (custodian rejected as replacement; multi-custodian per
-//     household made it untenable)
-//   • REMOVE zip-code column (not relevant on the overview)
-//   • Source clarification: status + updatedAt come from Avantos
-//   • Source clarification: aum comes from Orion (household rollup, existing only)
+// The advisor's book of business. Reuses the locked identity-graph personas so the
+// Relationships overview, the cross-silo Relationship Graph, and the opportunity
+// surfacing all tell one coherent story:
+//   • Whitmore Household — unified across Fi-Tek + LPL + eMoney + Amegy (Existing)
+//   • City of Cedar Falls — Corporate Trust deal relationship (Existing)
+//   • Marcus Hale / Janet Cole — cross-silo prospects surfaced by identity unification
 //
-// Remaining columns mirror the agreed-upon Stratos overview shape:
-//   Household       (Avantos relationship/household record)
-//   Advisor         (rep mapping; Salesforce + Orion cross-walk)
-//   Type            (Prospective / New / Existing)
-//   Status          (Avantos onboarding state + relationship record)
-//   AUM             (Orion household rollup, existing clients only)
-//   Updated At      (Avantos last-modified)
+// Columns map to approved Zions source systems via the unified relationship model
+// (Salesforce / Fi-Tek / LPL); no production integration implied. Synthetic data.
 
 export type RelationshipType = 'Prospective' | 'New' | 'Existing'
 
@@ -29,37 +23,55 @@ export interface Relationship {
   status: string | null
 }
 
-// Intentionally sparse — Stratos overview, brand-new prototype.
 export const RELATIONSHIPS_SEED: Relationship[] = [
-  { id: 'r-lincoln',   household: 'Abraham Lincoln',  advisor: 'Eric Sandrib', type: 'Prospective', aum: null,    targetedAum: null,   updatedAt: '3 days ago', status: null },
-  { id: 'r-acme',      household: 'Acme',             advisor: 'Eric Sandrib', type: 'Prospective', aum: null,    targetedAum: null,   updatedAt: '3 days ago', status: null },
-  { id: 'r-sandler',   household: 'Adam Sandler',     advisor: 'Eric Sandrib', type: 'Prospective', aum: null,    targetedAum: null,   updatedAt: '3 days ago', status: null },
-  { id: 'r-collins',   household: 'Ava Collins',      advisor: 'Eric Sandrib', type: 'Prospective', aum: null,    targetedAum: null,   updatedAt: '3 days ago', status: null },
-  { id: 'r-pitt',      household: 'Brad Pitt',        advisor: 'Eric Sandrib', type: 'Prospective', aum: null,    targetedAum: null,   updatedAt: '3 days ago', status: null },
-  { id: 'r-biz-413',   household: 'Business 4/13',    advisor: 'Eric Sandrib', type: 'Prospective', aum: null,    targetedAum: null,   updatedAt: '3 days ago', status: null },
-  { id: 'r-meaney',    household: 'Erin Aiko Meaney', advisor: 'Eric Sandrib', type: 'Prospective', aum: null,    targetedAum: null,   updatedAt: '3 days ago', status: null },
-  { id: 'r-erin-test', household: 'Erin test',        advisor: 'Eric Sandrib', type: 'Prospective', aum: null,    targetedAum: null,   updatedAt: '3 days ago', status: null },
-  { id: 'r-lang',      household: 'Lang, Chris M.',   advisor: 'Alice Chen',   type: 'New',         aum: 250000,  targetedAum: 500000, updatedAt: '1 hour ago', status: 'Account opening in progress' },
-  { id: 'r-smith',     household: 'Smith Family',     advisor: 'Alice Chen',   type: 'Existing',    aum: 1250000, targetedAum: null,   updatedAt: '2 days ago', status: 'Onboarded' },
-  { id: 'r-johnson',   household: 'Johnson Trust',    advisor: 'Bob Martinez', type: 'Existing',    aum: 3400000, targetedAum: null,   updatedAt: '5 days ago', status: 'Onboarded' },
+  // ── Existing (managed wealth + corporate trust) ──
+  { id: 'r-whitmore',    household: 'Whitmore Household',       advisor: 'Priya Raman',   type: 'Existing',    aum: 5_560_000,  targetedAum: null,      updatedAt: '2 days ago',  status: 'Onboarded · Wealth + Bank' },
+  { id: 'r-cedar-falls', household: 'City of Cedar Falls',      advisor: 'Daniel Okafor', type: 'Existing',    aum: 42_000_000, targetedAum: null,      updatedAt: '1 day ago',   status: 'Corporate Trust · active deal' },
+  { id: 'r-hargrove',    household: 'Hargrove Foundation',      advisor: 'Sofia Delgado', type: 'Existing',    aum: 12_400_000, targetedAum: null,      updatedAt: '1 week ago',  status: 'Onboarded' },
+  { id: 'r-beckett',     household: 'Beckett Living Trust',     advisor: 'Sofia Delgado', type: 'Existing',    aum: 8_100_000,  targetedAum: null,      updatedAt: '4 days ago',  status: 'Onboarded' },
+  { id: 'r-vance',       household: 'Vance Family Trust',       advisor: 'Marcus Webb',   type: 'Existing',    aum: 6_900_000,  targetedAum: null,      updatedAt: '5 days ago',  status: 'Onboarded' },
+  { id: 'r-nakamura',    household: 'Nakamura Family',          advisor: 'Priya Raman',   type: 'Existing',    aum: 3_250_000,  targetedAum: null,      updatedAt: '3 days ago',  status: 'Onboarded' },
+  // ── New (onboarding in flight) ──
+  { id: 'r-cedar-ridge', household: 'Cedar Ridge Holdings LLC', advisor: 'Daniel Okafor', type: 'New',         aum: null,       targetedAum: 5_000_000, updatedAt: '1 hour ago',  status: 'Commercial → wealth referral' },
+  { id: 'r-tran',        household: 'Tran Family',              advisor: 'Marcus Webb',   type: 'New',         aum: 450_000,    targetedAum: 1_000_000, updatedAt: '6 hours ago', status: 'Account opening in progress' },
+  { id: 'r-sandoval',    household: 'Sandoval Family',          advisor: 'Priya Raman',   type: 'New',         aum: 300_000,    targetedAum: 900_000,   updatedAt: 'yesterday',   status: 'KYC in review' },
+  // ── Prospective (cross-silo surfaced + COI) ──
+  { id: 'r-hale',        household: 'Marcus Hale',              advisor: 'Daniel Okafor', type: 'Prospective', aum: null,       targetedAum: 1_500_000, updatedAt: '1 hour ago',  status: 'Trust-officer prospect · Cedar Falls' },
+  { id: 'r-cole',        household: 'Janet Cole',               advisor: 'Daniel Okafor', type: 'Prospective', aum: null,       targetedAum: 5_000_000, updatedAt: '2 hours ago', status: 'Bank-inflow prospect · $8.5M CB&T' },
+  { id: 'r-pearson',     household: 'Pearson, James R.',        advisor: 'Priya Raman',   type: 'Prospective', aum: null,       targetedAum: 750_000,   updatedAt: '3 days ago',  status: 'Referral · COI' },
 ]
+
+// --- derived metrics (header summary cards) --------------------------------
+
+function sumBy(rows: Relationship[], key: 'aum' | 'targetedAum'): number {
+  return rows.reduce((t, r) => t + (r[key] ?? 0), 0)
+}
+
+function compactUsd(n: number): string {
+  if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(n >= 10_000_000 ? 0 : 1)}M`
+  if (n >= 1_000) return `${Math.round(n / 1_000)}K`
+  return `${n}`
+}
+
+const _prospective = RELATIONSHIPS_SEED.filter((r) => r.type === 'Prospective')
+const _new = RELATIONSHIPS_SEED.filter((r) => r.type === 'New')
+const _existing = RELATIONSHIPS_SEED.filter((r) => r.type === 'Existing')
 
 export const RELATIONSHIP_METRICS = {
   totalClients: RELATIONSHIPS_SEED.length,
-  totalAumWealth: 0,
+  totalAumWealth: compactUsd(sumBy(_existing, 'aum')),
   annualizedPremiumLife: 0,
   annualizedPremiumDisability: 0,
-  // These match the prospect-summary card set in the top header image.
   prospective: {
-    total: RELATIONSHIPS_SEED.filter((r) => r.type === 'Prospective').length,
-    targetedAum: 0,
+    total: _prospective.length,
+    targetedAum: compactUsd(sumBy(_prospective, 'targetedAum')),
   },
   new: {
-    total: RELATIONSHIPS_SEED.filter((r) => r.type === 'New').length,
-    aum: 0,
+    total: _new.length,
+    aum: compactUsd(sumBy(_new, 'aum')),
   },
   existing: {
-    total: RELATIONSHIPS_SEED.filter((r) => r.type === 'Existing').length,
-    aum: 0,
+    total: _existing.length,
+    aum: compactUsd(sumBy(_existing, 'aum')),
   },
 }

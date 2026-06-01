@@ -3,6 +3,7 @@
 @import "./styles/themes/mercer.css";
 @import "./styles/themes/guardian.css";
 @import "./styles/themes/vanguard.css";
+@import "./styles/themes/zions.css";
 
 @plugin "tailwindcss-animate";
 

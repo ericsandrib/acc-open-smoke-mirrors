@@ -1,7 +1,7 @@
 import { createContext, useContext, useState, useEffect, type ReactNode } from 'react'
 
 type ColorScheme = 'light' | 'dark'
-type BrandTheme = 'stratos' | 'mercer' | 'guardian' | 'vanguard'
+type BrandTheme = 'stratos' | 'mercer' | 'guardian' | 'vanguard' | 'zions'
 
 const ThemeContext = createContext<{
   colorScheme: ColorScheme
@@ -25,11 +25,11 @@ function getInitialColorScheme(): ColorScheme {
 
 function getInitialBrandTheme(): BrandTheme {
   const stored = localStorage.getItem('brand-theme')
-  // Force stratos for this demo; legacy stored values are ignored so the UI
-  // never shows a non-Stratos brand to a client.
-  if (stored === 'stratos') return stored
-  localStorage.setItem('brand-theme', 'stratos')
-  return 'stratos'
+  // Force zions for the Zions POC instance; legacy stored values are ignored so
+  // the UI never shows a non-Zions brand to the client.
+  if (stored === 'zions') return stored
+  localStorage.setItem('brand-theme', 'zions')
+  return 'zions'
 }
 
 function getInitialShowNestedGroups(): boolean {

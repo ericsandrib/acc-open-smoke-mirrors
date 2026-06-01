@@ -9,6 +9,7 @@ import { ServicingPage } from '@/pages/ServicingPage'
 import { OnboardingPage } from '@/pages/OnboardingPage'
 import { OnboardingJourneyDetailPage } from '@/pages/OnboardingJourneyDetailPage'
 import { RelationshipsPage } from '@/pages/RelationshipsPage'
+import { IdentityGraphPage } from '@/pages/IdentityGraphPage'
 import { SettingsPage } from '@/pages/SettingsPage'
 import { TestsIndexPage } from '@/pages/tests/TestsIndexPage'
 import { ProgressIndicatorTestPage } from '@/pages/tests/ProgressIndicatorTestPage'
@@ -33,6 +34,7 @@ export default function App() {
                   <Route path="/onboarding" element={<OnboardingPage />} />
                   <Route path="/onboarding/:journeyId" element={<OnboardingJourneyDetailPage />} />
                   <Route path="/relationships" element={<RelationshipsPage />} />
+                  <Route path="/network" element={<IdentityGraphPage />} />
                   <Route path="/settings" element={<SettingsPage />} />
                   <Route path="/tests" element={<TestsIndexPage />} />
                   <Route path="/tests/progress-indicator" element={<ProgressIndicatorTestPage />} />

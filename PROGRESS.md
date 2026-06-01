@@ -227,3 +227,52 @@
 - [x] AccountFinancialSection inserted into all 4 Schwab forms (One §6a, IRA §11, Managed §4a, Transfer §7)
 - [x] schwabPrePopulation: new deriveIdentityFromUploadedDocs() generates fake-but-plausible ID type, number, country, state, issue/expiration date from filename + subType
 - [x] useSchwabFormState wired to seed idType/idNumber/idCountry/idState/idIssueDate/idExpirationDate from the document identity
+
+## Spec 007: Zions POC Instance
+
+> Branch `zions-poc`. Locked to the Zions + Avantos POC Outline + the "Unified Wealth Intelligence" RFI. See [specs/007-zions-poc-instance.md](specs/007-zions-poc-instance.md).
+
+### Phase 1: Zions brand + instance default ✅
+- [x] `'zions'` added to `BrandTheme` union; forced as instance default
+- [x] `src/styles/themes/zions.css` (light + dark, Zions navy)
+- [x] `@import` in `index.css`; `BrandThemeSwitcher` → Zions; Zions wordmark/monogram (`public/zions-logo.svg`, `zions-mark.svg`) in nav
+- [x] `pnpm typecheck` clean; dev server renders Zions brand
+
+### Phase 2: Cross-silo identity graph + Zions seed (headline) ✅
+- [x] Legal-entity node type w/ multiple source-system IDs (Fi-Tek/LPL/Transtar/eMoney/bank-core) + affiliate membership + entity kind (`src/types/identityGraph.ts`)
+- [x] Zions seed: Whitmore HNW household (Fi-Tek + LPL + eMoney + Amegy), City of Cedar Falls issuer (Corporate Trust) w/ officer, Cedar Ridge business owner (`src/data/zions/identityGraphSeed.ts`)
+- [x] Graph viz via `@xyflow/react` + `dagre`; entity nodes list all source-system IDs (one node, many systems) — `/network`, Insights nav
+- [x] Corporate-trust → wealth bridge (Marcus Hale, issuer officer, as NBA prospect)
+- [x] Bank → wealth promotion signal (Janet Cole, $8.5M CB&T inflow)
+- [x] Cross-silo opportunities side panel; rendering verified via preview
+
+### Phase 3: Unified Advisor Experience ✅ (core)
+- [x] Re-seed `relationshipsSeed.ts` with Zions households + computed metrics
+- [x] Dashboard book-of-business + next-best actions + Growth (cross-silo opps) + Insights (Zions)
+- [x] Relationships page incl. cross-silo prospects (Hale, Cole) + Zions source-system footer
+- [ ] Activity timeline + AI client-summary hooks (deferred)
+- [ ] Source-system badges on relationship rows (graph has them; table deferred)
+
+### Phase 4: Onboarding / Account Opening (Zions re-seed)
+- [ ] Re-seed onboarding journey for a Zions household
+- [ ] Simulated Fi-Tek/GWES + Salesforce (read + Case write-back) + eSignature in-flow
+- [ ] Doc AI step: trust agreement / corporate resolution → prefill (mocked)
+- [ ] SLA / status tracking across advisor / ops / compliance
+
+### Phase 5: Servicing — meeting-to-action (distribution)
+- [x] Added `distribution` arch on the in-progress `Arch` model; Zions reseed (`servicingSeed.ts`)
+- [x] Whitmore ACH $120K distribution (meeting-to-action) + Hargrove delayed-beyond-SLA + Cedar Falls bond disbursement
+- [ ] Launch-from-insight wiring: Meeting Assistant "accept" → creates the distribution (Phase 6)
+
+### Phase 6: AI surfaces — DECISION PENDING
+- [ ] Meeting Assistant (summary + action cards → accept creates servicing action)
+- [ ] Ask Anything (scripted NL answers to the RFI example prompts)
+- [ ] Route + nav entry
+- [ ] Placeholder shell until Eric confirms faithful-port vs. placeholder approach
+
+### Phase 7: Operational analytics
+- [ ] SLA dashboard + bottleneck visibility + workflow monitoring + task transparency
+
+### Phase 8: Simulated-integration posture
+- [ ] "Connected systems" sits-above representation (Fi-Tek/Salesforce/SEI/LPL/eMoney/DocuSign/Box/Transtar/bank-core)
+- [ ] Corporate-trust panel tied to the Phase-2 issuer

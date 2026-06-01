@@ -11,6 +11,12 @@ export interface JourneyTask {
   assignedTo: string
   isSubTask?: boolean
   nickname?: string
+  /** Servicing dashboard display: person responsible for this task (defaults to assignedTo). */
+  taskOwner?: string
+  /** Servicing dashboard display: next-step date, pre-formatted (e.g. "Nov 12, 2025"). */
+  nextStep?: string
+  /** Servicing dashboard display: ready-to-begin date, pre-formatted. */
+  readyToBegin?: string
 }
 
 export interface JourneyAction {
@@ -25,6 +31,12 @@ export interface JourneyAction {
   groupType?: 'funding' | 'feature-service'
   /** Original workflow child ID (before journey/action prefix) */
   childId?: string
+  /** Servicing dashboard display: action category (e.g. "Account Opening", "Move Money"). */
+  category?: string
+  /** Servicing dashboard display: short numeric action identifier (e.g. "002431"). */
+  actionCode?: string
+  /** Servicing dashboard display: human-readable action description (custodian / registration). */
+  description?: string
   tasks: JourneyTask[]
 }
 

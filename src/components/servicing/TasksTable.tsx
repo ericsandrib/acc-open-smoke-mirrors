@@ -1,5 +1,6 @@
 import { useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { Users } from 'lucide-react'
 import {
   DataTable,
   DataTableHeader,
@@ -28,6 +29,9 @@ export interface TaskRow {
   actionTitle: string
   journeyName: string
   relationshipName: string
+  taskOwner: string
+  nextStep: string
+  readyToBegin: string
 }
 
 export function deriveTaskRows(journeys: Journey[]): TaskRow[] {
@@ -45,8 +49,32 @@ export function deriveTaskRows(journeys: Journey[]): TaskRow[] {
         actionTitle: action.title,
         journeyName: journey.name,
         relationshipName: journey.relationshipName,
+        taskOwner: task.taskOwner ?? task.assignedTo,
+        nextStep: task.nextStep ?? '',
+        readyToBegin: task.readyToBegin ?? '',
       })),
     ),
+  )
+}
+
+function initials(name: string): string {
+  const parts = name.trim().split(/\s+/).filter(Boolean)
+  if (parts.length === 0) return '—'
+  if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase()
+  return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase()
+}
+
+function OwnerCell({ name }: { name: string }) {
+  if (!name || name === 'Unassigned') {
+    return <span className="text-muted-foreground">Unassigned</span>
+  }
+  return (
+    <span className="inline-flex items-center gap-2">
+      <span className="inline-flex h-6 w-6 items-center justify-center rounded-full bg-muted text-[10px] font-medium text-muted-foreground">
+        {initials(name)}
+      </span>
+      {name}
+    </span>
   )
 }
 
@@ -60,13 +88,15 @@ export function TasksTable({ rows, visibleColumns }: TasksTableProps) {
 
   const comparators = useMemo(
     () => ({
+      relationshipName: compareString<TaskRow>((r) => r.relationshipName),
       title: compareString<TaskRow>((r) => r.title),
+      taskOwner: compareString<TaskRow>((r) => r.taskOwner),
       nickname: compareString<TaskRow>((r) => r.nickname ?? ''),
       actionTitle: compareString<TaskRow>((r) => r.actionTitle),
       journeyName: compareString<TaskRow>((r) => r.journeyName),
-      relationshipName: compareString<TaskRow>((r) => r.relationshipName),
       status: compareStatus<TaskRow>((r) => r.status, taskStatusOrder),
-      assignedTo: compareString<TaskRow>((r) => r.assignedTo),
+      nextStep: compareString<TaskRow>((r) => r.nextStep),
+      readyToBegin: compareString<TaskRow>((r) => r.readyToBegin),
     }),
     [],
   )
@@ -82,20 +112,30 @@ export function TasksTable({ rows, visibleColumns }: TasksTableProps) {
     <DataTable>
       <thead className="bg-muted/60 border-b border-border [&_th_svg]:hidden">
         <tr>
-          {vis('title') && <DataTableHeader size="comfortable" sortable sorted={sorted('title')} onSort={() => onSort('title')} style={{ width: 200 }}>Task</DataTableHeader>}
-          {vis('nickname') && <DataTableHeader size="comfortable" sortable sorted={sorted('nickname')} onSort={() => onSort('nickname')}>Action Nickname</DataTableHeader>}
+          {vis('relationshipName') && <DataTableHeader size="comfortable" sortable sorted={sorted('relationshipName')} onSort={() => onSort('relationshipName')}>Relationship</DataTableHeader>}
+          {vis('title') && <DataTableHeader size="comfortable" sortable sorted={sorted('title')} onSort={() => onSort('title')} style={{ width: 230 }}>Task</DataTableHeader>}
+          {vis('taskOwner') && <DataTableHeader size="comfortable" sortable sorted={sorted('taskOwner')} onSort={() => onSort('taskOwner')}>Task Owner</DataTableHeader>}
+          {vis('status') && <DataTableHeader size="comfortable" sortable sorted={sorted('status')} onSort={() => onSort('status')}>Status</DataTableHeader>}
+          {vis('nextStep') && <DataTableHeader size="comfortable" sortable sorted={sorted('nextStep')} onSort={() => onSort('nextStep')}>Next Step</DataTableHeader>}
+          {vis('readyToBegin') && <DataTableHeader size="comfortable" sortable sorted={sorted('readyToBegin')} onSort={() => onSort('readyToBegin')}>Ready to Begin</DataTableHeader>}
           {vis('actionTitle') && <DataTableHeader size="comfortable" sortable sorted={sorted('actionTitle')} onSort={() => onSort('actionTitle')}>Action Type</DataTableHeader>}
           {vis('journeyName') && <DataTableHeader size="comfortable" sortable sorted={sorted('journeyName')} onSort={() => onSort('journeyName')}>Journey</DataTableHeader>}
-          {vis('relationshipName') && <DataTableHeader size="comfortable" sortable sorted={sorted('relationshipName')} onSort={() => onSort('relationshipName')}>Relationship</DataTableHeader>}
-          {vis('status') && <DataTableHeader size="comfortable" sortable sorted={sorted('status')} onSort={() => onSort('status')}>Status</DataTableHeader>}
-          {vis('assignedTo') && <DataTableHeader size="comfortable" sortable sorted={sorted('assignedTo')} onSort={() => onSort('assignedTo')}>Assigned To</DataTableHeader>}
+          {vis('nickname') && <DataTableHeader size="comfortable" sortable sorted={sorted('nickname')} onSort={() => onSort('nickname')}>Action Nickname</DataTableHeader>}
         </tr>
       </thead>
       <tbody className="[&>tr:nth-child(even)]:bg-muted/30">
         {sortedRows.map((row) => (
           <DataTableRow key={row.id} className="cursor-pointer" onClick={() => navigate(`/servicing/${row.journeyId}`)}>
+            {vis('relationshipName') && (
+              <DataTableCell type="relationship">
+                <span className="inline-flex items-center gap-1.5 text-foreground underline-offset-2 hover:underline">
+                  <Users className="h-3.5 w-3.5 text-muted-foreground" />
+                  {row.relationshipName}
+                </span>
+              </DataTableCell>
+            )}
             {vis('title') && (
-              <DataTableCell type="primary" className="font-medium">
+              <DataTableCell type="primary" className="font-medium underline-offset-2 hover:underline">
                 {row.isSubTask ? (
                   <span className="pl-4 text-muted-foreground">{row.title}</span>
                 ) : (
@@ -103,12 +143,13 @@ export function TasksTable({ rows, visibleColumns }: TasksTableProps) {
                 )}
               </DataTableCell>
             )}
-            {vis('nickname') && <DataTableCell>{row.nickname}</DataTableCell>}
+            {vis('taskOwner') && <DataTableCell type="person"><OwnerCell name={row.taskOwner} /></DataTableCell>}
+            {vis('status') && <DataTableCell type="badge"><StatusBadge status={row.status} /></DataTableCell>}
+            {vis('nextStep') && <DataTableCell type="secondary">{row.nextStep}</DataTableCell>}
+            {vis('readyToBegin') && <DataTableCell type="secondary">{row.readyToBegin}</DataTableCell>}
             {vis('actionTitle') && <DataTableCell>{row.actionTitle}</DataTableCell>}
             {vis('journeyName') && <DataTableCell>{row.journeyName}</DataTableCell>}
-            {vis('relationshipName') && <DataTableCell>{row.relationshipName}</DataTableCell>}
-            {vis('status') && <DataTableCell type="badge"><StatusBadge status={row.status} /></DataTableCell>}
-            {vis('assignedTo') && <DataTableCell>{row.assignedTo}</DataTableCell>}
+            {vis('nickname') && <DataTableCell>{row.nickname}</DataTableCell>}
           </DataTableRow>
         ))}
       </tbody>

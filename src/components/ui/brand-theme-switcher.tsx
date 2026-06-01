@@ -2,7 +2,7 @@ import { useTheme } from '@/stores/themeStore'
 import { cn } from '@/lib/utils'
 
 const brands = [
-  { id: 'stratos' as const, label: 'Stratos', color: '#1E3A8A' },
+  { id: 'zions' as const, label: 'Zions', color: '#0b4f9c' },
 ]
 
 export function BrandThemeSwitcher() {

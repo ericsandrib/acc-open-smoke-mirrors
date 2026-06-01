@@ -10,7 +10,7 @@ import {
 } from "lucide-react";
 
 // ---------------------------------------------------------------------------
-// Mock data
+// Mock data — Zions POC instance (Spec 007 Phase 3)
 // ---------------------------------------------------------------------------
 
 interface ActionItem {
@@ -46,83 +46,67 @@ function getMeaningfulActionTitle(action: ActionItem): string {
 const actions: ActionItem[] = [
   {
     id: "1",
-    title: "Untitled Action",
-    description: "Schwab Account Ope...",
-    refId: "001Dn00000SA4I...",
+    title: "Distribution Request",
+    description: "Whitmore Household · ACH $120K (from 6/1 review)",
+    refId: "SVC-DST-8841",
     status: "In Progress",
-    date: "Oct 3",
+    date: "Jun 1",
   },
   {
     id: "2",
-    title: "Untitled Action",
-    description: "Manage Investment Strategy",
-    refId: "REL_86E0554BBE",
-    status: "Draft",
-    date: "Oct 31",
+    title: "Account Opening",
+    description: "Whitmore Household · Fi-Tek custody",
+    refId: "FT-AO-20455",
+    status: "In Progress",
+    date: "Jun 1",
   },
   {
     id: "3",
-    title: "Untitled Action",
-    description: "Manage Investment Strategy",
-    refId: "REL_156AEB0EB0",
-    status: "Draft",
-    date: "Nov 12",
+    title: "Corporate Trust Disbursement",
+    description: "City of Cedar Falls · 2026 GO bond",
+    refId: "FT-CT-90187",
+    status: "In Progress",
+    date: "May 27",
   },
   {
     id: "4",
-    title: "Untitled Action",
-    description: "Manage Cash or Pla...",
-    refId: "George and Patrici...",
+    title: "Transfer of Assets",
+    description: "Tran Family · LPL → Fi-Tek",
+    refId: "SVC-TOA-7720",
     status: "In Progress",
-    date: "Aug 11",
+    date: "May 28",
   },
   {
     id: "5",
-    title: "Untitled Action",
-    description: "Manage Investment Strategy",
-    refId: "REL_C689072A23",
+    title: "Manage Investment Strategy",
+    description: "Nakamura Family",
+    refId: "REL-NAK-3391",
     status: "Draft",
-    date: "Nov 10",
+    date: "May 30",
   },
   {
     id: "6",
-    title: "Untitled Action",
-    description: "Testing Action - Account Ope...",
-    refId: "REL_438E...",
-    status: "In Progress",
-    date: "Nov 7",
+    title: "KYC / Identity Check",
+    description: "Sandoval Family · onboarding",
+    refId: "REL-SAN-5540",
+    status: "Draft",
+    date: "May 31",
   },
   {
     id: "7",
-    title: "Untitled Action",
-    description: "Close Financial Account",
-    refId: "REL_54606C0718",
+    title: "Standing Money Movement",
+    description: "Hargrove Foundation · grant schedule",
+    refId: "SVC-STD-2210",
     status: "In Progress",
-    date: "Oct 9",
+    date: "May 29",
   },
   {
     id: "8",
-    title: "Untitled Action",
-    description: "Manage Dollar Cost Averaging...",
-    refId: "REL_86E0554...",
+    title: "Account Maintenance",
+    description: "Resolve custodian alert · Vance Family Trust",
+    refId: "SVC-ALR-1188",
     status: "Draft",
-    date: "Nov 11",
-  },
-  {
-    id: "9",
-    title: "Untitled Action",
-    description: "Close Financial Account",
-    refId: "REL_54606C0718",
-    status: "In Progress",
-    date: "Oct 9",
-  },
-  {
-    id: "10",
-    title: "Untitled Action",
-    description: "Manage Investment Strategy",
-    refId: "REL_56A49B0E80",
-    status: "Draft",
-    date: "Nov 11",
+    date: "May 26",
   },
 ];
 
@@ -136,56 +120,32 @@ interface GrowthItem {
 const growthItems: GrowthItem[] = [
   {
     id: "1",
-    name: "Aaron Allan-Referral-2026-23-14",
-    refId: "REL_4EC1F2BB9C",
-    status: "Qualified Opportunity",
+    name: "Marcus Hale — Finance Director, City of Cedar Falls",
+    refId: "OPP-TW-0001",
+    status: "Corporate Trust → Wealth",
   },
   {
     id: "2",
-    name: "Aaron Allan-Referral-2026-24-04",
-    refId: "REL_4EC1F2BB9C",
-    status: "Qualified Opportunity",
+    name: "Janet Cole — $8.5M CB&T business-sale inflow",
+    refId: "OPP-BW-0002",
+    status: "Bank → Wealth",
   },
   {
     id: "3",
-    name: "Aaron Allan-Referral-2026-25-04",
-    refId: "REL_4EC1F2BB9C",
-    status: "Qualified Opportunity",
+    name: "Cedar Ridge Holdings — commercial relationship",
+    refId: "OPP-CW-0003",
+    status: "Commercial → Wealth",
   },
   {
     id: "4",
-    name: "Aaron Allan-Referral-2026-30-05",
-    refId: "REL_4EC1F2BB9C",
+    name: "Pearson, James R. — COI referral",
+    refId: "REL-PEARSON",
     status: "Qualified Opportunity",
   },
   {
     id: "5",
-    name: "Aaron Allan-Referral-2026-47-04",
-    refId: "REL_4EC1F2BB9C",
-    status: "Qualified Opportunity",
-  },
-  {
-    id: "6",
-    name: "Aaron Allan-Referral-2026-47-04",
-    refId: "REL_4EC1F2BB9C",
-    status: "Qualified Opportunity",
-  },
-  {
-    id: "7",
-    name: "Aaron Allan-Referral-2026-47-04",
-    refId: "REL_4EC1F2BB9C",
-    status: "Qualified Opportunity",
-  },
-  {
-    id: "8",
-    name: "Aaron Allan-Referral-2026-49-04",
-    refId: "REL_4EC1F2BB9C",
-    status: "Qualified Opportunity",
-  },
-  {
-    id: "9",
-    name: "Aaron Allan-Referral-2026-50-20",
-    refId: "REL_4EC1F2BB9C",
+    name: "Nakamura Family — RMD planning window",
+    refId: "REL-NAK-3391",
     status: "Qualified Opportunity",
   },
 ];
@@ -197,32 +157,12 @@ interface InsightItem {
 }
 
 const insights: InsightItem[] = [
-  { label: "Excess Cash", category: "Financial Accounts", color: "#e85526" },
-  {
-    label: "No Model Assigned",
-    category: "Financial Accounts",
-    color: "#e85526",
-  },
-  {
-    label: "No Schedule Reviews",
-    category: "Relationship Health",
-    color: "#0d3f5e",
-  },
-  {
-    label: "Trade Holds - Envestnet",
-    category: "Financial Accounts",
-    color: "#e85526",
-  },
-  {
-    label: "Trade Holds - Orion",
-    category: "Financial Accounts",
-    color: "#e85526",
-  },
-  {
-    label: "New Distributions",
-    category: "Financial Accounts",
-    color: "#e85526",
-  },
+  { label: "Excess Cash — held-away (Plaid)", category: "Financial Accounts", color: "#e85526" },
+  { label: "New Distributions — Fi-Tek", category: "Servicing", color: "#e85526" },
+  { label: "Cross-silo match — Bank → Wealth", category: "Opportunities", color: "#0b4f9c" },
+  { label: "Unassigned Trust Officer", category: "Corporate Trust", color: "#0d3f5e" },
+  { label: "No Scheduled Review", category: "Relationship Health", color: "#0d3f5e" },
+  { label: "RMD due within 60 days", category: "Financial Accounts", color: "#e85526" },
 ];
 
 // ---------------------------------------------------------------------------
@@ -320,11 +260,11 @@ export function DashboardContent() {
         {/* Greeting header */}
         <div className="flex items-start justify-between mb-8">
           <div>
-            <h1 className="text-3xl font-light text-[#3d1f1f]">
-              Good afternoon, Greta
+            <h1 className="text-3xl font-light text-foreground">
+              Good afternoon, Priya
             </h1>
-            <p className="text-lg font-light text-[#6b8e6b] mt-0.5">
-              Wednesday, April 1
+            <p className="text-lg font-light text-muted-foreground mt-0.5">
+              Monday, June 1
             </p>
           </div>
           <button className="rounded-md border border-border bg-white px-4 py-2 text-sm font-medium text-[var(--text-primary)] hover:bg-[var(--bg-primary-hover)]">
@@ -338,7 +278,7 @@ export function DashboardContent() {
           <div className="flex flex-col gap-6">
             {/* Actions card */}
             <div className="rounded-xl bg-[var(--bg-secondary)]">
-              <CardHeader title="Actions" count={13287}>
+              <CardHeader title="Actions" count={2841}>
                 <DropdownButton label="Default" />
               </CardHeader>
               <div className="px-6 pb-2">
@@ -388,29 +328,34 @@ export function DashboardContent() {
           <div className="flex flex-col gap-6">
             {/* Meetings card */}
             <div className="rounded-xl bg-[var(--bg-secondary)]">
-              <CardHeader title="Meetings" count={0}>
+              <CardHeader title="Meetings" count={1}>
                 <div className="flex items-center gap-1">
                   <button className="rounded-md p-1 hover:bg-[var(--bg-secondary)]">
                     <ChevronLeft className="h-4 w-4 text-[var(--icon-secondary)]" />
                   </button>
                   <span className="px-2 text-sm font-medium text-[var(--text-primary)]">
-                    Apr 1
+                    Jun 1
                   </span>
                   <button className="rounded-md p-1 hover:bg-[var(--bg-secondary)]">
                     <ChevronRight className="h-4 w-4 text-[var(--icon-secondary)]" />
                   </button>
                 </div>
               </CardHeader>
-              <div className="flex flex-col items-center justify-center py-12 text-[var(--text-tertiary)]">
-                <div className="flex h-14 w-14 items-center justify-center rounded-xl bg-[var(--bg-tertiary)] mb-3">
-                  <Calendar className="h-7 w-7 opacity-50" />
+              <div className="px-6 pb-4">
+                <div className="flex items-center gap-3 py-3">
+                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[var(--bg-tertiary)]">
+                    <Calendar className="h-4 w-4 text-[var(--icon-secondary)]" />
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <p className="text-sm font-medium text-[var(--text-primary)] truncate">
+                      Whitmore Household — Quarterly Review
+                    </p>
+                    <p className="text-xs text-[var(--text-secondary)] truncate">
+                      11:00 AM &bull; Meeting Assistant ready
+                    </p>
+                  </div>
+                  <span className="shrink-0 text-xs text-[var(--text-tertiary)]">Today</span>
                 </div>
-                <p className="text-sm font-medium text-[var(--text-primary)]">
-                  No Meetings Found
-                </p>
-                <p className="text-xs text-[var(--text-tertiary)] mt-1">
-                  Try a different day or check back soon.
-                </p>
               </div>
             </div>
 
@@ -457,8 +402,8 @@ export function DashboardContent() {
                     key={item.id}
                     className="flex items-center gap-3 border-b border-border/50 py-3 last:border-b-0"
                   >
-                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[#f3eef8]">
-                      <TrendingUp className="h-4 w-4 text-[#7c5caa]" />
+                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[#eaf1f8]">
+                      <TrendingUp className="h-4 w-4 text-[#0b4f9c]" />
                     </div>
                     <div className="min-w-0 flex-1">
                       <p className="text-sm font-medium text-[var(--text-primary)] truncate">

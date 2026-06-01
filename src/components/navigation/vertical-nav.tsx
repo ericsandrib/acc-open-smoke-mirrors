@@ -10,6 +10,7 @@ import {
   Users,
   Star,
   Globe,
+  Network,
   Settings,
   Wrench,
   PanelRight,
@@ -73,7 +74,9 @@ const navGroups: NavGroup[] = [
   },
   {
     label: "Insights",
-    items: [],
+    items: [
+      { icon: Network, label: "Relationship Graph", href: "/network" },
+    ],
   },
   {
     label: "Records",
@@ -338,8 +341,8 @@ export function VerticalNav({
             >
               <div className="h-14 px-4 flex items-center shrink-0">
                 <img
-                  src="/stratos-logo.png"
-                  alt="Stratos Wealth Partners"
+                  src="/zions-logo.svg"
+                  alt="Zions Wealth"
                   className="h-7 w-auto"
                 />
               </div>
@@ -384,8 +387,8 @@ export function VerticalNav({
               {isExpanded ? (
                 <>
                   <img
-                    src="/stratos-logo.png"
-                    alt="Stratos Wealth Partners"
+                    src="/zions-logo.svg"
+                    alt="Zions Wealth"
                     className="h-7 w-auto"
                   />
                   <Tooltip>
@@ -414,8 +417,8 @@ export function VerticalNav({
               ) : (
                 <>
                   <img
-                    src="/stratos-logo.png"
-                    alt="Stratos"
+                    src="/zions-mark.svg"
+                    alt="Zions"
                     className={`h-6 w-auto mx-auto pointer-events-none object-contain ${
                       isCollapsedHovered ? "invisible" : ""
                     }`}
