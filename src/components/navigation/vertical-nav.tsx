@@ -11,6 +11,8 @@ import {
   Star,
   Globe,
   Network,
+  Activity,
+  Layers,
   Settings,
   Wrench,
   PanelRight,
@@ -76,6 +78,8 @@ const navGroups: NavGroup[] = [
     label: "Insights",
     items: [
       { icon: Network, label: "Relationship Graph", href: "/network" },
+      { icon: Activity, label: "Operations", href: "/operations" },
+      { icon: Layers, label: "Connected Systems", href: "/connected" },
     ],
   },
   {

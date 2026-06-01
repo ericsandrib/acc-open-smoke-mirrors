@@ -13,6 +13,8 @@ import { RelationshipsPage } from '@/pages/RelationshipsPage'
 import { IdentityGraphPage } from '@/pages/IdentityGraphPage'
 import { MeetingsPage } from '@/pages/MeetingsPage'
 import { MeetingDetailPage } from '@/pages/MeetingDetailPage'
+import { OperationsPage } from '@/pages/OperationsPage'
+import { ConnectedSystemsPage } from '@/pages/ConnectedSystemsPage'
 import { SettingsPage } from '@/pages/SettingsPage'
 import { TestsIndexPage } from '@/pages/tests/TestsIndexPage'
 import { ProgressIndicatorTestPage } from '@/pages/tests/ProgressIndicatorTestPage'
@@ -41,6 +43,8 @@ export default function App() {
                   <Route path="/network" element={<IdentityGraphPage />} />
                   <Route path="/meetings" element={<MeetingsPage />} />
                   <Route path="/meetings/:meetingId" element={<MeetingDetailPage />} />
+                  <Route path="/operations" element={<OperationsPage />} />
+                  <Route path="/connected" element={<ConnectedSystemsPage />} />
                   <Route path="/settings" element={<SettingsPage />} />
                   <Route path="/tests" element={<TestsIndexPage />} />
                   <Route path="/tests/progress-indicator" element={<ProgressIndicatorTestPage />} />

@@ -253,11 +253,11 @@
 - [ ] Activity timeline + AI client-summary hooks (deferred)
 - [ ] Source-system badges on relationship rows (graph has them; table deferred)
 
-### Phase 4: Onboarding / Account Opening (Zions re-seed)
-- [ ] Re-seed onboarding journey for a Zions household
-- [ ] Simulated Fi-Tek/GWES + Salesforce (read + Case write-back) + eSignature in-flow
-- [ ] Doc AI step: trust agreement / corporate resolution → prefill (mocked)
-- [ ] SLA / status tracking across advisor / ops / compliance
+### Phase 4: Onboarding / Account Opening (Zions re-seed) ✅ (core)
+- [x] `/onboarding` shows Zions account-opening journeys (Fi-Tek / LPL / SEI) — derives from the Zions `seededJourneys`
+- [x] Simulated integrations surfaced via Connected Systems (Phase 8): Fi-Tek/GWES, Salesforce write-back, eSignature
+- [ ] Deep account-opening wizard re-skin to Fi-Tek native forms — DEFERRED (wizard is Schwab-form-specific; disproportionate re-skin for the demo)
+- [ ] Doc-AI prefill step — DEFERRED with the wizard
 
 ### Phase 5: Servicing — meeting-to-action (distribution)
 - [x] Added `distribution` arch on the in-progress `Arch` model; Zions reseed (`servicingSeed.ts`)
@@ -271,9 +271,9 @@
 - [x] Prep (transcript) + Email (AI draft) tabs; Meetings list; `/meetings` route + existing nav item
 - [x] Deps added (TipTap 2.27 line, marked, dompurify, @tailwindcss/typography); typecheck clean; rendering verified via preview
 
-### Phase 7: Operational analytics
-- [ ] SLA dashboard + bottleneck visibility + workflow monitoring + task transparency
+### Phase 7: Operational analytics ✅
+- [x] `/operations` — SLA monitoring (Whitmore on-track · Hargrove past-SLA · Cedar Falls at-risk), bottlenecks by step, open actions by category — computed live from the servicing seed
 
-### Phase 8: Simulated-integration posture
-- [ ] "Connected systems" sits-above representation (Fi-Tek/Salesforce/SEI/LPL/eMoney/DocuSign/Box/Transtar/bank-core)
-- [ ] Corporate-trust panel tied to the Phase-2 issuer
+### Phase 8: Simulated-integration posture ✅ (core)
+- [x] `/connected` — sits-above representation; Fi-Tek linchpin highlighted (one connector, two schemas); Salesforce, SEI, LPL, eMoney, DocuSign, Box, Transtar, bank-core with read / write-back posture
+- [ ] Standalone corporate-trust panel (issuer is covered via the identity graph + Operations)
