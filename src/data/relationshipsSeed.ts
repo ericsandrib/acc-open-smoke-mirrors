@@ -39,8 +39,8 @@ export const RELATIONSHIPS_SEED: Relationship[] = [
   { id: 'r-biz-413',   household: 'Business 4/13',    advisor: 'Eric Sandrib', type: 'Prospective', aum: null,    targetedAum: null,   updatedAt: '3 days ago', status: null },
   { id: 'r-meaney',    household: 'Erin Aiko Meaney', advisor: 'Eric Sandrib', type: 'Prospective', aum: null,    targetedAum: null,   updatedAt: '3 days ago', status: null },
   { id: 'r-erin-test', household: 'Erin test',        advisor: 'Eric Sandrib', type: 'Prospective', aum: null,    targetedAum: null,   updatedAt: '3 days ago', status: null },
-  { id: 'r-lang',      household: 'Lang, Chris M.',   advisor: 'Alice Chen',   type: 'New',         aum: 250000,  targetedAum: 500000, updatedAt: '1 hour ago', status: 'Account opening in progress' },
-  { id: 'r-smith',     household: 'Smith Family',     advisor: 'Alice Chen',   type: 'Existing',    aum: 1250000, targetedAum: null,   updatedAt: '2 days ago', status: 'Onboarded' },
+  { id: 'r-lang',      household: 'Lang, Chris M.',   advisor: 'Greta Fure',   type: 'New',         aum: 250000,  targetedAum: 500000, updatedAt: '1 hour ago', status: 'Account opening in progress' },
+  { id: 'r-smith',     household: 'Smith Family',     advisor: 'Greta Fure',   type: 'Existing',    aum: 1250000, targetedAum: null,   updatedAt: '2 days ago', status: 'Onboarded' },
   { id: 'r-johnson',   household: 'Johnson Trust',    advisor: 'Bob Martinez', type: 'Existing',    aum: 3400000, targetedAum: null,   updatedAt: '5 days ago', status: 'Onboarded' },
 ]
 

@@ -222,7 +222,7 @@ const journeySpecs: JourneySpec[] = [
     ],
   },
   // ── End-to-end demo case: Begin → Claim → straight into the Schwab custodian form ──
-  // Journey advisor is Alice Chen (shows under "My Relationships"); the first task is
+  // Journey advisor is Greta Fure (shows under "My Relationships"); the first task is
   // unassigned + Ready to Begin so Begin surfaces the Claim modal, then the form.
   {
     id: 'ao-ferfecki', household: 'George and Patricia Ferfecki', owner: ME, createdAt: '2026-05-04',
