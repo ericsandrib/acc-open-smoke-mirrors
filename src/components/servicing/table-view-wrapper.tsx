@@ -36,7 +36,7 @@ export function TableViewWrapper<T>({
   const scopedRows = allRows.filter((row) => {
     if (relationshipScope === 'all') return true
     const assignee = String((row as Record<string, unknown>).assignedTo ?? '')
-    return assignee.includes('Alice Chen')
+    return assignee.includes('Priya Raman')
   })
 
   const filteredRows = vm.applyFilters(scopedRows)

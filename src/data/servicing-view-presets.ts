@@ -46,7 +46,7 @@ export const journeyPresets: ViewPreset[] = [
     id: 'journeys-mine',
     name: 'My Journeys',
     category: 'personal',
-    filters: [{ column: 'assignedTo', operator: 'equals', value: 'Alice Chen' }],
+    filters: [{ column: 'assignedTo', operator: 'equals', value: 'Priya Raman' }],
     visibleColumns: allJourneyCols,
   },
   {
@@ -117,7 +117,7 @@ export const actionPresets: ViewPreset[] = [
     id: 'actions-mine',
     name: 'My Actions',
     category: 'personal',
-    filters: [{ column: 'assignedTo', operator: 'contains', value: 'Alice Chen' }],
+    filters: [{ column: 'assignedTo', operator: 'contains', value: 'Priya Raman' }],
     visibleColumns: defaultActionCols,
   },
 ]
@@ -181,7 +181,7 @@ export const taskPresets: ViewPreset[] = [
     id: 'tasks-mine',
     name: 'My Tasks',
     category: 'personal',
-    filters: [{ column: 'assignedTo', operator: 'equals', value: 'Alice Chen' }],
+    filters: [{ column: 'assignedTo', operator: 'equals', value: 'Priya Raman' }],
     visibleColumns: defaultTaskCols,
   },
 ]
