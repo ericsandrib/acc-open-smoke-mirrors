@@ -17,6 +17,8 @@ export interface JourneyTask {
   nextStep?: string
   /** Servicing dashboard display: ready-to-begin date, pre-formatted. */
   readyToBegin?: string
+  /** Servicing dashboard display: due date, pre-formatted. */
+  due?: string
 }
 
 export interface JourneyAction {

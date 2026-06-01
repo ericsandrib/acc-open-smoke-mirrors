@@ -19,7 +19,6 @@ type Arch = 'open' | 'open-sim' | 'toa' | 'contribution' | 'standing' | 'alert'
 
 const TASK_TITLES: Record<Arch, string[]> = {
   open: [
-    'Configuration',
     'Complete Custodian Form',
     'Upload Supporting Documents',
     'KYC / Identity Check',
@@ -29,7 +28,6 @@ const TASK_TITLES: Record<Arch, string[]> = {
     'Verify Complete',
   ],
   'open-sim': [
-    'Configuration',
     'Complete Custodian Form',
     'Upload Supporting Documents',
     'Investment & Model Selection',
@@ -122,6 +120,7 @@ function buildAction(journeyId: string, household: string, spec: ActionSpec): Jo
       taskOwner: spec.owner,
       readyToBegin: fmtDate(spec.startDate),
       nextStep: fmtDate(addDays(spec.startDate, i * 5)),
+      due: fmtDate(addDays(spec.startDate, i * 5 + 4)),
       nickname: `${household} – ${spec.short}`,
     }
   })
@@ -222,10 +221,13 @@ const journeySpecs: JourneySpec[] = [
       { arch: 'open-sim', description: 'Open SIM Managed Account (SMA) – Schwab', short: 'Schwab SMA (SIM)', code: '002413', owner: 'Bob Martinez', done: 2, current: 'in_progress', startDate: '2025-12-10' },
     ],
   },
+  // ── End-to-end demo case: Begin → Claim → straight into the Schwab custodian form ──
+  // Journey advisor is Alice Chen (shows under "My Relationships"); the first task is
+  // unassigned + Ready to Begin so Begin surfaces the Claim modal, then the form.
   {
-    id: 'ao-ferfecki', household: 'George and Patricia Ferfecki', owner: 'Edward Kim', createdAt: '2025-12-08',
+    id: 'ao-ferfecki', household: 'George and Patricia Ferfecki', owner: ME, createdAt: '2026-05-04',
     actions: [
-      { arch: 'open', description: 'Open Schwab Brokerage – Individual', short: 'Schwab Individual', code: '002414', owner: 'Edward Kim', done: 5, current: 'in_progress', startDate: '2025-12-16' },
+      { arch: 'open', description: 'Open Schwab Brokerage – Individual', short: 'Schwab Individual', code: '002414', owner: 'Unassigned', done: 0, current: 'not_started', startDate: '2026-05-06' },
     ],
   },
   {

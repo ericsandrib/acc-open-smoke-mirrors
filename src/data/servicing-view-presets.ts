@@ -127,18 +127,23 @@ export const actionPresets: ViewPreset[] = [
 // Task Owner · Status · Next Step. (Complexity Level intentionally omitted.)
 export const taskColumns: ColumnDef[] = [
   { key: 'relationshipName', label: 'Relationship', filterable: 'text' },
+  { key: 'category', label: 'Category', filterable: 'multi-select' },
+  { key: 'actionCode', label: 'Action ID' },
+  { key: 'description', label: 'Action Description', filterable: 'text' },
+  { key: 'nickname', label: 'Action Nickname' },
   { key: 'title', label: 'Task', alwaysVisible: true },
   { key: 'taskOwner', label: 'Task Owner', filterable: 'multi-select' },
+  { key: 'readyToBegin', label: 'Ready to Begin' },
+  { key: 'due', label: 'Due' },
+  { key: 'begin', label: 'Begin' },
+  // Available via Display (hidden by default to mirror the reference UI):
   { key: 'status', label: 'Status', filterable: 'multi-select' },
   { key: 'nextStep', label: 'Next Step' },
-  // Available via Display (hidden by default to mirror the reference UI):
-  { key: 'readyToBegin', label: 'Ready to Begin' },
   { key: 'actionTitle', label: 'Action Type', filterable: 'multi-select' },
   { key: 'journeyName', label: 'Journey', filterable: 'text' },
-  { key: 'nickname', label: 'Action Nickname' },
 ]
 
-const defaultTaskCols = ['relationshipName', 'title', 'taskOwner', 'status', 'nextStep']
+const defaultTaskCols = ['relationshipName', 'category', 'actionCode', 'description', 'title', 'taskOwner', 'readyToBegin', 'due', 'begin']
 
 export const taskPresets: ViewPreset[] = [
   {

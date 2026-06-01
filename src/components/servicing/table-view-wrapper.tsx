@@ -35,8 +35,11 @@ export function TableViewWrapper<T>({
 
   const scopedRows = allRows.filter((row) => {
     if (relationshipScope === 'all') return true
-    const assignee = String((row as Record<string, unknown>).assignedTo ?? '')
-    return assignee.includes('Alice Chen')
+    const rec = row as Record<string, unknown>
+    // "My Relationships" = relationships I advise — include unassigned tasks within my journeys.
+    const assignee = String(rec.assignedTo ?? '')
+    const relationshipOwner = String(rec.relationshipOwner ?? '')
+    return assignee.includes('Alice Chen') || relationshipOwner.includes('Alice Chen')
   })
 
   const filteredRows = vm.applyFilters(scopedRows)

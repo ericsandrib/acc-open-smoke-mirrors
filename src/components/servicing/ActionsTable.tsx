@@ -26,6 +26,7 @@ export interface ActionRow {
   parentActionId?: string
   journeyName: string
   relationshipName: string
+  relationshipOwner: string
   category: string
   actionCode: string
   description: string
@@ -47,6 +48,7 @@ export function deriveActionRows(journeys: Journey[]): ActionRow[] {
         parentActionId: action.parentActionId,
         journeyName: journey.name,
         relationshipName: journey.relationshipName,
+        relationshipOwner: journey.assignedTo,
         category: action.category ?? '',
         actionCode: action.actionCode ?? '',
         description: action.description ?? action.title,

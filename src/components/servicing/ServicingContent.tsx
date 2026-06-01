@@ -23,7 +23,7 @@ export function ServicingContent() {
   const taskRows = useMemo(() => deriveTaskRows(journeys), [journeys])
 
   return (
-    <div className="max-w-6xl mx-auto">
+    <div className="w-full">
       <Tabs defaultValue="tasks">
         <div className="flex items-center justify-between mb-6">
           <PageTitle
