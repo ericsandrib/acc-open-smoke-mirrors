@@ -159,66 +159,66 @@ function buildJourney(spec: JourneySpec): Journey {
   }
 }
 
-// Stratos advisors (Alice Chen = the signed-in advisor → "My Relationships").
-const ME = 'Alice Chen'
+// Stratos advisors (Greta Fure = the signed-in advisor → "My Relationships").
+const ME = 'Greta Fure'
 
 const journeySpecs: JourneySpec[] = [
   {
-    id: 'ao-patel', household: 'Anita Patel', owner: ME, createdAt: '2025-11-03',
+    id: 'ao-patel', household: 'Anita Patel', owner: ME, createdAt: '2026-06-03',
     actions: [
-      { arch: 'open', description: 'Open Fidelity Premiere Select IRA – Roth', short: 'Fidelity Roth IRA', code: '002401', owner: ME, done: 3, current: 'in_progress', startDate: '2025-11-12' },
-      { arch: 'toa', description: 'ACAT transfer from Vanguard', short: 'Transfer of Assets', code: '002402', owner: ME, done: 0, current: 'not_started', startDate: '2025-11-20' },
+      { arch: 'open', description: 'Open Fidelity Premiere Select IRA – Roth', short: 'Fidelity Roth IRA', code: '002401', owner: ME, done: 3, current: 'in_progress', startDate: '2026-06-12' },
+      { arch: 'toa', description: 'ACAT transfer from Vanguard', short: 'Transfer of Assets', code: '002402', owner: ME, done: 0, current: 'not_started', startDate: '2026-06-20' },
     ],
   },
   {
-    id: 'ao-johnson', household: 'Johnson Trust', owner: ME, createdAt: '2025-10-21',
+    id: 'ao-johnson', household: 'Johnson Trust', owner: ME, createdAt: '2026-05-21',
     actions: [
-      { arch: 'open', description: 'Open Schwab One Trust Account', short: 'Schwab Trust', code: '002403', owner: ME, done: 2, current: 'blocked', startDate: '2025-10-28' },
+      { arch: 'open', description: 'Open Schwab One Trust Account', short: 'Schwab Trust', code: '002403', owner: ME, done: 2, current: 'blocked', startDate: '2026-05-28' },
     ],
   },
   {
-    id: 'ao-davis', household: 'Davis Household', owner: 'Bob Martinez', createdAt: '2025-10-29',
+    id: 'ao-davis', household: 'Davis Household', owner: 'Bob Martinez', createdAt: '2026-05-29',
     actions: [
-      { arch: 'open', description: 'Open Schwab Brokerage – Joint (JTWROS)', short: 'Schwab Joint', code: '002404', owner: 'Bob Martinez', done: 5, current: 'awaiting_review', startDate: '2025-11-05' },
-      { arch: 'contribution', description: 'Initial cash contribution', short: 'Contribution', code: '002405', owner: 'Bob Martinez', done: 0, current: 'not_started', startDate: '2025-11-18' },
+      { arch: 'open', description: 'Open Schwab Brokerage – Joint (JTWROS)', short: 'Schwab Joint', code: '002404', owner: 'Bob Martinez', done: 5, current: 'awaiting_review', startDate: '2026-06-05' },
+      { arch: 'contribution', description: 'Initial cash contribution', short: 'Contribution', code: '002405', owner: 'Bob Martinez', done: 0, current: 'not_started', startDate: '2026-06-18' },
     ],
   },
   {
-    id: 'ao-garcia', household: 'The Garcia Family', owner: 'Diana Torres', createdAt: '2025-11-24',
+    id: 'ao-garcia', household: 'The Garcia Family', owner: 'Diana Torres', createdAt: '2026-06-24',
     actions: [
-      { arch: 'open-sim', description: 'Open SIM Managed Account (SMA) – Fidelity', short: 'Fidelity SMA (SIM)', code: '002406', owner: 'Diana Torres', done: 4, current: 'in_progress', startDate: '2025-12-01' },
+      { arch: 'open-sim', description: 'Open SIM Managed Account (SMA) – Fidelity', short: 'Fidelity SMA (SIM)', code: '002406', owner: 'Diana Torres', done: 4, current: 'in_progress', startDate: '2026-07-01' },
     ],
   },
   {
-    id: 'ao-kim', household: 'Daniel Kim', owner: ME, createdAt: '2025-10-02',
+    id: 'ao-kim', household: 'Daniel Kim', owner: ME, createdAt: '2026-05-02',
     actions: [
-      { arch: 'open', description: 'Open Fidelity Brokerage – Individual', short: 'Fidelity Individual', code: '002407', owner: ME, done: 8, startDate: '2025-10-10' },
-      { arch: 'toa', description: 'ACAT transfer from E*TRADE', short: 'Transfer of Assets', code: '002408', owner: ME, done: 1, current: 'in_progress', startDate: '2025-10-22' },
+      { arch: 'open', description: 'Open Fidelity Brokerage – Individual', short: 'Fidelity Individual', code: '002407', owner: ME, done: 8, startDate: '2026-05-10' },
+      { arch: 'toa', description: 'ACAT transfer from E*TRADE', short: 'Transfer of Assets', code: '002408', owner: ME, done: 1, current: 'in_progress', startDate: '2026-05-22' },
     ],
   },
   {
-    id: 'ao-thompson', household: 'Laura Thompson', owner: 'Carol Williams', createdAt: '2025-11-10',
+    id: 'ao-thompson', household: 'Laura Thompson', owner: 'Carol Williams', createdAt: '2026-06-10',
     actions: [
-      { arch: 'open', description: 'Open Schwab IRA – Traditional', short: 'Schwab Traditional IRA', code: '002409', owner: 'Carol Williams', done: 6, current: 'in_progress', startDate: '2025-11-18' },
+      { arch: 'open', description: 'Open Schwab IRA – Traditional', short: 'Schwab Traditional IRA', code: '002409', owner: 'Carol Williams', done: 6, current: 'in_progress', startDate: '2026-06-18' },
     ],
   },
   {
-    id: 'ao-nakamura', household: 'Kenji Nakamura', owner: 'Diana Torres', createdAt: '2025-11-28',
+    id: 'ao-nakamura', household: 'Kenji Nakamura', owner: 'Diana Torres', createdAt: '2026-06-28',
     actions: [
-      { arch: 'open-sim', description: 'Open SEI Managed Account (Native API)', short: 'SEI Managed', code: '002410', owner: 'Diana Torres', done: 1, current: 'in_progress', startDate: '2025-12-05' },
+      { arch: 'open-sim', description: 'Open SEI Managed Account (Native API)', short: 'SEI Managed', code: '002410', owner: 'Diana Torres', done: 1, current: 'in_progress', startDate: '2026-07-05' },
     ],
   },
   {
-    id: 'ao-oconnor', household: "Bridget O'Connor", owner: ME, createdAt: '2025-11-07',
+    id: 'ao-oconnor', household: "Bridget O'Connor", owner: ME, createdAt: '2026-06-07',
     actions: [
-      { arch: 'open', description: 'Open Fidelity Trust Account', short: 'Fidelity Trust', code: '002411', owner: ME, done: 7, current: 'in_progress', startDate: '2025-11-15' },
-      { arch: 'alert', description: 'Resolve NIGO – missing trustee certification', short: 'Resolve Custodian Alert', code: '002412', owner: ME, done: 0, current: 'blocked', startDate: '2025-11-25' },
+      { arch: 'open', description: 'Open Fidelity Trust Account', short: 'Fidelity Trust', code: '002411', owner: ME, done: 7, current: 'in_progress', startDate: '2026-06-15' },
+      { arch: 'alert', description: 'Resolve NIGO – missing trustee certification', short: 'Resolve Custodian Alert', code: '002412', owner: ME, done: 0, current: 'blocked', startDate: '2026-06-25' },
     ],
   },
   {
-    id: 'ao-brooks', household: 'Hannah Brooks', owner: 'Bob Martinez', createdAt: '2025-12-02',
+    id: 'ao-brooks', household: 'Hannah Brooks', owner: 'Bob Martinez', createdAt: '2026-07-02',
     actions: [
-      { arch: 'open-sim', description: 'Open SIM Managed Account (SMA) – Schwab', short: 'Schwab SMA (SIM)', code: '002413', owner: 'Bob Martinez', done: 2, current: 'in_progress', startDate: '2025-12-10' },
+      { arch: 'open-sim', description: 'Open SIM Managed Account (SMA) – Schwab', short: 'Schwab SMA (SIM)', code: '002413', owner: 'Bob Martinez', done: 2, current: 'in_progress', startDate: '2026-07-10' },
     ],
   },
   // ── End-to-end demo case: Begin → Claim → straight into the Schwab custodian form ──
@@ -231,28 +231,28 @@ const journeySpecs: JourneySpec[] = [
     ],
   },
   {
-    id: 'ao-raj-patel', household: 'Raj Patel', owner: ME, createdAt: '2025-11-20',
+    id: 'ao-raj-patel', household: 'Raj Patel', owner: ME, createdAt: '2026-06-20',
     actions: [
-      { arch: 'open', description: 'Open Fidelity Premiere Select IRA – Traditional', short: 'Fidelity Traditional IRA', code: '002415', owner: ME, done: 4, current: 'in_progress', startDate: '2025-11-30' },
+      { arch: 'open', description: 'Open Fidelity Premiere Select IRA – Traditional', short: 'Fidelity Traditional IRA', code: '002415', owner: ME, done: 4, current: 'in_progress', startDate: '2026-06-30' },
     ],
   },
   {
-    id: 'ao-wei-chen', household: 'Wei Chen', owner: 'Bob Martinez', createdAt: '2025-11-25',
+    id: 'ao-wei-chen', household: 'Wei Chen', owner: 'Bob Martinez', createdAt: '2026-06-25',
     actions: [
-      { arch: 'open', description: 'Open Schwab IRA – Roth (Conversion)', short: 'Schwab Roth IRA', code: '002416', owner: 'Bob Martinez', done: 3, current: 'in_progress', startDate: '2025-12-03' },
-      { arch: 'standing', description: 'Standing money movement authorization', short: 'Standing Authorization', code: '002417', owner: 'Bob Martinez', done: 0, current: 'not_started', startDate: '2025-12-12' },
+      { arch: 'open', description: 'Open Schwab IRA – Roth (Conversion)', short: 'Schwab Roth IRA', code: '002416', owner: 'Bob Martinez', done: 3, current: 'in_progress', startDate: '2026-07-03' },
+      { arch: 'standing', description: 'Standing money movement authorization', short: 'Standing Authorization', code: '002417', owner: 'Bob Martinez', done: 0, current: 'not_started', startDate: '2026-07-12' },
     ],
   },
   {
-    id: 'ao-anderson', household: 'The Anderson Family', owner: 'Carol Williams', createdAt: '2025-12-30',
+    id: 'ao-anderson', household: 'The Anderson Family', owner: 'Carol Williams', createdAt: '2026-07-30',
     actions: [
-      { arch: 'open', description: 'Open Schwab Brokerage – Individual', short: 'Schwab Individual', code: '002418', owner: 'Carol Williams', done: 0, current: 'not_started', startDate: '2026-01-06' },
+      { arch: 'open', description: 'Open Schwab Brokerage – Individual', short: 'Schwab Individual', code: '002418', owner: 'Carol Williams', done: 0, current: 'not_started', startDate: '2026-08-06' },
     ],
   },
   {
-    id: 'ao-nguyen', household: 'Nguyen Trust', owner: ME, createdAt: '2025-12-01',
+    id: 'ao-nguyen', household: 'Nguyen Trust', owner: ME, createdAt: '2026-07-01',
     actions: [
-      { arch: 'open', description: 'Open Fidelity Entity Account – Trust', short: 'Fidelity Trust (Entity)', code: '002419', owner: ME, done: 2, current: 'blocked', startDate: '2025-12-08' },
+      { arch: 'open', description: 'Open Fidelity Entity Account – Trust', short: 'Fidelity Trust (Entity)', code: '002419', owner: ME, done: 2, current: 'blocked', startDate: '2026-07-08' },
     ],
   },
 ]

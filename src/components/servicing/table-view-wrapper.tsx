@@ -39,7 +39,7 @@ export function TableViewWrapper<T>({
     // "My Relationships" = relationships I advise — include unassigned tasks within my journeys.
     const assignee = String(rec.assignedTo ?? '')
     const relationshipOwner = String(rec.relationshipOwner ?? '')
-    return assignee.includes('Alice Chen') || relationshipOwner.includes('Alice Chen')
+    return assignee.includes('Greta Fure') || relationshipOwner.includes('Greta Fure')
   })
 
   const filteredRows = vm.applyFilters(scopedRows)

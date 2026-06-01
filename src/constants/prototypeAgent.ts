@@ -6,5 +6,5 @@ export const PROTOTYPE_AGENT_CODES = {
   officeCode: '1001',
   teamCode: '4402',
   advisorCode: '10442',
-  agentName: 'Alice Chen',
+  agentName: 'Greta Fure',
 } as const
