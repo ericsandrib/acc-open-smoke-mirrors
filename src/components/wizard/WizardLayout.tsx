@@ -435,6 +435,18 @@ function WizardLayoutInner() {
     }
     if (querySectionId) {
       dispatch({ type: 'FOCUS_PARENT_TASK_SECTION', sectionId: querySectionId })
+      // Deep-links into Open Accounts also switch the no-annuity sub-page so a task
+      // lands on its part of the flow (Accounts / Documents / KYC / Envelopes).
+      const pageForSection: Record<string, 'instructions' | 'documents' | 'kyc' | 'envelopes'> = {
+        'oa-accounts': 'instructions',
+        'oa-documents': 'documents',
+        'oa-kyc': 'kyc',
+        'oa-esign': 'envelopes',
+      }
+      const page = pageForSection[querySectionId]
+      if (page) {
+        dispatch({ type: 'SET_V5_NO_ANNUITY_OPEN_ACCOUNTS_PAGE', page })
+      }
     }
     if (queryChildId && state.activeChildActionId !== queryChildId) {
       const childExists = state.tasks.some((t) =>
