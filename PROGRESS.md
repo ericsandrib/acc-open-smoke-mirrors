@@ -264,11 +264,12 @@
 - [x] Whitmore ACH $120K distribution (meeting-to-action) + Hargrove delayed-beyond-SLA + Cedar Falls bond disbursement
 - [ ] Launch-from-insight wiring: Meeting Assistant "accept" → creates the distribution (Phase 6)
 
-### Phase 6: AI surfaces — DECISION PENDING
-- [ ] Meeting Assistant (summary + action cards → accept creates servicing action)
-- [ ] Ask Anything (scripted NL answers to the RFI example prompts)
-- [ ] Route + nav entry
-- [ ] Placeholder shell until Eric confirms faithful-port vs. placeholder approach
+### Phase 6: AI surfaces — Meeting Assistant (faithful port) ✅
+- [x] Faithful Meeting Assistant — TipTap summary editor (toolbar, attest/approve, char count) at `/meetings/:id`
+- [x] AI action-recommendation cards → "Create" accepts → linked action + toast → deep-links to the servicing distribution (meeting-to-action loop verified)
+- [x] Ask Anything — floating scripted chat (typewriter streaming, marked+DOMPurify) answering the RFI example prompts
+- [x] Prep (transcript) + Email (AI draft) tabs; Meetings list; `/meetings` route + existing nav item
+- [x] Deps added (TipTap 2.27 line, marked, dompurify, @tailwindcss/typography); typecheck clean; rendering verified via preview
 
 ### Phase 7: Operational analytics
 - [ ] SLA dashboard + bottleneck visibility + workflow monitoring + task transparency

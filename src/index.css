@@ -6,6 +6,7 @@
 @import "./styles/themes/zions.css";
 
 @plugin "tailwindcss-animate";
+@plugin "@tailwindcss/typography";
 
 @custom-variant dark (&:where(.dark, .dark *));
 

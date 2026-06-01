@@ -2,6 +2,7 @@ import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import { WorkflowProvider } from '@/stores/workflowStore'
 import { ServicingProvider } from '@/stores/servicingStore'
 import { ThemeProvider } from '@/stores/themeStore'
+import { MeetingsProvider } from '@/stores/meetingsStore'
 import { DashboardPage } from '@/pages/DashboardPage'
 import { WizardPage } from '@/pages/WizardPage'
 import { WorkflowPage } from '@/pages/WorkflowPage'
@@ -10,6 +11,8 @@ import { OnboardingPage } from '@/pages/OnboardingPage'
 import { OnboardingJourneyDetailPage } from '@/pages/OnboardingJourneyDetailPage'
 import { RelationshipsPage } from '@/pages/RelationshipsPage'
 import { IdentityGraphPage } from '@/pages/IdentityGraphPage'
+import { MeetingsPage } from '@/pages/MeetingsPage'
+import { MeetingDetailPage } from '@/pages/MeetingDetailPage'
 import { SettingsPage } from '@/pages/SettingsPage'
 import { TestsIndexPage } from '@/pages/tests/TestsIndexPage'
 import { ProgressIndicatorTestPage } from '@/pages/tests/ProgressIndicatorTestPage'
@@ -24,6 +27,7 @@ export default function App() {
         <WorkflowProvider>
           <ServicingProvider>
             <OpenAccountsVariantAndFocusProvider>
+              <MeetingsProvider>
               <BrowserRouter>
                 <Routes>
                   <Route path="/" element={<DashboardPage />} />
@@ -35,12 +39,15 @@ export default function App() {
                   <Route path="/onboarding/:journeyId" element={<OnboardingJourneyDetailPage />} />
                   <Route path="/relationships" element={<RelationshipsPage />} />
                   <Route path="/network" element={<IdentityGraphPage />} />
+                  <Route path="/meetings" element={<MeetingsPage />} />
+                  <Route path="/meetings/:meetingId" element={<MeetingDetailPage />} />
                   <Route path="/settings" element={<SettingsPage />} />
                   <Route path="/tests" element={<TestsIndexPage />} />
                   <Route path="/tests/progress-indicator" element={<ProgressIndicatorTestPage />} />
                   <Route path="*" element={<Navigate to="/" replace />} />
                 </Routes>
               </BrowserRouter>
+              </MeetingsProvider>
             </OpenAccountsVariantAndFocusProvider>
           </ServicingProvider>
         </WorkflowProvider>
