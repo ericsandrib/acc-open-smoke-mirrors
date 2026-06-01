@@ -69,26 +69,36 @@ export function deriveTaskRows(journeys: Journey[]): TaskRow[] {
 }
 
 /**
- * Maps an account-opening task to the Open Accounts wizard section it opens into,
- * so "Begin" brings the advisor to that part of the flow.
+ * Maps a servicing task to the part of the client-onboarding wizard it opens into,
+ * so clicking a task (or Begin) brings the advisor to that part of the journey.
  */
-function sectionForTask(title: string): string {
+function wizardTargetForTask(title: string): { taskId: string; sectionId?: string } {
   switch (title) {
+    case 'Client Info':
+      return { taskId: 'related-parties' }
+    case 'Existing Accounts':
+      return { taskId: 'existing-accounts' }
     case 'Upload Supporting Documents':
-      return 'oa-documents'
+      return { taskId: 'open-accounts', sectionId: 'oa-documents' }
     case 'KYC / Identity Check':
     case 'Suitability & Supervision Review':
-      return 'oa-kyc'
+      return { taskId: 'open-accounts', sectionId: 'oa-kyc' }
     case 'Generate & Submit Request':
     case 'Collect Client Signature':
     case 'Complete Quality Control Review':
     case 'Verify Complete':
-      return 'oa-esign'
+      return { taskId: 'open-accounts', sectionId: 'oa-esign' }
     case 'Complete Custodian Form':
     case 'Investment & Model Selection':
     default:
-      return 'oa-accounts'
+      return { taskId: 'open-accounts', sectionId: 'oa-accounts' }
   }
+}
+
+function wizardPath(journeyId: string, title: string): string {
+  const t = wizardTargetForTask(title)
+  const qs = t.sectionId ? `?taskId=${t.taskId}&sectionId=${t.sectionId}` : `?taskId=${t.taskId}`
+  return `/servicing/${journeyId}${qs}`
 }
 
 function initials(name: string): string {
@@ -147,9 +157,8 @@ export function TasksTable({ rows, visibleColumns }: TasksTableProps) {
 
   const vis = (key: string) => visibleColumns.includes(key)
 
-  /** Begin links into the account-opening form at the step matching this task. */
-  const beginTarget = (row: TaskRow) =>
-    `/servicing/${row.journeyId}?taskId=open-accounts&sectionId=${sectionForTask(row.title)}`
+  /** Begin links into the client-onboarding form at the step matching this task. */
+  const beginTarget = (row: TaskRow) => wizardPath(row.journeyId, row.title)
 
   const handleBegin = (e: MouseEvent, row: TaskRow) => {
     e.stopPropagation()
@@ -186,7 +195,7 @@ export function TasksTable({ rows, visibleColumns }: TasksTableProps) {
         </thead>
         <tbody className="[&>tr:nth-child(even)]:bg-muted/30">
           {sortedRows.map((row) => (
-            <DataTableRow key={row.id} className="cursor-pointer" onClick={() => navigate(`/servicing/${row.journeyId}`)}>
+            <DataTableRow key={row.id} className="cursor-pointer" onClick={() => navigate(wizardPath(row.journeyId, row.title))}>
               {vis('relationshipName') && (
                 <DataTableCell type="relationship">
                   <span className="inline-flex items-center gap-1.5 text-foreground underline-offset-2 hover:underline">

@@ -15,9 +15,10 @@ import type { TaskStatus } from '@/types/workflow'
  * Account Maintenance (Resolve Custodian Alert / NIGO) appear as their own actions.
  */
 
-type Arch = 'open' | 'open-sim' | 'toa' | 'contribution' | 'standing' | 'alert'
+type Arch = 'client-setup' | 'open' | 'open-sim' | 'toa' | 'contribution' | 'standing' | 'alert'
 
 const TASK_TITLES: Record<Arch, string[]> = {
+  'client-setup': ['Client Info', 'Existing Accounts'],
   open: [
     'Complete Custodian Form',
     'Upload Supporting Documents',
@@ -45,6 +46,7 @@ const TASK_TITLES: Record<Arch, string[]> = {
 }
 
 const ARCH_META: Record<Arch, { title: string; category: string }> = {
+  'client-setup': { title: 'Client Setup', category: 'Account Opening' },
   open: { title: 'Open Account', category: 'Account Opening' },
   'open-sim': { title: 'Open Account', category: 'Account Opening' },
   toa: { title: 'Transfer of Assets', category: 'Move Money' },
@@ -163,6 +165,16 @@ function buildJourney(spec: JourneySpec): Journey {
 const ME = 'Greta Fure'
 
 const journeySpecs: JourneySpec[] = [
+  // ── Lead "live" use case: John Smith. The wizard's default workflow data IS the
+  // Smith household, so clicking into John Smith's tasks shows John Smith (continuous),
+  // and each task routes to a different part of the onboarding journey. ──
+  {
+    id: 'ao-smith', household: 'John Smith', owner: ME, createdAt: '2026-05-26',
+    actions: [
+      { arch: 'client-setup', description: 'Client setup — info & existing accounts', short: 'Client Setup', code: '002420', owner: ME, done: 2, startDate: '2026-05-26' },
+      { arch: 'open', description: 'Open Fidelity Brokerage – Individual', short: 'Fidelity Individual', code: '002421', owner: ME, done: 2, current: 'in_progress', startDate: '2026-05-28' },
+    ],
+  },
   {
     id: 'ao-patel', household: 'Anita Patel', owner: ME, createdAt: '2026-06-03',
     actions: [
