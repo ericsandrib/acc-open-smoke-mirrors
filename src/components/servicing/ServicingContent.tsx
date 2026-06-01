@@ -24,37 +24,37 @@ export function ServicingContent() {
 
   return (
     <div className="max-w-6xl mx-auto">
-      <Tabs defaultValue="journeys">
+      <Tabs defaultValue="tasks">
         <div className="flex items-center justify-between mb-6">
           <PageTitle
             title="Servicing"
-            subHead="Track all journeys, actions, and tasks across all relationships and categories."
+            subHead="Track account-opening journeys, actions, and tasks across all client relationships."
           />
           <TabsList variant="elevated">
-            <TabsTrigger value="journeys">Journeys</TabsTrigger>
-            <TabsTrigger value="actions">Actions</TabsTrigger>
             <TabsTrigger value="tasks">Tasks</TabsTrigger>
+            <TabsTrigger value="actions">Actions</TabsTrigger>
+            <TabsTrigger value="journeys">Journeys</TabsTrigger>
           </TabsList>
         </div>
 
-        <TabsContent value="journeys">
-          <TableViewWrapper tableId="journeys" presets={journeyPresets} columns={journeyColumns} allRows={journeyRows}>
+        <TabsContent value="tasks">
+          <TableViewWrapper tableId="ao-tasks" presets={taskPresets} columns={taskColumns} allRows={taskRows}>
             {({ rows, visibleColumns }) => (
-              <JourneysTable rows={rows} visibleColumns={visibleColumns} />
+              <TasksTable rows={rows} visibleColumns={visibleColumns} />
             )}
           </TableViewWrapper>
         </TabsContent>
         <TabsContent value="actions">
-          <TableViewWrapper tableId="actions" presets={actionPresets} columns={actionColumns} allRows={actionRows}>
+          <TableViewWrapper tableId="ao-actions" presets={actionPresets} columns={actionColumns} allRows={actionRows}>
             {({ rows, visibleColumns }) => (
               <ActionsTable rows={rows} visibleColumns={visibleColumns} />
             )}
           </TableViewWrapper>
         </TabsContent>
-        <TabsContent value="tasks">
-          <TableViewWrapper tableId="tasks" presets={taskPresets} columns={taskColumns} allRows={taskRows}>
+        <TabsContent value="journeys">
+          <TableViewWrapper tableId="ao-journeys" presets={journeyPresets} columns={journeyColumns} allRows={journeyRows}>
             {({ rows, visibleColumns }) => (
-              <TasksTable rows={rows} visibleColumns={visibleColumns} />
+              <JourneysTable rows={rows} visibleColumns={visibleColumns} />
             )}
           </TableViewWrapper>
         </TabsContent>

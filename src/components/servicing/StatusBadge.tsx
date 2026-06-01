@@ -5,7 +5,7 @@ import { cn } from '@/lib/utils'
 
 const statusConfig: Record<string, { label: string; className: string }> = {
   not_started: {
-    label: 'Not Started',
+    label: 'Ready to Begin',
     className: 'bg-fill-neutral-secondary text-text-secondary border-border-primary',
   },
   in_progress: {
@@ -25,7 +25,7 @@ const statusConfig: Record<string, { label: string; className: string }> = {
     className: 'bg-fill-neutral-secondary text-text-tertiary border-border-primary',
   },
   awaiting_review: {
-    label: 'Awaiting Review',
+    label: 'Pending Approval',
     className: 'bg-yellow-50 text-yellow-800 border-yellow-300',
   },
   rejected: {

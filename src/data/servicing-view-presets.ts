@@ -59,17 +59,22 @@ export const journeyPresets: ViewPreset[] = [
 ]
 
 // ── Action columns ──────────────────────────────────────────────────
+// Ordered to match the Servicing → Actions view: Relationship · Category ·
+// Action ID · Action Description · Action Nickname.
 export const actionColumns: ColumnDef[] = [
-  { key: 'nickname', label: 'Action Nickname', alwaysVisible: true },
-  { key: 'title', label: 'Action Type', filterable: 'multi-select' },
-  { key: 'journeyName', label: 'Journey', filterable: 'text' },
   { key: 'relationshipName', label: 'Relationship', filterable: 'text' },
+  { key: 'category', label: 'Category', filterable: 'multi-select' },
+  { key: 'actionCode', label: 'Action ID' },
+  { key: 'description', label: 'Action Description', filterable: 'text' },
+  { key: 'nickname', label: 'Action Nickname', alwaysVisible: true },
+  // Available via Display (hidden by default to mirror the reference UI):
+  { key: 'title', label: 'Action Type', filterable: 'multi-select' },
   { key: 'status', label: 'Status', filterable: 'multi-select' },
   { key: 'assignedTo', label: 'Assigned To', filterable: 'multi-select' },
   { key: 'tasksComplete', label: 'Tasks Complete' },
 ]
 
-const allActionCols = actionColumns.map((c) => c.key)
+const defaultActionCols = ['relationshipName', 'category', 'actionCode', 'description', 'nickname']
 
 export const actionPresets: ViewPreset[] = [
   {
@@ -78,50 +83,62 @@ export const actionPresets: ViewPreset[] = [
     category: 'pinned',
     isDefault: true,
     filters: [],
-    visibleColumns: allActionCols,
+    visibleColumns: defaultActionCols,
+  },
+  {
+    id: 'actions-account-opening',
+    name: 'Account Opening',
+    category: 'pinned',
+    filters: [{ column: 'category', operator: 'equals', value: 'Account Opening' }],
+    visibleColumns: defaultActionCols,
   },
   {
     id: 'actions-in-progress',
     name: 'In Progress',
     category: 'pinned',
     filters: [{ column: 'status', operator: 'equals', value: 'in_progress' }],
-    visibleColumns: allActionCols,
+    visibleColumns: [...defaultActionCols, 'status'],
   },
   {
     id: 'actions-completed',
     name: 'Completed',
     category: 'pinned',
     filters: [{ column: 'status', operator: 'equals', value: 'complete' }],
-    visibleColumns: allActionCols,
+    visibleColumns: [...defaultActionCols, 'status'],
   },
   {
-    id: 'actions-blocked',
-    name: 'Blocked',
+    id: 'actions-awaiting-review',
+    name: 'Awaiting Review',
     category: 'personal',
-    filters: [{ column: 'status', operator: 'equals', value: 'blocked' }],
-    visibleColumns: allActionCols,
+    filters: [{ column: 'status', operator: 'equals', value: 'awaiting_review' }],
+    visibleColumns: [...defaultActionCols, 'status'],
   },
   {
     id: 'actions-mine',
     name: 'My Actions',
     category: 'personal',
     filters: [{ column: 'assignedTo', operator: 'contains', value: 'Alice Chen' }],
-    visibleColumns: allActionCols,
+    visibleColumns: defaultActionCols,
   },
 ]
 
 // ── Task columns ────────────────────────────────────────────────────
+// Ordered to match the Servicing → Tasks view: Relationship · Task ·
+// Task Owner · Status · Next Step. (Complexity Level intentionally omitted.)
 export const taskColumns: ColumnDef[] = [
+  { key: 'relationshipName', label: 'Relationship', filterable: 'text' },
   { key: 'title', label: 'Task', alwaysVisible: true },
-  { key: 'nickname', label: 'Action Nickname' },
+  { key: 'taskOwner', label: 'Task Owner', filterable: 'multi-select' },
+  { key: 'status', label: 'Status', filterable: 'multi-select' },
+  { key: 'nextStep', label: 'Next Step' },
+  // Available via Display (hidden by default to mirror the reference UI):
+  { key: 'readyToBegin', label: 'Ready to Begin' },
   { key: 'actionTitle', label: 'Action Type', filterable: 'multi-select' },
   { key: 'journeyName', label: 'Journey', filterable: 'text' },
-  { key: 'relationshipName', label: 'Relationship', filterable: 'text' },
-  { key: 'status', label: 'Status', filterable: 'multi-select' },
-  { key: 'assignedTo', label: 'Assigned To', filterable: 'multi-select' },
+  { key: 'nickname', label: 'Action Nickname' },
 ]
 
-const allTaskCols = taskColumns.map((c) => c.key)
+const defaultTaskCols = ['relationshipName', 'title', 'taskOwner', 'status', 'nextStep']
 
 export const taskPresets: ViewPreset[] = [
   {
@@ -130,41 +147,41 @@ export const taskPresets: ViewPreset[] = [
     category: 'pinned',
     isDefault: true,
     filters: [],
-    visibleColumns: allTaskCols,
+    visibleColumns: defaultTaskCols,
   },
   {
     id: 'tasks-in-progress',
     name: 'In Progress',
     category: 'pinned',
     filters: [{ column: 'status', operator: 'equals', value: 'in_progress' }],
-    visibleColumns: allTaskCols,
+    visibleColumns: defaultTaskCols,
+  },
+  {
+    id: 'tasks-ready',
+    name: 'Ready to Begin',
+    category: 'pinned',
+    filters: [{ column: 'status', operator: 'equals', value: 'not_started' }],
+    visibleColumns: defaultTaskCols,
   },
   {
     id: 'tasks-completed',
     name: 'Completed',
     category: 'pinned',
     filters: [{ column: 'status', operator: 'equals', value: 'complete' }],
-    visibleColumns: allTaskCols,
+    visibleColumns: defaultTaskCols,
   },
   {
     id: 'tasks-blocked',
     name: 'Blocked',
     category: 'pinned',
     filters: [{ column: 'status', operator: 'equals', value: 'blocked' }],
-    visibleColumns: allTaskCols,
+    visibleColumns: defaultTaskCols,
   },
   {
     id: 'tasks-mine',
     name: 'My Tasks',
     category: 'personal',
     filters: [{ column: 'assignedTo', operator: 'equals', value: 'Alice Chen' }],
-    visibleColumns: allTaskCols,
-  },
-  {
-    id: 'tasks-unassigned',
-    name: 'Unassigned',
-    category: 'personal',
-    filters: [{ column: 'assignedTo', operator: 'equals', value: '' }],
-    visibleColumns: ['title', 'actionTitle', 'journeyName', 'status'],
+    visibleColumns: defaultTaskCols,
   },
 ]
