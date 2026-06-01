@@ -10,6 +10,7 @@ import { ServicingPage } from '@/pages/ServicingPage'
 import { OnboardingPage } from '@/pages/OnboardingPage'
 import { OnboardingJourneyDetailPage } from '@/pages/OnboardingJourneyDetailPage'
 import { RelationshipsPage } from '@/pages/RelationshipsPage'
+import { RelationshipDetailPage } from '@/pages/RelationshipDetailPage'
 import { IdentityGraphPage } from '@/pages/IdentityGraphPage'
 import { MeetingsPage } from '@/pages/MeetingsPage'
 import { MeetingDetailPage } from '@/pages/MeetingDetailPage'
@@ -40,6 +41,7 @@ export default function App() {
                   <Route path="/onboarding" element={<OnboardingPage />} />
                   <Route path="/onboarding/:journeyId" element={<OnboardingJourneyDetailPage />} />
                   <Route path="/relationships" element={<RelationshipsPage />} />
+                  <Route path="/relationships/:relationshipId" element={<RelationshipDetailPage />} />
                   <Route path="/network" element={<IdentityGraphPage />} />
                   <Route path="/meetings" element={<MeetingsPage />} />
                   <Route path="/meetings/:meetingId" element={<MeetingDetailPage />} />
