@@ -47,6 +47,7 @@ import { buildRequiredEsignFormRows } from '@/utils/buildEsignEnvelopeFormRows'
 import { downloadEnvelopeManifest } from '@/utils/downloadEsignEnvelopeManifest'
 import { getEnvelopeDisplayName } from '@/utils/deriveEnvelopeDisplayName'
 import { EsignEnvelopeDrawer } from '@/components/wizard/forms/EsignEnvelopeDrawer'
+import { CustodianSubmissionPanel } from './CustodianSubmissionPanel'
 import { getAccountOwnersMissingKyc } from '@/utils/accountOpeningOwnerKyc'
 import { getAccountOpeningChildSubmissionIssues } from '@/utils/accountOpeningChildProgress'
 import {
@@ -1683,6 +1684,7 @@ export function OpenAccountsForm() {
             </Button>
           </div>
         )}
+        <CustodianSubmissionPanel taskId={openAccountsTaskId} />
       </section>
       </div>
       ) : null}
