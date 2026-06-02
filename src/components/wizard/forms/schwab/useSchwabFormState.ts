@@ -1,7 +1,6 @@
 import { useEffect, useMemo, useRef } from 'react'
 import { useTaskData, useWorkflow } from '@/stores/workflowStore'
-import { buildSchwabPrefill, deriveIdentityFromUploadedDocs, type SchwabPrefill } from './schwabPrePopulation'
-import { getRelevantOpenAccountsTask } from '@/utils/openAccountsTaskContext'
+import { buildSchwabPrefill, type SchwabPrefill } from './schwabPrePopulation'
 
 const SCHWAB_FORM_STATE_KEY = 'schwabForm'
 
@@ -139,14 +138,6 @@ export function useSchwabFormState(childId: string): SchwabFormStateApi {
     return owners.map((o) => o.partyId).filter((id): id is string => Boolean(id))
   }, [state.taskData, childId])
 
-  const documentIdentity = useMemo(() => {
-    const openAccountsTask = getRelevantOpenAccountsTask(state)
-    const openAccountsTaskData = openAccountsTask
-      ? (state.taskData[openAccountsTask.id] as Record<string, unknown> | undefined)
-      : undefined
-    return deriveIdentityFromUploadedDocs(openAccountsTaskData)
-  }, [state])
-
   const prefill = useMemo(
     () =>
       buildSchwabPrefill({
@@ -154,9 +145,8 @@ export function useSchwabFormState(childId: string): SchwabFormStateApi {
         selectedOwnerPartyIds,
         investmentProfessionalId: rawData.investmentProfessionalId as string | undefined,
         clientInfo: state.taskData['client-info'] as Record<string, unknown> | undefined,
-        documentIdentity,
       }),
-    [state, rawData.investmentProfessionalId, selectedOwnerPartyIds, documentIdentity],
+    [state, rawData.investmentProfessionalId, selectedOwnerPartyIds],
   )
 
   const selectedOwnerDisplayNames = useMemo(
@@ -224,7 +214,7 @@ export function useSchwabFormState(childId: string): SchwabFormStateApi {
     prefill,
     selectedOwnerPartyIds,
     selectedOwnerDisplayNames,
-    idSourceFileName: documentIdentity?.sourceFileName ?? null,
+    idSourceFileName: null,
     get(field) {
       const v = formBag[field]
       return typeof v === 'string' ? v : v == null ? '' : String(v)

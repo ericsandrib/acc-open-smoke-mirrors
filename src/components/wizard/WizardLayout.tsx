@@ -439,7 +439,7 @@ function WizardLayoutInner() {
       // lands on its part of the flow (Accounts / Documents / KYC / Envelopes).
       const pageForSection: Record<string, 'instructions' | 'documents' | 'kyc' | 'envelopes'> = {
         'oa-accounts': 'instructions',
-        'oa-documents': 'documents',
+        'oa-documents': 'kyc',
         'oa-kyc': 'kyc',
         'oa-esign': 'envelopes',
       }

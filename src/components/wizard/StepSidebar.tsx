@@ -285,15 +285,6 @@ function buildDisplayActions(state: WorkflowState, variant: OpenAccountsVariant)
               {
                 type: 'task',
                 task: {
-                  id: 'v5-noann-supporting-documents',
-                  label: 'Supporting Documents',
-                  underlyingTaskIds: [noAnnuityOnlyTaskId],
-                  v5NoAnnuityPage: 'documents',
-                },
-              },
-              {
-                type: 'task',
-                task: {
                   id: 'v5-noann-envelopes',
                   label: 'Envelopes',
                   underlyingTaskIds: [noAnnuityOnlyTaskId],
@@ -350,12 +341,6 @@ function buildDisplayActions(state: WorkflowState, variant: OpenAccountsVariant)
               v5NoAnnuityPage: 'kyc',
             },
             {
-              id: 'v5-noann-supporting-documents',
-              label: 'Supporting Documents',
-              underlyingTaskIds: [noAnnuityOpenAccountsTaskId],
-              v5NoAnnuityPage: 'documents',
-            },
-            {
               id: 'v5-noann-envelopes',
               label: 'Envelopes',
               underlyingTaskIds: [noAnnuityOpenAccountsTaskId],
@@ -383,12 +368,6 @@ function buildDisplayActions(state: WorkflowState, variant: OpenAccountsVariant)
               label: 'KYC',
               underlyingTaskIds: [noAnnuityOpenAccountsTaskId],
               v5NoAnnuityPage: 'kyc',
-            },
-            {
-              id: 'v5-noann-supporting-documents',
-              label: 'Supporting Documents',
-              underlyingTaskIds: [noAnnuityOpenAccountsTaskId],
-              v5NoAnnuityPage: 'documents',
             },
             {
               id: 'v5-noann-envelopes',

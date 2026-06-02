@@ -13,6 +13,11 @@ dist
 dist-ssr
 *.local
 
+# Local env / secrets (Schwab dev-portal creds live here — never commit)
+.env
+.env.*
+!.env.example
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json

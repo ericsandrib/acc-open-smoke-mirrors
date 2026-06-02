@@ -167,6 +167,17 @@ export function getOpenAccountsSubmitForReviewBlockers(
     return blockers
   }
 
+  // Relocated step-5 upload gate: at least one supporting document must be attached
+  // before the account package can be submitted for review.
+  const hasSupportingDoc = getOpenAccountsCoreSupportingDocumentSections().some((doc) => {
+    const docTaskData = (state.taskData[openAccountsTaskId] as Record<string, unknown> | undefined) ?? {}
+    const instances = (docTaskData[`doc-instances-${doc.id}`] as DocInstance[] | undefined) ?? []
+    return instances.some((i) => Boolean(i.fileName))
+  })
+  if (!hasSupportingDoc) {
+    blockers.push('Upload at least one supporting document (ID, passport, etc.) before submitting for review.')
+  }
+
   const openData = (state.taskData[openAccountsTaskId] as Record<string, unknown> | undefined) ?? {}
   const envelopes = (openData.esignEnvelopes as EsignEnvelope[] | undefined) ?? []
   const sentEnvelopes = envelopes.filter((env) => env.sentToClient === true)

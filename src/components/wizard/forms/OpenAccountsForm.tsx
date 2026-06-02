@@ -343,19 +343,6 @@ export function OpenAccountsForm() {
     [],
   )
 
-  /**
-   * True once at least one supporting-document instance has a fileName attached.
-   * Gates the "Add accounts" button so the operator captures ID/passport before
-   * starting an application — the captured doc seeds form pre-fill downstream.
-   */
-  const hasUploadedDocument = useMemo(() => {
-    for (const doc of supportingDocSections) {
-      const instances = (data[`doc-instances-${doc.id}`] as DocInstance[] | undefined) ?? []
-      if (instances.some((i) => Boolean(i.fileName))) return true
-    }
-    return false
-  }, [supportingDocSections, data])
-
   const ownerPartyIdsByAccountChild = useMemo(() => {
     const map = new Map<string, string[]>()
     for (const c of accountOpeningChildren) {
@@ -796,7 +783,7 @@ export function OpenAccountsForm() {
           />
         </div>
       ) : null}
-      {showV5Instructions || showV5Documents ? (
+      {showV5Instructions ? (
       <div
         className={cn(
           (openAccountsVariant === 'v5' || openAccountsVariant === 'v6') && 'space-y-10',
@@ -815,129 +802,6 @@ export function OpenAccountsForm() {
             ),
         )}
       >
-      {/* Section 1: Gather documents — captured before Account Forms so ID/passport details can pre-fill each application's form. */}
-      {!externalAnnuityPlatform && showV5Documents ? (
-      <section
-        id={sectionId('oa-documents')}
-        className={cn('scroll-mt-16', isV5NoAnnuityPaged && 'pt-2')}
-      >
-        {!isV5NoAnnuityPaged ? (
-          <>
-            {isCardVariant ? (
-              <div
-                className={cn(
-                  '-mx-6 -mt-6 mb-8 px-6 py-4',
-                  isVersion2 && 'border-b border-border/60',
-                  isVersion4 && 'border-b border-border/60',
-                  isVersion3 && 'mx-0 mt-0 px-0 pt-0 pb-4 border-b border-border/60',
-                  (isVersion2 || isVersion4) && 'bg-[#F5F5F4]',
-                )}
-              >
-                <h4 className={cardGroupHeadingClass}>Gather documents</h4>
-              </div>
-            ) : (
-              <div className="flex items-center gap-4 scroll-mt-16 mb-4">
-                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-[8px] bg-foreground/80 text-background text-base font-semibold">
-                  1
-                </div>
-                <h2 className="text-2xl font-semibold">Gather documents</h2>
-              </div>
-            )}
-            <div
-              className={cn(
-                sectionHeaderSpacingClass,
-                !isCardVariant && 'pt-2',
-              )}
-            >
-              <p className={subsectionBodyClass}>
-                Upload at least one identity document (ID, passport, etc.) before adding accounts. Firm
-                and custodian-generated forms are handled in{' '}
-                <span className="font-medium text-foreground">Envelopes</span>.
-              </p>
-            </div>
-          </>
-        ) : null}
-        {supportingDocSections.length > 0 ? (
-          <div className="space-y-2">
-            <div className="space-y-4">
-            {supportingDocSections.map((doc) => {
-              const instances = ((data[`doc-instances-${doc.id}`] as DocInstance[] | undefined) ?? [])
-
-              const updateInstances = (next: DocInstance[]) => {
-                updateField(`doc-instances-${doc.id}`, next)
-              }
-
-              const updateInstance = (instanceId: string, updates: Partial<DocInstance>) => {
-                updateInstances(instances.map((i) => i.id === instanceId ? { ...i, ...updates } : i))
-              }
-
-              const handleFileSelect = (instanceId: string) => {
-                const input = document.createElement('input')
-                input.type = 'file'
-                input.accept = '.pdf,.jpg,.jpeg,.png'
-                input.onchange = (e) => {
-                  const file = (e.target as HTMLInputElement).files?.[0]
-                  if (file) {
-                    const prior = instances.find((i) => i.id === instanceId)
-                    updateInstance(instanceId, {
-                      fileName: file.name,
-                      status: nextStatusAfterUpload(prior?.status),
-                    })
-                  }
-                }
-                input.click()
-              }
-
-              const addInstance = () => {
-                updateInstances([
-                  ...instances,
-                  {
-                    id: `di-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
-                    docTypeId: doc.id,
-                    assignedTo: '',
-                    status: defaultSupportingDocumentStatus(),
-                  },
-                ])
-              }
-
-              const removeInstance = (instanceId: string) => {
-                updateInstances(instances.filter((i) => i.id !== instanceId))
-              }
-              const subTypes = getDocSubTypes(doc.id)
-              return (
-                <DocumentUploadInstancesTable
-                  key={doc.id}
-                  docLabel={doc.label}
-                  docDescription={doc.description}
-                  instances={instances}
-                  subTypes={subTypes}
-                  assignees={supportingDocumentAssignees}
-                  emptyMessage="No documents added yet."
-                  lockAssignedWhenPresent={false}
-                  onAdd={addInstance}
-                  onRemove={removeInstance}
-                  onUpload={handleFileSelect}
-                  onUpdate={updateInstance}
-                />
-              )
-            })}
-            </div>
-          </div>
-        ) : (
-          <div className="rounded-lg border border-dashed border-border p-4 text-center">
-            <p className="text-sm text-muted-foreground">
-              No documents added yet.
-            </p>
-          </div>
-        )}
-      </section>
-      ) : null}
-
-      {!externalAnnuityPlatform && !isCardVariant && !isV5NoAnnuityPaged ? (
-        <div className="h-5 mt-14 flex items-center">
-          <hr className="border-t border-border w-full" />
-        </div>
-      ) : null}
 
       {showV5Instructions && (isCardVariant || !externalAnnuityPlatform) && openAccountsVariant !== 'v5' ? (
         isCardVariant ? (
@@ -958,7 +822,7 @@ export function OpenAccountsForm() {
         ) : (
           <div className="flex items-center gap-4 scroll-mt-16" id={sectionId('oa-instructions-group')}>
             <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-[8px] bg-foreground/80 text-background text-base font-semibold">
-              2
+              1
             </div>
             <h2 className="text-2xl font-semibold">Account forms</h2>
           </div>
@@ -1069,7 +933,6 @@ export function OpenAccountsForm() {
             <Button
               variant="ghost"
               className="w-full"
-              disabled={!hasUploadedDocument}
               onClick={() => setPickerOpen(true)}
             >
               <Plus className="h-4 w-4 mr-2" />
@@ -1084,7 +947,6 @@ export function OpenAccountsForm() {
             </p>
             <Button
               variant="secondary"
-              disabled={!hasUploadedDocument}
               onClick={() => setPickerOpen(true)}
             >
               <Plus className="h-4 w-4 mr-1" />
@@ -1092,13 +954,6 @@ export function OpenAccountsForm() {
             </Button>
           </div>
         )}
-        {!hasUploadedDocument ? (
-          <p className="mt-2 text-xs text-muted-foreground">
-            Upload at least one supporting document (ID, passport, etc.) above before adding accounts.
-            Captured fields will pre-fill each application.
-          </p>
-        ) : null}
-
         <AccountTypePickerDialog
           open={pickerOpen}
           onOpenChange={setPickerOpen}
@@ -1150,7 +1005,7 @@ export function OpenAccountsForm() {
       ) : null}
 
       {/* KYC Verification H2 group — KYC sections hidden on annuity path */}
-      {!externalAnnuityPlatform && showV5Kyc ? (
+      {!externalAnnuityPlatform && (showV5Kyc || showV5Documents) ? (
         <div
           className={cn(
             (openAccountsVariant === 'v5' || openAccountsVariant === 'v6') && 'space-y-9',
@@ -1198,7 +1053,7 @@ export function OpenAccountsForm() {
             <>
               <div className="flex items-center gap-4">
                 <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-[8px] bg-foreground/80 text-background text-base font-semibold">
-                  3
+                  2
                 </div>
                 <h2 className="text-2xl font-semibold">KYC and Supervision</h2>
               </div>
@@ -1210,6 +1065,98 @@ export function OpenAccountsForm() {
           )}
         </div>
         ) : null}
+      {/* Supporting documents — folded into the KYC/identity step (spec step 5 upload gate). */}
+      <section
+        id={sectionId('oa-documents')}
+        className="scroll-mt-16"
+      >
+        <div
+          className={cn(
+            sectionHeaderSpacingClass,
+            !isCardVariant && 'pt-4',
+          )}
+        >
+          <h3 className={subsectionTitleClass}>Supporting Documents</h3>
+          <p className={subsectionBodyClass}>
+            Upload identity documents (ID, passport, etc.) for the account owners. At least one is
+            required before submitting for review. Firm and custodian-generated forms are handled in{' '}
+            <span className="font-medium text-foreground">Envelopes</span>.
+          </p>
+        </div>
+        {supportingDocSections.length > 0 ? (
+          <div className="space-y-2">
+            <div className="space-y-4">
+            {supportingDocSections.map((doc) => {
+              const instances = ((data[`doc-instances-${doc.id}`] as DocInstance[] | undefined) ?? [])
+
+              const updateInstances = (next: DocInstance[]) => {
+                updateField(`doc-instances-${doc.id}`, next)
+              }
+
+              const updateInstance = (instanceId: string, updates: Partial<DocInstance>) => {
+                updateInstances(instances.map((i) => i.id === instanceId ? { ...i, ...updates } : i))
+              }
+
+              const handleFileSelect = (instanceId: string) => {
+                const input = document.createElement('input')
+                input.type = 'file'
+                input.accept = '.pdf,.jpg,.jpeg,.png'
+                input.onchange = (e) => {
+                  const file = (e.target as HTMLInputElement).files?.[0]
+                  if (file) {
+                    const prior = instances.find((i) => i.id === instanceId)
+                    updateInstance(instanceId, {
+                      fileName: file.name,
+                      status: nextStatusAfterUpload(prior?.status),
+                    })
+                  }
+                }
+                input.click()
+              }
+
+              const addInstance = () => {
+                updateInstances([
+                  ...instances,
+                  {
+                    id: `di-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+                    docTypeId: doc.id,
+                    assignedTo: '',
+                    status: defaultSupportingDocumentStatus(),
+                  },
+                ])
+              }
+
+              const removeInstance = (instanceId: string) => {
+                updateInstances(instances.filter((i) => i.id !== instanceId))
+              }
+              const subTypes = getDocSubTypes(doc.id)
+              return (
+                <DocumentUploadInstancesTable
+                  key={doc.id}
+                  docLabel={doc.label}
+                  docDescription={doc.description}
+                  instances={instances}
+                  subTypes={subTypes}
+                  assignees={supportingDocumentAssignees}
+                  emptyMessage="No documents added yet."
+                  lockAssignedWhenPresent={false}
+                  onAdd={addInstance}
+                  onRemove={removeInstance}
+                  onUpload={handleFileSelect}
+                  onUpdate={updateInstance}
+                />
+              )
+            })}
+            </div>
+          </div>
+        ) : (
+          <div className="rounded-lg border border-dashed border-border p-4 text-center">
+            <p className="text-sm text-muted-foreground">
+              No documents added yet.
+            </p>
+          </div>
+        )}
+      </section>
       <section
         id={sectionId('oa-kyc-owners')}
         className="scroll-mt-16"
@@ -1594,7 +1541,7 @@ export function OpenAccountsForm() {
               <>
                 <div className="flex items-center gap-4">
                   <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-[8px] bg-foreground/80 text-background text-base font-semibold">
-                    4
+                    3
                   </div>
                   <h2 className="text-2xl font-semibold">Envelopes</h2>
                 </div>
