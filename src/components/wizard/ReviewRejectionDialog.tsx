@@ -2,14 +2,9 @@ import { useState } from 'react'
 import { useWorkflow } from '@/stores/workflowStore'
 import { Button } from '@/components/ui/button'
 import { Label } from '@/components/ui/label'
-import {
-  Select,
-  SelectTrigger,
-  SelectValue,
-  SelectContent,
-  SelectItem,
-} from '@/components/ui/select'
 import { ShieldAlert } from 'lucide-react'
+import { ReviewReasonMultiSelect } from '@/components/wizard/ReviewReasonMultiSelect'
+import { getReasonLabels } from '@/utils/reviewReasonSelection'
 
 const REJECTION_REASONS = [
   { value: 'incomplete-documentation', label: 'Incomplete Documentation' },
@@ -29,20 +24,20 @@ interface ReviewRejectionDialogProps {
 
 export function ReviewRejectionDialog({ open, onClose, variant = 'main' }: ReviewRejectionDialogProps) {
   const { dispatch } = useWorkflow()
-  const [reason, setReason] = useState('')
+  const [reasons, setReasons] = useState<string[]>([])
   const [feedback, setFeedback] = useState('')
 
   if (!open) return null
 
   const handleSubmit = () => {
-    if (!reason) return
-    const label = REJECTION_REASONS.find((r) => r.value === reason)?.label ?? reason
+    if (reasons.length === 0) return
+    const label = getReasonLabels(REJECTION_REASONS, reasons)
     if (variant === 'child') {
       dispatch({ type: 'REJECT_CHILD_REVIEW', reason: label, feedback: feedback.trim() || undefined })
     } else {
       dispatch({ type: 'REJECT_REVIEW', reason: label, feedback: feedback.trim() || undefined })
     }
-    setReason('')
+    setReasons([])
     setFeedback('')
     onClose()
   }
@@ -50,7 +45,7 @@ export function ReviewRejectionDialog({ open, onClose, variant = 'main' }: Revie
   return (
     <div className="fixed inset-0 z-[60] flex items-center justify-center">
       <div className="fixed inset-0 bg-black/50" onClick={onClose} />
-      <div className="relative z-10 bg-background rounded-lg border border-border shadow-lg max-w-md w-full mx-4 p-6 space-y-5">
+      <div className="relative z-10 mx-4 w-full max-w-md overflow-hidden rounded-lg border border-border bg-background p-6 shadow-lg space-y-5">
         <div className="flex items-start gap-3">
           <div className="rounded-full bg-red-50 p-2 shrink-0">
             <ShieldAlert className="h-5 w-5 text-red-600" />
@@ -63,20 +58,14 @@ export function ReviewRejectionDialog({ open, onClose, variant = 'main' }: Revie
           </div>
         </div>
 
-        <div className="space-y-2">
+        <div className="min-w-0 space-y-2">
           <Label>Reason for Rejection</Label>
-          <Select value={reason} onValueChange={setReason}>
-            <SelectTrigger>
-              <SelectValue placeholder="Select a reason..." />
-            </SelectTrigger>
-            <SelectContent className="z-[70]">
-              {REJECTION_REASONS.map((r) => (
-                <SelectItem key={r.value} value={r.value}>
-                  {r.label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          <ReviewReasonMultiSelect
+            options={REJECTION_REASONS}
+            value={reasons}
+            onChange={setReasons}
+            placeholder="Select reasons..."
+          />
         </div>
 
         <div className="space-y-2">
@@ -91,7 +80,7 @@ export function ReviewRejectionDialog({ open, onClose, variant = 'main' }: Revie
 
         <div className="flex items-center justify-end gap-3 pt-1">
           <Button variant="outline" onClick={onClose}>Cancel</Button>
-          <Button variant="destructive" onClick={handleSubmit} disabled={!reason}>
+          <Button variant="destructive" onClick={handleSubmit} disabled={reasons.length === 0}>
             Submit Rejection
           </Button>
         </div>

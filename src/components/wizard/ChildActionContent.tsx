@@ -318,7 +318,13 @@ export function ChildActionContent() {
             {description}
           </p>
         )}
-        <div className={formReadOnly ? 'pointer-events-none opacity-75 select-none' : ''}>
+        <div
+          className={
+            formReadOnly
+              ? 'pointer-events-none opacity-75 select-none [&_[data-readonly-interactive]]:pointer-events-auto'
+              : ''
+          }
+        >
           {FormComponent ? (
             <FormComponent key={formKey} />
           ) : (

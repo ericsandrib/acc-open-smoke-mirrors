@@ -35,6 +35,7 @@ export function SupportingDocumentPdfViewButton({ previewKey, fileName, classNam
         variant="outline"
         size="sm"
         className={className ?? 'h-7 text-xs'}
+        data-readonly-interactive
         onClick={() => setOpen(true)}
       >
         View

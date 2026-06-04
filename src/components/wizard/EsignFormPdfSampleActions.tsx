@@ -17,6 +17,8 @@ type Props = {
   displayLabel: string
   /** Documents review shows executed copies; envelope builder shows pre-sign preview */
   viewMode?: EsignPdfViewMode
+  /** Called when the user downloads the PDF (e.g. to record Forms Package compliance). */
+  onDownload?: () => void
 }
 
 /** View / Download for firm/custodian demo PDFs (explicit map or fallback). */
@@ -28,7 +30,7 @@ export function EsignFormPdfSampleActions({ formIdOrDocId, displayLabel, viewMod
 
   return (
     <>
-      <div className="flex shrink-0 items-center gap-1">
+      <div className="flex shrink-0 items-center gap-1" data-readonly-interactive>
         <Button
           type="button"
           variant="outline"
@@ -44,6 +46,7 @@ export function EsignFormPdfSampleActions({ formIdOrDocId, displayLabel, viewMod
           href={sample.href}
           download={sample.fileName}
           title="Download"
+          onClick={() => onDownload?.()}
           className="inline-flex h-8 w-8 items-center justify-center rounded-md border border-border bg-card text-foreground shadow-sm transition-colors hover:bg-muted focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
         >
           <FileDown className="h-4 w-4 shrink-0" aria-hidden />

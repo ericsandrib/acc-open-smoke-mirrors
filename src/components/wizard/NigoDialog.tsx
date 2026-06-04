@@ -1,14 +1,9 @@
 import { useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { Label } from '@/components/ui/label'
-import {
-  Select,
-  SelectTrigger,
-  SelectValue,
-  SelectContent,
-  SelectItem,
-} from '@/components/ui/select'
 import { ShieldAlert } from 'lucide-react'
+import { ReviewReasonMultiSelect } from '@/components/wizard/ReviewReasonMultiSelect'
+import { getReasonLabels, type ReviewReasonOption } from '@/utils/reviewReasonSelection'
 
 const NIGO_REASONS = [
   { value: 'incomplete-documentation', label: 'Incomplete Documentation' },
@@ -21,8 +16,6 @@ const NIGO_REASONS = [
   { value: 'other', label: 'Other' },
 ]
 
-type NigoReasonOption = { value: string; label: string }
-
 interface NigoDialogProps {
   open: boolean
   onClose: () => void
@@ -30,7 +23,7 @@ interface NigoDialogProps {
   onSubmit: (reason: string, feedback?: string) => void
   /** `reject` uses Accept/Reject-style copy for HO Document Team; default uses clarification copy (e.g. Principal). */
   variant?: 'nigo' | 'reject'
-  reasonOptions?: NigoReasonOption[]
+  reasonOptions?: ReviewReasonOption[]
   reasonLabel?: string
   title?: string
   confirmLabel?: string
@@ -47,23 +40,23 @@ export function NigoDialog({
   title,
   confirmLabel,
 }: NigoDialogProps) {
-  const [reason, setReason] = useState('')
+  const [reasons, setReasons] = useState<string[]>([])
   const [feedback, setFeedback] = useState('')
 
   if (!open) return null
 
   const handleSubmit = () => {
-    if (!reason) return
-    const label = reasonOptions.find((r) => r.value === reason)?.label ?? reason
+    if (reasons.length === 0) return
+    const label = getReasonLabels(reasonOptions, reasons)
     onSubmit(label, feedback.trim() || undefined)
-    setReason('')
+    setReasons([])
     setFeedback('')
   }
 
   return (
     <div className="fixed inset-0 z-[60] flex items-center justify-center">
       <div className="fixed inset-0 bg-black/50" onClick={onClose} />
-      <div className="relative z-10 bg-background rounded-lg border border-border shadow-lg max-w-md w-full mx-4 p-6 space-y-5">
+      <div className="relative z-10 mx-4 w-full max-w-md overflow-hidden rounded-lg border border-border bg-background p-6 shadow-lg space-y-5">
         <div className="flex items-start gap-3">
           <div className="rounded-full bg-red-50 p-2 shrink-0">
             <ShieldAlert className="h-5 w-5 text-red-600" />
@@ -80,20 +73,14 @@ export function NigoDialog({
           </div>
         </div>
 
-        <div className="space-y-2">
+        <div className="min-w-0 space-y-2">
           <Label>{reasonLabel ?? (variant === 'reject' ? 'Rejection reason' : 'Clarification reason')}</Label>
-          <Select value={reason} onValueChange={setReason}>
-            <SelectTrigger>
-              <SelectValue placeholder="Select a reason..." />
-            </SelectTrigger>
-            <SelectContent className="z-[70]">
-              {reasonOptions.map((r) => (
-                <SelectItem key={r.value} value={r.value}>
-                  {r.label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          <ReviewReasonMultiSelect
+            options={reasonOptions}
+            value={reasons}
+            onChange={setReasons}
+            placeholder="Select reasons..."
+          />
         </div>
 
         <div className="space-y-2">
@@ -108,7 +95,7 @@ export function NigoDialog({
 
         <div className="flex items-center justify-end gap-3 pt-1">
           <Button variant="outline" onClick={onClose}>Cancel</Button>
-          <Button variant="destructive" onClick={handleSubmit} disabled={!reason}>
+          <Button variant="destructive" onClick={handleSubmit} disabled={reasons.length === 0}>
             {confirmLabel ?? (variant === 'reject' ? 'Reject Review' : 'Submit request')}
           </Button>
         </div>

@@ -2,14 +2,13 @@ import { useEffect, useState } from 'react'
 import { ShieldAlert } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Label } from '@/components/ui/label'
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select'
 import { ComplianceModalShell } from '@/components/wizard/ComplianceModalShell'
+import { ReviewReasonMultiSelect } from '@/components/wizard/ReviewReasonMultiSelect'
+import {
+  formatSelectedReasonCodes,
+  getReasonLabels,
+  selectedReasonsInclude,
+} from '@/utils/reviewReasonSelection'
 
 export const ACCOUNT_OPENING_REJECTION_REASONS = [
   { value: 'sanctions-watchlist-match', label: 'Sanctions / watchlist match' },
@@ -32,27 +31,25 @@ export function RejectAccountOpeningDialog({
   onCancel,
   onConfirm,
 }: RejectAccountOpeningDialogProps) {
-  const [reasonCode, setReasonCode] = useState('')
+  const [reasonCodes, setReasonCodes] = useState<string[]>([])
   const [reviewerNotes, setReviewerNotes] = useState('')
 
   useEffect(() => {
     if (open) {
-      setReasonCode('')
+      setReasonCodes([])
       setReviewerNotes('')
     }
   }, [open])
 
   const notesTrimmed = reviewerNotes.trim()
-  const notesRequired = reasonCode === 'other'
-  const confirmDisabled = !reasonCode || (notesRequired && !notesTrimmed)
+  const notesRequired = selectedReasonsInclude(reasonCodes, 'other')
+  const confirmDisabled = reasonCodes.length === 0 || (notesRequired && !notesTrimmed)
 
   const handleConfirm = () => {
     if (confirmDisabled) return
-    const reasonLabel =
-      ACCOUNT_OPENING_REJECTION_REASONS.find((r) => r.value === reasonCode)?.label ?? reasonCode
     onConfirm({
-      reasonCode,
-      reasonLabel,
+      reasonCode: formatSelectedReasonCodes(reasonCodes),
+      reasonLabel: getReasonLabels(ACCOUNT_OPENING_REJECTION_REASONS, reasonCodes),
       reviewerNotes: notesTrimmed || undefined,
     })
   }
@@ -78,20 +75,14 @@ export function RejectAccountOpeningDialog({
         </>
       }
     >
-      <div className="space-y-2">
+      <div className="min-w-0 space-y-2">
         <Label className="text-sm">Rejection reason</Label>
-        <Select value={reasonCode} onValueChange={setReasonCode}>
-          <SelectTrigger>
-            <SelectValue placeholder="Select a reason" />
-          </SelectTrigger>
-          <SelectContent className="z-[70]">
-            {ACCOUNT_OPENING_REJECTION_REASONS.map((reason) => (
-              <SelectItem key={reason.value} value={reason.value}>
-                {reason.label}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+        <ReviewReasonMultiSelect
+          options={[...ACCOUNT_OPENING_REJECTION_REASONS]}
+          value={reasonCodes}
+          onChange={setReasonCodes}
+          placeholder="Select reasons..."
+        />
       </div>
 
       <div className="space-y-2">

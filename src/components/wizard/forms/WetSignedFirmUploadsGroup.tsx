@@ -30,7 +30,6 @@ interface WetSignedFirmUploadsGroupProps {
 
 export function WetSignedFirmUploadsGroup({
   documentTypes,
-  accountOptions,
   uploads,
   onChange,
   defaultAccountChildId,
@@ -38,25 +37,8 @@ export function WetSignedFirmUploadsGroup({
 }: WetSignedFirmUploadsGroupProps) {
   const { registerPreview } = useSupportingDocumentPreview()
 
-  const syncAccountNumberFromChild = (childId: string | undefined) => {
-    if (!childId) return undefined
-    return accountOptions.find((a) => a.childId === childId)?.accountNumber
-  }
-
   const updateRow = (id: string, patch: Partial<WetSignedFirmUpload>) => {
-    onChange(
-      uploads.map((u) => {
-        if (u.id !== id) return u
-        let next = { ...u, ...patch }
-        if (patch.accountChildId !== undefined) {
-          next = {
-            ...next,
-            accountNumber: syncAccountNumberFromChild(patch.accountChildId) ?? next.accountNumber,
-          }
-        }
-        return next
-      }),
-    )
+    onChange(uploads.map((u) => (u.id === id ? { ...u, ...patch } : u)))
   }
 
   const removeRow = (id: string) => {
@@ -64,13 +46,11 @@ export function WetSignedFirmUploadsGroup({
   }
 
   const addRow = () => {
-    const acct = defaultAccountChildId
     onChange([
       ...uploads,
       newWetSignedFirmUploadRow({
         documentTypeId: documentTypes[0]?.id ?? '',
-        accountChildId: acct,
-        accountNumber: syncAccountNumberFromChild(acct),
+        accountChildId: defaultAccountChildId,
       }),
     ])
   }
@@ -102,8 +82,8 @@ export function WetSignedFirmUploadsGroup({
   return (
     <div className="space-y-3">
       <p className="text-[11px] text-muted-foreground leading-snug">
-        Add one row per signed document (for example in-person or mail delivery). Choose the form type and account (if
-        applicable), then upload the file.
+        Add one row per signed document (for example in-person or mail delivery). Choose the form type, then upload
+        the file.
       </p>
 
       {uploads.length === 0 ? (
@@ -119,11 +99,8 @@ export function WetSignedFirmUploadsGroup({
           <table className="w-full text-sm table-fixed">
             <thead>
               <tr className="border-b border-border bg-muted/40">
-                <th className="text-left font-medium text-muted-foreground px-3 py-2 text-xs w-[34%] min-w-0">
+                <th className="text-left font-medium text-muted-foreground px-3 py-2 text-xs w-[40%] min-w-0">
                   Document type
-                </th>
-                <th className="text-left font-medium text-muted-foreground px-3 py-2 text-xs w-[30%] min-w-0">
-                  Account
                 </th>
                 <th className="text-left font-medium text-muted-foreground px-3 py-2 text-xs min-w-0">File</th>
                 <th className="w-10 px-1" />
@@ -145,26 +122,6 @@ export function WetSignedFirmUploadsGroup({
                         {documentTypes.map((d) => (
                           <SelectItem key={d.id} value={d.id}>
                             {d.label}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </td>
-                  <td className="px-3 py-2 align-top min-w-0">
-                    <Select
-                      value={row.accountChildId ?? '__none__'}
-                      onValueChange={(v) =>
-                        updateRow(row.id, { accountChildId: v === '__none__' ? undefined : v })
-                      }
-                    >
-                      <SelectTrigger className="h-8 text-xs w-full min-w-0">
-                        <SelectValue placeholder="Optional" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="__none__">Not specified</SelectItem>
-                        {accountOptions.map((a) => (
-                          <SelectItem key={a.childId} value={a.childId}>
-                            {a.label}
                           </SelectItem>
                         ))}
                       </SelectContent>

@@ -23,6 +23,7 @@ import { getGenericChildSubTaskProgress } from '@/utils/childSubTaskProgress'
 import {
   Clock,
   MessageSquare,
+  ShieldAlert,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import {
@@ -69,6 +70,10 @@ import {
 import type { ChildTask, TaskStatus, WorkflowState } from '@/types/workflow'
 import { getAccountOwnersMissingKyc } from '@/utils/accountOpeningOwnerKyc'
 import {
+  getAccountOpeningChildSubmissionIssues,
+  hasAccountOpeningChildBeenSubmittedForReview,
+} from '@/utils/accountOpeningChildProgress'
+import {
   isChildInAmlReviewQueue,
   isChildInDocumentReviewQueue,
   isChildInHoKycReviewQueue,
@@ -87,13 +92,18 @@ import {
 import { toast } from 'sonner'
 import { handleWizardPanelShellWheel, handleWizardScrollPaneWheel } from '@/utils/wizardScroll'
 import { formatStructuredReviewText } from '@/utils/formatStructuredReviewText'
+import {
+  getReasonLabels,
+  selectedReasonsInclude,
+  type ReviewReasonOption,
+} from '@/utils/reviewReasonSelection'
+import { ReviewReasonMultiSelect } from '@/components/wizard/ReviewReasonMultiSelect'
 
 import { PizzaTrackerActionIcon } from '@/components/wizard/PizzaTrackerEntityIcons'
 
 const reviewDialogContentClass =
   'data-[state=open]:!animate-none data-[state=closed]:!animate-none !duration-0'
 
-type ReviewReasonOption = { value: string; label: string }
 type ReviewAction = {
   id: string
   label: string
@@ -157,10 +167,6 @@ const DELEGATE_TARGET_OPTIONS: Array<{
   { value: 'ho-principal', label: 'Principal Review' },
   { value: 'ho-documents', label: 'Document Review' },
 ]
-
-function getReasonLabel(options: ReviewReasonOption[], value: string): string {
-  return options.find((reason) => reason.value === value)?.label ?? ''
-}
 
 /**
  * Mirrors StepSidebar progress signals for child sub-task rows.
@@ -414,9 +420,9 @@ function ReviewTextDialog({
   description,
   supportingDescription,
   reasonLabel,
-  reasonPlaceholder = 'Select a reason...',
+  reasonPlaceholder = 'Select reasons...',
   reasonOptions,
-  reasonValue,
+  reasonValues,
   onReasonChange,
   label,
   placeholder,
@@ -436,8 +442,8 @@ function ReviewTextDialog({
   reasonLabel?: string
   reasonPlaceholder?: string
   reasonOptions?: ReviewReasonOption[]
-  reasonValue?: string
-  onReasonChange?: (value: string) => void
+  reasonValues?: string[]
+  onReasonChange?: (value: string[]) => void
   label: string
   placeholder: string
   value: string
@@ -451,15 +457,16 @@ function ReviewTextDialog({
 }) {
   const notesTrimmed = value.trim()
   const reasonRequired = Boolean(reasonOptions?.length)
-  const reasonMissing = reasonRequired && !reasonValue
+  const reasonMissing = reasonRequired && (reasonValues?.length ?? 0) === 0
   const notesRequired =
-    Boolean(requireNotesWhenReasonValue) && reasonValue === requireNotesWhenReasonValue
+    Boolean(requireNotesWhenReasonValue) &&
+    selectedReasonsInclude(reasonValues ?? [], requireNotesWhenReasonValue!)
   const notesInvalid = notesRequired && !notesTrimmed
   const confirmDisabled = reasonMissing || notesInvalid
 
   return (
     <Dialog open={open} onOpenChange={(nextOpen) => !nextOpen && onCancel()}>
-      <DialogContent className={cn('max-w-md', reviewDialogContentClass)}>
+      <DialogContent className={cn('max-w-md overflow-hidden', reviewDialogContentClass)}>
         <DialogHeader>
           <DialogTitle>{title}</DialogTitle>
           <DialogDescription asChild>
@@ -470,20 +477,14 @@ function ReviewTextDialog({
           </DialogDescription>
         </DialogHeader>
         {reasonOptions && reasonOptions.length > 0 && onReasonChange ? (
-          <div className="space-y-2">
+          <div className="min-w-0 space-y-2">
             <Label className="text-sm">{reasonLabel ?? 'Reason'}</Label>
-            <Select value={reasonValue ?? ''} onValueChange={onReasonChange}>
-              <SelectTrigger>
-                <SelectValue placeholder={reasonPlaceholder} />
-              </SelectTrigger>
-              <SelectContent className="z-[70]">
-                {reasonOptions.map((reason) => (
-                  <SelectItem key={reason.value} value={reason.value}>
-                    {reason.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <ReviewReasonMultiSelect
+              options={reasonOptions}
+              value={reasonValues ?? []}
+              onChange={onReasonChange}
+              placeholder={reasonPlaceholder}
+            />
           </div>
         ) : null}
         <div className="space-y-2">
@@ -498,7 +499,7 @@ function ReviewTextDialog({
             <p className="text-xs text-destructive">{notesValidationMessage}</p>
           ) : null}
         </div>
-        <DialogFooter>
+        <DialogFooter className="flex-wrap gap-2 sm:space-x-0">
           <Button type="button" variant="outline" onClick={onCancel}>
             Cancel
           </Button>
@@ -579,7 +580,7 @@ function ChildReviewStatusActions() {
   const [dialog, setDialog] = useState<ReviewerDialog>(null)
   const [showNigoModal, setShowNigoModal] = useState<'document' | 'principal' | null>(null)
   const [comments, setComments] = useState('')
-  const [selectedReason, setSelectedReason] = useState('')
+  const [selectedReasons, setSelectedReasons] = useState<string[]>([])
   const [holdOpen, setHoldOpen] = useState(false)
   const [holdReason, setHoldReason] = useState('')
   const [holdNotes, setHoldNotes] = useState('')
@@ -589,7 +590,7 @@ function ChildReviewStatusActions() {
   const [delegateOpen, setDelegateOpen] = useState(false)
   const [delegateTarget, setDelegateTarget] = useState<'aml' | 'ho-principal' | 'ho-documents'>('aml')
   const [escalateOpen, setEscalateOpen] = useState(false)
-  const [escalateReason, setEscalateReason] = useState('')
+  const [escalateReasons, setEscalateReasons] = useState<string[]>([])
   const [escalateComments, setEscalateComments] = useState('')
 
   if (!ctx) return null
@@ -611,7 +612,7 @@ function ChildReviewStatusActions() {
   const closeDialog = () => {
     setDialog(null)
     setComments('')
-    setSelectedReason('')
+    setSelectedReasons([])
   }
 
   const applyOnHold = () => {
@@ -655,11 +656,11 @@ function ChildReviewStatusActions() {
     dispatch({
       type: 'AML_ESCALATE_SAR',
       reason:
-        formatStructuredReviewText(getReasonLabel(AML_REJECTION_REASONS, escalateReason), escalateComments) ||
+        formatStructuredReviewText(getReasonLabels(AML_REJECTION_REASONS, escalateReasons), escalateComments) ||
         undefined,
     })
     setEscalateOpen(false)
-    setEscalateReason('')
+    setEscalateReasons([])
     setEscalateComments('')
   }
 
@@ -904,8 +905,8 @@ function ChildReviewStatusActions() {
         description="Request additional information from the advisor before AML review can continue."
         reasonLabel="Documentation reason"
         reasonOptions={DOCUMENT_REVIEW_REJECTION_REASONS}
-        reasonValue={selectedReason}
-        onReasonChange={setSelectedReason}
+        reasonValues={selectedReasons}
+        onReasonChange={setSelectedReasons}
         label="Additional information"
         placeholder="Describe the AML concerns, potential matches, or corrections needed..."
         value={comments}
@@ -916,7 +917,7 @@ function ChildReviewStatusActions() {
         onConfirm={() => {
           dispatch({
             type: 'AML_REVIEW_FLAG',
-            findings: formatStructuredReviewText(getReasonLabel(DOCUMENT_REVIEW_REJECTION_REASONS, selectedReason), comments) || undefined,
+            findings: formatStructuredReviewText(getReasonLabels(DOCUMENT_REVIEW_REJECTION_REASONS, selectedReasons), comments) || undefined,
           })
           closeDialog()
         }}
@@ -928,8 +929,8 @@ function ChildReviewStatusActions() {
         description="Escalate this submission for suspicious activity handling and SAR review."
         reasonLabel="AML reason"
         reasonOptions={AML_REJECTION_REASONS}
-        reasonValue={selectedReason}
-        onReasonChange={setSelectedReason}
+        reasonValues={selectedReasons}
+        onReasonChange={setSelectedReasons}
         label="Additional information"
         placeholder="Describe the reason for the escalation..."
         value={comments}
@@ -940,7 +941,7 @@ function ChildReviewStatusActions() {
         onConfirm={() => {
           dispatch({
             type: 'AML_ESCALATE_SAR',
-            reason: formatStructuredReviewText(getReasonLabel(AML_REJECTION_REASONS, selectedReason), comments) || undefined,
+            reason: formatStructuredReviewText(getReasonLabels(AML_REJECTION_REASONS, selectedReasons), comments) || undefined,
           })
           closeDialog()
         }}
@@ -969,8 +970,8 @@ function ChildReviewStatusActions() {
         description="Request additional information from the advisor before document review can continue."
         reasonLabel="Documentation reason"
         reasonOptions={DOCUMENT_REVIEW_REJECTION_REASONS}
-        reasonValue={selectedReason}
-        onReasonChange={setSelectedReason}
+        reasonValues={selectedReasons}
+        onReasonChange={setSelectedReasons}
         label="Additional information"
         placeholder="Describe what additional information is needed..."
         value={comments}
@@ -979,7 +980,7 @@ function ChildReviewStatusActions() {
         onCancel={closeDialog}
         onConfirm={() => {
           const feedback =
-            formatStructuredReviewText(getReasonLabel(DOCUMENT_REVIEW_REJECTION_REASONS, selectedReason), comments) ||
+            formatStructuredReviewText(getReasonLabels(DOCUMENT_REVIEW_REJECTION_REASONS, selectedReasons), comments) ||
             'Please provide additional information.'
           dispatch({ type: 'HO_KYC_REQUEST_CHANGES', comments: feedback })
           toast('Document Review requested information', {
@@ -997,8 +998,8 @@ function ChildReviewStatusActions() {
         description="Reject this submission and return it to the advisor with rationale."
         reasonLabel="Rejection reason"
         reasonOptions={CIP_REJECTION_REASONS}
-        reasonValue={selectedReason}
-        onReasonChange={setSelectedReason}
+        reasonValues={selectedReasons}
+        onReasonChange={setSelectedReasons}
         label="Reviewer notes"
         placeholder="Add additional compliance findings or review notes..."
         value={comments}
@@ -1010,7 +1011,7 @@ function ChildReviewStatusActions() {
         onCancel={closeDialog}
         onConfirm={() => {
           const feedback =
-            formatStructuredReviewText(getReasonLabel(CIP_REJECTION_REASONS, selectedReason), comments) ||
+            formatStructuredReviewText(getReasonLabels(CIP_REJECTION_REASONS, selectedReasons), comments) ||
             'Rejected by Document Review.'
           dispatch({ type: 'HO_KYC_REQUEST_CHANGES', comments: feedback })
           closeDialog()
@@ -1040,8 +1041,8 @@ function ChildReviewStatusActions() {
         description="Request additional information or supporting documents from the advisor before document review can continue."
         reasonLabel="Documentation reason"
         reasonOptions={DOCUMENT_REVIEW_REJECTION_REASONS}
-        reasonValue={selectedReason}
-        onReasonChange={setSelectedReason}
+        reasonValues={selectedReasons}
+        onReasonChange={setSelectedReasons}
         label="Additional information"
         placeholder="Describe what additional documentation or corrections are needed..."
         value={comments}
@@ -1049,7 +1050,7 @@ function ChildReviewStatusActions() {
         onChange={setComments}
         onCancel={closeDialog}
         onConfirm={() => {
-          const reason = getReasonLabel(DOCUMENT_REVIEW_REJECTION_REASONS, selectedReason)
+          const reason = getReasonLabels(DOCUMENT_REVIEW_REJECTION_REASONS, selectedReasons)
           dispatch({
             type: 'DOCUMENT_REVIEW_NIGO',
             reason,
@@ -1078,8 +1079,8 @@ function ChildReviewStatusActions() {
         description="Request additional information from the advisor needed to complete principal review."
         reasonLabel="Documentation reason"
         reasonOptions={DOCUMENT_REVIEW_REJECTION_REASONS}
-        reasonValue={selectedReason}
-        onReasonChange={setSelectedReason}
+        reasonValues={selectedReasons}
+        onReasonChange={setSelectedReasons}
         label="Additional information"
         placeholder="Describe what additional information or corrections are needed before principal approval..."
         value={comments}
@@ -1087,7 +1088,7 @@ function ChildReviewStatusActions() {
         onChange={setComments}
         onCancel={closeDialog}
         onConfirm={() => {
-          const reason = getReasonLabel(DOCUMENT_REVIEW_REJECTION_REASONS, selectedReason)
+          const reason = getReasonLabels(DOCUMENT_REVIEW_REJECTION_REASONS, selectedReasons)
           dispatch({
             type: 'PRINCIPAL_REVIEW_NIGO',
             reason,
@@ -1156,8 +1157,8 @@ function ChildReviewStatusActions() {
         description="Send the account back to the advisor for additional CIP information or supporting documents."
         reasonLabel="Documentation reason"
         reasonOptions={DOCUMENT_REVIEW_REJECTION_REASONS}
-        reasonValue={selectedReason}
-        onReasonChange={setSelectedReason}
+        reasonValues={selectedReasons}
+        onReasonChange={setSelectedReasons}
         label="Additional information"
         placeholder="Describe what additional documentation or corrections are needed..."
         value={comments}
@@ -1165,7 +1166,7 @@ function ChildReviewStatusActions() {
         onChange={setComments}
         onCancel={closeDialog}
         onConfirm={() => {
-          const reason = getReasonLabel(DOCUMENT_REVIEW_REJECTION_REASONS, selectedReason)
+          const reason = getReasonLabels(DOCUMENT_REVIEW_REJECTION_REASONS, selectedReasons)
           dispatch({
             type: 'ACCOUNT_CIP_REQUEST_INFO',
             accountChildId: child.id,
@@ -1199,8 +1200,8 @@ function ChildReviewStatusActions() {
         description="Reject principal review due to supervisory findings. The advisor will be notified and the account will move to Escalation / Hold."
         reasonLabel="Rejection reason"
         reasonOptions={DOCUMENT_REVIEW_REJECTION_REASONS}
-        reasonValue={selectedReason}
-        onReasonChange={setSelectedReason}
+        reasonValues={selectedReasons}
+        onReasonChange={setSelectedReasons}
         label="Reviewer notes"
         placeholder="Add additional compliance findings or review notes..."
         value={comments}
@@ -1211,7 +1212,7 @@ function ChildReviewStatusActions() {
         onChange={setComments}
         onCancel={closeDialog}
         onConfirm={() => {
-          const rejectionReason = getReasonLabel(DOCUMENT_REVIEW_REJECTION_REASONS, selectedReason)
+          const rejectionReason = getReasonLabels(DOCUMENT_REVIEW_REJECTION_REASONS, selectedReasons)
           const reviewerNotes = formatStructuredReviewText(rejectionReason, comments) || rejectionReason
           dispatch({
             type: 'ACCOUNT_PRINCIPAL_REJECT',
@@ -1228,8 +1229,8 @@ function ChildReviewStatusActions() {
         description="Request additional information from the advisor needed to complete principal review. The account will return to the advisor for corrections."
         reasonLabel="Documentation reason"
         reasonOptions={DOCUMENT_REVIEW_REJECTION_REASONS}
-        reasonValue={selectedReason}
-        onReasonChange={setSelectedReason}
+        reasonValues={selectedReasons}
+        onReasonChange={setSelectedReasons}
         label="Additional information"
         placeholder="Describe what additional information or corrections are needed before principal approval..."
         value={comments}
@@ -1237,7 +1238,7 @@ function ChildReviewStatusActions() {
         onChange={setComments}
         onCancel={closeDialog}
         onConfirm={() => {
-          const reason = getReasonLabel(DOCUMENT_REVIEW_REJECTION_REASONS, selectedReason)
+          const reason = getReasonLabels(DOCUMENT_REVIEW_REJECTION_REASONS, selectedReasons)
           dispatch({
             type: 'ACCOUNT_PRINCIPAL_REQUEST_INFO',
             accountChildId: child.id,
@@ -1254,8 +1255,8 @@ function ChildReviewStatusActions() {
         description="Escalate this workflow for additional compliance review."
         reasonLabel="Escalation reason"
         reasonOptions={AML_REJECTION_REASONS}
-        reasonValue={escalateReason}
-        onReasonChange={setEscalateReason}
+        reasonValues={escalateReasons}
+        onReasonChange={setEscalateReasons}
         label="Additional comments"
         placeholder="Provide escalation context..."
         value={escalateComments}
@@ -1267,7 +1268,7 @@ function ChildReviewStatusActions() {
       />
 
       <Dialog open={holdOpen} onOpenChange={setHoldOpen}>
-        <DialogContent className={cn('max-w-md', reviewDialogContentClass)}>
+        <DialogContent className={cn('max-w-md overflow-hidden', reviewDialogContentClass)}>
           <DialogHeader>
             <DialogTitle>Place On Hold</DialogTitle>
             <DialogDescription>
@@ -1339,7 +1340,7 @@ function ChildReviewStatusActions() {
       />
 
       <Dialog open={delegateOpen} onOpenChange={setDelegateOpen}>
-        <DialogContent className={cn('max-w-md', reviewDialogContentClass)}>
+        <DialogContent className={cn('max-w-md overflow-hidden', reviewDialogContentClass)}>
           <DialogHeader>
             <DialogTitle>Delegate Review</DialogTitle>
             <DialogDescription>Route this review to another team queue.</DialogDescription>
@@ -1437,6 +1438,7 @@ function ChildActionSidebarInner() {
   )
   const [exitToOnboardingOpen, setExitToOnboardingOpen] = useState(false)
   const [resubmitOpen, setResubmitOpen] = useState(false)
+  const [submissionIssues, setSubmissionIssues] = useState<string[] | null>(null)
   const { prefs } = usePizzaTrackerDisplayPrefs()
   const advisorResubmitEligible = useAdvisorResubmitEligible()
 
@@ -1712,10 +1714,19 @@ function ChildActionSidebarInner() {
               : stageLabel === 'Draft'
                 ? 'Complete all sections to submit.'
                 : 'Check the activity timeline for details.'
-          const showResubmit =
-            state.demoViewMode === 'advisor' && advisorResubmitEligible
+          const isAccountDraft =
+            child.childType === 'account-opening' && stageLabel === 'Draft'
+          const showSubmitForReview =
+            state.demoViewMode === 'advisor' && (advisorResubmitEligible || isAccountDraft)
 
           const handleStatusCardResubmit = () => {
+            if (child.childType === 'account-opening') {
+              const issues = getAccountOpeningChildSubmissionIssues(state, child.id)
+              if (issues.length > 0) {
+                setSubmissionIssues(issues)
+                return
+              }
+            }
             if (child.childType === 'kyc') {
               const infoTaskId = `${child.id}-info`
               const infoData = state.taskData[infoTaskId] ?? {}
@@ -1768,7 +1779,7 @@ function ChildActionSidebarInner() {
                       ) : null}
                     </p>
                   )}
-                  {showResubmit ? (
+                  {showSubmitForReview ? (
                     <Button type="button" className="w-full" onClick={handleStatusCardResubmit}>
                       Submit for Review
                     </Button>
@@ -1818,6 +1829,12 @@ function ChildActionSidebarInner() {
               type="button"
               onClick={() => {
                 dispatch({ type: 'SUBMIT_CHILD_FOR_REVIEW' })
+                if (
+                  child.childType === 'account-opening' &&
+                  !hasAccountOpeningChildBeenSubmittedForReview(state, child.id)
+                ) {
+                  dispatch({ type: 'SET_DEMO_VIEW', mode: 'ho-documents' })
+                }
                 setResubmitOpen(false)
               }}
             >
@@ -1826,6 +1843,41 @@ function ChildActionSidebarInner() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+      {submissionIssues && submissionIssues.length > 0 ? (
+        <div className="fixed inset-0 z-[70] flex items-center justify-center p-4">
+          <div className="fixed inset-0 bg-black/50" aria-hidden />
+          <div
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="status-card-submission-blocked-title"
+            className="relative z-10 bg-background rounded-lg border border-border shadow-lg max-w-2xl w-full p-6 space-y-4 max-h-[80vh] overflow-y-auto"
+          >
+            <div className="flex items-start gap-3">
+              <div className="rounded-full bg-amber-50 dark:bg-amber-950/50 p-2 shrink-0">
+                <ShieldAlert className="h-5 w-5 text-amber-600" />
+              </div>
+              <div className="space-y-2 min-w-0">
+                <h3 id="status-card-submission-blocked-title" className="text-base font-semibold">
+                  Cannot submit for review yet
+                </h3>
+                <p className="text-sm text-muted-foreground">
+                  Resolve the issues below before submitting this account opening for review.
+                </p>
+              </div>
+            </div>
+            <ul className="list-disc pl-5 space-y-1.5 text-sm text-foreground">
+              {submissionIssues.map((issue, idx) => (
+                <li key={`${idx}-${issue}`}>{issue}</li>
+              ))}
+            </ul>
+            <div className="flex justify-end pt-1">
+              <Button type="button" onClick={() => setSubmissionIssues(null)}>
+                I understand
+              </Button>
+            </div>
+          </div>
+        </div>
+      ) : null}
       <Dialog open={exitToOnboardingOpen} onOpenChange={setExitToOnboardingOpen}>
         <DialogContent className="max-w-md !data-[state=closed]:zoom-out-100 !data-[state=open]:zoom-in-100 !data-[state=closed]:slide-out-to-left-0 !data-[state=open]:slide-in-from-left-0 !data-[state=closed]:slide-out-to-top-[50%] !data-[state=open]:slide-in-from-top-[50%]">
           <DialogHeader>

@@ -24,6 +24,7 @@ import {
 } from '@/utils/wetSignedFirmUploads'
 import { findParentTaskForChild } from '@/utils/openAccountsTaskContext'
 import { resolveAccountOpeningFormsPackageTaskId } from '@/utils/accountOpeningDocumentTasks'
+import { ESIGN_DOWNLOADED_FORM_IDS_KEY } from '@/utils/accountOpeningFormsPackageValidation'
 import { buildSupportingDocumentPreviewKey } from '@/utils/journeySupportingDocuments'
 import { useOpenAccountsVariant } from '@/components/wizard/openAccountsVariantContext'
 import { cn } from '@/lib/utils'
@@ -227,6 +228,13 @@ export function AcctChildDocumentsReviewForm({
     )
   }, [ruleDrivenDocs.firmCustodianEsign, executedFormsByFormId, accountChildId])
 
+  const recordEsignFormDownload = (formKey: string) => {
+    if (!showFormsPackage || !formsPackageTaskId) return
+    const existing = (data[ESIGN_DOWNLOADED_FORM_IDS_KEY] as string[] | undefined) ?? []
+    if (existing.includes(formKey)) return
+    updateField(ESIGN_DOWNLOADED_FORM_IDS_KEY, [...existing, formKey])
+  }
+
 
   if (!ctx) {
     return <p className="text-sm text-muted-foreground">Open this step from account opening.</p>
@@ -322,6 +330,7 @@ export function AcctChildDocumentsReviewForm({
                           formIdOrDocId={`${ctx.child.id}::${doc.id}`}
                           displayLabel={doc.label}
                           viewMode="signed"
+                          onDownload={() => recordEsignFormDownload(`${ctx.child.id}::${doc.id}`)}
                         />
                       </div>
                     </li>

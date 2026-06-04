@@ -22,6 +22,7 @@ import {
   resolveAccountOpeningFormsPackageTaskId,
   accountOpeningSupportingDocumentsTaskId,
 } from '@/utils/accountOpeningDocumentTasks'
+import { getAccountOpeningFormsPackageSubmissionIssues } from '@/utils/accountOpeningFormsPackageValidation'
 
 type DocInstance = {
   id: string
@@ -384,15 +385,7 @@ export function getAccountOpeningChildSubmissionIssues(
   }
 
   if (!kycEsignExternal) {
-    const docsTaskId = resolveAccountOpeningFormsPackageTaskId(state, accountChildId)
-    const docsData = (state.taskData[docsTaskId] as Record<string, unknown> | undefined) ?? {}
-    const executedEsignForms =
-      (docsData.esignExecutedForms as
-        | Array<{ id?: string; envelopeId?: string; formId?: string; label?: string; fileName?: string; executedAt?: string }>
-        | undefined) ?? []
-    if (executedEsignForms.length === 0) {
-      issues.push('Forms Package: send and complete at least one eSign envelope so signed forms appear for this account.')
-    }
+    issues.push(...getAccountOpeningFormsPackageSubmissionIssues(state, accountChildId))
   }
 
   return issues

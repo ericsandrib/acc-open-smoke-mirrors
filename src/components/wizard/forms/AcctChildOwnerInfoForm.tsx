@@ -515,6 +515,7 @@ export function AcctChildOwnerInfoForm() {
           </p>
         </div>
 
+        <div className="space-y-4">
         <div className="rounded-lg border border-border p-1">
           <div>
             {beneficiaries.length === 0 ? (
@@ -593,6 +594,7 @@ export function AcctChildOwnerInfoForm() {
               )}
             </div>
           </div>
+        </div>
         </div>
 
         <AddHouseholdMemberSheet

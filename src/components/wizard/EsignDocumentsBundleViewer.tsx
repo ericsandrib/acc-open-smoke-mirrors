@@ -42,7 +42,14 @@ export function EsignDocumentsBundleViewerButton({ items, triggerLabel = 'View a
 
   return (
     <>
-      <Button type="button" variant="outline" size="sm" className="gap-1.5 h-8 text-xs" onClick={() => setOpen(true)}>
+      <Button
+        type="button"
+        variant="outline"
+        size="sm"
+        className="gap-1.5 h-8 text-xs"
+        data-readonly-interactive
+        onClick={() => setOpen(true)}
+      >
         <Files className="h-3.5 w-3.5" />
         {triggerLabel}
       </Button>
