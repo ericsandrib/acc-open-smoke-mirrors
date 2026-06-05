@@ -97,12 +97,18 @@ export function AITextEditor({
   bottomText,
   footer,
   onChange,
+  title = 'Summary',
+  placeholder = 'The AI summary will appear here…',
+  showAiHint = true,
 }: {
   content: string
   disabled?: boolean
   bottomText?: string
   footer?: React.ReactNode
   onChange?: (html: string) => void
+  title?: string
+  placeholder?: string
+  showAiHint?: boolean
 }) {
   const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
 
@@ -115,7 +121,7 @@ export function AITextEditor({
       Link.configure({ openOnClick: false, autolink: true, linkOnPaste: true, HTMLAttributes: { target: '_blank', rel: 'noopener' } }),
       TextAlign.configure({ types: ['heading', 'paragraph'] }),
       CharacterCount.configure({ limit: CHAR_LIMIT }),
-      Placeholder.configure({ placeholder: 'The AI summary will appear here…' }),
+      Placeholder.configure({ placeholder }),
     ],
     content,
     editorProps: {
@@ -146,7 +152,7 @@ export function AITextEditor({
       <div className={cn('rounded-t-xl border border-border flex items-center justify-between h-14 pl-4 pr-2', disabled ? 'bg-secondary/40' : 'bg-card')}>
         <div className="flex items-center gap-2 text-sm font-medium text-foreground">
           <NotepadText className="h-4 w-4 text-muted-foreground" />
-          Summary
+          {title}
         </div>
         <ToolBar editor={editor} disabled={disabled} />
       </div>
@@ -162,7 +168,7 @@ export function AITextEditor({
       </div>
       <div className="pt-3 flex items-center justify-between">
         <span className="text-xs text-muted-foreground inline-flex items-center gap-1">
-          <Sparkles className="h-3 w-3" /> {bottomText ?? 'AI-generated draft. Review for accuracy before approving.'}
+          {showAiHint && <Sparkles className="h-3 w-3" />} {bottomText ?? 'AI-generated draft. Review for accuracy before approving.'}
         </span>
         <span className={cn('text-xs tabular-nums', count > CHAR_LIMIT * 0.95 ? 'text-amber-600' : 'text-muted-foreground')}>
           {count.toLocaleString()} / {CHAR_LIMIT.toLocaleString()}

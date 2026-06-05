@@ -10,9 +10,9 @@ export interface ScriptedReply {
 
 export const SUGGESTED_PROMPTS: string[] = [
   'Summarize this meeting and generate follow-up actions',
+  'What referral opportunities came up in this meeting?',
+  'Prep me for my next meeting with this household',
   'Which distributions are delayed beyond SLA?',
-  'Show all accounts held across custodians for this client',
-  'What pending onboarding tasks does the Whitmore household have?',
 ]
 
 export const SCRIPTED_REPLIES: ScriptedReply[] = [
@@ -49,6 +49,39 @@ Total relationship value ≈ **$5.6M** across Wealth + Bank.`,
 - RMD calculation (age 73) — not started
 
 No KYC gaps outstanding.`,
+  },
+  {
+    keywords: ['referral'],
+    answer: `**3 referral signals** in today's Whitmore review:
+
+- **Moment of delight** — *"You've made all of this so easy this year."* A natural opening to ask for an introduction.
+- **Network mention** — Ralph's sister **Carol** is recently widowed and worried about retirement (~92% confidence). Suggested: offer a warm intro call.
+- **Center of influence** — the household CPA **Janet Liu** handles the trust returns. Suggested: COI outreach for year-end tax coordination.
+
+I can draft a referral task or add a line to the follow-up email — your call. *(Compliant prompts only — never auto-sent.)*`,
+  },
+  {
+    keywords: ['delight'],
+    answer: `One clear **moment of delight** today: *"You've made all of this so easy this year. We really appreciate it."* — a strong satisfaction signal and a natural, compliant opening to ask whether Ralph & Diane know others who'd benefit from similar guidance.`,
+  },
+  {
+    keywords: ['prep'],
+    answer: `Here's your **pre-meeting prep** for the Whitmore household (full report is on the Prep tab):
+
+- **History:** last 3 meetings centered on the lake-property sale and resulting liquidity; open item — confirm Diane as primary beneficiary (LPL).
+- **Profile:** Ralph turns 73 (first RMD); new grandchild (529 interest); sister Carol — possible referral.
+- **Financials:** Fi-Tek $4.2M · LPL $1.8M; allocation slightly over on equity vs. policy.
+- **Recommended agenda:** confirm the $120K landed, finalize RMD + 529, decide on the Carol intro and CPA Janet Liu sync.`,
+  },
+  {
+    keywords: ['life event'],
+    answer: `**3 life events** detected from the transcript:
+
+- **Liquidity event** — lake property sold; $120K bridge need by mid-June.
+- **Turning 73** — first Required Minimum Distribution due before year-end.
+- **New grandchild** — interest in funding a 529.
+
+Each can be turned into a tracked action from the Actions tab.`,
   },
   {
     keywords: ['summarize', 'follow'],

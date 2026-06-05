@@ -1,5 +1,5 @@
 import { createContext, useContext, useState, type ReactNode } from 'react'
-import type { MeetingSummary, ActionRecommendation, MeetingActionItem } from '@/types/meeting'
+import type { MeetingSummary, ActionRecommendation, MeetingActionItem, MeetingEmail, EmailStatus } from '@/types/meeting'
 import {
   MEETINGS,
   MEETING_SUMMARIES,
@@ -8,6 +8,18 @@ import {
   RELATIONSHIP_ACTIONS,
 } from '@/data/zions/meetingsSeed'
 
+/** Seed the mutable email map from whatever each meeting carries. */
+function seedEmails(): Record<string, MeetingEmail> {
+  const out: Record<string, MeetingEmail> = {}
+  for (const m of MEETINGS) if (m.email) out[m.id] = { ...m.email, to: [...m.email.to], cc: [...m.email.cc] }
+  return out
+}
+function seedPrepNotes(): Record<string, string> {
+  const out: Record<string, string> = {}
+  for (const m of MEETINGS) if (m.prepNotesHtml) out[m.id] = m.prepNotesHtml
+  return out
+}
+
 interface MeetingsCtxValue {
   meetings: typeof MEETINGS
   summaries: Record<string, MeetingSummary>
@@ -15,6 +27,9 @@ interface MeetingsCtxValue {
   linkedActions: Record<string, MeetingActionItem[]>
   relationshipActions: Record<string, MeetingActionItem[]>
   actionsSkipped: Record<string, boolean>
+  prepNotes: Record<string, string>
+  emails: Record<string, MeetingEmail>
+  feedback: Record<string, 'up' | 'down' | undefined>
   setSummaryContent: (meetingId: string, html: string) => void
   attestSummary: (meetingId: string, agent: string) => void
   unattestSummary: (meetingId: string) => void
@@ -24,6 +39,11 @@ interface MeetingsCtxValue {
   linkAction: (meetingId: string, action: MeetingActionItem) => void
   unlinkAction: (meetingId: string, actionRunId: string) => void
   setActionsSkipped: (meetingId: string, skipped: boolean) => void
+  setPrepNotes: (meetingId: string, html: string) => void
+  setEmailContent: (meetingId: string, html: string) => void
+  setEmailSubject: (meetingId: string, subject: string) => void
+  setEmailStatus: (meetingId: string, status: EmailStatus) => void
+  setFeedback: (key: string, v: 'up' | 'down' | undefined) => void
 }
 
 const MeetingsContext = createContext<MeetingsCtxValue | null>(null)
@@ -40,6 +60,9 @@ export function MeetingsProvider({ children }: { children: ReactNode }) {
     () => structuredClone(RELATIONSHIP_ACTIONS),
   )
   const [actionsSkipped, setActionsSkippedState] = useState<Record<string, boolean>>({})
+  const [prepNotes, setPrepNotesState] = useState<Record<string, string>>(() => seedPrepNotes())
+  const [emails, setEmails] = useState<Record<string, MeetingEmail>>(() => seedEmails())
+  const [feedback, setFeedbackState] = useState<Record<string, 'up' | 'down' | undefined>>({})
 
   const setSummaryContent = (meetingId: string, html: string) =>
     setSummaries((s) => ({ ...s, [meetingId]: { ...s[meetingId], meetingId, contentHtml: html } }))
@@ -47,7 +70,7 @@ export function MeetingsProvider({ children }: { children: ReactNode }) {
   const attestSummary = (meetingId: string, agent: string) =>
     setSummaries((s) => ({
       ...s,
-      [meetingId]: { ...s[meetingId], isAttested: true, attestedAt: '2026-06-01', attestingAgent: agent },
+      [meetingId]: { ...s[meetingId], isAttested: true, attestedAt: '2026-06-05', attestingAgent: agent },
     }))
 
   const unattestSummary = (meetingId: string) =>
@@ -59,7 +82,7 @@ export function MeetingsProvider({ children }: { children: ReactNode }) {
       name: rec.blueprintName,
       blueprintName: rec.blueprintCategory,
       status: 'todo',
-      createdAt: '2026-06-01',
+      createdAt: '2026-06-05',
       sourceSystem: 'avantos',
       servicingJourneyId: rec.servicingJourneyId,
     }
@@ -92,6 +115,21 @@ export function MeetingsProvider({ children }: { children: ReactNode }) {
   const setActionsSkipped = (meetingId: string, skipped: boolean) =>
     setActionsSkippedState((s) => ({ ...s, [meetingId]: skipped }))
 
+  const setPrepNotes = (meetingId: string, html: string) =>
+    setPrepNotesState((s) => ({ ...s, [meetingId]: html }))
+
+  const setEmailContent = (meetingId: string, html: string) =>
+    setEmails((e) => ({ ...e, [meetingId]: { ...e[meetingId], bodyHtml: html } }))
+
+  const setEmailSubject = (meetingId: string, subject: string) =>
+    setEmails((e) => ({ ...e, [meetingId]: { ...e[meetingId], subject } }))
+
+  const setEmailStatus = (meetingId: string, status: EmailStatus) =>
+    setEmails((e) => ({ ...e, [meetingId]: { ...e[meetingId], status } }))
+
+  const setFeedback = (key: string, v: 'up' | 'down' | undefined) =>
+    setFeedbackState((s) => ({ ...s, [key]: v }))
+
   return (
     <MeetingsContext.Provider
       value={{
@@ -101,6 +139,9 @@ export function MeetingsProvider({ children }: { children: ReactNode }) {
         linkedActions,
         relationshipActions,
         actionsSkipped,
+        prepNotes,
+        emails,
+        feedback,
         setSummaryContent,
         attestSummary,
         unattestSummary,
@@ -109,6 +150,11 @@ export function MeetingsProvider({ children }: { children: ReactNode }) {
         linkAction,
         unlinkAction,
         setActionsSkipped,
+        setPrepNotes,
+        setEmailContent,
+        setEmailSubject,
+        setEmailStatus,
+        setFeedback,
       }}
     >
       {children}

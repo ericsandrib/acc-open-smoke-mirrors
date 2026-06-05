@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { toast } from 'sonner'
 import {
@@ -15,11 +16,17 @@ import {
   FileText,
   PauseCircle,
   XCircle,
+  Heart,
+  Gift,
+  Trophy,
+  Users,
+  Briefcase,
+  HandHeart,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
 import { useMeetings } from '@/stores/meetingsStore'
-import type { ActionStatus, MeetingActionItem, ActionRecommendation } from '@/types/meeting'
+import type { ActionStatus, MeetingActionItem, ActionRecommendation, ReferralMoment, ReferralTrigger } from '@/types/meeting'
 
 const STATUS_RING: Record<ActionStatus, string> = {
   todo: 'bg-emerald-100 text-emerald-700',
@@ -120,6 +127,55 @@ function SectionLabel({ children }: { children: React.ReactNode }) {
   return <h3 className="text-sm font-semibold text-foreground">{children}</h3>
 }
 
+const TRIGGER_META: Record<ReferralTrigger, { label: string; icon: React.ComponentType<{ className?: string }> }> = {
+  positive_sentiment: { label: 'Moment of delight', icon: Heart },
+  milestone: { label: 'Milestone', icon: Trophy },
+  network_mention: { label: 'Network mention', icon: Users },
+  explicit_offer: { label: 'Referral offered', icon: Gift },
+  coi_reference: { label: 'Center of influence', icon: Briefcase },
+}
+
+function ReferralOpportunities({ moments }: { moments: ReferralMoment[] }) {
+  const [items, setItems] = useState(moments)
+  if (items.length === 0) return null
+  return (
+    <section className="overflow-hidden rounded-xl border border-rose-200 bg-rose-50/40">
+      <div className="flex items-center gap-2 px-4 py-3">
+        <span className="flex h-7 w-7 items-center justify-center rounded-full bg-rose-500 text-white"><HandHeart className="h-4 w-4" /></span>
+        <span className="text-sm font-semibold text-rose-700">Referral opportunities &amp; moments of delight</span>
+        <span className="rounded-full bg-rose-100 px-1.5 py-0.5 text-[10px] font-medium text-rose-700">Roadmap</span>
+      </div>
+      <div className="mx-3 mb-3 divide-y divide-border rounded-lg border border-border bg-card">
+        {items.map((r) => {
+          const meta = TRIGGER_META[r.trigger]
+          return (
+            <div key={r.id} className="flex items-start justify-between gap-3 p-3">
+              <div className="flex min-w-0 items-start gap-3">
+                <div className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-rose-100 text-rose-600"><meta.icon className="h-4 w-4" /></div>
+                <div className="min-w-0">
+                  <div className="flex items-center gap-1.5">
+                    <span className="text-sm font-medium text-foreground">{meta.label}{r.subjectName ? ` — ${r.subjectName}` : ''}</span>
+                    <span className="rounded-full bg-muted px-1.5 py-0.5 text-[10px] text-muted-foreground">{Math.round(r.confidence * 100)}% conf.</span>
+                  </div>
+                  <p className="mt-0.5 text-xs italic text-muted-foreground">“{r.snippet}”</p>
+                  <p className="mt-1 text-xs text-foreground/80">{r.suggestedNextStep}</p>
+                </div>
+              </div>
+              <div className="flex shrink-0 items-center gap-1.5">
+                <Button size="sm" variant="outline" className="h-8 gap-1.5" onClick={() => { setItems((x) => x.filter((i) => i.id !== r.id)); toast.success('Referral task added', { description: r.suggestedNextStep }) }}>
+                  <Plus className="h-3.5 w-3.5" /> Add task
+                </Button>
+                <Button size="icon" variant="ghost" className="h-8 w-8 text-muted-foreground" onClick={() => setItems((x) => x.filter((i) => i.id !== r.id))} aria-label="Dismiss"><Trash2 className="h-4 w-4" /></Button>
+              </div>
+            </div>
+          )
+        })}
+      </div>
+      <p className="px-4 pb-3 text-[11px] text-rose-700/70">Compliant prompts only — never auto-sent. The advisor decides whether to act.</p>
+    </section>
+  )
+}
+
 export function MeetingActionsTab({ meetingId }: { meetingId: string }) {
   const navigate = useNavigate()
   const m = useMeetings()
@@ -127,6 +183,7 @@ export function MeetingActionsTab({ meetingId }: { meetingId: string }) {
   const linked = m.linkedActions[meetingId] ?? []
   const existing = m.relationshipActions[meetingId] ?? []
   const skipped = m.actionsSkipped[meetingId]
+  const referrals = m.meetings.find((x) => x.id === meetingId)?.referralMoments ?? []
 
   const onCreate = (rec: ActionRecommendation) => {
     m.acceptRecommendation(meetingId, rec)
@@ -182,6 +239,9 @@ export function MeetingActionsTab({ meetingId }: { meetingId: string }) {
           </div>
         </section>
       )}
+
+      {/* Referral opportunities & moments of delight (roadmap) */}
+      {referrals.length > 0 && <ReferralOpportunities moments={referrals} />}
 
       {/* Existing actions for the relationship */}
       <section className="flex flex-col gap-2">

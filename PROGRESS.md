@@ -277,3 +277,36 @@
 ### Phase 8: Simulated-integration posture ✅ (core)
 - [x] `/connected` — sits-above representation; Fi-Tek linchpin highlighted (one connector, two schemas); Salesforce, SEI, LPL, eMoney, DocuSign, Box, Transtar, bank-core with read / write-back posture
 - [ ] Standalone corporate-trust panel (issuer is covered via the identity graph + Operations)
+
+## Spec 009: Zions Meetings — End-to-End Meeting Assistant
+
+### Phase 1: Data model + seed
+- [x] Extend `Meeting` (lifecycle, vendor, meetingLink, organizer, participants+RSVP, email, prepReport, referralMoments, lifeEvents, topics)
+- [x] New types: Participant, MeetingEmail, PrepReport/Section, ReferralMoment, LifeEvent, MeetingTopic
+- [x] Expand Zions seed (Whitmore ended+AI bundle, Nakamura live, Whitmore Annual upcoming+prep report, Cedar Falls in-person/no-recording, historical, non-attendee)
+- [x] Store: prepNotes + emails state + mutations + thumbs feedback
+
+### Phase 2: Meeting list (dashboard)
+- [x] Header + filter row (Coming Up window, relationship scope, My/All toggle)
+- [x] Day-grouped list; MeetingListItem (RSVP accent, vendor icon, relationship chip, time, avatars)
+- [x] Live badge + Copy + Join; hover popover; status chips; non-attendee muted + external arrow
+
+### Phase 3: Meeting detail shell
+- [x] Header (title, type chip, Now indicator, lifecycle); tabs w/ status indicators + New badges
+- [x] Right sidebar (Details / Transcript / Comments) — inline-editable meeting link, participants w/ copy + RSVP, prep-report link
+- [x] Ask Anything chat (meeting-aware)
+
+### Phase 4: Tabs
+- [x] Prep (internal notes + prep-report card)
+- [x] Summary (AI badge, helper states, thumbs, transcript-link banner, topics chips, life-events callout)
+- [x] Actions (3 sections + Referral Opportunities & Moments of Delight)
+- [x] Email (subject/To/CC, AI badge/disclaimer, Refine modifiers, Skip/Restore, 4-step Guided Send, mail status)
+
+### Phase 5: Pre-Meeting Prep Report (roadmap headline)
+- [x] 6 sections + highlights + evidence + recommended agenda + "generated/emailed" banner (dialog)
+
+### Phase 6: Scripted AI
+- [x] chatScript extended: referral, prep, life events + Zions prompts
+
+### QA
+- [x] pnpm typecheck + build clean; all surfaces verified in preview; console clean
