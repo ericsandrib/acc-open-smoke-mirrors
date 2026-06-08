@@ -12,7 +12,6 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { Plus, Trash2 } from 'lucide-react'
-import { teamMembers } from '@/data/teamMembers'
 
 const REGISTRATION_TYPE_OPTIONS: { value: string; label: string }[] = (
   Object.entries(registrationTypeLabels) as [RegistrationType, string][]
@@ -22,6 +21,33 @@ const QUANTITY_OPTIONS = Array.from({ length: 10 }, (_, i) => ({
   value: String(i + 1),
   label: String(i + 1),
 }))
+
+const OFFICE_OPTIONS = ['TBC', 'TBG', 'TBK', 'WBA'] as const
+
+const IP_OPTIONS = [
+  '8AH',
+  '004',
+  'QGY',
+  '18Q',
+  'P77',
+  '53N',
+  '3Q3',
+  '75J',
+  '3WF',
+  '6ZQ',
+  '7CJ',
+  'D93',
+  '7HT',
+  '844',
+  '8W6',
+  '988',
+  '4WG',
+  'J69',
+  'H51',
+  '2IM',
+  'H32',
+  'IKT',
+] as const
 
 interface Row {
   id: string
@@ -71,10 +97,8 @@ export function AccountTypePickerDialog({ open, onOpenChange, onConfirm }: Accou
     })
   }, [rows])
 
-  const officeOptions = [...new Set(teamMembers.map((m) => m.officeCode))]
-    .sort()
-    .map((code) => ({ value: code, label: `Product ${code}` }))
-  const advisorOptions = teamMembers.map((m) => ({ value: m.id, label: m.name }))
+  const officeOptions = OFFICE_OPTIONS.map((code) => ({ value: code, label: code }))
+  const ipOptions = IP_OPTIONS.map((code) => ({ value: code, label: code }))
 
   const handleReset = () => {
     setRows([createRow()])
@@ -161,11 +185,11 @@ export function AccountTypePickerDialog({ open, onOpenChange, onConfirm }: Accou
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               <div className="space-y-1.5">
                 <Label>
-                  Product <span className="text-destructive">*</span>
+                  Office <span className="text-destructive">*</span>
                 </Label>
                 <Select value={officeCode || undefined} onValueChange={setOfficeCode}>
                   <SelectTrigger className="h-9 w-full text-left [&>span]:text-left">
-                    <SelectValue placeholder="Select product…" />
+                    <SelectValue placeholder="Select office…" />
                   </SelectTrigger>
                   <SelectContent className="max-h-[min(24rem,70vh)]">
                     {officeOptions.map((opt) => (
@@ -178,17 +202,17 @@ export function AccountTypePickerDialog({ open, onOpenChange, onConfirm }: Accou
               </div>
               <div className="space-y-1.5">
                 <Label>
-                  Advisor <span className="text-destructive">*</span>
+                  IP <span className="text-destructive">*</span>
                 </Label>
                 <Select
                   value={investmentProfessionalId || undefined}
                   onValueChange={setInvestmentProfessionalId}
                 >
                   <SelectTrigger className="h-9 w-full text-left [&>span]:text-left">
-                    <SelectValue placeholder="Select advisor…" />
+                    <SelectValue placeholder="Select IP…" />
                   </SelectTrigger>
                   <SelectContent className="max-h-[min(24rem,70vh)]">
-                    {advisorOptions.map((opt) => (
+                    {ipOptions.map((opt) => (
                       <SelectItem key={opt.value} value={opt.value}>
                         {opt.label}
                       </SelectItem>

@@ -7,7 +7,7 @@ import { cn } from '@/lib/utils'
 import { getReasonLabels, type ReviewReasonOption } from '@/utils/reviewReasonSelection'
 
 interface ReviewReasonMultiSelectProps {
-  options: ReviewReasonOption[]
+  options: readonly ReviewReasonOption[]
   value: string[]
   onChange: (value: string[]) => void
   placeholder?: string
@@ -15,7 +15,7 @@ interface ReviewReasonMultiSelectProps {
 }
 
 function getTriggerSummary(
-  options: ReviewReasonOption[],
+  options: readonly ReviewReasonOption[],
   value: string[],
   placeholder: string,
 ): { label: string; title?: string } {

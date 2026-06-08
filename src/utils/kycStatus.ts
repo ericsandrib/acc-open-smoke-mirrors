@@ -108,6 +108,20 @@ export function getKycStatus(
   party?: RelatedParty,
 ): KycStatus {
   if (party && getMissingOwnerKycFields(party).length > 0) return 'unverified'
+
+  if (party?.kyc?.status) {
+    switch (party.kyc.status) {
+      case 'Pass':
+        return 'pass'
+      case 'Fail':
+        return 'fail'
+      case 'Expired':
+        return 'expired'
+      case 'Error':
+        return 'pending_review'
+    }
+  }
+
   if (!owner?.autoTriggeredAt) return 'unverified'
 
   if (isAmlDispositionFailure(owner)) return 'fail'

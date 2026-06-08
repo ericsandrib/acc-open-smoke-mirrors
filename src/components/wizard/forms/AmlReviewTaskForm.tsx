@@ -11,6 +11,7 @@ import {
   sortPartiesByVerificationPriority,
 } from '@/utils/ownerVerificationSubjectUx'
 import { getKycStatusBadge } from '@/utils/kycStatus'
+import { partyHasAmlWatchlistHits } from '@/utils/kycFixtureForParty'
 
 export function AmlReviewTaskForm() {
   const { state } = useWorkflow()
@@ -21,9 +22,18 @@ export function AmlReviewTaskForm() {
   const parties = getAccountPartiesRequiringKyc(state, accountChildId)
   const ownerForParty = (partyId: string) => getOwnerReviewState(state, accountChildId, partyId)
 
+  const amlReviewParties = useMemo(
+    () =>
+      parties.filter(
+        (p) =>
+          partyHasAmlWatchlistHits(p) || ownerForParty(p.id)?.amlReview?.status === 'flagged',
+      ),
+    [parties, state.childReviewsByChildId, accountChildId, state.relatedParties],
+  )
+
   const sortedParties = useMemo(
-    () => sortPartiesByVerificationPriority(parties, ownerForParty),
-    [parties, state.childReviewsByChildId, accountChildId],
+    () => sortPartiesByVerificationPriority(amlReviewParties, ownerForParty),
+    [amlReviewParties, state.childReviewsByChildId, accountChildId],
   )
 
   const [selectedPartyId, setSelectedPartyId] = useState<string | null>(null)
@@ -33,11 +43,13 @@ export function AmlReviewTaskForm() {
 
   return (
     <div className="space-y-5">
-      {parties.length === 0 && (
-        <p className="text-sm text-muted-foreground">No natural-person owners require AML screening for this account.</p>
+      {amlReviewParties.length === 0 && (
+        <p className="text-sm text-muted-foreground">
+          No watchlist matches require AML review for this account.
+        </p>
       )}
 
-      {parties.length > 0 && (
+      {amlReviewParties.length > 0 && (
         <div className="space-y-3">
           <div>
             <h3 className="text-base font-semibold">Participants</h3>

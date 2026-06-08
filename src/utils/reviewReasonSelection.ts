@@ -1,6 +1,9 @@
 export type ReviewReasonOption = { value: string; label: string }
 
-export function getReasonLabels(options: ReviewReasonOption[], values: string[]): string {
+export function getReasonLabels(
+  options: readonly ReviewReasonOption[],
+  values: string[],
+): string {
   return values
     .map((value) => options.find((reason) => reason.value === value)?.label ?? value)
     .filter(Boolean)

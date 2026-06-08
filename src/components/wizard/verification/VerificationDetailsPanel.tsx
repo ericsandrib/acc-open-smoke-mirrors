@@ -10,7 +10,10 @@ import {
   getKycStatusBadge,
   isAutomatedAmlClearMessage,
 } from '@/utils/kycStatus'
-import { KycStatusContactCardAlert } from '@/components/wizard/verification/KycStatusToastChip'
+import { KycInstantIdDrawer } from '@/components/wizard/verification/KycInstantIdDrawer'
+import { OverallKycSummary } from '@/components/wizard/verification/OverallKycSummary'
+import { VerificationSubsection } from '@/components/wizard/verification/VerificationSubsection'
+import { amlPassFailFromOwner, cipPassFailFromOwner } from '@/utils/kycPassFail'
 
 function CipSubsystemGuidance({ children }: { children: string }) {
   return <p className="text-xs text-muted-foreground leading-snug pt-1">{children}</p>
@@ -54,14 +57,6 @@ function DetailRow({ label, value }: { label: string; value?: string | null }) {
   )
 }
 
-function AmlStatusLabel({ status }: { status?: string }) {
-  if (status === 'cleared') return <span className="text-green-700 dark:text-green-300">Clear</span>
-  if (status === 'flagged') return <span className="text-red-700 dark:text-red-300">Flagged</span>
-  if (status === 'escalated') return <span className="text-red-700 dark:text-red-300">Escalated</span>
-  if (status === 'info_requested') return <span className="text-amber-800 dark:text-amber-300">Information requested</span>
-  return <span className="text-muted-foreground">Pending review</span>
-}
-
 /** Tertiary utility control — always available on CIP drawer, quieter when verification passed. */
 function VerificationReRunAction({
   label,
@@ -90,14 +85,6 @@ function VerificationReRunAction({
   )
 }
 
-function CipStatusLabel({ ho, overall }: { ho?: string; overall?: string }) {
-  if (ho === 'approved') return <span className="text-green-700 dark:text-green-300">Verified</span>
-  if (ho === 'changes_requested') return <span className="text-amber-800 dark:text-amber-300">Additional Information Required</span>
-  if (overall === 'fail') return <span className="text-red-700 dark:text-red-300">Failed</span>
-  if (overall === 'pass') return <span className="text-green-700 dark:text-green-300">Verified</span>
-  return <span className="text-muted-foreground">Pending review</span>
-}
-
 export type VerificationDetailsFocus = 'aml' | 'cip'
 
 export function VerificationDetailsPanel({
@@ -119,7 +106,6 @@ export function VerificationDetailsPanel({
   const cipGuidance = getCipSubsystemSupportingCopy(owner)
   const amlAutomatedClearCopy = getAmlAutomatedClearDrawerCopy(owner)
 
-  const amlStatus = owner?.amlReview?.status
   const amlPayload = owner?.amlPayloadDemo
   const amlFindings = owner?.amlReview?.findings
   const amlApprovalReason = owner?.amlReview?.approvalReason
@@ -134,7 +120,6 @@ export function VerificationDetailsPanel({
 
   const cip = owner?.cipStatus
   const cipPayload = owner?.cipPayloadDemo
-  const hoStatus = owner?.hoKycReview?.status
   const hoComments = owner?.hoKycReview?.comments
   const idLabel = cip?.idVerification === 'pass' ? 'Match' : cip?.idVerification === 'fail' ? 'Mismatch' : 'Pending'
   const addrLabel = cip?.addressMatch === 'pass' ? 'Match' : cip?.addressMatch === 'fail' ? 'Mismatch' : 'Pending'
@@ -143,94 +128,164 @@ export function VerificationDetailsPanel({
   const reRunLabel = focus === 'aml' ? 'Re-run screening' : 'Re-run verification'
   const showReRunFooter = focus !== 'aml' && Boolean(onReRun)
 
+  if (party.kyc) {
+    return (
+      <KycInstantIdDrawer
+        party={party}
+        owner={owner}
+        taskType={focus === 'aml' ? 'AML' : 'CIP'}
+        onReRun={onReRun}
+      />
+    )
+  }
+
   return (
     <div className="space-y-4">
-      {/* 1. KYC status — mirrors the PartySlotCard contact-card alert (icon +
-          title + supporting copy on a toned container). */}
-      <KycStatusContactCardAlert badge={badge} variant="reviewer" />
-
-      {/* 2. AML status — outcome, then findings, then secondary guidance */}
-      <section className="space-y-3">
-        <div className="space-y-0.5">
-          <SectionHeader>AML status</SectionHeader>
-          <p className="text-sm leading-tight">
-            <AmlStatusLabel status={amlStatus} />
-          </p>
-        </div>
-
-        <div className="space-y-1.5">
-          <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
-            <DetailRow label="OFAC matches" value={String(amlPayload?.ofacMatches ?? 0)} />
-            <DetailRow label="PEP / watchlist hits" value={String(watchlistHits.length)} />
-            <DetailRow label="Last screening" value={formatTimestamp(owner?.kycVerificationLastCheckedAt)} />
-          </div>
-          {watchlistHits.length > 0 && (
-            <ul className="text-xs text-muted-foreground space-y-0.5">
-              {Object.entries(watchlistByCategory).map(([cat, list]) => (
-                <li key={cat}>
-                  <span className="font-medium text-foreground">{cat}:</span> {list.join('; ')}
-                </li>
-              ))}
-            </ul>
-          )}
-          {isMeaningfulReviewerMessage(amlFindings) && watchlistHits.length === 0 && (
-            <p className="text-xs text-muted-foreground">
-              <span className="font-medium text-foreground">Findings:</span> {amlFindings}
-            </p>
-          )}
-          {amlAutomatedClearCopy ? (
-            <p className="text-xs text-muted-foreground">{amlAutomatedClearCopy}</p>
-          ) : isMeaningfulReviewerMessage(amlApprovalReason) &&
-            !isAutomatedAmlClearMessage(amlApprovalReason) ? (
-            <p className="text-xs text-muted-foreground">
-              <span className="font-medium text-foreground">Approval note:</span> {amlApprovalReason}
-            </p>
-          ) : null}
-          {isMeaningfulReviewerMessage(amlInfoComments) && (
-            <p className="text-xs text-muted-foreground">
-              <span className="font-medium text-foreground">Information requested:</span> {amlInfoComments}
-            </p>
-          )}
-        </div>
-
-        {amlDrawerGuidance ? (
-          <p className="text-[11px] font-normal text-muted-foreground/80 leading-snug">
-            {amlDrawerGuidance}
-          </p>
-        ) : null}
-      </section>
+      <OverallKycSummary owner={owner} party={party} />
 
       <Separator className="!my-7" />
 
-      {/* 3. CIP status — identity verification and CIP-specific guidance */}
-      <section className="space-y-1">
-        <SectionHeader>CIP status</SectionHeader>
-        <p className="text-sm">
-          <CipStatusLabel ho={hoStatus} overall={cip?.overallStatus} />
-        </p>
-        {cipGuidance ? <CipSubsystemGuidance>{cipGuidance}</CipSubsystemGuidance> : null}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-3 pt-1">
-          <DetailRow label="Identity verification" value={idLabel} />
-          <DetailRow label="Address match" value={addrLabel} />
-          <DetailRow label="DOB match" value={dobLabel} />
-        </div>
-        {cipPayload?.mismatches && cipPayload.mismatches.length > 0 && (
-          <ul className="text-xs text-red-800 dark:text-red-300 list-disc pl-4 pt-1">
-            {cipPayload.mismatches.map((m) => (
-              <li key={m}>{m}</li>
-            ))}
-          </ul>
-        )}
-        {isMeaningfulReviewerMessage(hoComments) && (
-          <p className="text-xs text-amber-800 dark:text-amber-300 pt-1">
-            <span className="font-medium">Reviewer note:</span> {hoComments}
-          </p>
-        )}
-      </section>
+      {focus === 'cip' ? (
+        <>
+          <VerificationSubsection label="CIP" status={cipPassFailFromOwner(owner, party)}>
+            {cipGuidance ? <CipSubsystemGuidance>{cipGuidance}</CipSubsystemGuidance> : null}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+              <DetailRow label="Identity verification" value={idLabel} />
+              <DetailRow label="Address match" value={addrLabel} />
+              <DetailRow label="DOB match" value={dobLabel} />
+            </div>
+            {cipPayload?.mismatches && cipPayload.mismatches.length > 0 && (
+              <ul className="text-xs text-red-800 dark:text-red-300 list-disc pl-4 pt-1">
+                {cipPayload.mismatches.map((m) => (
+                  <li key={m}>{m}</li>
+                ))}
+              </ul>
+            )}
+            {isMeaningfulReviewerMessage(hoComments) && (
+              <p className="text-xs text-amber-800 dark:text-amber-300 pt-1">
+                <span className="font-medium">Reviewer note:</span> {hoComments}
+              </p>
+            )}
+          </VerificationSubsection>
+
+          <Separator className="!my-7" />
+
+          <VerificationSubsection label="AML" status={amlPassFailFromOwner(owner)}>
+            <div className="space-y-1.5">
+              <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
+                <DetailRow label="OFAC matches" value={String(amlPayload?.ofacMatches ?? 0)} />
+                <DetailRow label="PEP / watchlist hits" value={String(watchlistHits.length)} />
+                <DetailRow label="Last screening" value={formatTimestamp(owner?.kycVerificationLastCheckedAt)} />
+              </div>
+              {watchlistHits.length > 0 && (
+                <ul className="text-xs text-muted-foreground space-y-0.5">
+                  {Object.entries(watchlistByCategory).map(([cat, list]) => (
+                    <li key={cat}>
+                      <span className="font-medium text-foreground">{cat}:</span> {list.join('; ')}
+                    </li>
+                  ))}
+                </ul>
+              )}
+              {isMeaningfulReviewerMessage(amlFindings) && watchlistHits.length === 0 && (
+                <p className="text-xs text-muted-foreground">
+                  <span className="font-medium text-foreground">Findings:</span> {amlFindings}
+                </p>
+              )}
+              {amlAutomatedClearCopy ? (
+                <p className="text-xs text-muted-foreground">{amlAutomatedClearCopy}</p>
+              ) : isMeaningfulReviewerMessage(amlApprovalReason) &&
+                !isAutomatedAmlClearMessage(amlApprovalReason) ? (
+                <p className="text-xs text-muted-foreground">
+                  <span className="font-medium text-foreground">Approval note:</span> {amlApprovalReason}
+                </p>
+              ) : null}
+              {isMeaningfulReviewerMessage(amlInfoComments) && (
+                <p className="text-xs text-muted-foreground">
+                  <span className="font-medium text-foreground">Information requested:</span> {amlInfoComments}
+                </p>
+              )}
+            </div>
+
+            {amlDrawerGuidance ? (
+              <p className="text-[11px] font-normal text-muted-foreground/80 leading-snug">
+                {amlDrawerGuidance}
+              </p>
+            ) : null}
+          </VerificationSubsection>
+        </>
+      ) : (
+        <>
+          <VerificationSubsection label="AML" status={amlPassFailFromOwner(owner)}>
+            <div className="space-y-1.5">
+              <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
+                <DetailRow label="OFAC matches" value={String(amlPayload?.ofacMatches ?? 0)} />
+                <DetailRow label="PEP / watchlist hits" value={String(watchlistHits.length)} />
+                <DetailRow label="Last screening" value={formatTimestamp(owner?.kycVerificationLastCheckedAt)} />
+              </div>
+              {watchlistHits.length > 0 && (
+                <ul className="text-xs text-muted-foreground space-y-0.5">
+                  {Object.entries(watchlistByCategory).map(([cat, list]) => (
+                    <li key={cat}>
+                      <span className="font-medium text-foreground">{cat}:</span> {list.join('; ')}
+                    </li>
+                  ))}
+                </ul>
+              )}
+              {isMeaningfulReviewerMessage(amlFindings) && watchlistHits.length === 0 && (
+                <p className="text-xs text-muted-foreground">
+                  <span className="font-medium text-foreground">Findings:</span> {amlFindings}
+                </p>
+              )}
+              {amlAutomatedClearCopy ? (
+                <p className="text-xs text-muted-foreground">{amlAutomatedClearCopy}</p>
+              ) : isMeaningfulReviewerMessage(amlApprovalReason) &&
+                !isAutomatedAmlClearMessage(amlApprovalReason) ? (
+                <p className="text-xs text-muted-foreground">
+                  <span className="font-medium text-foreground">Approval note:</span> {amlApprovalReason}
+                </p>
+              ) : null}
+              {isMeaningfulReviewerMessage(amlInfoComments) && (
+                <p className="text-xs text-muted-foreground">
+                  <span className="font-medium text-foreground">Information requested:</span> {amlInfoComments}
+                </p>
+              )}
+            </div>
+
+            {amlDrawerGuidance ? (
+              <p className="text-[11px] font-normal text-muted-foreground/80 leading-snug">
+                {amlDrawerGuidance}
+              </p>
+            ) : null}
+          </VerificationSubsection>
+
+          <Separator className="!my-7" />
+
+          <VerificationSubsection label="CIP" status={cipPassFailFromOwner(owner, party)}>
+            {cipGuidance ? <CipSubsystemGuidance>{cipGuidance}</CipSubsystemGuidance> : null}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+              <DetailRow label="Identity verification" value={idLabel} />
+              <DetailRow label="Address match" value={addrLabel} />
+              <DetailRow label="DOB match" value={dobLabel} />
+            </div>
+            {cipPayload?.mismatches && cipPayload.mismatches.length > 0 && (
+              <ul className="text-xs text-red-800 dark:text-red-300 list-disc pl-4 pt-1">
+                {cipPayload.mismatches.map((m) => (
+                  <li key={m}>{m}</li>
+                ))}
+              </ul>
+            )}
+            {isMeaningfulReviewerMessage(hoComments) && (
+              <p className="text-xs text-amber-800 dark:text-amber-300 pt-1">
+                <span className="font-medium">Reviewer note:</span> {hoComments}
+              </p>
+            )}
+          </VerificationSubsection>
+        </>
+      )}
 
       <Separator className="!my-7" />
 
-      {/* 4. Verification metadata */}
+      {/* Verification metadata */}
       <section className="space-y-1">
         <SectionHeader>Verification metadata</SectionHeader>
         <div className="grid grid-cols-2 md:grid-cols-3 gap-3 pt-1">

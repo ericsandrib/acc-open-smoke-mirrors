@@ -22,7 +22,12 @@ type Props = {
 }
 
 /** View / Download for firm/custodian demo PDFs (explicit map or fallback). */
-export function EsignFormPdfSampleActions({ formIdOrDocId, displayLabel, viewMode = 'signed' }: Props) {
+export function EsignFormPdfSampleActions({
+  formIdOrDocId,
+  displayLabel,
+  viewMode = 'signed',
+  onDownload,
+}: Props) {
   const sample = resolveEsignFormSampleWithFallback(formIdOrDocId, displayLabel)
   const [viewer, setViewer] = useState<{ href: string; title: string } | null>(null)
   const titlePrefix = viewMode === 'signed' ? 'Signed' : 'Preview'

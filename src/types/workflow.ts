@@ -1,3 +1,5 @@
+import type { PartyKycResult } from '@/types/kycResult'
+
 export type TaskStatus =
   | 'not_started'
   | 'in_progress'
@@ -111,6 +113,8 @@ export interface RelatedParty {
   trustParties?: TrustPartyRef[]
   /** Demo-only: when true, automated AML screening returns a flagged result for this party. */
   demoForceFlagAml?: boolean
+  /** LexisNexis InstantID KYC result (demo fixtures at KYC run). */
+  kyc?: PartyKycResult
 }
 
 export type AccountType = 'brokerage' | 'ira' | 'roth_ira' | '401k' | 'trust' | 'checking' | 'savings'

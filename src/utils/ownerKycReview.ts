@@ -20,6 +20,10 @@ import {
   isParticipantVerificationReusable,
   withScreeningFingerprint,
 } from '@/utils/participantVerification'
+import {
+  ownerReviewPatchFromKycFixture,
+  resolveKycFixtureForParty,
+} from '@/utils/kycFixtureForParty'
 
 /** Configurable required fields before auto KYC trigger (natural persons). */
 export const OWNER_KYC_REQUIRED_FIELD_KEYS = [
@@ -249,82 +253,15 @@ export function deriveSingleFlowAccountDisplayPhase(
   return 'draft'
 }
 
-function defaultOwnerCipPass(): NonNullable<ChildReviewState['cipStatus']> {
-  return {
-    idVerification: 'pass',
-    addressMatch: 'pass',
-    dobMatch: 'pass',
-    overallStatus: 'pass',
-  }
-}
-
-/**
- * Demo: a clean KYC run auto-verifies the owner. AML/CIP both pass, HO KYC approved,
- * party kycStatus flips to verified, and the result is marked reusable across future accounts.
- *
- * A reviewer can still flag/escalate via the AML Review or CIP Review tasks if needed.
- */
-/**
- * Demo-only: returns true if the party should fail AML on automated screening.
- * Honors the explicit `demoForceFlagAml` flag and falls back to identifying Jane Smith
- * by her seed id / name so the demo works even on stale persisted state.
- */
-function isDemoForceFlagAmlParty(party: RelatedParty): boolean {
-  if (party.demoForceFlagAml) return true
-  if (party.id === 'member-2') return true
-  const fullName = `${party.firstName ?? ''} ${party.lastName ?? ''}`.trim().toLowerCase()
-  return fullName === 'jane smith'
-}
-
 export function buildAutoRunOwnerKycPatch(
   party: RelatedParty,
-  options?: { suppressDemoFlag?: boolean },
+  options?: { suppressDemoFlag?: boolean; reRunReason?: string; runBy?: string; isReRun?: boolean },
 ): Partial<OwnerKycReviewState> {
   const now = new Date().toISOString()
-  // Demo flag (Jane Smith) is only honored on initial KYC runs. Re-runs always return clean
-  // so the reviewer remediation loop demos cleanly.
-  if (!options?.suppressDemoFlag && isDemoForceFlagAmlParty(party)) {
-    return withScreeningFingerprint(party, {
-      autoTriggeredAt: now,
-      requiredFieldsKey: ownerRequiredFieldsKey(party),
-      kycVerificationLastCheckedAt: now,
-      kycVerificationResultSummary: 'Automated screening returned potential matches — pending AML review.',
-      cipStatus: defaultOwnerCipPass(),
-      amlReview: {
-        status: 'flagged',
-        decidedAt: now,
-      },
-      hoKycReview: { status: 'pending' },
-      amlPayloadDemo: {
-        ofacMatches: 0,
-        watchlistHits: ['PEP — possible match (demo)', 'Adverse media — single article (demo)'],
-        summary: 'Potential PEP and adverse-media hits require AML team review.',
-      },
-      cipPayloadDemo: { identityProvider: 'LexisNexis InstantID (demo)', mismatches: [] },
-      reusableVerifiedKyc: false,
-      provider: 'LexisNexis InstantID (demo)',
-      runType: 'Automated',
-      triggerSource: 'Forms package sent to client',
-    })
-  }
+  const kyc = resolveKycFixtureForParty(party, { suppressDemoFlag: options?.suppressDemoFlag, ranAt: now })
   return withScreeningFingerprint(party, {
-    autoTriggeredAt: now,
+    ...ownerReviewPatchFromKycFixture(kyc, options),
     requiredFieldsKey: ownerRequiredFieldsKey(party),
-    kycVerificationLastCheckedAt: now,
-    kycVerificationResultSummary: 'Identity verification passed (automated).',
-    cipStatus: defaultOwnerCipPass(),
-    amlReview: { status: 'cleared', decidedAt: now, approvalReason: 'Automated screening — no hits' },
-    hoKycReview: { status: 'approved', decidedAt: now },
-    amlPayloadDemo: {
-      ofacMatches: 0,
-      watchlistHits: [],
-      summary: 'Automated screening completed — no OFAC / PEP / watchlist hits.',
-    },
-    cipPayloadDemo: { identityProvider: 'LexisNexis InstantID (demo)', mismatches: [] },
-    reusableVerifiedKyc: true,
-    provider: 'LexisNexis InstantID (demo)',
-    runType: 'Automated',
-    triggerSource: 'Forms package sent to client',
   })
 }
 
@@ -541,6 +478,8 @@ export function applyAutoRunOwnerKycToState(
   // Reuse prior verified KYC if this owner has been verified on another account (initial runs only).
   const reusable = !isReRun ? findReusableVerifiedKyc(state, partyId, accountChildId) : undefined
   const now = new Date().toISOString()
+  const kycFixture = resolveKycFixtureForParty(party, { suppressDemoFlag: isReRun, ranAt: now })
+
   let patch: Partial<OwnerKycReviewState> = reusable
     ? withScreeningFingerprint(party, {
         ...reusable.review,
@@ -552,17 +491,12 @@ export function applyAutoRunOwnerKycToState(
         reusableSourceAccountChildId: reusable.accountChildId,
         triggerSource: 'Reused from prior verification',
       })
-    : buildAutoRunOwnerKycPatch(party, { suppressDemoFlag: isReRun })
-
-  if (isReRun) {
-    patch = {
-      ...patch,
-      runType: 'Re-run',
-      lastReRunBy: options?.runBy,
-      reRunReason: options?.reRunReason,
-      triggerSource: 'Manual re-run',
-    }
-  }
+    : buildAutoRunOwnerKycPatch(party, {
+        suppressDemoFlag: isReRun,
+        isReRun,
+        reRunReason: options?.reRunReason,
+        runBy: options?.runBy,
+      })
 
   const prev = state.childReviewsByChildId?.[accountChildId] ?? {}
   const merged = mergeOwnerReviewPatch(prev, partyId, patch)
@@ -572,7 +506,12 @@ export function applyAutoRunOwnerKycToState(
     ...state,
     relatedParties: state.relatedParties.map((p) =>
       p.id === party.id
-        ? { ...p, kycStatus: verified ? ('verified' as const) : ('pending' as const) }
+        ? {
+            ...p,
+            kyc: reusable ? p.kyc : kycFixture,
+            kycStatus: verified ? ('verified' as const) : ('pending' as const),
+            lastAmlRunAt: (reusable ? p.kyc?.last_run_date : kycFixture.last_run_date)?.slice(0, 10),
+          }
         : p,
     ),
     childReviewsByChildId: {

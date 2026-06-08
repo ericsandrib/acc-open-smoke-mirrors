@@ -83,46 +83,6 @@ function AdvisorViewBanner() {
     )
   }
 
-  if (!isKyc && isAccountOpeningAwaitingClarification(reviewState, child.status)) {
-    const rejectedByPrincipal = principalReview?.status === 'nigo'
-    const teamLabel = rejectedByPrincipal ? 'Principal Review' : 'Document Review'
-    const nigoData = rejectedByPrincipal ? principalReview : docReview
-    const feedbackBlock =
-      nigoData?.nigoReason || nigoData?.nigoFeedback ? (
-        <div className="mt-2 rounded-md bg-red-100/60 dark:bg-red-900/30 px-3 py-2 space-y-1">
-          {nigoData?.nigoReason ? (
-            <p className="text-xs text-red-900 dark:text-red-100">
-              <span className="font-semibold">Reason:</span> {nigoData.nigoReason}
-            </p>
-          ) : null}
-          {nigoData?.nigoFeedback ? (
-            <p className="text-xs text-red-800/90 dark:text-red-200/80">
-              <span className="font-semibold">Feedback:</span> {nigoData.nigoFeedback}
-            </p>
-          ) : null}
-        </div>
-      ) : null
-    const decidedAt = nigoData?.decidedAt ?? decision?.decidedAt
-
-    return (
-      <div className="rounded-lg border border-red-200 bg-red-50 dark:border-red-900/60 dark:bg-red-950/40 px-4 py-3 mb-6">
-        <div className="flex items-start gap-3">
-          <AlertTriangle className="h-5 w-5 text-red-600 dark:text-red-400 mt-0.5 shrink-0" />
-          <div className="space-y-1">
-            <p className="text-sm font-medium text-red-900 dark:text-red-100">Returned by {teamLabel}</p>
-            <p className="text-xs text-red-800/80 dark:text-red-200/70">
-              Review feedback, update the application, and submit for review.
-            </p>
-            {feedbackBlock}
-            {decidedAt ? (
-              <p className="text-xs text-red-700/70 dark:text-red-300/60 mt-1">at {decidedAt}</p>
-            ) : null}
-          </div>
-        </div>
-      </div>
-    )
-  }
-
   if (child.status === 'in_progress' || child.status === 'not_started') {
     return null
   }
