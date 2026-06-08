@@ -49,14 +49,28 @@ const sheetVariants = cva(
 
 interface SheetContentProps
   extends React.ComponentPropsWithoutRef<typeof SheetPrimitive.Content>,
-    VariantProps<typeof sheetVariants> {}
+    VariantProps<typeof sheetVariants> {
+  overlayClassName?: string
+  /** Render a dimmed backdrop even when the sheet root uses `modal={false}`. */
+  forceBackdrop?: boolean
+}
 
 const SheetContent = React.forwardRef<
   React.ElementRef<typeof SheetPrimitive.Content>,
   SheetContentProps
->(({ side = "right", className, children, ...props }, ref) => (
+>(({ side = "right", className, overlayClassName, forceBackdrop, children, ...props }, ref) => (
   <SheetPortal>
-    <SheetOverlay />
+    {forceBackdrop ? (
+      <div
+        aria-hidden="true"
+        className={cn(
+          'fixed inset-0 z-50 bg-black/80 animate-in fade-in-0',
+          overlayClassName,
+        )}
+      />
+    ) : (
+      <SheetOverlay className={overlayClassName} />
+    )}
     <SheetPrimitive.Content
       ref={ref}
       className={cn(sheetVariants({ side }), className)}

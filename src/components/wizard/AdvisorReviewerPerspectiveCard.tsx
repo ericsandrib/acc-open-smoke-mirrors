@@ -1,10 +1,12 @@
 import { useEffect, useRef, useState } from 'react'
+import { createPortal } from 'react-dom'
 import { useLocation } from 'react-router-dom'
 import { Building, Eye, GripVertical, ShieldAlert, ShieldCheck } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import type { WorkflowState } from '@/types/workflow'
 import { useWorkflow } from '@/stores/workflowStore'
 import { isEmbeddedAccountOwnerKycEnabled } from '@/utils/ownerKycReview'
+import { setDemoPerspectiveDragging } from '@/utils/demoPerspectiveControl'
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -185,16 +187,17 @@ export function AdvisorReviewerPerspectiveCard() {
     if (event.button !== 0) return
     const card = cardRef.current
     if (!card) return
-    const rect = card.getBoundingClientRect()
     dragMovedRef.current = false
     draggingRef.current = {
       pointerId: event.pointerId,
-      offsetX: event.clientX - rect.left,
-      offsetY: event.clientY - rect.top,
+      offsetX: event.clientX - card.getBoundingClientRect().left,
+      offsetY: event.clientY - card.getBoundingClientRect().top,
       startX: event.clientX,
       startY: event.clientY,
       startAt: Date.now(),
     }
+    setDemoPerspectiveDragging(true)
+    event.stopPropagation()
     event.currentTarget.setPointerCapture(event.pointerId)
   }
 
@@ -232,6 +235,7 @@ export function AdvisorReviewerPerspectiveCard() {
     const isQuickClick = !dragMovedRef.current && heldMs <= CLICK_MAX_DURATION_MS
     draggingRef.current = null
     dragMovedRef.current = false
+    setDemoPerspectiveDragging(false)
 
     if (isQuickClick) {
       setMenuOpen(true)
@@ -244,31 +248,39 @@ export function AdvisorReviewerPerspectiveCard() {
     event.stopPropagation()
   }
 
-  return (
-    <DropdownMenu
-      open={menuOpen}
-      onOpenChange={(next) => {
-        if (!next) setMenuOpen(false)
-      }}
+  if (typeof document === 'undefined') return null
+
+  return createPortal(
+    <div
+      data-demo-perspective-layer=""
+      className="pointer-events-none fixed inset-0 z-[150]"
+      onPointerDown={(event) => event.stopPropagation()}
     >
-      <DropdownMenuTrigger asChild>
-        <button
-          ref={cardRef}
-          type="button"
-          style={{ right: position.right, bottom: position.bottom }}
-          aria-label={`${label}. Click to switch workspace, drag to move.`}
-          title="Click to switch workspace · drag to move"
-          onPointerDown={handlePointerDown}
-          onPointerMove={handlePointerMove}
-          onPointerUp={handlePointerUp}
-          onPointerCancel={handlePointerUp}
-          onClick={handleTriggerClick}
-          className={cn(
-            'fixed z-[100] flex cursor-grab touch-none items-center gap-1.5 rounded-full border bg-white py-1 pl-1.5 pr-1.5 shadow-lg',
-            'select-none isolate active:cursor-grabbing hover:bg-white',
-            accent.shell,
-          )}
-        >
+      <DropdownMenu
+        open={menuOpen}
+        onOpenChange={(next) => {
+          if (!next) setMenuOpen(false)
+        }}
+      >
+        <DropdownMenuTrigger asChild>
+          <button
+            ref={cardRef}
+            type="button"
+            data-demo-perspective-card=""
+            style={{ right: position.right, bottom: position.bottom }}
+            aria-label={`${label}. Click to switch workspace, drag to move.`}
+            title="Click to switch workspace · drag to move"
+            onPointerDown={handlePointerDown}
+            onPointerMove={handlePointerMove}
+            onPointerUp={handlePointerUp}
+            onPointerCancel={handlePointerUp}
+            onClick={handleTriggerClick}
+            className={cn(
+              'pointer-events-auto fixed z-[150] flex cursor-grab touch-none items-center gap-1.5 rounded-full border bg-white py-1 pl-1.5 pr-1.5 shadow-lg',
+              'select-none isolate active:cursor-grabbing hover:bg-white',
+              accent.shell,
+            )}
+          >
           <span className="shrink-0 rounded-full p-1 text-muted-foreground pointer-events-none">
             <GripVertical className="h-3.5 w-3.5" aria-hidden />
           </span>
@@ -282,7 +294,8 @@ export function AdvisorReviewerPerspectiveCard() {
           align="end"
           side="top"
           sideOffset={8}
-          className="z-[200] min-w-[17rem] rounded-lg border border-border bg-background p-1 shadow-lg"
+          data-demo-perspective-menu=""
+          className="pointer-events-auto z-[250] min-w-[17rem] rounded-lg border border-border bg-background p-1 shadow-lg"
         >
           <DropdownMenuItem
             onSelect={() => dispatch({ type: 'SET_DEMO_VIEW', mode: 'advisor' })}
@@ -342,6 +355,8 @@ export function AdvisorReviewerPerspectiveCard() {
             AML Team View
           </DropdownMenuItem>
         </DropdownMenuContent>
-    </DropdownMenu>
+      </DropdownMenu>
+    </div>,
+    document.body,
   )
 }
