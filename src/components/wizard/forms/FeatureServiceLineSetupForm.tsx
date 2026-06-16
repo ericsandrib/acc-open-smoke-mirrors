@@ -14,6 +14,7 @@ import {
   ACCOUNT_FEATURE_SERVICE_OPTIONS,
   ACCOUNT_FEATURE_SERVICE_SPAWN_OPTIONS,
 } from '@/data/accountFeatureServiceOptions'
+import { AlternativeStrategyElectionSection } from '@/components/wizard/forms/AlternativeStrategyElectionSection'
 import { FinancialAccountSlotCard } from '@/components/wizard/forms/FinancialAccountSlotCard'
 import { useOpenAccountsVariant } from '@/components/wizard/openAccountsVariantContext'
 import { cn } from '@/lib/utils'
@@ -48,8 +49,12 @@ export function FeatureServiceLineSetupForm() {
   const featureLinkId = String((data.featureLinkedFinancialAccountId as string) ?? '').trim()
 
   const childRoot = ctx ? ((state.taskData[ctx.child.id] as Record<string, unknown> | undefined) ?? undefined) : undefined
+  const parentAccountChildId =
+    (childRoot?.parentAccountChildId as string | undefined) ??
+    (data.parentAccountChildId as string | undefined)
   const featureServiceType =
     (data.featureServiceType as string | undefined) ?? (childRoot?.featureServiceType as string | undefined) ?? ''
+  const isAlternativeStrategyLine = featureServiceType === 'alternative_strategy_selection'
 
   const serviceTypeOptions = useMemo(() => {
     const cur = featureServiceType
@@ -65,6 +70,18 @@ export function FeatureServiceLineSetupForm() {
   if (!ctx || ctx.child.childType !== 'feature-service-line') {
     return (
       <p className="text-sm text-muted-foreground">Open this step from Account features & services on an account.</p>
+    )
+  }
+
+  if (isAlternativeStrategyLine && parentAccountChildId) {
+    return (
+      <div className={variant === 'v5' || variant === 'v6' ? 'space-y-9' : 'space-y-7'}>
+        <AlternativeStrategyElectionSection
+          accountChildId={parentAccountChildId}
+          assumeRequested
+          showRequestToggle={false}
+        />
+      </div>
     )
   }
 
@@ -106,9 +123,8 @@ export function FeatureServiceLineSetupForm() {
           <Label>Feature / service type</Label>
           {(ACCOUNT_EMBEDDED_FEATURE_VALUES as readonly string[]).includes(featureServiceType) ? (
             <p className="text-xs text-amber-900 dark:text-amber-100 rounded-md border border-amber-200 bg-amber-50 dark:border-amber-900/50 dark:bg-amber-950/30 px-3 py-2">
-              Margin, options, and alternative strategy selection are configured on the parent account under{' '}
-              <strong>Account &amp; owners</strong>. This service line is legacy if it still shows those types—prefer
-              closing it and using the account step instead.
+              Margin and options are configured on the parent account under <strong>Account &amp; owners</strong>. This
+              service line is legacy if it still shows those types—prefer closing it and using the account step instead.
             </p>
           ) : null}
           <Select

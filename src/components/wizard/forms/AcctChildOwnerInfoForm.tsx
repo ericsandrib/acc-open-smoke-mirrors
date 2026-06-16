@@ -843,8 +843,7 @@ export function AcctChildOwnerInfoForm() {
                 Investment Elections
               </h3>
               <p className={childSectionBodyClass}>
-                Request margin, options, and related investment elections on this account. Identity and suitability stay
-                on the owners above.
+                Request margin and options on this account. Identity and suitability stay on the owners above.
               </p>
             </div>
             <AccountFeatureRequestsSection accountChildId={childId} hideSectionHeader />

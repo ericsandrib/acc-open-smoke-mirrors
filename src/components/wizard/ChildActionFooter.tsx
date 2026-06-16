@@ -15,7 +15,10 @@ import {
   getAccountOpeningChildSubmissionIssues,
   hasAccountOpeningChildBeenSubmittedForReview,
 } from '@/utils/accountOpeningChildProgress'
-import { OPEN_ACCOUNTS_WITH_ANNUITY_FORM_KEY } from '@/utils/openAccountsTaskContext'
+import {
+  isAnnuityOrderAccountOpeningChild,
+  OPEN_ACCOUNTS_WITH_ANNUITY_FORM_KEY,
+} from '@/utils/openAccountsTaskContext'
 import { handleWizardPanelShellWheel } from '@/utils/wizardScroll'
 import { PENDING_RELEASE_STATUS_LABEL } from '@/utils/childStatusDisplay'
 
@@ -146,10 +149,9 @@ export function ChildActionFooter() {
       : 'individual'
   const annuityOwnersTaskId = `${child.id}-account-owners`
   const annuityOwnersTaskData = state.taskData[annuityOwnersTaskId] as Record<string, unknown> | undefined
+  const isAnnuityOrderChild = isAnnuityOrderAccountOpeningChild(state, child)
   const isAnnuityAccountOwnersSubTask =
-    child.childType === 'account-opening' &&
-    ctx.parentTask?.formKey === OPEN_ACCOUNTS_WITH_ANNUITY_FORM_KEY &&
-    ctx.currentSubTask.suffix === 'account-owners'
+    isAnnuityOrderChild && ctx.currentSubTask.suffix === 'account-owners'
   const hideNextForCompletedAnnuityOwners =
     isAnnuityAccountOwnersSubTask && child.status === 'complete'
   const showParentBackOnFirstTask = isFirst
@@ -222,6 +224,7 @@ export function ChildActionFooter() {
     }
 
     if (child.childType === 'account-opening') {
+      if (isAnnuityOrderChild) return
       const issues = getAccountOpeningChildSubmissionIssues(state, child.id)
       if (issues.length > 0) {
         setSubmissionIssues(issues)
@@ -385,7 +388,7 @@ export function ChildActionFooter() {
                         'N/A'}
                   </span>
                 </div>
-              ) : isKyc ? (
+              ) : isKyc || isAnnuityOrderChild ? (
                 <Button variant="outline" onClick={() => dispatch({ type: 'EXIT_CHILD_ACTION' })}>
                   Next
                   <ChevronRight className="h-4 w-4" />

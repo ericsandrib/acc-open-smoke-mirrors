@@ -1,4 +1,5 @@
 import type { ChildTask, Task, WorkflowState } from '@/types/workflow'
+import { getVisibleChildSubTasks } from '@/utils/childTaskRegistry'
 
 /** Standard Open Accounts step (non-annuity path: single journey or first branch of a split). */
 export const OPEN_ACCOUNTS_FORM_KEY = 'open-accounts' as const
@@ -85,4 +86,34 @@ export function getOpenAccountsTaskData(
   openAccountsTaskId: string,
 ): Record<string, unknown> {
   return (state.taskData[openAccountsTaskId] as Record<string, unknown> | undefined) ?? {}
+}
+
+/** Account-opening child drilled in from the annuity-order parent task (not standard open-accounts). */
+export function isAnnuityOrderAccountOpeningChild(
+  state: WorkflowState,
+  childOrId: ChildTask | string,
+): boolean {
+  const childId = typeof childOrId === 'string' ? childOrId : childOrId.id
+  const child =
+    typeof childOrId === 'string'
+      ? state.tasks.flatMap((t) => t.children ?? []).find((c) => c.id === childId)
+      : childOrId
+  if (child?.childType !== 'account-opening') return false
+  return findParentTaskForChild(state, childId)?.formKey === OPEN_ACCOUNTS_WITH_ANNUITY_FORM_KEY
+}
+
+/** Visible sub-tasks for a child workflow, including annuity-order account-opening restrictions. */
+export function getVisibleSubTasksForChild(
+  state: WorkflowState,
+  child: ChildTask,
+  demoViewMode: WorkflowState['demoViewMode'] = state.demoViewMode ?? 'advisor',
+) {
+  const parent = findParentTaskForChild(state, child.id)
+  return getVisibleChildSubTasks(child.childType, demoViewMode, child.status, {
+    accountWorkflowPhase:
+      child.childType === 'account-opening'
+        ? state.childReviewsByChildId?.[child.id]?.accountWorkflowPhase
+        : undefined,
+    parentOpenAccountsFormKey: parent?.formKey,
+  })
 }

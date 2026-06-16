@@ -14,7 +14,8 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from '@/components/ui/tooltip'
-import { getSubTaskDisplayTitle, getVisibleChildSubTasks } from '@/utils/childTaskRegistry'
+import { getSubTaskDisplayTitle } from '@/utils/childTaskRegistry'
+import { getVisibleSubTasksForChild } from '@/utils/openAccountsTaskContext'
 import { getAccountWorkflowPhase, ownersAmlScreeningCleared } from '@/utils/ownerKycReview'
 import {
   getAccountOpeningSubTaskProgress,
@@ -59,7 +60,10 @@ import {
 import { ApplicationStatusWidget } from '@/components/wizard/ApplicationStatusWidget'
 import { useTheme } from '@/stores/themeStore'
 import { isSingleFlowKycEnabled } from '@/utils/ownerKycReview'
-import { findParentTaskForChild } from '@/utils/openAccountsTaskContext'
+import {
+  findParentTaskForChild,
+  isAnnuityOrderAccountOpeningChild,
+} from '@/utils/openAccountsTaskContext'
 import { AssignAllTasksControl } from '@/components/wizard/AssignAllTasksControl'
 import { PizzaTrackerProgressIndicator } from '@/components/wizard/PizzaTrackerProgressIndicator'
 import type { PizzaTrackerRowProgress } from '@/components/wizard/pizzaTrackerDisplayProgress'
@@ -1523,12 +1527,7 @@ function ChildActionSidebarInner() {
     child.childType !== 'funding-line' &&
     child.childType !== 'feature-service-line'
   const childAssignee = parentTask?.assignedTo ?? state.assignedTo
-  const visibleSubTasks = getVisibleChildSubTasks(child.childType, viewMode, child.status, {
-    accountWorkflowPhase:
-      child.childType === 'account-opening'
-        ? getAccountWorkflowPhase(state, child.id)
-        : undefined,
-  })
+  const visibleSubTasks = getVisibleSubTasksForChild(state, child, viewMode)
   const childProgress = computeChildSubTasksProgress(state, child, visibleSubTasks)
 
   return (
@@ -1709,15 +1708,25 @@ function ChildActionSidebarInner() {
             ? null
             : stageLabel === 'Draft' &&
                 child.childType === 'account-opening' &&
-                isSingleFlowKycEnabled(state)
-              ? 'Review submits automatically after the client signs the forms package.'
-              : stageLabel === 'Draft'
-                ? 'Complete all sections to submit.'
-                : 'Check the activity timeline for details.'
+                isAnnuityOrderAccountOpeningChild(state, child)
+              ? 'Submit the application to NetX360 when all account application requirements have been completed.'
+              : stageLabel === 'Draft' &&
+                  child.childType === 'account-opening' &&
+                  isSingleFlowKycEnabled(state)
+                ? 'Review submission occurs automatically once the client signs the eSignature forms package. Reviews for wet-signature forms packages require manual submission.'
+                : stageLabel === 'Draft'
+                  ? 'Complete all sections to submit.'
+                  : 'Check the activity timeline for details.'
+          const isDraftAccountOpeningGuidance =
+            stageLabel === 'Draft' &&
+            child.childType === 'account-opening' &&
+            (isAnnuityOrderAccountOpeningChild(state, child) || isSingleFlowKycEnabled(state))
           const isAccountDraft =
             child.childType === 'account-opening' && stageLabel === 'Draft'
           const showSubmitForReview =
-            state.demoViewMode === 'advisor' && (advisorResubmitEligible || isAccountDraft)
+            !isAnnuityOrderAccountOpeningChild(state, child) &&
+            state.demoViewMode === 'advisor' &&
+            (advisorResubmitEligible || isAccountDraft)
 
           const handleStatusCardResubmit = () => {
             if (child.childType === 'account-opening') {
@@ -1768,14 +1777,13 @@ function ChildActionSidebarInner() {
                 <div className="px-4 pb-4 space-y-3">
                   {clarificationRequired ? (
                     <p className="text-sm text-foreground leading-snug">{statusSentence}</p>
+                  ) : isDraftAccountOpeningGuidance && detailSentence ? (
+                    <p className="text-[14px] font-normal text-primary leading-snug">{detailSentence}</p>
                   ) : (
                     <p className="text-[14px] font-normal text-primary leading-snug">
-                      {statusSentence}
+                      <span className="block">{statusSentence}</span>
                       {detailSentence ? (
-                        <>
-                          <br />
-                          {detailSentence}
-                        </>
+                        <span className="block mt-[1lh]">{detailSentence}</span>
                       ) : null}
                     </p>
                   )}

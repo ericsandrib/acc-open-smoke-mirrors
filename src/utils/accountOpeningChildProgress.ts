@@ -3,7 +3,6 @@ import { findParentTaskForChild, OPEN_ACCOUNTS_WITH_ANNUITY_FORM_KEY } from '@/u
 import { isSingleFlowKycEnabled } from '@/utils/ownerKycReview'
 import { mergeFeatureRequests } from '@/types/featureRequests'
 import {
-  alternativeStrategyProgressWeight,
   getAlternativeStrategyBlockingIssues,
 } from '@/utils/alternativeStrategyValidation'
 import {
@@ -146,9 +145,8 @@ function progressAccountOwners(state: WorkflowState, accountChildId: string): { 
   const optionsLevelOk = (fr.options?.requestedLevel ?? 0) >= 1
   const optionsRequested = typeof fr.options?.requested === 'boolean'
   const optionsOk = optionsRequested && (!fr.options?.requested || optionsLevelOk)
-  const altW = alternativeStrategyProgressWeight(fr.alternativeStrategySelection)
-  const featureFilled = (marginOk ? 1 : 0) + (optionsOk ? 1 : 0) + altW
-  const featureTotal = 3
+  const featureFilled = (marginOk ? 1 : 0) + (optionsOk ? 1 : 0)
+  const featureTotal = 2
 
   const total = 1 + ownerSlots + supplementalKeys.length + featureTotal
   const filled = titleFilled + ownerFilled + supFilled + featureFilled
@@ -373,8 +371,14 @@ export function getAccountOpeningChildSubmissionIssues(
 
   const childMeta = state.taskData[accountChildId] as Record<string, unknown> | undefined
   const fr = mergeFeatureRequests(childMeta?.featureRequests)
-  for (const msg of getAlternativeStrategyBlockingIssues(fr.alternativeStrategySelection)) {
-    issues.push(`Alternative strategy: ${msg}`)
+  const hasAltStrategyLine = getFeatureLinesForAccount(state, accountChildId).some((line) => {
+    const lineData = mergedFeatureLineSetupData(state, line.id)
+    return lineData.featureServiceType === 'alternative_strategy_selection'
+  })
+  if (hasAltStrategyLine || fr.alternativeStrategySelection?.requested) {
+    for (const msg of getAlternativeStrategyBlockingIssues(fr.alternativeStrategySelection)) {
+      issues.push(`Alternative strategy: ${msg}`)
+    }
   }
 
   if (!kycEsignExternal) {
@@ -418,6 +422,8 @@ export function canAdvisorManuallySubmitAccountOpeningChild(
   child: ChildTask,
 ): boolean {
   if (child.childType !== 'account-opening') return false
+  const parentOpenAccountsTask = findParentTaskForChild(state, child.id)
+  if (parentOpenAccountsTask?.formKey === OPEN_ACCOUNTS_WITH_ANNUITY_FORM_KEY) return false
   if (!isAccountOpeningChildDraft(child)) return true
   return !isSingleFlowKycEnabled(state)
 }

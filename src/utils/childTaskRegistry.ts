@@ -1,4 +1,5 @@
 import type { AccountWorkflowPhase, ChildType, TaskStatus, WorkflowState } from '@/types/workflow'
+import { OPEN_ACCOUNTS_WITH_ANNUITY_FORM_KEY } from '@/utils/openAccountsTaskContext'
 import { getPersistedHideKycChildWorkflows } from '@/utils/hideKycChildWorkflows'
 
 export interface SubTaskDefinition {
@@ -103,6 +104,8 @@ export function isParentOpenAccountsSupportingDocumentsEnabled(): boolean {
 export interface VisibleSubTaskOptions {
   /** Single-flow account workflow phase for the child — controls AML/CIP review task visibility. */
   accountWorkflowPhase?: AccountWorkflowPhase
+  /** Parent open-accounts task — annuity-order path only exposes Account & Owners. */
+  parentOpenAccountsFormKey?: string
 }
 
 /**
@@ -140,6 +143,9 @@ export function getVisibleChildSubTasks(
     return all.filter((s) => s.suffix !== 'documents')
   }
   if (childType === 'account-opening') {
+    if (options?.parentOpenAccountsFormKey === OPEN_ACCOUNTS_WITH_ANNUITY_FORM_KEY) {
+      return all.filter((s) => s.suffix === 'account-owners')
+    }
     if (demoViewMode === 'aml') {
       return all.filter((s) => s.suffix === 'aml-review' || s.suffix === 'supporting-documents')
     }

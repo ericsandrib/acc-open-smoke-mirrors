@@ -3,8 +3,8 @@ import { getOpenAccountsCoreSupportingDocumentSections } from '@/utils/registrat
 import {
   getChildSubTaskIds,
   getChildTypeConfig,
-  getVisibleChildSubTasks,
 } from '@/utils/childTaskRegistry'
+import { getVisibleSubTasksForChild } from '@/utils/openAccountsTaskContext'
 
 /** One uploaded (or placeholder) supporting document row for reviewer rails. */
 export type JourneySupportingDocRow = {
@@ -105,7 +105,7 @@ function collectKycChildSupportingDocumentRows(
   const kycTask = state.tasks.find((t) => t.formKey === 'kyc')
   for (const child of kycTask?.children ?? []) {
     if (child.childType !== 'kyc') continue
-    const visible = getVisibleChildSubTasks(child.childType, state.demoViewMode, child.status)
+    const visible = getVisibleSubTasksForChild(state, child)
     for (const st of visible) {
       if (!isSupportingDocumentsSubTask(st.formKey, st.suffix)) continue
       const subId = `${child.id}-${st.suffix}`
@@ -152,7 +152,7 @@ export function collectJourneySupportingDocumentRows(state: WorkflowState): Jour
       pushUnique(rowsFromTaskData(state, childRoot, child.id, child.name, labelMap))
 
       const config = getChildTypeConfig(child.childType)
-      const visible = getVisibleChildSubTasks(child.childType, state.demoViewMode, child.status)
+      const visible = getVisibleSubTasksForChild(state, child)
       for (const st of visible) {
         const subId = `${child.id}-${st.suffix}`
         const subData = (state.taskData[subId] as Record<string, unknown> | undefined) ?? {}

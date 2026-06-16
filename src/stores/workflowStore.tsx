@@ -29,11 +29,11 @@ import type { JourneyAction, JourneyStatus } from '@/types/servicing'
 import {
   getChildSubTaskIds,
   getChildTypeConfig,
-  getVisibleChildSubTasks,
   parseChildSubTaskId,
 } from '@/utils/childTaskRegistry'
 import {
   findParentTaskForChild,
+  getVisibleSubTasksForChild,
   OPEN_ACCOUNTS_FORM_KEY,
   OPEN_ACCOUNTS_WITH_ANNUITY_FORM_KEY,
 } from '@/utils/openAccountsTaskContext'
@@ -646,18 +646,14 @@ function remapChildSubTaskIndexForDemoView(
   const child = findActiveChild(state)
   if (!child) return undefined
 
-  const phase =
-    child.childType === 'account-opening'
-      ? state.childReviewsByChildId?.[child.id]?.accountWorkflowPhase
-      : undefined
-  const nextVisible = getVisibleChildSubTasks(child.childType, nextDemoViewMode, child.status, {
-    accountWorkflowPhase: phase,
-  })
+  const nextVisible = getVisibleSubTasksForChild(
+    { ...state, demoViewMode: nextDemoViewMode },
+    child,
+    nextDemoViewMode,
+  )
   if (nextVisible.length === 0) return undefined
 
-  const prevVisible = getVisibleChildSubTasks(child.childType, state.demoViewMode, child.status, {
-    accountWorkflowPhase: phase,
-  })
+  const prevVisible = getVisibleSubTasksForChild(state, child)
   const raw = state.activeChildSubTaskIndex ?? 0
   const clampedPrev = Math.min(Math.max(0, raw), Math.max(prevVisible.length - 1, 0))
   const suffix = prevVisible[clampedPrev]?.suffix
@@ -690,13 +686,7 @@ function remapChildSubTaskIndexForDemoView(
 function clampChildSubTaskIndex(state: WorkflowState, index: number): number | undefined {
   const child = findActiveChild(state)
   if (!child) return undefined
-  const phase =
-    child.childType === 'account-opening'
-      ? state.childReviewsByChildId?.[child.id]?.accountWorkflowPhase
-      : undefined
-  const visible = getVisibleChildSubTasks(child.childType, state.demoViewMode, child.status, {
-    accountWorkflowPhase: phase,
-  })
+  const visible = getVisibleSubTasksForChild(state, child)
   if (visible.length === 0) return undefined
   return Math.min(Math.max(0, index), visible.length - 1)
 }
@@ -1428,14 +1418,7 @@ function workflowReducer(state: WorkflowState, action: WorkflowAction): Workflow
         enteredChild?.childType,
       )
       const enterVisible =
-        enteredChild != null
-          ? getVisibleChildSubTasks(enteredChild.childType, sanitizedEnterMode, enteredChild.status, {
-              accountWorkflowPhase:
-                enteredChild.childType === 'account-opening'
-                  ? state.childReviewsByChildId?.[enteredChild.id]?.accountWorkflowPhase
-                  : undefined,
-            })
-          : []
+        enteredChild != null ? getVisibleSubTasksForChild(state, enteredChild, sanitizedEnterMode) : []
       let enterIdx = action.subTaskIndex ?? 0
       if (enterVisible.length > 0) {
         if (
@@ -1537,7 +1520,7 @@ function workflowReducer(state: WorkflowState, action: WorkflowAction): Workflow
         .flatMap((t) => t.children ?? [])
         .find((c) => c.id === state.activeChildActionId)
       if (!child) return state
-      const maxIndex = getVisibleChildSubTasks(child.childType, state.demoViewMode, child.status).length - 1
+      const maxIndex = getVisibleSubTasksForChild(state, child).length - 1
       if (state.activeChildSubTaskIndex >= maxIndex) return state
       const nextIdx = state.activeChildSubTaskIndex + 1
       const prevHwm = state.childHighWaterMark ?? {}
@@ -2915,19 +2898,8 @@ export function useChildActionContext() {
   if (!child) return null
 
   const baseConfig = getChildTypeConfig(child.childType)
-  const parentTask = state.tasks.find((t) =>
-    t.children?.some((c) => c.id === child.id)
-  )
-  const baseSubTasks = getVisibleChildSubTasks(child.childType, state.demoViewMode, child.status, {
-    accountWorkflowPhase:
-      child.childType === 'account-opening'
-        ? state.childReviewsByChildId?.[child.id]?.accountWorkflowPhase
-        : undefined,
-  })
-  const subTasks =
-    child.childType === 'account-opening' && parentTask?.formKey === OPEN_ACCOUNTS_WITH_ANNUITY_FORM_KEY
-      ? baseSubTasks.filter((s) => s.suffix === 'account-owners')
-      : baseSubTasks
+  const parentTask = state.tasks.find((t) => t.children?.some((c) => c.id === child.id))
+  const subTasks = getVisibleSubTasksForChild(state, child)
   const config = {
     ...baseConfig,
     subTasks,

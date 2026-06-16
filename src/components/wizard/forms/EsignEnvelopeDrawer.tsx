@@ -129,7 +129,7 @@ interface EsignEnvelopeDrawerProps {
   onOpenChange: (open: boolean) => void
   envelope: EsignEnvelope
   onSave: (envelope: EsignEnvelope) => void
-  /** When true, primary action is create: label is Send (eSign) or Save (wet); edit mode always Save. */
+  /** When true, primary action is create: label is Send (eSign) or Generate package (wet); edit mode always Save. */
   isCreate?: boolean
 }
 
@@ -946,7 +946,7 @@ export function EsignEnvelopeDrawer({
                   ? 'Save forms package'
                   : isElectronicSignatureDelivery(local.deliveryMethod)
                     ? 'Send forms package'
-                    : 'Save forms package'}
+                    : 'Generate package'}
               </Button>
             </div>
           </div>

@@ -4,7 +4,8 @@ import type { TaskStatus, WorkflowState } from '@/types/workflow'
 import { seededJourneys } from '@/data/servicingSeed'
 import { useWorkflow } from './workflowStore'
 import { getActionStatus } from '@/utils/getActionStatus'
-import { getChildTypeConfig, getVisibleChildSubTasks } from '@/utils/childTaskRegistry'
+import { getChildTypeConfig } from '@/utils/childTaskRegistry'
+import { getVisibleSubTasksForChild } from '@/utils/openAccountsTaskContext'
 import { deriveChildDisplayStatus } from '@/utils/childStatusDisplay'
 import { deriveAccountOpeningChildDisplayStatus } from '@/utils/accountOpeningEnvelopeStatus'
 import { formatOpenAccountsChildRowLabel } from '@/utils/openAccountsChildRowLabel'
@@ -77,7 +78,7 @@ function deriveLiveJourney(state: WorkflowState): Journey | null {
         const childConfig = getChildTypeConfig(c.childType)
         const isTerminal = c.status === 'complete' || c.status === 'awaiting_review' || c.status === 'canceled'
         const hwm = state.childHighWaterMark?.[c.id] ?? -1
-        const visibleSubTasks = getVisibleChildSubTasks(c.childType, state.demoViewMode, c.status)
+        const visibleSubTasks = getVisibleSubTasksForChild(state, c)
         const childTasks: JourneyTask[] = visibleSubTasks.map((sub, idx): JourneyTask => {
           let subStatus: TaskStatus = 'not_started'
           if (isTerminal) {
