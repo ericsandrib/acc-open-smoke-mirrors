@@ -2,50 +2,61 @@ import { useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import {
   ChevronDown,
+  ChevronRight,
+  ChevronLeft,
   Info,
   BarChart3,
   UsersRound,
   ArrowUpDown,
   Filter,
-  Plus,
+  RefreshCw,
+  LayoutGrid,
 } from 'lucide-react'
-import { AccessoryBar } from '@/components/accessory-bar'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import {
-  RELATIONSHIPS_SEED,
-  RELATIONSHIP_METRICS,
   type Relationship,
+  type RelationshipType,
 } from '@/data/relationshipsSeed'
+import {
+  useRelationships,
+  useRelationshipMetrics,
+} from '@/db/queries/relationships'
 import { cn } from '@/lib/utils'
-import { CreateProspectDialog } from './CreateProspectDialog'
+import { ConfigHotspot } from '@/components/config-overlay'
 
 // --- summary cards ---------------------------------------------------------
 
-function ProspectCard({
-  status,
-  left,
-  right,
-}: {
+interface KpiCardProps {
   status: 'Prospective' | 'New' | 'Existing'
   left: { label: string; value: React.ReactNode }
   right: { label: string; value: React.ReactNode }
-}) {
+  active?: boolean
+}
+
+function KpiCard({ status, left, right, active }: KpiCardProps) {
   return (
-    <div className="rounded-xl bg-muted/50 px-4 py-3 min-w-[220px] flex flex-col gap-2">
-      <div className="flex items-center gap-1.5 text-sm text-foreground font-medium">
+    <div
+      className={cn(
+        'rounded-xl px-5 py-4 min-w-[230px] flex flex-col gap-3 transition-colors',
+        active
+          ? 'bg-white border border-border shadow-sm'
+          : 'bg-muted/50 border border-transparent',
+      )}
+    >
+      <div className="flex items-center gap-1.5 text-sm font-medium text-foreground">
         <BarChart3 className="h-4 w-4 text-rose-500" />
         <span>{status}</span>
-        <Info className="h-3.5 w-3.5 opacity-50" />
+        <Info className="h-3.5 w-3.5 text-muted-foreground/70" />
       </div>
-      <div className="flex items-center gap-8 text-sm">
+      <div className="flex items-start gap-10 text-sm">
         <div>
           <div className="text-muted-foreground text-xs">{left.label}</div>
-          <div className="text-foreground font-medium mt-0.5">{left.value}</div>
+          <div className="text-foreground font-semibold mt-1">{left.value}</div>
         </div>
         <div>
           <div className="text-muted-foreground text-xs">{right.label}</div>
-          <div className="text-foreground font-medium mt-0.5">{right.value}</div>
+          <div className="text-foreground font-semibold mt-1">{right.value}</div>
         </div>
       </div>
     </div>
@@ -54,35 +65,82 @@ function ProspectCard({
 
 // --- view tabs -------------------------------------------------------------
 
-type ViewTab = 'all' | 'more'
+type ViewTab =
+  | 'all'
+  | 'prospective'
+  | 'onboarding'
+  | 'existing'
+  | 'transferred'
+  | 'tax-documents'
+  | 'more'
 
-function ViewTabs({ active, onChange }: { active: ViewTab; onChange: (v: ViewTab) => void }) {
-  const tabs: { id: ViewTab; label: string; count?: number; badge?: string }[] = [
-    { id: 'all', label: 'All', count: RELATIONSHIPS_SEED.length },
-    { id: 'more', label: 'More', badge: 'New' },
+const TAB_TYPE_FILTER: Record<ViewTab, RelationshipType | null> = {
+  all: null,
+  prospective: 'Prospect',
+  onboarding: 'Onboarding',
+  existing: 'Existing',
+  transferred: null,
+  'tax-documents': null,
+  more: null,
+}
+
+function ViewTabs({
+  active,
+  onChange,
+  counts,
+}: {
+  active: ViewTab
+  onChange: (v: ViewTab) => void
+  counts: { all: number; prospective: number; onboarding: number; existing: number; transferred: number }
+}) {
+  const t = counts
+  const tabs: {
+    id: ViewTab
+    label: string
+    count?: number
+    badge?: string
+    truncate?: boolean
+  }[] = [
+    { id: 'all', label: 'All', count: t.all },
+    { id: 'prospective', label: 'Prospective', count: t.prospective },
+    { id: 'onboarding', label: 'Onboarding', count: t.onboarding },
+    { id: 'existing', label: 'Existing', count: t.existing },
+    { id: 'transferred', label: 'Transferred', count: t.transferred },
+    { id: 'tax-documents', label: 'Tax Documents', truncate: true },
+    { id: 'more', label: 'More' },
   ]
   return (
-    <div className="border-b border-border flex items-center gap-6 text-sm">
-      {tabs.map((t) => (
+    <div className="border-b border-border flex items-center gap-6 text-sm overflow-x-auto">
+      {tabs.map((tab) => (
         <button
-          key={t.id}
-          onClick={() => onChange(t.id)}
+          key={tab.id}
+          onClick={() => onChange(tab.id)}
           className={cn(
-            'flex items-center gap-1.5 py-2 -mb-px border-b-2 transition-colors',
-            active === t.id
+            'flex items-center gap-1.5 py-2.5 -mb-px border-b-2 transition-colors whitespace-nowrap',
+            active === tab.id
               ? 'border-foreground text-foreground font-medium'
               : 'border-transparent text-muted-foreground hover:text-foreground',
           )}
         >
-          {t.label}
-          {typeof t.count === 'number' && (
-            <span className="inline-flex items-center justify-center h-5 min-w-[22px] rounded-full bg-muted text-xs font-medium px-1.5 text-muted-foreground">
-              {t.count}
+          {tab.label}
+          {typeof tab.count === 'number' && (
+            <span
+              className={cn(
+                'inline-flex items-center justify-center h-5 min-w-[22px] rounded-full text-xs font-medium px-1.5',
+                active === tab.id
+                  ? 'bg-muted text-foreground'
+                  : 'bg-muted text-muted-foreground',
+              )}
+            >
+              {tab.count}
             </span>
           )}
-          {t.badge && (
-            <Badge className="ml-1 h-5 bg-emerald-100 text-emerald-800 border-0 text-[10px] font-semibold">
-              {t.badge}
+          {tab.truncate && (
+            <ChevronRight className="h-3.5 w-3.5 opacity-50" />
+          )}
+          {tab.badge && (
+            <Badge className="ml-1 h-5 bg-emerald-100 text-emerald-800 hover:bg-emerald-100 border-0 text-[10px] font-semibold rounded">
+              {tab.badge}
             </Badge>
           )}
         </button>
@@ -106,28 +164,40 @@ function ActionBar() {
           My Relationships
           <ChevronDown className="h-3.5 w-3.5 opacity-60" />
         </Button>
-        <Button variant="outline" size="sm" className="rounded-md h-9 gap-2 text-sm">
+        <Button
+          variant="outline"
+          size="sm"
+          className="rounded-md h-9 gap-2 text-sm"
+        >
           <ArrowUpDown className="h-4 w-4" />
           Sort
         </Button>
-        <Button variant="outline" size="sm" className="rounded-md h-9 gap-2 text-sm">
+        <Button
+          variant="outline"
+          size="sm"
+          className="rounded-md h-9 gap-2 text-sm"
+        >
           <Filter className="h-4 w-4" />
           Filter
         </Button>
       </div>
-      <div className="flex items-center gap-3">
+      <div className="flex items-center gap-2">
         <Button
-          size="sm"
-          className="h-9 px-4 bg-emerald-600 hover:bg-emerald-700 text-white font-medium rounded-md"
+          variant="outline"
+          size="icon"
+          className="h-9 w-9 rounded-md"
+          aria-label="Refresh"
         >
-          Save View
+          <RefreshCw className="h-4 w-4" />
         </Button>
-        <button
-          type="button"
-          className="text-sm text-foreground/80 hover:text-foreground transition-colors"
+        <Button
+          variant="outline"
+          size="sm"
+          className="rounded-md h-9 gap-2 text-sm"
         >
-          Reset
-        </button>
+          <LayoutGrid className="h-4 w-4" />
+          Display
+        </Button>
       </div>
     </div>
   )
@@ -135,70 +205,72 @@ function ActionBar() {
 
 // --- table -----------------------------------------------------------------
 
+function AdvisorBadge({
+  name,
+  initials,
+}: {
+  name: string
+  initials: string
+}) {
+  return (
+    <div className="flex items-center gap-2">
+      <div className="flex h-6 w-6 items-center justify-center rounded-full bg-sky-100 text-sky-800 text-[10px] font-semibold">
+        {initials}
+      </div>
+      <span className="text-sm text-foreground">{name}</span>
+    </div>
+  )
+}
+
 function formatMoney(n: number | null) {
   if (n === null || n === undefined) return ''
   return n.toLocaleString('en-US', {
     style: 'currency',
     currency: 'USD',
-    maximumFractionDigits: 0,
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
   })
 }
 
-const COLUMNS: {
-  key: keyof Relationship
-  label: string
-  width?: string
-  render?: (r: Relationship) => React.ReactNode
-}[] = [
-  {
-    key: 'household',
-    label: 'Household',
-    width: 'min-w-[200px]',
-    render: (r) => (
-      <div className="flex items-center gap-2">
-        <UsersRound className="h-4 w-4 text-muted-foreground" />
-        <Link
-          to={`/relationships/${r.id}`}
-          className="underline underline-offset-2 text-foreground hover:text-primary"
-        >
-          {r.household}
-        </Link>
-      </div>
-    ),
-  },
-  { key: 'advisor', label: 'Advisor', width: 'min-w-[140px]' },
-  { key: 'type', label: 'Type', width: 'min-w-[110px]' },
-  { key: 'status', label: 'Status', width: 'min-w-[240px]' },
-  {
-    key: 'aum',
-    label: 'AUM',
-    width: 'min-w-[140px]',
-    render: (r) => <span>{formatMoney(r.aum)}</span>,
-  },
-  { key: 'updatedAt', label: 'Updated At', width: 'min-w-[120px]' },
-]
-
 function RelationshipsTable({ rows }: { rows: Relationship[] }) {
   return (
-    <div className="mt-3 border-t border-border overflow-x-auto">
-      <table className="w-full text-sm">
+    <div className="mt-3 overflow-x-auto">
+      <table className="w-full text-sm border-collapse">
         <thead>
-          <tr className="bg-muted/40 text-left text-xs text-muted-foreground">
-            {COLUMNS.map((c) => (
-              <th key={String(c.key)} className={cn('px-4 py-2.5 font-medium', c.width)}>
-                {c.label}
-              </th>
-            ))}
+          <tr className="bg-muted/40 text-left text-xs text-muted-foreground border-y border-border">
+            <th className="px-4 py-2.5 font-medium min-w-[260px]">Relationship</th>
+            <th className="px-4 py-2.5 font-medium min-w-[200px]">Advisor</th>
+            <th className="px-4 py-2.5 font-medium min-w-[140px]">Type</th>
+            <th className="px-4 py-2.5 font-medium min-w-[140px] text-right">AUM</th>
           </tr>
         </thead>
         <tbody>
           {rows.map((r) => (
-            <tr key={r.id} className="border-b border-border hover:bg-muted/30">
-              {COLUMNS.map((c) => (
-                <td key={String(c.key)} className={cn('px-4 py-3 text-foreground/90', c.width)}>
-                  {c.render ? c.render(r) : ((r[c.key] as string) ?? '')}
-                </td>
-              ))}
+            <tr
+              key={r.id}
+              className="border-b border-border hover:bg-muted/30"
+            >
+              <td className="px-4 py-3">
+                <div className="flex items-center gap-2">
+                  <UsersRound className="h-4 w-4 text-muted-foreground" />
+                  <Link
+                    to={`/relationships/${r.id}`}
+                    className="underline underline-offset-2 text-foreground hover:text-primary"
+                  >
+                    {r.household}
+                  </Link>
+                </div>
+              </td>
+              <td className="px-4 py-3">
+                <AdvisorBadge
+                  name={r.advisor}
+                  initials={r.advisorInitials}
+                />
+              </td>
+              <td className="px-4 py-3 text-foreground/90">{r.type}</td>
+              <td className="px-4 py-3 text-foreground/90 tabular-nums text-right">
+                {formatMoney(r.aum)}
+              </td>
             </tr>
           ))}
         </tbody>
@@ -207,62 +279,139 @@ function RelationshipsTable({ rows }: { rows: Relationship[] }) {
   )
 }
 
+// --- pagination ------------------------------------------------------------
+
+function Pagination() {
+  const [page, setPage] = useState(1)
+  const pages = [1, 2, 3, 4, 5]
+  return (
+    <div className="flex items-center justify-center gap-1 pt-6 pb-0">
+      <button
+        onClick={() => setPage((p) => Math.max(1, p - 1))}
+        className="h-8 w-8 rounded-md flex items-center justify-center text-muted-foreground hover:bg-muted disabled:opacity-30"
+        disabled={page === 1}
+        aria-label="Previous page"
+      >
+        <ChevronLeft className="h-4 w-4" />
+      </button>
+      {pages.map((p) => (
+        <button
+          key={p}
+          onClick={() => setPage(p)}
+          className={cn(
+            'h-8 w-8 rounded-md text-sm font-medium',
+            page === p
+              ? 'bg-foreground text-background'
+              : 'text-foreground hover:bg-muted',
+          )}
+        >
+          {p}
+        </button>
+      ))}
+      <span className="px-1.5 text-muted-foreground text-sm">…</span>
+      <button
+        onClick={() => setPage((p) => p + 1)}
+        className="h-8 w-8 rounded-md flex items-center justify-center text-muted-foreground hover:bg-muted"
+        aria-label="Next page"
+      >
+        <ChevronRight className="h-4 w-4" />
+      </button>
+    </div>
+  )
+}
+
 // --- main ------------------------------------------------------------------
 
 export function RelationshipsContent() {
   const [view, setView] = useState<ViewTab>('all')
-  const [createOpen, setCreateOpen] = useState(false)
-  const m = RELATIONSHIP_METRICS
+  const { data: all } = useRelationships()
+  const { data: metrics } = useRelationshipMetrics()
 
-  const rows = useMemo(() => RELATIONSHIPS_SEED, [view])
+  const m =
+    metrics ?? {
+      totalClients: 0,
+      prospective: { total: 0, targetedAum: '0' },
+      new: { total: 0, aum: '0' },
+      existing: { total: 0, aum: '0' },
+      tabs: { all: 0, prospective: 0, onboarding: 0, existing: 0, transferred: 0 },
+    }
+
+  const rows = useMemo(() => {
+    const source = all ?? []
+    const filter = TAB_TYPE_FILTER[view]
+    if (!filter) return source
+    return source.filter((r) => r.type === filter)
+  }, [all, view])
 
   return (
-    <div className="max-w-7xl mx-auto">
-      <AccessoryBar
-        breadcrumbs={[{ label: 'Home', href: '/' }]}
-        currentPage="Relationships"
-        showBackButton={false}
-        showBorder={false}
-        className="-mt-6 mb-2"
+    <div className="relative max-w-[1400px] mx-auto -mt-2">
+      {/* Section-level hotspot — the "Relationships list" parent */}
+      <ConfigHotspot
+        knobId="relationships/list"
+        anchor="top-right"
+        size="md"
+        className="!top-0 !right-0"
       />
 
-      <div className="flex items-start justify-between gap-4 mb-5">
-        <h1 className="text-3xl font-semibold tracking-tight text-foreground">
-          Relationships
-        </h1>
-        <Button
-          onClick={() => setCreateOpen(true)}
-          className="bg-foreground text-background hover:bg-foreground/90 h-9 gap-1.5"
-        >
-          <Plus className="h-4 w-4" />
-          New Prospect
-        </Button>
-      </div>
+      <h1 className="text-3xl font-semibold tracking-tight text-foreground mb-5">
+        Relationships
+      </h1>
 
-      {/* Prospective / New / Existing summary cards (exact mercer-live header layout) */}
-      <div className="flex items-stretch gap-3 mb-6 flex-wrap">
-        <ProspectCard
+      {/* KPI summary cards — Header metrics knob */}
+      <div className="relative flex items-stretch gap-3 mb-6 flex-wrap pr-10">
+        <ConfigHotspot
+          knobId="relationships/list/header-metrics"
+          anchor="top-right"
+          size="md"
+          area="region"
+          className="!top-0 !right-0"
+        />
+        <KpiCard
           status="Prospective"
           left={{ label: 'Total', value: m.prospective.total }}
-          right={{ label: 'Targeted AUM', value: `$${m.prospective.targetedAum}` }}
+          right={{
+            label: 'Targeted AUM',
+            value: `$${m.prospective.targetedAum}`,
+          }}
         />
-        <ProspectCard
+        <KpiCard
           status="New"
           left={{ label: 'Total', value: m.new.total }}
           right={{ label: 'AUM', value: `$${m.new.aum}` }}
         />
-        <ProspectCard
+        <KpiCard
           status="Existing"
           left={{ label: 'Total', value: m.existing.total }}
           right={{ label: 'AUM', value: `$${m.existing.aum}` }}
         />
       </div>
 
-      <ViewTabs active={view} onChange={setView} />
-      <ActionBar />
-      <RelationshipsTable rows={rows} />
+      {/* View tabs — Default views knob */}
+      <div className="relative pr-10">
+        <ConfigHotspot
+          knobId="relationships/list/default-views"
+          anchor="middle-right"
+          size="sm"
+          className="!right-0"
+        />
+        <ViewTabs active={view} onChange={setView} counts={m.tabs} />
+      </div>
 
-      <CreateProspectDialog open={createOpen} onClose={() => setCreateOpen(false)} />
+      <ActionBar />
+
+      {/* Table — Columns knob */}
+      <div className="relative">
+        <ConfigHotspot
+          knobId="relationships/list/columns"
+          anchor="top-right"
+          size="md"
+          area="region"
+          className="!top-2 !right-2"
+        />
+        <RelationshipsTable rows={rows} />
+      </div>
+
+      <Pagination />
     </div>
   )
 }

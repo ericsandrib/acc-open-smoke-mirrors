@@ -9,32 +9,48 @@ import { ServicingPage } from '@/pages/ServicingPage'
 import { OnboardingPage } from '@/pages/OnboardingPage'
 import { JourneyDetailPage } from '@/pages/JourneyDetailPage'
 import { RelationshipsPage } from '@/pages/RelationshipsPage'
+import { RelationshipDetailPage } from '@/pages/RelationshipDetailPage'
 import { SettingsPage } from '@/pages/SettingsPage'
+import { OrionGapsPage } from '@/pages/OrionGapsPage'
 import { Toaster } from '@/components/ui/sonner'
 import { AppPasswordGate } from '@/components/AppPasswordGate'
+import {
+  ConfigOverlayProvider,
+  ConfigOverlayToggle,
+  ConfigCapturePanel,
+} from '@/components/config-overlay'
+import { PGliteProvider } from '@/db/PGliteProvider'
 
 export default function App() {
   return (
     <ThemeProvider>
       <AppPasswordGate>
-        <WorkflowProvider>
-          <ServicingProvider>
-            <BrowserRouter>
-              <Routes>
-                <Route path="/" element={<DashboardPage />} />
-                <Route path="/wizard" element={<WizardPage />} />
-                <Route path="/workflow" element={<WorkflowPage />} />
-                <Route path="/servicing" element={<ServicingPage />} />
-                <Route path="/servicing/:journeyId" element={<JourneyDetailPage />} />
-                <Route path="/servicing/:journeyId/action/:actionId" element={<JourneyDetailPage />} />
-                <Route path="/onboarding" element={<OnboardingPage />} />
-                <Route path="/relationships" element={<RelationshipsPage />} />
-                <Route path="/settings" element={<SettingsPage />} />
-                <Route path="*" element={<Navigate to="/" replace />} />
-              </Routes>
-            </BrowserRouter>
-          </ServicingProvider>
-        </WorkflowProvider>
+        <PGliteProvider>
+        <ConfigOverlayProvider>
+          <WorkflowProvider>
+            <ServicingProvider>
+              <BrowserRouter>
+                <Routes>
+                  <Route path="/" element={<DashboardPage />} />
+                  <Route path="/wizard" element={<WizardPage />} />
+                  <Route path="/workflow" element={<WorkflowPage />} />
+                  <Route path="/servicing" element={<ServicingPage />} />
+                  <Route path="/servicing/:journeyId" element={<JourneyDetailPage />} />
+                  <Route path="/servicing/:journeyId/action/:actionId" element={<JourneyDetailPage />} />
+                  <Route path="/onboarding" element={<OnboardingPage />} />
+                  <Route path="/relationships" element={<RelationshipsPage />} />
+                  <Route path="/relationships/:id" element={<RelationshipDetailPage />} />
+                  <Route path="/settings" element={<SettingsPage />} />
+                  <Route path="/orion-gaps" element={<OrionGapsPage />} />
+                  <Route path="*" element={<Navigate to="/" replace />} />
+                </Routes>
+              </BrowserRouter>
+            </ServicingProvider>
+          </WorkflowProvider>
+          <ConfigOverlayToggle />
+          <ConfigCapturePanel />
+        </ConfigOverlayProvider>
+        </PGliteProvider>
         <Toaster />
       </AppPasswordGate>
     </ThemeProvider>

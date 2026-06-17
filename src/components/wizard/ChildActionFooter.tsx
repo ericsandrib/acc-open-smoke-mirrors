@@ -15,6 +15,7 @@ import {
   getAccountOpeningChildSubmissionIssues,
   hasAccountOpeningChildBeenSubmittedForReview,
 } from '@/utils/accountOpeningChildProgress'
+import { runAccountOwnersGuardrails } from '@/utils/accountOwnersGuardrails'
 import { OPEN_ACCOUNTS_WITH_ANNUITY_FORM_KEY } from '@/utils/openAccountsTaskContext'
 
 function SubmissionBlockedModal({
@@ -252,6 +253,27 @@ export function ChildActionFooter() {
     setShowResubmitModal(false)
   }
 
+  /**
+   * Wrapped Next handler. When advancing past the Account & Owners
+   * sub-task of an account-opening child, run the 3 system guardrails
+   * (Approximate Account Value > Liquid NW, > Net Worth, Liquidity Need
+   * > Account Value). On violations, surface the standard
+   * SubmissionBlockedModal with the failure list and don't advance.
+   */
+  const goNext = () => {
+    const isAccountOwnersStep =
+      child.childType === 'account-opening' &&
+      ctx.currentSubTask.suffix === 'account-owners'
+    if (isAccountOwnersStep) {
+      const violations = runAccountOwnersGuardrails(state, child.id)
+      if (violations.length > 0) {
+        setSubmissionIssues(violations.map((v) => `${v.id}: ${v.message}`))
+        return
+      }
+    }
+    dispatch({ type: 'CHILD_GO_NEXT' })
+  }
+
   const handleDone = () => {
     if (isKyc) {
       const infoTaskId = `${child.id}-info`
@@ -374,7 +396,7 @@ export function ChildActionFooter() {
               )
             ) : null}
             {!isLast && !hideNextInAdvisorAfterSubmit && !hideNavForCompletedNetx360Step && !hideNextForCompletedAnnuityOwners && (
-              <Button onClick={() => dispatch({ type: 'CHILD_GO_NEXT' })}>
+              <Button onClick={goNext}>
                 Next
                 <ChevronRight className="h-4 w-4" />
               </Button>
@@ -459,7 +481,7 @@ export function ChildActionFooter() {
                 </Button>
               )
             ) : (
-              <Button onClick={() => dispatch({ type: 'CHILD_GO_NEXT' })}>
+              <Button onClick={goNext}>
                 Next
                 <ChevronRight className="h-4 w-4" />
               </Button>

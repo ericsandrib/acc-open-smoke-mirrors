@@ -24,7 +24,6 @@ import {
 import { AccountOwnerPartySheet } from '@/components/wizard/forms/AccountOwnerPartySheet'
 import { EditLegalEntitySheet } from '@/components/wizard/forms/EditLegalEntitySheet'
 import { PartySlotCard } from '@/components/wizard/forms/PartySlotCard'
-import { AccountFeatureRequestsSection } from '@/components/wizard/forms/AccountFeatureRequestsSection'
 import { toast } from 'sonner'
 import { isTrustEntityParty } from '@/utils/trustEntityParty'
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from '@/components/ui/sheet'
@@ -723,11 +722,6 @@ export function AcctChildOwnerInfoForm() {
         <AccountAdditionalInformationSection data={data} updateField={updateField} hideHeader />
       </section>
 
-      {childId ? (
-        <section id="acct-features" className="space-y-6 scroll-mt-16">
-          <AccountFeatureRequestsSection accountChildId={childId} />
-        </section>
-      ) : null}
       </div>
     </div>
   )

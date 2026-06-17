@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { VerticalNav } from '@/components/navigation/vertical-nav'
+import { SideNav } from '@/components/navigation/side-nav'
 import { ComposeDialog } from '@/components/dashboard/ComposeDialog'
 
 interface AppShellProps {
@@ -8,12 +8,17 @@ interface AppShellProps {
 
 export function AppShell({ children }: AppShellProps) {
   const [composeOpen, setComposeOpen] = useState(false)
+  const [sideNavCollapsed, setSideNavCollapsed] = useState(false)
 
   return (
     <div className="flex h-screen bg-background">
-      <VerticalNav onCreateClick={() => setComposeOpen(true)} />
+      <SideNav
+        collapsed={sideNavCollapsed}
+        onToggle={() => setSideNavCollapsed((c) => !c)}
+        onCreateClick={() => setComposeOpen(true)}
+      />
 
-      <main className="flex-1 overflow-y-auto p-8">
+      <main className="flex-1 overflow-y-auto px-8 pt-8 pb-4">
         {children}
       </main>
 

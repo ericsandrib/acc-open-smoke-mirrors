@@ -13,29 +13,40 @@ const navItems = [
   { label: "Advisor Matching", href: "/advisor-matching" },
 ];
 
-export function TopNav() {
+export interface TopNavProps {
+  onCreateClick?: () => void;
+}
+
+export function TopNav({ onCreateClick }: TopNavProps) {
   const { pathname } = useLocation();
+
+  const isActive = (href: string) => {
+    if (href === "/") return pathname === "/";
+    return pathname === href || pathname.startsWith(href + "/");
+  };
 
   return (
     <header className="sticky top-0 z-50 flex h-14 items-center border-b border-border bg-white px-4 gap-4">
-      {/* Logo */}
-      <div className="flex items-center gap-3 shrink-0">
-        <span className="text-xl font-bold tracking-tight text-[var(--text-primary)]">
-          G
-        </span>
+      {/* Stratos logo */}
+      <Link to="/" className="flex items-center gap-3 shrink-0" aria-label="Stratos home">
+        <img
+          src="/stratos-logo.png"
+          alt="Stratos Wealth Partners"
+          className="h-8 w-auto"
+        />
         <div className="h-6 w-px bg-border" />
-      </div>
+      </Link>
 
       {/* Nav links */}
       <nav className="flex items-center gap-0 overflow-x-auto min-w-0 flex-1">
         {navItems.map((item) => {
-          const isActive = pathname === item.href;
+          const active = isActive(item.href);
           return (
             <Link
               key={item.href}
               to={item.href}
               className={`whitespace-nowrap rounded-md px-2.5 py-1.5 text-[13px] transition-colors ${
-                isActive
+                active
                   ? "font-semibold text-[var(--text-primary)]"
                   : "text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-secondary)]"
               }`}
@@ -50,6 +61,7 @@ export function TopNav() {
       <div className="flex items-center gap-3 shrink-0">
         <Button
           size="sm"
+          onClick={onCreateClick}
           className="gap-1.5 bg-[var(--fill-inverse-primary)] text-white hover:bg-[var(--fill-inverse-primary-hover)] rounded-full px-4"
         >
           Create
@@ -81,7 +93,7 @@ export function TopNav() {
 
         {/* User avatar */}
         <div className="flex h-8 w-8 items-center justify-center rounded-full bg-[var(--fill-brand-accent-primary)] text-xs font-medium text-white">
-          GF
+          G
         </div>
       </div>
     </header>
