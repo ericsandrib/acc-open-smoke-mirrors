@@ -5,13 +5,10 @@ import {
   Search,
   Bell,
   CalendarDays,
-  SlidersHorizontal,
   Handshake,
   Users,
-  Star,
   Globe,
   Settings,
-  Wrench,
   PanelRight,
   Menu,
   Plus,
@@ -42,7 +39,9 @@ interface NavGroup {
 }
 
 // ---------------------------------------------------------------------------
-// Nav data — matches 5178 vertical nav layout
+// Nav data — limited to the Guardian agent-portal tab set:
+//   Home, Search, Notifications, Meetings | Servicing, Relationships, Onboarding
+// (Meetings currently has no route — dead link by design until built out.)
 // ---------------------------------------------------------------------------
 
 const navGroups: NavGroup[] = [
@@ -52,32 +51,14 @@ const navGroups: NavGroup[] = [
       { icon: Search, label: "Search", href: "/search" },
       { icon: Bell, label: "Notifications", href: "/notifications", badge: 8 },
       { icon: CalendarDays, label: "Meetings", href: "/meetings" },
-      { icon: SlidersHorizontal, label: "My Work", href: "/my-work" },
     ],
   },
   {
-    label: "Favorites",
     items: [
-      { icon: Users, label: "My Team", href: "/my-team" },
-      { icon: Star, label: "My Favorite View", href: "/my-favorite-view" },
-    ],
-  },
-  {
-    label: "Manage",
-    items: [
-      { icon: Users, label: "Relationships", href: "/relationships" },
       { icon: Handshake, label: "Servicing", href: "/servicing" },
+      { icon: Users, label: "Relationships", href: "/relationships" },
       { icon: Globe, label: "Onboarding", href: "/onboarding" },
-      { icon: Wrench, label: "Active Actions", href: "/active-actions" },
     ],
-  },
-  {
-    label: "Insights",
-    items: [],
-  },
-  {
-    label: "Records",
-    items: [],
   },
 ];
 
