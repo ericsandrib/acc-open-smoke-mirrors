@@ -15,7 +15,8 @@ import {
   getMaxAccountOwnersForRegistration,
   registrationAllowsLegalEntityAsAccountOwner,
 } from '@/utils/registrationOwnerLimits'
-import { Plus, Trash2 } from 'lucide-react'
+import { Plus, Trash2, ExternalLink } from 'lucide-react'
+import { useNavigate } from 'react-router-dom'
 import {
   AddClientInfoLegalEntitySheet,
   AddHouseholdMemberSheet,
@@ -80,6 +81,7 @@ function parsePercent(raw?: string): number {
 
 export function AcctChildOwnerInfoForm() {
   const { state, dispatch } = useWorkflow()
+  const navigate = useNavigate()
   const variant = useOpenAccountsVariant()
   // v5/v6 intentionally render flat, with no section cards or card-only header strips.
   const isVersion2 = variant === 'v2'
@@ -857,6 +859,35 @@ export function AcctChildOwnerInfoForm() {
               </p>
             </div>
             <AccountFeatureRequestsSection accountChildId={childId} hideSectionHeader />
+          </div>
+        </section>
+      ) : null}
+
+      {isSei ? (
+        <section id="acct-sei-investment-selection" className="space-y-4 scroll-mt-16">
+          <div className={childSectionHeaderClass}>
+            <h3 className={childSectionTitleClass}>Investment Selection</h3>
+            <p className={childSectionBodyClass}>
+              Model selection, funding instructions, personalization, and account rebalancing are completed in the
+              SEI ecosystem. Continue via single sign-on — no separate login.
+            </p>
+          </div>
+          <div className="flex items-center justify-between gap-4 rounded-lg border border-border p-4">
+            <div className="flex min-w-0 items-center gap-3">
+              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-muted">
+                <ExternalLink className="h-4 w-4" />
+              </div>
+              <div className="min-w-0">
+                <p className="text-sm font-medium">Continue to SEI for Investment Selection</p>
+                <p className="text-xs text-muted-foreground">Opens the SEI ecosystem via single sign-on.</p>
+              </div>
+            </div>
+            <Button
+              onClick={() => navigate(`/sso?return=${encodeURIComponent(window.location.pathname)}`)}
+            >
+              Continue to SEI
+              <ExternalLink className="ml-1.5 h-4 w-4" />
+            </Button>
           </div>
         </section>
       ) : null}

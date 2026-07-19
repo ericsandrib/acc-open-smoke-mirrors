@@ -9,6 +9,7 @@ import { ServicingPage } from '@/pages/ServicingPage'
 import { OnboardingPage } from '@/pages/OnboardingPage'
 import { OnboardingJourneyDetailPage } from '@/pages/OnboardingJourneyDetailPage'
 import { SettingsPage } from '@/pages/SettingsPage'
+import { SsoHandoffPage } from '@/pages/SsoHandoffPage'
 import { TestsIndexPage } from '@/pages/tests/TestsIndexPage'
 import { ProgressIndicatorTestPage } from '@/pages/tests/ProgressIndicatorTestPage'
 import { TestSandboxPage } from '@/pages/test/TestSandboxPage'
@@ -34,6 +35,7 @@ export default function App() {
                     <Route path="/onboarding" element={<OnboardingPage />} />
                     <Route path="/onboarding/:journeyId" element={<OnboardingJourneyDetailPage />} />
                     <Route path="/settings" element={<SettingsPage />} />
+                    <Route path="/sso" element={<SsoHandoffPage />} />
                     <Route path="/tests" element={<TestsIndexPage />} />
                     <Route path="/tests/progress-indicator" element={<ProgressIndicatorTestPage />} />
                     <Route path="/test" element={<TestSandboxPage />} />
