@@ -1,5 +1,6 @@
 import type { Journey, JourneyAction, JourneyStatus, JourneyTask } from '@/types/servicing'
 import type { TaskStatus } from '@/types/workflow'
+import { shiftDate } from '@/lib/demoClock'
 
 /**
  * Servicing seed — Zions POC instance (Spec 007 Phase 5).
@@ -12,7 +13,7 @@ import type { TaskStatus } from '@/types/workflow'
  * Move Money (Transfer of Assets, Contribution, Standing authorization, Distribution) and
  * Account Maintenance (Resolve Custodian Alert / NIGO) appear as their own actions.
  * The Whitmore "Distribution" is the meeting-to-action centerpiece (generated from the
- * 6/1 Quarterly Review by the Meeting Assistant); Hargrove's is delayed beyond SLA.
+ * Quarterly Review by the Meeting Assistant); Hargrove's is delayed beyond SLA.
  */
 
 type Arch = 'open' | 'open-sim' | 'toa' | 'contribution' | 'standing' | 'alert' | 'distribution'
@@ -113,6 +114,8 @@ function buildAction(journeyId: string, household: string, spec: ActionSpec): Jo
   const meta = ARCH_META[spec.arch]
   const titles = TASK_TITLES[spec.arch]
   const actionId = `${journeyId}-${spec.arch}-${spec.code}`
+  // Slide the authored anchor date to the live demo clock (preserves relative spacing).
+  const startDate = shiftDate(spec.startDate)
 
   const tasks: JourneyTask[] = titles.map((title, i): JourneyTask => {
     let status: TaskStatus
@@ -128,8 +131,8 @@ function buildAction(journeyId: string, household: string, spec: ActionSpec): Jo
       status,
       assignedTo: spec.owner,
       taskOwner: spec.owner,
-      readyToBegin: fmtDate(spec.startDate),
-      nextStep: fmtDate(addDays(spec.startDate, i * 5)),
+      readyToBegin: fmtDate(startDate),
+      nextStep: fmtDate(addDays(startDate, i * 5)),
       nickname: `${household} – ${spec.short}`,
     }
   })
@@ -162,7 +165,7 @@ function buildJourney(spec: JourneySpec): Journey {
     relationshipName: spec.relationship ?? spec.household,
     assignedTo: spec.owner,
     createdBy: spec.owner,
-    createdAt: spec.createdAt,
+    createdAt: shiftDate(spec.createdAt),
     status,
     actions,
   }
@@ -172,11 +175,11 @@ function buildJourney(spec: JourneySpec): Journey {
 const ME = 'Priya Raman'
 
 const journeySpecs: JourneySpec[] = [
-  // ── Meeting-to-action: the Whitmore distribution generated from the 6/1 Quarterly Review ──
+  // ── Meeting-to-action: the Whitmore distribution generated from the Quarterly Review ──
   {
-    id: 'sv-whitmore', household: 'Whitmore Household', owner: ME, createdAt: '2026-06-01',
+    id: 'sv-whitmore', household: 'Whitmore Household', owner: ME, createdAt: '2026-06-05',
     actions: [
-      { arch: 'distribution', description: 'ACH distribution $120,000 to client bank — life event (from 6/1 Quarterly Review)', short: 'Distribution · ACH $120K', code: '003841', owner: ME, done: 1, current: 'in_progress', startDate: '2026-06-01' },
+      { arch: 'distribution', description: 'ACH distribution $120,000 to client bank — life event (from the Quarterly Review)', short: 'Distribution · ACH $120K', code: '003841', owner: ME, done: 1, current: 'in_progress', startDate: '2026-06-05' },
     ],
   },
   // ── Distribution delayed beyond SLA (supports "which distributions are delayed beyond SLA?") ──

@@ -1,8 +1,10 @@
 import { useState } from 'react'
 import { toast } from 'sonner'
-import { Sparkles, ThumbsUp, ThumbsDown, Link2, Loader2, Tag, CalendarHeart } from 'lucide-react'
+import { Sparkles, ThumbsUp, ThumbsDown, Link2, Loader2, Tag, CalendarHeart, Wand2, ChevronDown, RotateCcw } from 'lucide-react'
 import { Button } from '@/components/ui/button'
+import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem } from '@/components/ui/dropdown-menu'
 import { AITextEditor } from './AITextEditor'
+import { MEETING_SUMMARIES } from '@/data/zions/meetingsSeed'
 import { useMeetings } from '@/stores/meetingsStore'
 import type { Meeting } from '@/types/meeting'
 import { cn } from '@/lib/utils'
@@ -45,6 +47,8 @@ export function SummaryTab({ meeting }: { meeting: Meeting }) {
   const [busy, setBusy] = useState(false)
   const [linking, setLinking] = useState(false)
   const [aiBadge, setAiBadge] = useState(false)
+  const [regenerating, setRegenerating] = useState(false)
+  const [nonce, setNonce] = useState(0)
   const fb = m.feedback[`summary-${meetingId}`]
 
   // Generating (ended, AI still processing).
@@ -52,6 +56,18 @@ export function SummaryTab({ meeting }: { meeting: Meeting }) {
     return (
       <div className="flex items-center justify-center gap-2 rounded-xl border border-border bg-card px-4 py-16 text-sm text-muted-foreground">
         <Loader2 className="h-4 w-4 animate-spin text-[#0b4f9c]" /> Generating AI summary…
+      </div>
+    )
+  }
+
+  // Live — the summary generates automatically once the meeting ends.
+  if (meeting.lifecycle === 'live') {
+    return (
+      <div className="flex flex-col items-center justify-center gap-2 rounded-xl border border-[#0b4f9c33] bg-[#0b4f9c0a] px-4 py-16 text-center">
+        <span className="inline-flex items-center gap-1.5 text-sm font-medium text-[#0b4f9c]">
+          <span className="h-2 w-2 animate-pulse rounded-full bg-red-500" /> Meeting in progress
+        </span>
+        <p className="text-xs text-muted-foreground">The AI summary, follow-up email, and action suggestions generate automatically when the meeting ends. Watch the live transcript in the Transcript panel.</p>
       </div>
     )
   }
@@ -88,6 +104,8 @@ export function SummaryTab({ meeting }: { meeting: Meeting }) {
 
   const attested = summary.isAttested
   const showAi = summary.isAiEnhanced || aiBadge
+  const edited = !!m.dirty[`summary-${meetingId}`]
+  const hasOriginal = MEETING_SUMMARIES[meetingId]?.contentHtml !== undefined
 
   const toggle = () => {
     setBusy(true)
@@ -97,6 +115,13 @@ export function SummaryTab({ meeting }: { meeting: Meeting }) {
       setBusy(false)
     }, 300)
   }
+
+  const refine = (label: string) => {
+    setRegenerating(true)
+    setTimeout(() => { setRegenerating(false); toast.success(`Summary rewritten — ${label.toLowerCase()}`) }, 800)
+  }
+
+  const restore = () => { m.restoreSummary(meetingId); setNonce((n) => n + 1); toast.success('Restored the AI draft') }
 
   const footer = (
     <div className="flex h-full items-center justify-between px-4">
@@ -118,15 +143,49 @@ export function SummaryTab({ meeting }: { meeting: Meeting }) {
   return (
     <div className="flex flex-col gap-3">
       {showAi && (
-        <span className="inline-flex w-fit items-center gap-1 rounded-full bg-[#0b4f9c14] px-2 py-0.5 text-xs font-medium text-[#0b4f9c]"><Sparkles className="h-3 w-3" /> AI-generated summary</span>
+        <div className="flex items-center justify-between">
+          {edited ? (
+            <span className="inline-flex w-fit items-center gap-1.5 rounded-full bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-700"><Sparkles className="h-3 w-3" /> AI draft · edited by you</span>
+          ) : (
+            <span className="inline-flex w-fit items-center gap-1 rounded-full bg-[#0b4f9c14] px-2 py-0.5 text-xs font-medium text-[#0b4f9c]"><Sparkles className="h-3 w-3" /> AI-generated summary</span>
+          )}
+          {!attested && (
+            <div className="flex items-center gap-1.5">
+              {edited && hasOriginal && (
+                <button type="button" onClick={restore} className="inline-flex items-center gap-1.5 rounded-lg border border-border px-2.5 py-1.5 text-xs font-medium text-muted-foreground hover:bg-muted/50">
+                  <RotateCcw className="h-3.5 w-3.5" /> Restore AI draft
+                </button>
+              )}
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <button type="button" className="inline-flex items-center gap-1.5 rounded-lg border border-border px-2.5 py-1.5 text-xs font-medium text-foreground hover:bg-muted/50">
+                    <Wand2 className="h-3.5 w-3.5 text-[#0b4f9c]" /> Refine <ChevronDown className="h-3 w-3 text-muted-foreground" />
+                  </button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  {['Make it shorter', 'Expand with detail', 'More formal', 'Plain language', 'Regenerate from transcript'].map((o) => (
+                    <DropdownMenuItem key={o} onClick={() => refine(o)}>{o}</DropdownMenuItem>
+                  ))}
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </div>
+          )}
+        </div>
       )}
-      <AITextEditor
-        content={summary.contentHtml}
-        disabled={attested}
-        bottomText={attested ? 'Approved — read only. The advisor remains accountable for the final summary.' : 'AI-generated draft. Review for accuracy before approving.'}
-        footer={footer}
-        onChange={(html) => m.setSummaryContent(meetingId, html)}
-      />
+      {regenerating ? (
+        <div className="flex items-center gap-2 rounded-xl border border-border bg-card px-4 py-10 text-sm text-muted-foreground">
+          <Sparkles className="h-4 w-4 animate-pulse text-[#0b4f9c]" /> Rewriting the summary…
+        </div>
+      ) : (
+        <AITextEditor
+          key={`sum-${meetingId}-${nonce}`}
+          content={summary.contentHtml}
+          disabled={attested}
+          bottomText={attested ? 'Approved — read only. The advisor remains accountable for the final summary.' : 'AI-generated draft. Review for accuracy before approving.'}
+          footer={footer}
+          onChange={(html) => { m.setSummaryContent(meetingId, html); m.setDirty(`summary-${meetingId}`, true) }}
+        />
+      )}
       <TopicsAndEvents meeting={meeting} />
     </div>
   )

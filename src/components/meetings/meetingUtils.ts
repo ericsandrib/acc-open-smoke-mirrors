@@ -1,10 +1,11 @@
 import type { Meeting, MeetingVendor, RsvpStatus, MeetingLifecycle } from '@/types/meeting'
+import { TODAY_ISO } from '@/lib/demoClock'
 
 export const ZIONS_NAVY = '#0b4f9c'
 
-// "Today" anchor for the POC. Keeps the seed's Live / Today / Upcoming framing stable
-// regardless of the real wall-clock date during a demo.
-export const TODAY = '2026-06-05'
+// "Today" anchor for the POC. Driven by the shared demo clock so the seed's
+// Live / Today / Upcoming framing is always relative to the real current date.
+export const TODAY = TODAY_ISO
 
 export function vendorLabel(v?: MeetingVendor): string {
   switch (v) {
@@ -17,11 +18,16 @@ export function vendorLabel(v?: MeetingVendor): string {
   }
 }
 
-/** Short label used in list meta rows. */
+/** Short label used in list meta rows — now brand-aware (was a generic "Video call"). */
 export function vendorShort(v?: MeetingVendor): string {
-  if (v === 'in_person') return 'In person'
-  if (v === 'phone') return 'Phone'
-  return 'Video call'
+  switch (v) {
+    case 'zoom': return 'Zoom'
+    case 'teams': return 'Microsoft Teams'
+    case 'meet': return 'Google Meet'
+    case 'phone': return 'Phone'
+    case 'in_person': return 'In person'
+    default: return 'Video call'
+  }
 }
 
 export function isVirtual(v?: MeetingVendor): boolean {

@@ -72,7 +72,7 @@ const REL_TO_ENTITY: Record<string, string> = {
 
 // Per-relationship narrative overrides (context note + offering + division).
 const OVERRIDES: Record<string, Partial<RelationshipDetail>> = {
-  'r-whitmore': { offering: 'Wealth + Bank', clientSince: 'Mar 2014', context: 'Lake-property sale closed; a $120K ACH distribution is in flight (from the 6/1 review). Banks at Amegy. First RMD due this year.' },
+  'r-whitmore': { offering: 'Wealth + Bank', clientSince: 'Mar 2014', context: 'Lake-property sale closed; a $120K ACH distribution is in flight (from the Quarterly Review). Banks at Amegy. First RMD due this year.' },
   'r-cedar-falls': { offering: 'Corporate Trust', clientSince: 'Jul 2019', context: '$42M 2026 GO bond issuance in Corporate Trust on Fi-Tek + Transtar. Trustee sync held 5/22.' },
   'r-cedar-ridge': { offering: 'Commercial → Wealth', clientSince: 'New', context: 'C&I borrower at California Bank & Trust; $8.5M business-sale inflow. Commercial → wealth referral in motion.' },
   'r-hale': { offering: 'Prospect', clientSince: '—', context: 'Finance Director of the City of Cedar Falls (a $42M Corporate Trust issuer). Banks personally at Zions Bank; no Wealth relationship yet — surfaced by identity unification.' },

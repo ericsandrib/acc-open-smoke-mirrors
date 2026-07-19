@@ -1,9 +1,10 @@
 import { useMemo, useState } from 'react'
-import { Calendar, Users, ChevronDown } from 'lucide-react'
+import { Calendar, Users, ChevronDown, Search } from 'lucide-react'
 import { AppShell } from '@/components/layout/AppShell'
 import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem } from '@/components/ui/dropdown-menu'
 import { useMeetings } from '@/stores/meetingsStore'
 import { MeetingListItem } from '@/components/meetings/MeetingListItem'
+import { MeetingQuickView } from '@/components/meetings/MeetingQuickView'
 import {
   type DateWindow, DATE_WINDOW_LABEL, inDateWindow, dayGroupLabel, startMs, isLive,
 } from '@/components/meetings/meetingUtils'
@@ -30,13 +31,22 @@ export function MeetingsPage() {
   const [dateWindow, setDateWindow] = useState<DateWindow>('coming_up')
   const [relScope, setRelScope] = useState<RelScope>('all')
   const [mineOnly, setMineOnly] = useState(true)
+  const [previewId, setPreviewId] = useState<string | null>(null)
+  const [query, setQuery] = useState('')
+  const previewMeeting = previewId ? m.meetings.find((x) => x.id === previewId) ?? null : null
 
   const groups = useMemo(() => {
+    const q = query.trim().toLowerCase()
     const filtered = m.meetings.filter((mtg) => {
-      if (!inDateWindow(mtg, dateWindow)) return false
+      // A search query goes global — it ignores the date window so any meeting is findable.
+      if (!q && !inDateWindow(mtg, dateWindow)) return false
       if (relScope === 'mine' && !(mtg.owner === CURRENT_ADVISOR || (mtg.participants ?? []).some((p) => p.name === CURRENT_ADVISOR))) return false
       if (relScope === 'non_rel' && mtg.relationshipId && !mtg.isExternal) return false
       if (mineOnly && mtg.isAttendee === false) return false
+      if (q) {
+        const hay = [mtg.subject, mtg.relationshipName, ...(mtg.participants ?? []).map((p) => p.name)].join(' ').toLowerCase()
+        if (!hay.includes(q)) return false
+      }
       return true
     })
     const sorted = [...filtered].sort((a, b) => {
@@ -50,7 +60,7 @@ export function MeetingsPage() {
       byDay.get(k)!.push(mtg)
     }
     return Array.from(byDay.entries())
-  }, [m.meetings, dateWindow, relScope, mineOnly])
+  }, [m.meetings, dateWindow, relScope, mineOnly, query])
 
   return (
     <AppShell>
@@ -59,6 +69,17 @@ export function MeetingsPage() {
         <p className="mb-6 text-sm text-muted-foreground">
           Native transcription → AI summary → attributed action items. The advisor approves before anything becomes final.
         </p>
+
+        {/* search */}
+        <div className="relative mb-3">
+          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+          <input
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            placeholder="Search meetings, relationships, or people…"
+            className="w-full rounded-lg border border-border bg-card py-2 pl-9 pr-3 text-sm outline-none focus:border-[#0b4f9c]"
+          />
+        </div>
 
         {/* filter row */}
         <div className="mb-6 flex flex-wrap items-center gap-2">
@@ -113,7 +134,7 @@ export function MeetingsPage() {
                 <h2 className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">{day}</h2>
                 <div className="flex flex-col gap-2">
                   {items.map((mtg) => (
-                    <MeetingListItem key={mtg.id} meeting={mtg} summary={m.summaries[mtg.id]} />
+                    <MeetingListItem key={mtg.id} meeting={mtg} summary={m.summaries[mtg.id]} onPreview={() => setPreviewId(mtg.id)} />
                   ))}
                 </div>
               </section>
@@ -121,6 +142,7 @@ export function MeetingsPage() {
           </div>
         )}
       </div>
+      <MeetingQuickView meeting={previewMeeting} onClose={() => setPreviewId(null)} />
     </AppShell>
   )
 }

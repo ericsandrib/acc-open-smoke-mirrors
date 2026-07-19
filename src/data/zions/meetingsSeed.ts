@@ -7,7 +7,8 @@
 // life events, topics — plus a forward-looking Pre-Meeting Prep Report on the upcoming
 // Annual Planning meeting (the roadmap headline).
 //
-// Dates are anchored around "today" = 2026-06-05 so the list shows Live / Today / Upcoming.
+// Dates are authored around the anchor (2026-06-05) and slid to the real "today" via the
+// shared demo clock (shiftDateTime/shiftDate), so the list always shows Live / Today / Upcoming.
 
 import type {
   Meeting,
@@ -16,6 +17,7 @@ import type {
   MeetingActionItem,
   Participant,
 } from '@/types/meeting'
+import { shiftDateTime, shiftDate } from '@/lib/demoClock'
 
 // --- People ----------------------------------------------------------------
 
@@ -41,8 +43,8 @@ export const MEETINGS: Meeting[] = [
     subject: 'Whitmore Household — Quarterly Review',
     relationshipName: 'Whitmore Household',
     relationshipId: 'r-whitmore',
-    startTime: '2026-06-05T09:00:00',
-    endTime: '2026-06-05T09:45:00',
+    startTime: shiftDateTime('2026-06-05T09:00:00'),
+    endTime: shiftDateTime('2026-06-05T09:45:00'),
     meetingType: 'periodic',
     lifecycle: 'ended_ready',
     vendor: 'teams',
@@ -108,8 +110,8 @@ Priya Raman: Great idea. And please confirm Diane is primary beneficiary on the 
     subject: 'Nakamura Family — Portfolio Check-in',
     relationshipName: 'Nakamura Family',
     relationshipId: 'r-nakamura',
-    startTime: '2026-06-05T13:00:00',
-    endTime: '2026-06-05T13:30:00',
+    startTime: shiftDateTime('2026-06-05T13:00:00'),
+    endTime: shiftDateTime('2026-06-05T13:30:00'),
     meetingType: 'periodic',
     lifecycle: 'live',
     vendor: 'zoom',
@@ -122,6 +124,11 @@ Priya Raman: Great idea. And please confirm Diane is primary beneficiary on the 
     participants: [KEN, MEI, PRIYA],
     prepStatus: 'in_progress',
     prepNotesHtml: `<p>Rebalance overdue; Ken asked last time about an RMD planning window. Check 529 performance.</p>`,
+    transcript: `Priya Raman: Thanks for hopping on, Ken — I know Mei's trying to join in a minute.
+Ken Nakamura: No problem. I wanted to revisit the allocation; it feels heavy on equity lately.
+Priya Raman: It is — a few points above the policy band. I'd suggest we trim back toward target today.
+Ken Nakamura: Let's do that. And remind me where we landed on the RMD timing before year-end.
+Priya Raman: I'll model a couple of distribution years and walk you through the withholding options.`,
   },
 
   // 3) UPCOMING — Pre-Meeting Prep Report demo (roadmap headline).
@@ -130,8 +137,8 @@ Priya Raman: Great idea. And please confirm Diane is primary beneficiary on the 
     subject: 'Whitmore Household — Annual Planning',
     relationshipName: 'Whitmore Household',
     relationshipId: 'r-whitmore',
-    startTime: '2026-06-09T10:00:00',
-    endTime: '2026-06-09T11:00:00',
+    startTime: shiftDateTime('2026-06-09T10:00:00'),
+    endTime: shiftDateTime('2026-06-09T11:00:00'),
     meetingType: 'periodic',
     lifecycle: 'upcoming',
     vendor: 'teams',
@@ -144,7 +151,7 @@ Priya Raman: Great idea. And please confirm Diane is primary beneficiary on the 
     participants: [RALPH, DIANE, PRIYA, MARCUS],
     prepStatus: 'not_started',
     prepReport: {
-      generatedAt: '2026-06-08T06:00:00',
+      generatedAt: shiftDateTime('2026-06-08T06:00:00'),
       deliveredTo: 'priya.raman@zionsbancorp.com',
       recommendedTopics: [
         'Confirm the $120K distribution landed and the bridge purchase closed',
@@ -216,8 +223,8 @@ Priya Raman: Great idea. And please confirm Diane is primary beneficiary on the 
     subject: 'City of Cedar Falls — Trustee Sync',
     relationshipName: 'City of Cedar Falls',
     relationshipId: 'r-cedar-falls',
-    startTime: '2026-06-03T09:30:00',
-    endTime: '2026-06-03T10:15:00',
+    startTime: shiftDateTime('2026-06-03T09:30:00'),
+    endTime: shiftDateTime('2026-06-03T10:15:00'),
     meetingType: 'one_off',
     lifecycle: 'no_recording',
     vendor: 'in_person',
@@ -229,6 +236,7 @@ Priya Raman: Great idea. And please confirm Diane is primary beneficiary on the 
     organizer: DANIEL,
     participants: [TRUSTEE_1, TRUSTEE_2, DANIEL],
     prepStatus: 'complete',
+    prepNotesHtml: `<p>Trustee sync on the 2026 GO bond disbursement timeline. Confirm the disbursement schedule with Sandra Rivera (Treasurer); Tom Hodge sent regrets. Flag: Marcus Hale (Finance Director) is a strong Corporate Trust → Wealth introduction.</p>`,
   },
 
   // 5) HISTORICAL — predates AI capture.
@@ -237,8 +245,8 @@ Priya Raman: Great idea. And please confirm Diane is primary beneficiary on the 
     subject: 'Nakamura Family — Portfolio Check-in',
     relationshipName: 'Nakamura Family',
     relationshipId: 'r-nakamura',
-    startTime: '2026-05-28T14:00:00',
-    endTime: '2026-05-28T14:30:00',
+    startTime: shiftDateTime('2026-05-28T14:00:00'),
+    endTime: shiftDateTime('2026-05-28T14:30:00'),
     meetingType: 'periodic',
     lifecycle: 'historical',
     vendor: 'zoom',
@@ -248,7 +256,17 @@ Priya Raman: Great idea. And please confirm Diane is primary beneficiary on the 
     owner: 'Priya Raman',
     organizer: PRIYA,
     participants: [KEN, PRIYA],
-    transcript: 'Discussion of rebalancing and an upcoming RMD planning window.',
+    hasTranscript: true,
+    topics: [
+      { id: 'nm-t1', label: 'Rebalance to target' },
+      { id: 'nm-t2', label: 'RMD planning window' },
+      { id: 'nm-t3', label: 'Education funding (529)' },
+    ],
+    transcript: `Priya Raman: Good to see you, Ken. Last quarter we flagged the equity drift — where do you want to land?
+Ken Nakamura: I'm comfortable trimming equity back toward target. Let's get that moving.
+Priya Raman: Will do — I'll stage the rebalance. We should also map your RMD planning window before year-end.
+Ken Nakamura: Yes, remind me what the timing looks like. I don't want a surprise.
+Priya Raman: I'll model a couple of distribution years and bring options. And the 529 for the kids is tracking to plan.`,
   },
 
   // 6) NON-ATTENDEE — view-only, muted in the list.
@@ -257,8 +275,8 @@ Priya Raman: Great idea. And please confirm Diane is primary beneficiary on the 
     subject: 'Amegy Commercial — Business-owner Intro',
     relationshipName: 'Tran Logistics (prospect)',
     relationshipId: 'r-tran',
-    startTime: '2026-06-09T15:00:00',
-    endTime: '2026-06-09T15:30:00',
+    startTime: shiftDateTime('2026-06-09T15:00:00'),
+    endTime: shiftDateTime('2026-06-09T15:30:00'),
     meetingType: 'one_off',
     lifecycle: 'upcoming',
     vendor: 'meet',
@@ -269,6 +287,114 @@ Priya Raman: Great idea. And please confirm Diane is primary beneficiary on the 
     owner: 'Marcus Bell',
     organizer: MARCUS,
     participants: [MARCUS],
+  },
+
+  // 7) NO RELATIONSHIP CONNECTED — a calendar event not yet linked to a CRM relationship
+  // (the Mercer headline delta). Tied to the Carol referral from the Whitmore review.
+  {
+    id: 'mtg-unlinked-intro',
+    subject: 'Intro call — Carol (Whitmore referral)',
+    relationshipName: '',
+    startTime: shiftDateTime('2026-06-05T16:00:00'),
+    endTime: shiftDateTime('2026-06-05T16:30:00'),
+    meetingType: 'one_off',
+    lifecycle: 'upcoming',
+    vendor: 'meet',
+    meetingLink: 'https://meet.google.com/carol-intro',
+    isAttendee: true,
+    myRsvp: 'going',
+    owner: 'Priya Raman',
+    organizer: PRIYA,
+    participants: [PRIYA],
+    prepStatus: 'not_started',
+    prepNotesHtml: `<p>Warm intro from Ralph Whitmore's review — his sister Carol, recently widowed, exploring retirement planning. Not yet a client; connect to a relationship after the call.</p>`,
+  },
+
+  // 8–11) Nearby-day meetings so the date toggle always reveals something within a click or
+  // two. Each ties to a household that has a live servicing journey, so the calendar and the
+  // Servicing board tell one story. Kept lightweight (no AI bundle) so none dead-ends.
+
+  // YESTERDAY — in-person onboarding kickoff (no recording).
+  {
+    id: 'mtg-sandoval-kickoff',
+    subject: 'Sandoval Family — Onboarding Kickoff',
+    relationshipName: 'Sandoval Family',
+    startTime: shiftDateTime('2026-06-04T11:00:00'),
+    endTime: shiftDateTime('2026-06-04T11:45:00'),
+    meetingType: 'one_off',
+    lifecycle: 'no_recording',
+    vendor: 'in_person',
+    location: 'Zions Wealth — Salt Lake City office',
+    hasTranscript: false,
+    isAttendee: true,
+    myRsvp: 'going',
+    owner: 'Priya Raman',
+    organizer: PRIYA,
+    participants: [{ id: 'c-sandoval', name: 'Rosa Sandoval', kind: 'client', title: 'Primary', rsvp: 'going' }, PRIYA],
+    prepStatus: 'complete',
+    prepNotesHtml: `<p>Kickoff for the Fi-Tek Roth IRA opening. Walk through KYC document needs and funding plan; the Account Opening journey is already in flight in Servicing.</p>`,
+  },
+
+  // TOMORROW — upcoming new-account walkthrough.
+  {
+    id: 'mtg-pearson-walkthrough',
+    subject: 'Pearson, James R. — New Account Walkthrough',
+    relationshipName: 'Pearson, James R.',
+    startTime: shiftDateTime('2026-06-06T10:30:00'),
+    endTime: shiftDateTime('2026-06-06T11:00:00'),
+    meetingType: 'one_off',
+    lifecycle: 'upcoming',
+    vendor: 'teams',
+    meetingLink: 'https://teams.microsoft.com/l/meetup-join/pearson-walkthrough',
+    isAttendee: true,
+    myRsvp: 'going',
+    owner: 'Priya Raman',
+    organizer: PRIYA,
+    participants: [{ id: 'c-pearson', name: 'James R. Pearson', kind: 'client', title: 'Primary', rsvp: 'going' }, PRIYA],
+    prepStatus: 'not_started',
+    prepNotesHtml: `<p>Walk James through the LPL brokerage opening that's underway. Confirm beneficiary and funding source.</p>`,
+  },
+
+  // +2 DAYS — Nakamura follow-up on the 529.
+  {
+    id: 'mtg-nakamura-529',
+    subject: 'Nakamura Family — 529 Options Review',
+    relationshipName: 'Nakamura Family',
+    relationshipId: 'r-nakamura',
+    startTime: shiftDateTime('2026-06-07T14:30:00'),
+    endTime: shiftDateTime('2026-06-07T15:00:00'),
+    meetingType: 'periodic',
+    lifecycle: 'upcoming',
+    vendor: 'zoom',
+    meetingLink: 'https://zoom.us/j/nakamura-529',
+    isAttendee: true,
+    myRsvp: 'going',
+    owner: 'Priya Raman',
+    organizer: PRIYA,
+    participants: [KEN, MEI, PRIYA],
+    prepStatus: 'not_started',
+    prepNotesHtml: `<p>Present 529 funding options and confirm the contribution amount; ties to the Nakamura contribution action in Servicing.</p>`,
+  },
+
+  // +3 DAYS — Tran transfer-of-assets check-in.
+  {
+    id: 'mtg-tran-toa',
+    subject: 'Tran Family — Transfer of Assets Check-in',
+    relationshipName: 'Tran Family',
+    relationshipId: 'r-tran',
+    startTime: shiftDateTime('2026-06-08T09:00:00'),
+    endTime: shiftDateTime('2026-06-08T09:30:00'),
+    meetingType: 'one_off',
+    lifecycle: 'upcoming',
+    vendor: 'meet',
+    meetingLink: 'https://meet.google.com/tran-toa',
+    isAttendee: true,
+    myRsvp: 'going',
+    owner: 'Priya Raman',
+    organizer: PRIYA,
+    participants: [{ id: 'c-tran', name: 'Linh Tran', kind: 'client', title: 'Primary', rsvp: 'going' }, PRIYA],
+    prepStatus: 'not_started',
+    prepNotesHtml: `<p>Status on the ACAT transfer from LPL → Fi-Tek. Confirm cost-basis transfer and timeline.</p>`,
   },
 ]
 
@@ -293,6 +419,26 @@ export const MEETING_SUMMARIES: Record<string, MeetingSummary> = {
 <li>Send 529 options; update beneficiary designation on LPL.</li>
 </ul>`,
   },
+  'mtg-nakamura-may': {
+    meetingId: 'mtg-nakamura-may',
+    isAttested: true,
+    attestedAt: shiftDate('2026-05-28'),
+    attestingAgent: 'Priya Raman',
+    isAiEnhanced: true,
+    contentHtml: `<h2>Meeting summary</h2>
+<p>Portfolio check-in with <strong>Ken Nakamura</strong>. Reviewed allocation drift and set the path to a rebalance; previewed RMD planning.</p>
+<h3>Key topics</h3>
+<ul>
+<li><strong>Rebalance.</strong> Equity drifted above the policy band; Ken approved trimming back toward target.</li>
+<li><strong>RMD planning.</strong> Map a distribution window before year-end; Priya to model options.</li>
+<li><strong>Education.</strong> 529 tracking to plan — no change.</li>
+</ul>
+<h3>Decisions &amp; next steps</h3>
+<ul>
+<li>Stage the rebalance (Manage Investment Strategy).</li>
+<li>Model RMD distribution years and bring options to Ken.</li>
+</ul>`,
+  },
 }
 
 /** AI action recommendations per meeting (from the transcript). */
@@ -303,7 +449,7 @@ export const ACTION_RECOMMENDATIONS: Record<string, ActionRecommendation[]> = {
       blueprintName: 'Distribution — ACH $120,000 to Amegy checking',
       blueprintCategory: 'Move Money',
       servicingJourneyId: 'sv-whitmore',
-      detail: 'Life-event liquidity need confirmed in the 6/5 review. Targets mid-June; routes to Suitability & Supervision then ops.',
+      detail: 'Life-event liquidity need confirmed in the Quarterly Review. Targets mid-June; routes to Suitability & Supervision then ops.',
     },
     {
       id: 'rec-rmd',
@@ -318,6 +464,20 @@ export const ACTION_RECOMMENDATIONS: Record<string, ActionRecommendation[]> = {
       detail: 'Confirm Diane Whitmore as primary beneficiary.',
     },
   ],
+  'mtg-nakamura-may': [
+    {
+      id: 'rec-nak-rebal',
+      blueprintName: 'Manage Investment Strategy — rebalance to target',
+      blueprintCategory: 'Investment Strategy',
+      detail: 'Equity drifted above the policy band; trim back toward target allocation (REL-NAK-3391).',
+    },
+    {
+      id: 'rec-nak-rmd',
+      blueprintName: 'Model RMD distribution window',
+      blueprintCategory: 'Account Maintenance',
+      detail: 'Map distribution years before year-end; bring options to Ken.',
+    },
+  ],
 }
 
 /** Actions already linked to the meeting. */
@@ -328,7 +488,10 @@ export const LINKED_ACTIONS: Record<string, MeetingActionItem[]> = {
 /** Other open actions for the relationship (linkable). */
 export const RELATIONSHIP_ACTIONS: Record<string, MeetingActionItem[]> = {
   'mtg-whitmore-q2': [
-    { actionRunId: 'FT-AO-20455', name: 'Account Opening — Fi-Tek custody', blueprintName: 'Account Opening', status: 'processing', createdAt: '2026-06-01', sourceSystem: 'avantos' },
-    { actionRunId: 'REL-WHIT-REV', name: 'Annual review — schedule', blueprintName: 'Relationship Management', status: 'scheduled', createdAt: '2026-05-15', sourceSystem: 'salesforce' },
+    { actionRunId: 'FT-AO-20455', name: 'Account Opening — Fi-Tek custody', blueprintName: 'Account Opening', status: 'processing', createdAt: shiftDate('2026-06-01'), sourceSystem: 'avantos' },
+    { actionRunId: 'REL-WHIT-REV', name: 'Annual review — schedule', blueprintName: 'Relationship Management', status: 'scheduled', createdAt: shiftDate('2026-05-15'), sourceSystem: 'salesforce' },
+  ],
+  'mtg-cedar-falls': [
+    { actionRunId: 'FT-CT-90187', name: 'Corporate Trust Disbursement — 2026 GO bond', blueprintName: 'Corporate Trust', status: 'processing', createdAt: shiftDate('2026-05-27'), sourceSystem: 'avantos' },
   ],
 }

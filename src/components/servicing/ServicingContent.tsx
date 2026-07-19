@@ -1,4 +1,5 @@
 import { useMemo } from 'react'
+import { useSearchParams } from 'react-router-dom'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { PageTitle } from '@/components/page-title'
 import { useServicing } from '@/stores/servicingStore'
@@ -17,14 +18,21 @@ import {
 
 export function ServicingContent() {
   const { journeys } = useServicing()
+  const [searchParams] = useSearchParams()
 
   const journeyRows = useMemo(() => deriveJourneyRows(journeys), [journeys])
   const actionRows = useMemo(() => deriveActionRows(journeys), [journeys])
   const taskRows = useMemo(() => deriveTaskRows(journeys), [journeys])
 
+  // Allow deep-links (e.g. from the Home dashboard) to open a specific tab via ?tab=.
+  const tabParam = searchParams.get('tab')
+  const initialTab = tabParam === 'actions' || tabParam === 'journeys' ? tabParam : 'tasks'
+
   return (
     <div className="max-w-6xl mx-auto">
-      <Tabs defaultValue="tasks">
+      {/* key forces the uncontrolled Tabs to re-init when the ?tab= param changes,
+          while leaving the tabs freely clickable afterward. */}
+      <Tabs key={initialTab} defaultValue={initialTab}>
         <div className="flex items-center justify-between mb-6">
           <PageTitle
             title="Servicing"

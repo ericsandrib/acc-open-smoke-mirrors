@@ -2,19 +2,14 @@ import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { toast } from 'sonner'
 import {
-  Video, Phone, MapPin, Users, Copy, ArrowUpRight, ExternalLink, Sparkles, CheckCircle2,
+  Video, MapPin, Users, Copy, ArrowUpRight, ExternalLink, Sparkles, CheckCircle2, Link2, Eye,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import type { Meeting, MeetingSummary, Participant } from '@/types/meeting'
 import {
   fmtTime, vendorShort, rsvpAccent, RSVP_LABEL, isLive, vendorLabel,
 } from './meetingUtils'
-
-function VendorIcon({ vendor, className }: { vendor?: Meeting['vendor']; className?: string }) {
-  if (vendor === 'in_person') return <MapPin className={className} />
-  if (vendor === 'phone') return <Phone className={className} />
-  return <Video className={className} />
-}
+import { VendorMark } from './VendorMark'
 
 function Avatars({ people, max = 3 }: { people: Participant[]; max?: number }) {
   const shown = people.slice(0, max)
@@ -52,7 +47,7 @@ function StatusChip({ meeting, summary }: { meeting: Meeting; summary?: MeetingS
   return null
 }
 
-export function MeetingListItem({ meeting, summary }: { meeting: Meeting; summary?: MeetingSummary }) {
+export function MeetingListItem({ meeting, summary, onPreview }: { meeting: Meeting; summary?: MeetingSummary; onPreview?: () => void }) {
   const navigate = useNavigate()
   const [hover, setHover] = useState(false)
   const live = isLive(meeting)
@@ -76,7 +71,13 @@ export function MeetingListItem({ meeting, summary }: { meeting: Meeting; summar
   }
 
   return (
-    <div className="relative" onMouseEnter={() => setHover(true)} onMouseLeave={() => setHover(false)}>
+    <div
+      className="relative"
+      onMouseEnter={() => setHover(true)}
+      onMouseLeave={() => setHover(false)}
+      onFocus={() => setHover(true)}
+      onBlur={(e) => { if (!e.currentTarget.contains(e.relatedTarget as Node)) setHover(false) }}
+    >
       <div
         role="button"
         tabIndex={0}
@@ -103,13 +104,28 @@ export function MeetingListItem({ meeting, summary }: { meeting: Meeting; summar
             {meeting.isExternal && <ArrowUpRight className="h-3.5 w-3.5 shrink-0 text-muted-foreground opacity-0 group-hover:opacity-100" />}
           </div>
           <div className="mt-0.5 flex items-center gap-1.5 text-xs text-muted-foreground">
-            <VendorIcon vendor={meeting.vendor} className="h-3.5 w-3.5" />
+            <VendorMark vendor={meeting.vendor} className="h-4 w-4" />
             <span>{vendorShort(meeting.vendor)}</span>
-            {meeting.relationshipName && (
+            {meeting.relationshipName ? (
               <>
                 <span aria-hidden>·</span>
                 <span className="inline-flex items-center gap-1 rounded-full bg-muted px-1.5 py-0.5">
                   <Users className="h-3 w-3" /> {meeting.relationshipName}
+                </span>
+              </>
+            ) : !meeting.isExternal ? (
+              <>
+                <span aria-hidden>·</span>
+                <span className="inline-flex items-center gap-1 rounded-full border border-amber-300 bg-amber-50 px-1.5 py-0.5 font-medium text-amber-700">
+                  <Link2 className="h-3 w-3" /> No relationship connected
+                </span>
+              </>
+            ) : null}
+            {meeting.isAttendee !== false && (meeting.myRsvp === 'maybe' || meeting.myRsvp === 'declined') && (
+              <>
+                <span aria-hidden>·</span>
+                <span className={cn('rounded-full px-1.5 py-0.5 font-medium', meeting.myRsvp === 'maybe' ? 'bg-amber-50 text-amber-700' : 'bg-red-50 text-red-600')}>
+                  {meeting.myRsvp === 'maybe' ? 'You: Maybe' : 'You declined'}
                 </span>
               </>
             )}
@@ -125,6 +141,16 @@ export function MeetingListItem({ meeting, summary }: { meeting: Meeting; summar
                 <Video className="h-3.5 w-3.5" /> Join Meeting
               </span>
             </div>
+          )}
+          {onPreview && !muted && (
+            <button
+              onClick={(e) => { e.stopPropagation(); onPreview() }}
+              title="Quick preview"
+              aria-label="Quick preview"
+              className="hidden rounded-md p-1.5 text-muted-foreground hover:bg-muted hover:text-foreground group-hover:inline-flex"
+            >
+              <Eye className="h-4 w-4" />
+            </button>
           )}
           <StatusChip meeting={meeting} summary={summary} />
           <div className="flex flex-col items-end">

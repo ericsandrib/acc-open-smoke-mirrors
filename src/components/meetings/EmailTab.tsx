@@ -75,6 +75,8 @@ export function EmailTab({ meeting }: { meeting: Meeting }) {
   const fb = m.feedback[`email-${meeting.id}`]
   const [regenerating, setRegenerating] = useState(false)
   const [showSend, setShowSend] = useState(false)
+  const [nonce, setNonce] = useState(0)
+  const edited = !!m.dirty[`email-${meeting.id}`]
 
   // Pre-meeting placeholder (no draft yet).
   if (!email || meeting.lifecycle === 'upcoming' || meeting.lifecycle === 'live') {
@@ -102,6 +104,8 @@ export function EmailTab({ meeting }: { meeting: Meeting }) {
     setRegenerating(true)
     setTimeout(() => { setRegenerating(false); toast.success(`Email rewritten — ${label.toLowerCase()}`) }, 800)
   }
+
+  const restoreAi = () => { m.restoreEmail(meeting.id); setNonce((n) => n + 1); toast.success('Restored the AI draft') }
 
   const footer = (
     <div className="flex h-full items-center justify-between gap-2 px-4">
@@ -135,7 +139,7 @@ export function EmailTab({ meeting }: { meeting: Meeting }) {
           <span className="w-7 shrink-0 text-xs text-muted-foreground">Subj</span>
           <input
             value={email.subject}
-            onChange={(e) => m.setEmailSubject(meeting.id, e.target.value)}
+            onChange={(e) => { m.setEmailSubject(meeting.id, e.target.value); m.setDirty(`email-${meeting.id}`, true) }}
             disabled={sent}
             className="flex-1 bg-transparent text-sm font-medium text-foreground outline-none disabled:opacity-70"
           />
@@ -148,19 +152,30 @@ export function EmailTab({ meeting }: { meeting: Meeting }) {
       {/* AI controls */}
       {email.isAi && !sent && (
         <div className="flex items-center justify-between">
-          <span className="inline-flex items-center gap-1 rounded-full bg-[#0b4f9c14] px-2 py-0.5 text-xs font-medium text-[#0b4f9c]"><Sparkles className="h-3 w-3" /> AI-drafted from your summary</span>
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <button type="button" className="inline-flex items-center gap-1.5 rounded-lg border border-border px-2.5 py-1.5 text-xs font-medium text-foreground hover:bg-muted/50">
-                <Wand2 className="h-3.5 w-3.5 text-[#0b4f9c]" /> Refine <ChevronDown className="h-3 w-3 text-muted-foreground" />
+          {edited ? (
+            <span className="inline-flex items-center gap-1.5 rounded-full bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-700"><Sparkles className="h-3 w-3" /> AI draft · edited by you</span>
+          ) : (
+            <span className="inline-flex items-center gap-1 rounded-full bg-[#0b4f9c14] px-2 py-0.5 text-xs font-medium text-[#0b4f9c]"><Sparkles className="h-3 w-3" /> AI-drafted from your summary</span>
+          )}
+          <div className="flex items-center gap-1.5">
+            {edited && (
+              <button type="button" onClick={restoreAi} className="inline-flex items-center gap-1.5 rounded-lg border border-border px-2.5 py-1.5 text-xs font-medium text-muted-foreground hover:bg-muted/50">
+                <RotateCcw className="h-3.5 w-3.5" /> Restore AI draft
               </button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              {['Make it warmer', 'More concise', 'More formal', 'Add next-meeting date'].map((o) => (
-                <DropdownMenuItem key={o} onClick={() => refine(o)}>{o}</DropdownMenuItem>
-              ))}
-            </DropdownMenuContent>
-          </DropdownMenu>
+            )}
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <button type="button" className="inline-flex items-center gap-1.5 rounded-lg border border-border px-2.5 py-1.5 text-xs font-medium text-foreground hover:bg-muted/50">
+                  <Wand2 className="h-3.5 w-3.5 text-[#0b4f9c]" /> Refine <ChevronDown className="h-3 w-3 text-muted-foreground" />
+                </button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                {['Make it warmer', 'More concise', 'More formal', 'Add next-meeting date'].map((o) => (
+                  <DropdownMenuItem key={o} onClick={() => refine(o)}>{o}</DropdownMenuItem>
+                ))}
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
         </div>
       )}
 
@@ -170,13 +185,14 @@ export function EmailTab({ meeting }: { meeting: Meeting }) {
         </div>
       ) : (
         <AITextEditor
+          key={`email-${meeting.id}-${nonce}`}
           title="Follow-up email"
           placeholder="Write your follow-up email…"
           content={email.bodyHtml}
           disabled={sent}
           bottomText="This draft is based on your meeting notes. Edit it, then copy and send through your email app."
           footer={footer}
-          onChange={(html) => m.setEmailContent(meeting.id, html)}
+          onChange={(html) => { m.setEmailContent(meeting.id, html); m.setDirty(`email-${meeting.id}`, true) }}
         />
       )}
 

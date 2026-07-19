@@ -1,19 +1,20 @@
 import { useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { ArrowLeft, NotepadText, Workflow, Mail, ListTodo, CheckCircle2 } from 'lucide-react'
+import { ArrowLeft, NotepadText, Workflow, Mail, ListTodo, CheckCircle2, GraduationCap } from 'lucide-react'
 import { SummaryTab } from './SummaryTab'
 import { MeetingActionsTab } from './MeetingActions'
 import { EmailTab } from './EmailTab'
 import { PrepTab } from './PrepTab'
 import { MeetingSidebar } from './MeetingSidebar'
 import { PrepReportView } from './PrepReportView'
+import { CoachTab } from './CoachTab'
 import { AskAnything } from './AskAnything'
 import type { Meeting } from '@/types/meeting'
 import { useMeetings } from '@/stores/meetingsStore'
 import { cn } from '@/lib/utils'
-import { fmtDate, fmtTime, LIFECYCLE_LABEL, isLive } from './meetingUtils'
+import { fmtDate, fmtTime, LIFECYCLE_LABEL, isLive, hasEnded } from './meetingUtils'
 
-type TabId = 'prep' | 'summary' | 'actions' | 'email'
+type TabId = 'prep' | 'summary' | 'actions' | 'email' | 'coach'
 
 export function MeetingLayout({ meeting }: { meeting: Meeting }) {
   const navigate = useNavigate()
@@ -38,13 +39,19 @@ export function MeetingLayout({ meeting }: { meeting: Meeting }) {
     hint?: string
     badge?: number
     isNew?: boolean
+    roadmap?: boolean
   }
-  const tabs: TabDef[] = useMemo(() => [
-    { id: 'prep', label: 'Prep', icon: ListTodo, done: meeting.prepStatus === 'complete', hint: meeting.prepStatus === 'in_progress' ? 'In progress' : undefined },
-    { id: 'summary', label: 'Summary', icon: NotepadText, done: summary?.isAttested, isNew: isNew && !visited.has('summary') },
-    { id: 'actions', label: 'Actions', icon: Workflow, badge: actionCount || undefined },
-    { id: 'email', label: 'Email', icon: Mail, done: email?.status === 'sent', hint: email?.status === 'skipped' ? 'Skipped' : undefined, isNew: isNew && !visited.has('email') },
-  ], [meeting.prepStatus, email?.status, summary?.isAttested, actionCount, isNew, visited])
+  const showCoach = !!meeting.hasTranscript && hasEnded(meeting)
+  const tabs: TabDef[] = useMemo(() => {
+    const list: TabDef[] = [
+      { id: 'prep', label: 'Prep', icon: ListTodo, done: meeting.prepStatus === 'complete', hint: meeting.prepStatus === 'in_progress' ? 'In progress' : undefined },
+      { id: 'summary', label: 'Summary', icon: NotepadText, done: summary?.isAttested, isNew: isNew && !visited.has('summary') },
+      { id: 'actions', label: 'Actions', icon: Workflow, badge: actionCount || undefined },
+      { id: 'email', label: 'Email', icon: Mail, done: email?.status === 'sent', hint: email?.status === 'skipped' ? 'Skipped' : undefined, isNew: isNew && !visited.has('email') },
+    ]
+    if (showCoach) list.push({ id: 'coach', label: 'Coach', icon: GraduationCap, roadmap: true })
+    return list
+  }, [meeting.prepStatus, email?.status, summary?.isAttested, actionCount, isNew, visited, showCoach])
 
   const go = (id: TabId) => { setTab(id); setVisited((v) => new Set(v).add(id)) }
 
@@ -71,7 +78,7 @@ export function MeetingLayout({ meeting }: { meeting: Meeting }) {
                 <span className="rounded-full border border-border px-2 py-0.5 text-[11px] text-muted-foreground">{LIFECYCLE_LABEL[meeting.lifecycle ?? 'upcoming']}</span>
               )}
             </div>
-            <p className="text-sm text-muted-foreground">{meeting.relationshipName} · {fmtDate(meeting.startTime)}, {fmtTime(meeting.startTime)}</p>
+            <p className="text-sm text-muted-foreground">{meeting.relationshipName || 'No relationship connected'} · {fmtDate(meeting.startTime)}, {fmtTime(meeting.startTime)}</p>
           </div>
 
           {/* tabs */}
@@ -93,15 +100,17 @@ export function MeetingLayout({ meeting }: { meeting: Meeting }) {
                   <span className="ml-0.5 inline-flex h-4 min-w-4 items-center justify-center rounded-full bg-muted px-1 text-[10px] text-muted-foreground">{t.badge}</span>
                 ) : null}
                 {t.isNew && <span className="ml-0.5 rounded-full bg-[#0b4f9c] px-1.5 py-0.5 text-[9px] font-semibold uppercase text-white">New</span>}
+                {t.roadmap && <span className="ml-0.5 rounded-full bg-rose-100 px-1.5 py-0.5 text-[9px] font-semibold uppercase text-rose-700">Roadmap</span>}
               </button>
             ))}
           </div>
 
           {/* content */}
-          {tab === 'prep' && <PrepTab meeting={meeting} onOpenPrepReport={() => setPrepReportOpen(true)} />}
+          {tab === 'prep' && <PrepTab meeting={meeting} />}
           {tab === 'summary' && <SummaryTab meeting={meeting} />}
           {tab === 'actions' && <MeetingActionsTab meetingId={meeting.id} />}
           {tab === 'email' && <EmailTab meeting={meeting} />}
+          {tab === 'coach' && <CoachTab meeting={meeting} />}
         </div>
 
         {/* sidebar */}
@@ -109,7 +118,7 @@ export function MeetingLayout({ meeting }: { meeting: Meeting }) {
       </div>
 
       <PrepReportView meeting={meeting} open={prepReportOpen} onOpenChange={setPrepReportOpen} />
-      <AskAnything meetingSubject={meeting.subject} />
+      <AskAnything meetingSubject={meeting.subject} relationshipId={meeting.relationshipId} />
     </div>
   )
 }

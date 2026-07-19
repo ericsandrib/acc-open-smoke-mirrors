@@ -310,3 +310,29 @@
 
 ### QA
 - [x] pnpm typecheck + build clean; all surfaces verified in preview; console clean
+
+## Spec 010: Zions Meetings — Maturity Build-out (full slate)
+
+> Branch `zions-poc`. Closes the audit gaps vs. the Notion meetings roadmap. See [specs/010-meetings-maturity.md](specs/010-meetings-maturity.md).
+
+### P0 — Credibility base ✅
+- [x] P0.1 Reconcile home↔meetings seed (time/date/referral) into one coherent world
+- [x] P0.2 Vendor brand icons + real vendor label on list cards
+- [x] P0.3 Meeting-aware Ask Anything (Nakamura / Cedar Falls reply sets)
+- [x] P0.4 Spread a real AI bundle to ≥2 more meetings (no dead-ends)
+
+### P1 — Headline capabilities ✅
+- [x] P1.1 Summary custom modifiers (parity with email Refine)
+- [x] P1.2 "Edited since AI" treatment + restore original (summary + email)
+- [x] P1.3 Live notetaker / streaming transcript experience (consent + retention)
+- [x] P1.4 Inline Prep Report on Prep tab + citations + push-agenda-to-notes
+- [x] P1.5 "No relationship connected" state + unlinked seed meeting + connect affordance
+- [x] P1.6 List-level quick-preview slide-over (Summary / Actions / Email peek)
+- [x] Fix: per-meeting view state resets on detail→detail navigation (`key={meeting.id}`)
+
+### P2 — Depth & polish ✅
+- [x] P2.1 Advisor Coach panel (roadmap) — talk-ratio / discovery Qs / sentiment + coaching tips, as a 5th tab on ended meetings
+- [x] P2.2 Relationship Detail → Communications tab embeds the meeting comms timeline (unified detail route)
+- [x] P2.3 Recording consent + transcript-retention controls in the detail sidebar
+- [x] P2.4 Global meeting search (ignores date window) + maybe/declined card chip + popover keyboard a11y (focus/blur)
+- [x] Cleanup: residual "6/1 review" stragglers reconciled to 6/5 (servicingSeed, relationshipDetail)

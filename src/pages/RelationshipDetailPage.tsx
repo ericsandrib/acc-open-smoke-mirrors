@@ -8,6 +8,9 @@ import { AppShell } from '@/components/layout/AppShell'
 import { Badge } from '@/components/ui/badge'
 import { cn } from '@/lib/utils'
 import { getRelationshipDetail, type RelationshipDetail, type DetailAccount } from '@/data/zions/relationshipDetail'
+import { MEETINGS, MEETING_SUMMARIES } from '@/data/zions/meetingsSeed'
+import { fmtDate } from '@/components/meetings/meetingUtils'
+import type { Meeting } from '@/types/meeting'
 
 function usd(n?: number | null): string {
   if (n == null) return '—'
@@ -226,6 +229,40 @@ function TabBody({ tab, d, navigate }: { tab: TabId; d: RelationshipDetail; navi
       )
     case 'growth':
       return <Section title="Growth opportunities" count={d.opportunities.length}><Rows empty="No opportunities surfaced." items={d.opportunities.map((o) => ({ primary: o.signal, secondary: o.kind, right: usd(o.estimatedValue) }))} /></Section>
+    case 'communications': {
+      // Same meeting records as the Meetings module — opening one routes to the unified detail page.
+      const comms = d.meetings
+        .map((ref) => MEETINGS.find((mm) => mm.id === ref.id))
+        .filter(Boolean) as Meeting[]
+      const sorted = [...comms].sort((a, b) => new Date(b.startTime).getTime() - new Date(a.startTime).getTime())
+      if (sorted.length === 0) {
+        return <div className="rounded-xl border border-dashed border-border px-4 py-12 text-center text-sm text-muted-foreground">No communications on file.</div>
+      }
+      return (
+        <Section title="Meeting communications" count={sorted.length}>
+          <div className="divide-y divide-border/40">
+            {sorted.map((mm) => {
+              const hasSummary = !!MEETING_SUMMARIES[mm.id] || mm.lifecycle === 'ended_ready'
+              return (
+                <button key={mm.id} onClick={() => navigate(`/meetings/${mm.id}`)} className="w-full px-4 py-3 text-left hover:bg-muted/50">
+                  <div className="flex items-center gap-2">
+                    <Calendar className="h-4 w-4 shrink-0 text-muted-foreground" />
+                    <span className="flex-1 text-sm font-medium text-foreground">{mm.subject}</span>
+                    <span className="text-xs text-muted-foreground">{fmtDate(mm.startTime)}</span>
+                  </div>
+                  <div className="mt-1 flex flex-wrap items-center gap-1.5 pl-6 text-[11px]">
+                    {mm.lifecycle === 'live' && <span className="inline-flex items-center gap-1 rounded-full bg-red-50 px-1.5 py-0.5 font-medium text-red-600"><span className="h-1.5 w-1.5 animate-pulse rounded-full bg-red-500" /> Live now</span>}
+                    {hasSummary && <span className="inline-flex items-center gap-1 rounded-full bg-[#0b4f9c14] px-1.5 py-0.5 text-[#0b4f9c]"><Sparkles className="h-3 w-3" /> AI summary</span>}
+                    {mm.hasTranscript && <span className="rounded-full bg-muted px-1.5 py-0.5 text-muted-foreground">Transcript</span>}
+                    {mm.email && <span className="rounded-full bg-muted px-1.5 py-0.5 text-muted-foreground">Follow-up email · {mm.email.status}</span>}
+                  </div>
+                </button>
+              )
+            })}
+          </div>
+        </Section>
+      )
+    }
     default: {
       const labels: Record<string, string> = { planning: 'Financial planning (eMoney)', billing: 'Billing & fees', communications: 'Communications', documents: 'Documents & e-sign' }
       return <div className="rounded-xl border border-dashed border-border px-4 py-12 text-center text-sm text-muted-foreground">{labels[tab] ?? tab} — representative tab (data not in the POC seed).</div>

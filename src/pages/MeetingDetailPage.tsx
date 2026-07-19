@@ -18,7 +18,8 @@ export function MeetingDetailPage() {
 
   return (
     <AppShell>
-      <MeetingLayout meeting={meeting} />
+      {/* key by id so all per-meeting view state (tabs, sidebar panel, link/relationship fields) resets on navigation */}
+      <MeetingLayout key={meeting.id} meeting={meeting} />
     </AppShell>
   )
 }

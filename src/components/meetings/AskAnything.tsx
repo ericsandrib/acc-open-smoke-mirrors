@@ -5,7 +5,7 @@ import DOMPurify from 'dompurify'
 import { Sparkles, ArrowUp, X, SquarePen, Video, Lightbulb, Square } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import type { ChatMessage, ChatStatus } from '@/types/meeting'
-import { SUGGESTED_PROMPTS, matchReply } from '@/data/zions/chatScript'
+import { suggestedPrompts, matchReply } from '@/data/zions/chatScript'
 
 marked.setOptions({ breaks: true, gfm: true })
 
@@ -79,7 +79,8 @@ function ThinkingDots() {
   )
 }
 
-export function AskAnything({ meetingSubject }: { meetingSubject?: string }) {
+export function AskAnything({ meetingSubject, relationshipId }: { meetingSubject?: string; relationshipId?: string }) {
+  const prompts = suggestedPrompts(relationshipId)
   const [open, setOpen] = useState(false)
   const [messages, setMessages] = useState<ChatMessage[]>([])
   const [status, setStatus] = useState<ChatStatus>('ready')
@@ -100,7 +101,7 @@ export function AskAnything({ meetingSubject }: { meetingSubject?: string }) {
     setStatus('submitted')
     if (taRef.current) taRef.current.style.height = 'auto'
     window.setTimeout(() => {
-      const reply: ChatMessage = { id: `a${Date.now()}`, role: 'assistant', text: matchReply(text), isHistoric: false }
+      const reply: ChatMessage = { id: `a${Date.now()}`, role: 'assistant', text: matchReply(text, relationshipId), isHistoric: false }
       setMessages((m) => [...m, reply])
       setStatus('streaming')
     }, 650)
@@ -141,7 +142,7 @@ export function AskAnything({ meetingSubject }: { meetingSubject?: string }) {
                     <p className="text-lg text-muted-foreground">What can I help with?</p>
                   </div>
                   <div className="flex flex-col gap-2">
-                    {SUGGESTED_PROMPTS.map((p) => (
+                    {prompts.map((p) => (
                       <button
                         key={p}
                         onClick={() => submit(p)}

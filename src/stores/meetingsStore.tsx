@@ -1,5 +1,6 @@
 import { createContext, useContext, useState, type ReactNode } from 'react'
 import type { MeetingSummary, ActionRecommendation, MeetingActionItem, MeetingEmail, EmailStatus } from '@/types/meeting'
+import { TODAY_ISO } from '@/lib/demoClock'
 import {
   MEETINGS,
   MEETING_SUMMARIES,
@@ -20,6 +21,9 @@ function seedPrepNotes(): Record<string, string> {
   return out
 }
 
+/** Immutable copy of the AI-original emails, for "restore AI draft". */
+const ORIGINAL_EMAILS = seedEmails()
+
 interface MeetingsCtxValue {
   meetings: typeof MEETINGS
   summaries: Record<string, MeetingSummary>
@@ -30,6 +34,8 @@ interface MeetingsCtxValue {
   prepNotes: Record<string, string>
   emails: Record<string, MeetingEmail>
   feedback: Record<string, 'up' | 'down' | undefined>
+  /** Whether an AI artifact has been edited by the advisor since generation, keyed `summary-<id>` / `email-<id>`. */
+  dirty: Record<string, boolean>
   setSummaryContent: (meetingId: string, html: string) => void
   attestSummary: (meetingId: string, agent: string) => void
   unattestSummary: (meetingId: string) => void
@@ -44,6 +50,9 @@ interface MeetingsCtxValue {
   setEmailSubject: (meetingId: string, subject: string) => void
   setEmailStatus: (meetingId: string, status: EmailStatus) => void
   setFeedback: (key: string, v: 'up' | 'down' | undefined) => void
+  setDirty: (key: string, v: boolean) => void
+  restoreSummary: (meetingId: string) => void
+  restoreEmail: (meetingId: string) => void
 }
 
 const MeetingsContext = createContext<MeetingsCtxValue | null>(null)
@@ -63,6 +72,7 @@ export function MeetingsProvider({ children }: { children: ReactNode }) {
   const [prepNotes, setPrepNotesState] = useState<Record<string, string>>(() => seedPrepNotes())
   const [emails, setEmails] = useState<Record<string, MeetingEmail>>(() => seedEmails())
   const [feedback, setFeedbackState] = useState<Record<string, 'up' | 'down' | undefined>>({})
+  const [dirty, setDirtyState] = useState<Record<string, boolean>>({})
 
   const setSummaryContent = (meetingId: string, html: string) =>
     setSummaries((s) => ({ ...s, [meetingId]: { ...s[meetingId], meetingId, contentHtml: html } }))
@@ -70,7 +80,7 @@ export function MeetingsProvider({ children }: { children: ReactNode }) {
   const attestSummary = (meetingId: string, agent: string) =>
     setSummaries((s) => ({
       ...s,
-      [meetingId]: { ...s[meetingId], isAttested: true, attestedAt: '2026-06-05', attestingAgent: agent },
+      [meetingId]: { ...s[meetingId], isAttested: true, attestedAt: TODAY_ISO, attestingAgent: agent },
     }))
 
   const unattestSummary = (meetingId: string) =>
@@ -82,7 +92,7 @@ export function MeetingsProvider({ children }: { children: ReactNode }) {
       name: rec.blueprintName,
       blueprintName: rec.blueprintCategory,
       status: 'todo',
-      createdAt: '2026-06-05',
+      createdAt: TODAY_ISO,
       sourceSystem: 'avantos',
       servicingJourneyId: rec.servicingJourneyId,
     }
@@ -130,6 +140,21 @@ export function MeetingsProvider({ children }: { children: ReactNode }) {
   const setFeedback = (key: string, v: 'up' | 'down' | undefined) =>
     setFeedbackState((s) => ({ ...s, [key]: v }))
 
+  const setDirty = (key: string, v: boolean) =>
+    setDirtyState((s) => ({ ...s, [key]: v }))
+
+  const restoreSummary = (meetingId: string) => {
+    const original = MEETING_SUMMARIES[meetingId]?.contentHtml
+    if (original !== undefined) setSummaryContent(meetingId, original)
+    setDirtyState((s) => ({ ...s, [`summary-${meetingId}`]: false }))
+  }
+
+  const restoreEmail = (meetingId: string) => {
+    const o = ORIGINAL_EMAILS[meetingId]
+    if (o) setEmails((e) => ({ ...e, [meetingId]: { ...o, to: [...o.to], cc: [...o.cc] } }))
+    setDirtyState((s) => ({ ...s, [`email-${meetingId}`]: false }))
+  }
+
   return (
     <MeetingsContext.Provider
       value={{
@@ -142,6 +167,7 @@ export function MeetingsProvider({ children }: { children: ReactNode }) {
         prepNotes,
         emails,
         feedback,
+        dirty,
         setSummaryContent,
         attestSummary,
         unattestSummary,
@@ -155,6 +181,9 @@ export function MeetingsProvider({ children }: { children: ReactNode }) {
         setEmailSubject,
         setEmailStatus,
         setFeedback,
+        setDirty,
+        restoreSummary,
+        restoreEmail,
       }}
     >
       {children}

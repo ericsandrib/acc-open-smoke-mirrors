@@ -1,12 +1,14 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { toast } from 'sonner'
 import {
   Info, FileText, MessageSquare, Video, Phone, MapPin, Copy, Plus, Link2, Check,
-  Sparkles, Search, AtSign, Send,
+  Sparkles, Search, AtSign, Send, ShieldCheck, ChevronDown,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem } from '@/components/ui/dropdown-menu'
 import type { Meeting, Participant, RsvpStatus } from '@/types/meeting'
 import { fmtDate, fmtTime, vendorLabel, isVirtual } from './meetingUtils'
+import { VendorMark } from './VendorMark'
 
 type Panel = 'details' | 'transcript' | 'comments'
 
@@ -96,6 +98,71 @@ function MeetingLinkField({ meeting }: { meeting: Meeting }) {
   )
 }
 
+function RelationshipField({ meeting }: { meeting: Meeting }) {
+  const [connected, setConnected] = useState<string | null>(meeting.relationshipName || null)
+  if (connected) {
+    return (
+      <div>
+        <p className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">Relationship</p>
+        <p className="text-sm font-medium text-foreground">{connected}</p>
+      </div>
+    )
+  }
+  const candidates = ['Whitmore Household', 'Nakamura Family', 'City of Cedar Falls', '+ Create new relationship']
+  return (
+    <div className="rounded-lg border border-amber-300 bg-amber-50 p-3">
+      <p className="flex items-center gap-1.5 text-xs font-semibold text-amber-700"><Link2 className="h-3.5 w-3.5" /> No relationship connected</p>
+      <p className="mt-0.5 text-[11px] text-amber-700/80">Link this meeting to a CRM relationship so its summary, actions, and AI signals route correctly.</p>
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild>
+          <button className="mt-2 inline-flex items-center gap-1.5 rounded-md bg-amber-600 px-2.5 py-1.5 text-xs font-medium text-white hover:bg-amber-700"><Plus className="h-3.5 w-3.5" /> Connect relationship</button>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="start">
+          {candidates.map((c) => (
+            <DropdownMenuItem
+              key={c}
+              onClick={() => {
+                const isNew = c.startsWith('+')
+                setConnected(isNew ? 'Carol Whitmore (new)' : c)
+                toast.success(isNew ? 'Created and connected a new relationship' : `Connected to ${c}`)
+              }}
+            >
+              {c}
+            </DropdownMenuItem>
+          ))}
+        </DropdownMenuContent>
+      </DropdownMenu>
+    </div>
+  )
+}
+
+function RecordingRetention({ meeting }: { meeting: Meeting }) {
+  const [retention, setRetention] = useState('30 days')
+  if (!isVirtual(meeting.vendor)) return null
+  const opts = ['30 days', '90 days', '1 year', 'Until I delete it']
+  return (
+    <div>
+      <p className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">Recording &amp; retention</p>
+      <div className="mt-1 space-y-2 rounded-lg border border-border bg-card/60 p-2.5">
+        <div className="flex items-center gap-1.5 text-xs text-foreground"><ShieldCheck className="h-3.5 w-3.5 text-emerald-600" /> Consent on file · all participants</div>
+        <div className="flex items-center justify-between gap-2 text-xs">
+          <span className="text-muted-foreground">Transcript retention</span>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <button className="inline-flex items-center gap-1 rounded-md border border-border px-2 py-1 text-xs font-medium text-foreground hover:bg-muted/50">{retention} <ChevronDown className="h-3 w-3 text-muted-foreground" /></button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              {opts.map((o) => (
+                <DropdownMenuItem key={o} onClick={() => { setRetention(o); toast.success(`Transcript retention set to ${o.toLowerCase()}`) }}>{o}</DropdownMenuItem>
+              ))}
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </div>
+      </div>
+    </div>
+  )
+}
+
 function DetailsPanel({ meeting, onOpenPrepReport }: { meeting: Meeting; onOpenPrepReport: () => void }) {
   const [q, setQ] = useState('')
   const participants = (meeting.participants ?? []).filter((p) => !q || p.name.toLowerCase().includes(q.toLowerCase()) || (p.email ?? '').includes(q.toLowerCase()))
@@ -104,14 +171,11 @@ function DetailsPanel({ meeting, onOpenPrepReport }: { meeting: Meeting; onOpenP
 
   return (
     <div className="space-y-4">
-      <div>
-        <p className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">Relationship</p>
-        <p className="text-sm font-medium text-foreground">{meeting.relationshipName}</p>
-      </div>
+      <RelationshipField meeting={meeting} />
       <div>
         <p className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">When</p>
         <p className="text-sm text-foreground">{fmtDate(meeting.startTime)}</p>
-        <p className="text-xs text-muted-foreground">{fmtTime(meeting.startTime)} – {fmtTime(meeting.endTime)} · {vendorLabel(meeting.vendor)}</p>
+        <p className="flex items-center gap-1.5 text-xs text-muted-foreground">{fmtTime(meeting.startTime)} – {fmtTime(meeting.endTime)} · <VendorMark vendor={meeting.vendor} className="h-3.5 w-3.5" /> {vendorLabel(meeting.vendor)}</p>
       </div>
 
       <div>
@@ -124,6 +188,8 @@ function DetailsPanel({ meeting, onOpenPrepReport }: { meeting: Meeting; onOpenP
           <a href="tel:" className="mt-2 inline-flex w-full items-center justify-center gap-1.5 rounded-md border border-border px-2.5 py-1.5 text-xs font-medium text-foreground hover:bg-muted"><Phone className="h-3.5 w-3.5" /> Call</a>
         )}
       </div>
+
+      <RecordingRetention meeting={meeting} />
 
       {/* Prep report link */}
       {meeting.prepReport && (
@@ -162,7 +228,51 @@ function DetailsPanel({ meeting, onOpenPrepReport }: { meeting: Meeting; onOpenP
   )
 }
 
+function LiveTranscriptPanel({ meeting }: { meeting: Meeting }) {
+  const lines = (meeting.transcript ?? '').split('\n').filter(Boolean)
+  const [revealed, setRevealed] = useState(1)
+  useEffect(() => {
+    if (revealed >= lines.length) return
+    const id = setTimeout(() => setRevealed((n) => n + 1), 2200)
+    return () => clearTimeout(id)
+  }, [revealed, lines.length])
+  return (
+    <div className="space-y-3">
+      <div className="rounded-lg border border-[#0b4f9c33] bg-[#0b4f9c0a] px-3 py-2">
+        <div className="flex items-center gap-1.5 text-xs font-medium text-[#0b4f9c]">
+          <span className="relative flex h-2 w-2">
+            <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-red-400 opacity-75" />
+            <span className="relative inline-flex h-2 w-2 rounded-full bg-red-500" />
+          </span>
+          Meeting Assistant is taking notes
+        </div>
+        <p className="mt-1 inline-flex items-center gap-1 text-[11px] text-muted-foreground"><ShieldCheck className="h-3 w-3" /> Recording with participant consent · transcript retained 30 days</p>
+      </div>
+      <div className="space-y-2">
+        {lines.slice(0, revealed).map((line, i) => {
+          const [speaker, ...rest] = line.split(':')
+          const text = rest.join(':').trim()
+          return (
+            <div key={i} className="text-[13px] leading-snug">
+              <span className="font-medium text-foreground">{speaker}</span>
+              <span className="text-foreground/80">{text ? `: ${text}` : ''}</span>
+            </div>
+          )
+        })}
+        {revealed < lines.length && (
+          <div className="flex items-center gap-1 py-1 pl-1">
+            {[0, 1, 2].map((i) => (
+              <span key={i} className="h-1.5 w-1.5 animate-pulse rounded-full bg-foreground/40" style={{ animationDelay: `${i * 0.15}s` }} />
+            ))}
+          </div>
+        )}
+      </div>
+    </div>
+  )
+}
+
 function TranscriptPanel({ meeting }: { meeting: Meeting }) {
+  if (meeting.lifecycle === 'live' && meeting.transcript) return <LiveTranscriptPanel meeting={meeting} />
   if (!meeting.hasTranscript || !meeting.transcript) {
     return <p className="py-8 text-center text-xs text-muted-foreground">{meeting.vendor === 'in_person' ? 'In-person meeting — no recording or transcript.' : 'No transcript available yet.'}</p>
   }
@@ -217,7 +327,7 @@ const TABS: { id: Panel; label: string; icon: React.ComponentType<{ className?: 
 ]
 
 export function MeetingSidebar({ meeting, onOpenPrepReport }: { meeting: Meeting; onOpenPrepReport: () => void }) {
-  const [panel, setPanel] = useState<Panel>('details')
+  const [panel, setPanel] = useState<Panel>(meeting.lifecycle === 'live' ? 'transcript' : 'details')
   return (
     <aside className="w-[320px] shrink-0 rounded-xl border border-border bg-card/40">
       <div className="flex border-b border-border">
