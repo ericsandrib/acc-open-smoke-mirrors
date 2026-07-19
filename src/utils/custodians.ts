@@ -44,6 +44,8 @@ export interface AccountTypeOption {
   registrationType: RegistrationType
   /** Present for SEI selections only. */
   seiAccountType?: string
+  /** Numeric SEI accountTypeId (SEI only) — drives the investment-program lookup + create call. */
+  accountTypeId?: number
 }
 
 /** Account-type options for a custodian — SEI shows its 27-type taxonomy;
@@ -55,6 +57,7 @@ export function getAccountTypeOptionsForCustodian(custodian: Custodian): Account
       label: t.label,
       registrationType: t.registrationType,
       seiAccountType: t.seiAccountType,
+      accountTypeId: t.accountTypeId,
     }))
   }
   return FORMS_RAIL_REGISTRATIONS.map((rt) => ({

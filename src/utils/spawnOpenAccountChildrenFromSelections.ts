@@ -20,10 +20,12 @@ export function spawnOpenAccountChildrenFromSelections(
         metadata: {
           custodian: sel.custodian,
           registrationType: sel.registrationType,
-          // Present for SEI accounts only — drives the SEI form + MRDC call.
+          // SEI account-creation (MRDC) fields — derived from reference data + the selection.
           ...(sel.seiAccountType ? { seiAccountType: sel.seiAccountType } : {}),
-          firmCode: sel.firmCode,
-          advisorId: sel.advisorId,
+          ...(sel.accountTypeId != null ? { accountTypeId: sel.accountTypeId } : {}),
+          ...(sel.investmentProgramId ? { investmentProgramId: sel.investmentProgramId } : {}),
+          swpFirmId: sel.swpFirmId,
+          primaryAdvisorId: sel.primaryAdvisorId,
         },
       })
     }

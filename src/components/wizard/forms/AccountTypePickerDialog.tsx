@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import type { RegistrationType } from '@/utils/registrationDocuments'
 import type { Custodian } from '@/utils/custodians'
 import { CUSTODIAN_OPTIONS, getAccountTypeOptionsForCustodian } from '@/utils/custodians'
+import { SEI_ADVISOR_PROFILE, getSeiInvestmentPrograms } from '@/data/sei/seiReferenceData'
 import { Button } from '@/components/ui/button'
 import { Label } from '@/components/ui/label'
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from '@/components/ui/sheet'
@@ -19,33 +20,29 @@ const QUANTITY_OPTIONS = Array.from({ length: 10 }, (_, i) => ({
   label: String(i + 1),
 }))
 
-// Firm / advisor identifiers. For SEI these map to the account-creation API's
-// swpFirmId (firm) and primaryAdvisorId (advisor) at the MRDC step.
-const FIRM_OPTIONS = ['TBC', 'TBG', 'TBK', 'WBA'] as const
-
-const ADVISOR_OPTIONS = [
-  '8AH', '004', 'QGY', '18Q', 'P77', '53N', '3Q3', '75J', '3WF', '6ZQ',
-  '7CJ', 'D93', '7HT', '844', '8W6', '988', '4WG', 'J69', 'H51', '2IM',
-  'H32', 'IKT',
-] as const
-
 interface Row {
   id: string
   custodian: Custodian
   /** The picked option value — SEI account type id, or a RegistrationType for forms-based custodians. */
   accountTypeValue: string
+  /** SEI only — investmentProgramId (dependent on account type). */
+  investmentProgramId: string
   quantity: number
 }
 
 export type Selection = {
   custodian: Custodian
   registrationType: RegistrationType
-  /** Present for SEI selections; the true SEI account type id used by the SEI form + MRDC. */
+  /** Present for SEI selections; the true SEI account type id used by the SEI form + create call. */
   seiAccountType?: string
+  /** SEI only — numeric accountTypeId + investmentProgramId for the create call. */
+  accountTypeId?: number
+  investmentProgramId?: string
   label: string
   count: number
-  firmCode: string
-  advisorId: string
+  /** Derived from the logged-in advisor's SEI reference-data profile. */
+  swpFirmId: number
+  primaryAdvisorId: number
 }
 
 function createRow(): Row {
@@ -53,6 +50,7 @@ function createRow(): Row {
     id: `row-${Date.now()}-${Math.random().toString(36).slice(2)}`,
     custodian: 'sei',
     accountTypeValue: '',
+    investmentProgramId: '',
     quantity: 1,
   }
 }
@@ -65,8 +63,6 @@ interface AccountTypePickerDialogProps {
 
 export function AccountTypePickerDialog({ open, onOpenChange, onConfirm }: AccountTypePickerDialogProps) {
   const [rows, setRows] = useState<Row[]>(() => [createRow()])
-  const [firmCode, setFirmCode] = useState('')
-  const [advisorId, setAdvisorId] = useState('')
 
   // Refs to each row's account-type SelectTrigger so we can focus the new row's
   // select after "Add another account".
@@ -85,14 +81,7 @@ export function AccountTypePickerDialog({ open, onOpenChange, onConfirm }: Accou
     })
   }, [rows])
 
-  const firmOptions = FIRM_OPTIONS.map((code) => ({ value: code, label: code }))
-  const advisorOptions = ADVISOR_OPTIONS.map((code) => ({ value: code, label: code }))
-
-  const handleReset = () => {
-    setRows([createRow()])
-    setFirmCode('')
-    setAdvisorId('')
-  }
+  const handleReset = () => setRows([createRow()])
 
   const handleOpenChange = (next: boolean) => {
     if (!next) handleReset()
@@ -103,9 +92,16 @@ export function AccountTypePickerDialog({ open, onOpenChange, onConfirm }: Accou
     setRows((prev) => prev.map((r) => (r.id === id ? { ...r, ...patch } : r)))
   }
 
-  // Changing custodian resets the account type, since each custodian has its own list.
+  // Changing custodian resets the account type + program, since each custodian has its own lists.
   const changeCustodian = (id: string, custodian: Custodian) => {
-    setRows((prev) => prev.map((r) => (r.id === id ? { ...r, custodian, accountTypeValue: '' } : r)))
+    setRows((prev) =>
+      prev.map((r) => (r.id === id ? { ...r, custodian, accountTypeValue: '', investmentProgramId: '' } : r)),
+    )
+  }
+
+  // Changing account type resets the program (SEI programs depend on account type).
+  const changeAccountType = (id: string, accountTypeValue: string) => {
+    setRows((prev) => prev.map((r) => (r.id === id ? { ...r, accountTypeValue, investmentProgramId: '' } : r)))
   }
 
   const removeRow = (id: string) => {
@@ -121,19 +117,21 @@ export function AccountTypePickerDialog({ open, onOpenChange, onConfirm }: Accou
     setRows((prev) => [...prev, next])
   }
 
-  const validRows = rows.filter((r) => r.accountTypeValue !== '')
+  const isRowComplete = (r: Row) =>
+    r.accountTypeValue !== '' && (r.custodian !== 'sei' || r.investmentProgramId !== '') && r.quantity >= 1
 
+  const validRows = rows.filter(isRowComplete)
   const totalAccounts = validRows.reduce((sum, r) => sum + r.quantity, 0)
 
   const buildSelections = (): Selection[] => {
-    // Group identical (custodian + account type) rows, summing quantity.
+    // Group identical (custodian + account type + program) rows, summing quantity.
     const grouped = new Map<string, Selection>()
 
     for (const row of validRows) {
       const opts = getAccountTypeOptionsForCustodian(row.custodian)
       const opt = opts.find((o) => o.value === row.accountTypeValue)
       if (!opt) continue
-      const key = `${row.custodian}::${row.accountTypeValue}`
+      const key = `${row.custodian}::${row.accountTypeValue}::${row.investmentProgramId}`
       const existing = grouped.get(key)
       if (existing) {
         existing.count += row.quantity
@@ -142,10 +140,12 @@ export function AccountTypePickerDialog({ open, onOpenChange, onConfirm }: Accou
           custodian: row.custodian,
           registrationType: opt.registrationType,
           seiAccountType: opt.seiAccountType,
+          accountTypeId: opt.accountTypeId,
+          investmentProgramId: row.custodian === 'sei' ? row.investmentProgramId : undefined,
           label: opt.label,
           count: row.quantity,
-          firmCode,
-          advisorId,
+          swpFirmId: SEI_ADVISOR_PROFILE.firm.swpFirmId,
+          primaryAdvisorId: SEI_ADVISOR_PROFILE.advisorId,
         })
       }
     }
@@ -161,10 +161,7 @@ export function AccountTypePickerDialog({ open, onOpenChange, onConfirm }: Accou
     onOpenChange(false)
   }
 
-  const canSubmit =
-    firmCode !== '' &&
-    advisorId !== '' &&
-    rows.some((r) => r.accountTypeValue !== '' && r.quantity >= 1)
+  const canSubmit = validRows.length > 0
 
   return (
     <Sheet open={open} onOpenChange={handleOpenChange}>
@@ -177,51 +174,34 @@ export function AccountTypePickerDialog({ open, onOpenChange, onConfirm }: Accou
         </SheetHeader>
         <SheetDescription className="px-6 pb-4 shrink-0">
           Choose a custodian and account type for each account to open. The custodian determines the available
-          account types and how the account is opened. Each row is one or more parallel account-opening
-          workflows—use quantity when you need the same account type more than once.
+          account types and how the account is opened.
         </SheetDescription>
 
         <div className="flex-1 overflow-y-auto px-6 py-5 space-y-4">
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-            <div className="space-y-1.5">
-              <Label>
-                Firm <span className="text-destructive">*</span>
-              </Label>
-              <Select value={firmCode || undefined} onValueChange={setFirmCode}>
-                <SelectTrigger className="h-9 w-full text-left [&>span]:text-left">
-                  <SelectValue placeholder="Select firm…" />
-                </SelectTrigger>
-                <SelectContent className="max-h-[min(24rem,70vh)]">
-                  {firmOptions.map((opt) => (
-                    <SelectItem key={opt.value} value={opt.value}>
-                      {opt.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+          {/* Derived from the logged-in advisor's SEI reference-data profile — not entered. */}
+          <div className="rounded-lg border border-border bg-muted/30 px-4 py-3">
+            <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">SEI profile</p>
+            <div className="mt-1.5 grid gap-1 text-sm sm:grid-cols-2">
+              <div>
+                <span className="text-muted-foreground">Firm: </span>
+                <span className="font-medium">{SEI_ADVISOR_PROFILE.firm.firmName}</span>
+              </div>
+              <div>
+                <span className="text-muted-foreground">Advisor: </span>
+                <span className="font-medium">{SEI_ADVISOR_PROFILE.advisorName}</span>
+              </div>
             </div>
-            <div className="space-y-1.5">
-              <Label>
-                Advisor <span className="text-destructive">*</span>
-              </Label>
-              <Select value={advisorId || undefined} onValueChange={setAdvisorId}>
-                <SelectTrigger className="h-9 w-full text-left [&>span]:text-left">
-                  <SelectValue placeholder="Select advisor…" />
-                </SelectTrigger>
-                <SelectContent className="max-h-[min(24rem,70vh)]">
-                  {advisorOptions.map((opt) => (
-                    <SelectItem key={opt.value} value={opt.value}>
-                      {opt.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
+            <p className="mt-1.5 text-[11px] text-muted-foreground">
+              Firm &amp; advisor are pulled from your SEI reference-data profile.
+            </p>
           </div>
 
           <div className="space-y-3">
             {rows.map((row) => {
               const accountTypeOptions = getAccountTypeOptionsForCustodian(row.custodian)
+              const selectedOpt = accountTypeOptions.find((o) => o.value === row.accountTypeValue)
+              const programs =
+                row.custodian === 'sei' ? getSeiInvestmentPrograms(selectedOpt?.accountTypeId) : []
               return (
                 <div key={row.id} className="rounded-lg border border-border p-3 space-y-3">
                   <div className="flex items-center gap-3">
@@ -263,7 +243,7 @@ export function AccountTypePickerDialog({ open, onOpenChange, onConfirm }: Accou
                       <Label className="text-xs uppercase tracking-wide text-muted-foreground">Account type</Label>
                       <Select
                         value={row.accountTypeValue || undefined}
-                        onValueChange={(v) => updateRow(row.id, { accountTypeValue: v })}
+                        onValueChange={(v) => changeAccountType(row.id, v)}
                       >
                         <SelectTrigger
                           ref={(el) => {
@@ -309,6 +289,34 @@ export function AccountTypePickerDialog({ open, onOpenChange, onConfirm }: Accou
                       </Select>
                     </div>
                   </div>
+
+                  {/* SEI: investment program is a reference-data dropdown, dependent on account type. */}
+                  {row.custodian === 'sei' && row.accountTypeValue !== '' ? (
+                    <div className="space-y-1.5">
+                      <Label className="text-xs uppercase tracking-wide text-muted-foreground">
+                        Investment program
+                      </Label>
+                      <Select
+                        value={row.investmentProgramId || undefined}
+                        onValueChange={(v) => updateRow(row.id, { investmentProgramId: v })}
+                      >
+                        <SelectTrigger className="h-9 w-full text-left [&>span]:line-clamp-2 [&>span]:text-left">
+                          <SelectValue placeholder="Select investment program…" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {programs.map((p) => (
+                            <SelectItem
+                              key={p.investmentProgramId}
+                              value={String(p.investmentProgramId)}
+                              className="whitespace-normal"
+                            >
+                              {p.investmentProgramDescription}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  ) : null}
                 </div>
               )
             })}
