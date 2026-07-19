@@ -18,9 +18,12 @@ export function spawnOpenAccountChildrenFromSelections(
         childName: name,
         childType: 'account-opening',
         metadata: {
+          custodian: sel.custodian,
           registrationType: sel.registrationType,
-          officeCode: sel.officeCode,
-          investmentProfessionalId: sel.investmentProfessionalId,
+          // Present for SEI accounts only — drives the SEI form + MRDC call.
+          ...(sel.seiAccountType ? { seiAccountType: sel.seiAccountType } : {}),
+          firmCode: sel.firmCode,
+          advisorId: sel.advisorId,
         },
       })
     }

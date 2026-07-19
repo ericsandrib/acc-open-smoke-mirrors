@@ -21,6 +21,8 @@ import type { ChildTask, RelatedParty } from '@/types/workflow'
 import { AccountTypePickerDialog } from './AccountTypePickerDialog'
 import type { Selection } from './AccountTypePickerDialog'
 import { spawnOpenAccountChildrenFromSelections } from '@/utils/spawnOpenAccountChildrenFromSelections'
+import type { Custodian } from '@/utils/custodians'
+import { CUSTODIAN_LABELS } from '@/utils/custodians'
 import { canAdvisorManuallySubmitAccountOpeningChild } from '@/utils/accountOpeningChildProgress'
 import {
   getOpenAccountsCoreSupportingDocumentSections,
@@ -926,6 +928,11 @@ export function OpenAccountsForm() {
                       </span>
                     </button>
                     <div className="flex items-center gap-2">
+                      {childMeta?.custodian ? (
+                        <Badge variant="secondary" className="text-xs group-hover:hidden">
+                          {CUSTODIAN_LABELS[childMeta.custodian as Custodian] ?? String(childMeta.custodian)}
+                        </Badge>
+                      ) : null}
                       {(() => {
                         const reviewState = state.childReviewsByChildId?.[child.id]
                         const displayStatus = deriveAccountOpeningChildDisplayStatus(
