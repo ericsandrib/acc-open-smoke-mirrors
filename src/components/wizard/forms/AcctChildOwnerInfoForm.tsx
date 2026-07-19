@@ -33,6 +33,8 @@ import { useOpenAccountsVariant } from '@/components/wizard/openAccountsVariantC
 import { cn } from '@/lib/utils'
 import type { CustodianId } from '@/utils/custodians'
 import { SchwabAccountForm } from '@/components/wizard/forms/schwab/SchwabAccountForm'
+import { SeiAccountForm } from '@/components/wizard/forms/sei/SeiAccountForm'
+import { getSeiMaxOwners } from '@/data/sei/seiRegistrationToForm'
 
 type OwnerRow = { id: string; type: 'existing'; partyId?: string }
 type BeneficiaryDesignationType = 'primary' | 'contingent'
@@ -147,10 +149,14 @@ export function AcctChildOwnerInfoForm() {
           ? 3
           : 2 // schwab-one-personal, schwab-managed-account (Individual default; Joint adds slot 2)
       : null
+  const seiMaxOwners =
+    childCustodian === 'sei' ? getSeiMaxOwners(childApplicationType ?? undefined) : null
   const maxOwners =
     schwabMaxOwners !== null
       ? schwabMaxOwners
-      : getMaxAccountOwnersForRegistration(childRegType)
+      : seiMaxOwners !== null
+        ? seiMaxOwners
+        : getMaxAccountOwnersForRegistration(childRegType)
   const requiredOwnerSlots = Math.max(1, maxOwners)
 
   const [addMemberSheetOwnerId, setAddMemberSheetOwnerId] = useState<string | null>(null)
@@ -315,6 +321,7 @@ export function AcctChildOwnerInfoForm() {
   }
 
   const isSchwabFlow = childCustodian === 'schwab' && Boolean(childId)
+  const isSeiFlow = childCustodian === 'sei' && Boolean(childId)
 
   return (
     <div className={variant === 'v5' || variant === 'v6' ? 'space-y-9' : 'space-y-7'}>
@@ -472,7 +479,11 @@ export function AcctChildOwnerInfoForm() {
         <SchwabAccountForm childId={childId} />
       ) : null}
 
-      {!isSchwabFlow && showBeneficiariesSection ? (
+      {isSeiFlow && childId ? (
+        <SeiAccountForm childId={childId} />
+      ) : null}
+
+      {!isSchwabFlow && !isSeiFlow && showBeneficiariesSection ? (
       <section id="acct-beneficiaries" className="space-y-6 scroll-mt-16">
         <div
           className={cn(
@@ -782,7 +793,7 @@ export function AcctChildOwnerInfoForm() {
       </section>
       ) : null}
 
-      {!isSchwabFlow ? (
+      {!isSchwabFlow && !isSeiFlow ? (
       <section id="acct-info" className="space-y-6 scroll-mt-16">
         <div
           className={cn(
@@ -827,7 +838,7 @@ export function AcctChildOwnerInfoForm() {
       </section>
       ) : null}
 
-      {!isSchwabFlow && childId ? (
+      {!isSchwabFlow && !isSeiFlow && childId ? (
         <section id="acct-features" className="space-y-6 scroll-mt-16">
           <div
             className={cn(

@@ -310,101 +310,56 @@ function buildDisplayActions(state: WorkflowState, variant: OpenAccountsVariant)
     noAnnuityTasks.find((t) => t.formKey === OPEN_ACCOUNTS_FORM_KEY)?.id ??
     noAnnuityTasks[0]?.id
 
-  const v5WithAnnuityGroup: DisplayTaskRow = {
-    type: 'group',
-    id: 'v5-accounts-with-annuity',
-    label: 'Annuity Accounts',
-    tasks: withAnnuityTasks.map((t) => ({
-      id: t.id,
-      label: t.formKey === OPEN_ACCOUNTS_WITH_ANNUITY_FORM_KEY ? 'Accounts' : t.title,
-      underlyingTaskIds: [t.id],
-    })),
-  }
+  // Stratos has no annuity workflow, so Open Accounts is a single flat list of
+  // steps (Accounts → KYC → Envelopes) — no annuity vs. non-annuity grouping.
+  const accountsStep: DisplayTaskNode | null =
+    noAnnuityOpenAccountsTaskId == null
+      ? null
+      : variant === 'v6'
+        ? {
+            id: 'v6-account-instructions',
+            label: 'Accounts',
+            underlyingTaskIds: [noAnnuityOpenAccountsTaskId],
+            v6CombinedInstructions: true,
+          }
+        : {
+            id: 'v5-noann-account-instructions',
+            label: 'Accounts',
+            underlyingTaskIds: [noAnnuityOpenAccountsTaskId],
+            v5NoAnnuityPage: 'instructions',
+          }
 
-  const v5WithoutAnnuityGroup: DisplayTaskRow = {
-    type: 'group',
-    id: 'v5-accounts-without-annuity',
-    label: 'Non-Annuity Accounts',
-    tasks:
-      noAnnuityOpenAccountsTaskId != null
-        ? [
-            {
-              id: 'v5-noann-account-instructions',
-              label: 'Accounts',
-              underlyingTaskIds: [noAnnuityOpenAccountsTaskId],
-              v5NoAnnuityPage: 'instructions',
-            },
-            {
-              id: 'v5-noann-kyc-verification',
-              label: 'KYC',
-              underlyingTaskIds: [noAnnuityOpenAccountsTaskId],
-              v5NoAnnuityPage: 'kyc',
-            },
-            {
-              id: 'v5-noann-envelopes',
-              label: 'Envelopes',
-              underlyingTaskIds: [noAnnuityOpenAccountsTaskId],
-              v5NoAnnuityPage: 'envelopes',
-            },
-          ]
-        : [],
-  }
-
-  const v6WithoutAnnuityGroup: DisplayTaskRow = {
-    type: 'group',
-    id: 'v6-accounts-without-annuity',
-    label: 'Non-Annuity Accounts',
-    tasks:
-      noAnnuityOpenAccountsTaskId != null
-        ? [
-            {
-              id: 'v6-account-instructions',
-              label: 'Accounts',
-              underlyingTaskIds: [noAnnuityOpenAccountsTaskId],
-              v6CombinedInstructions: true,
-            },
-            {
-              id: 'v5-noann-kyc-verification',
-              label: 'KYC',
-              underlyingTaskIds: [noAnnuityOpenAccountsTaskId],
-              v5NoAnnuityPage: 'kyc',
-            },
-            {
-              id: 'v5-noann-envelopes',
-              label: 'Envelopes',
-              underlyingTaskIds: [noAnnuityOpenAccountsTaskId],
-              v5NoAnnuityPage: 'envelopes',
-            },
-          ]
-        : [],
-  }
+  const openAccountsStepRows: DisplayTaskRow[] = accountsStep
+    ? [
+        { type: 'task', task: accountsStep },
+        {
+          type: 'task',
+          task: {
+            id: 'v5-noann-kyc-verification',
+            label: 'KYC',
+            underlyingTaskIds: [noAnnuityOpenAccountsTaskId!],
+            v5NoAnnuityPage: 'kyc',
+          },
+        },
+        {
+          type: 'task',
+          task: {
+            id: 'v5-noann-envelopes',
+            label: 'Envelopes',
+            underlyingTaskIds: [noAnnuityOpenAccountsTaskId!],
+            v5NoAnnuityPage: 'envelopes',
+          },
+        },
+      ]
+    : []
 
   const accountOpeningGroup: DisplayActionNode = {
     id: 'account-opening',
     title: 'Open Accounts',
     taskRows:
-      variant === 'v5'
-        ? [v5WithoutAnnuityGroup, v5WithAnnuityGroup]
-        : variant === 'v6'
-          ? [
-              v6WithoutAnnuityGroup,
-              ...(withAnnuityTasks[0]?.id
-                ? [
-                    {
-                      type: 'task' as const,
-                      task: {
-                        id: 'v6-annuity-accounts-setup',
-                        label: 'Annuity Accounts',
-                        underlyingTaskIds: [withAnnuityTasks[0].id],
-                      },
-                    },
-                  ]
-                : []),
-            ]
-        : [
-            ...withAnnuityTasks.map((t) => toTaskRow(t, 'Annuity Accounts')),
-            ...noAnnuityTasks.map((t) => toTaskRow(t, 'Non-Annuity Accounts')),
-          ],
+      variant === 'v5' || variant === 'v6'
+        ? openAccountsStepRows
+        : noAnnuityTasks.map((t) => toTaskRow(t, 'Accounts')),
   }
 
   const result: DisplayActionNode[] = []

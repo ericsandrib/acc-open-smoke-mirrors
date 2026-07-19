@@ -20,8 +20,10 @@ export interface TrustPartyRef {
 
 /** Suitability / regulatory extension for account-owner individuals (wizard). */
 export interface AccountOwnerIndividualProfile {
+  prefix?: string
   middleName?: string
   suffix?: string
+  citizenship?: string
   legalStreet?: string
   legalApt?: string
   legalCity?: string

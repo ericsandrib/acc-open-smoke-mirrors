@@ -1,0 +1,218 @@
+[
+ {
+  "id": "TRADITIONAL_IRA",
+  "label": "Traditional IRA",
+  "form": "A",
+  "formName": "A_StandardIRA \u2014 Form A \u2014 Standard IRA",
+  "taxQualified": true,
+  "notes": ""
+ },
+ {
+  "id": "ROTH_IRA",
+  "label": "Roth IRA",
+  "form": "A",
+  "formName": "A_StandardIRA \u2014 Form A \u2014 Standard IRA",
+  "taxQualified": true,
+  "notes": ""
+ },
+ {
+  "id": "SEP_IRA",
+  "label": "SEP IRA",
+  "form": "A",
+  "formName": "A_StandardIRA \u2014 Form A \u2014 Standard IRA",
+  "taxQualified": true,
+  "notes": ""
+ },
+ {
+  "id": "SIMPLE_IRA",
+  "label": "SIMPLE IRA",
+  "form": "B",
+  "formName": "B_SimpleIRA \u2014 Form B \u2014 SIMPLE IRA",
+  "taxQualified": true,
+  "notes": "Per PDF: employer* fields validated only on this type"
+ },
+ {
+  "id": "INHERITED_TRADITIONAL_IRA",
+  "label": "Inherited Traditional IRA",
+  "form": "C",
+  "formName": "C_InheritedIRA \u2014 Form C \u2014 Inherited IRA (Trad/Roth)",
+  "taxQualified": true,
+  "notes": "Per PDF: accountOwnerTypeId allows Individual Adult/Minor/Trust/Estate; Minor pulls Custodian block"
+ },
+ {
+  "id": "INHERITED_ROTH_IRA",
+  "label": "Inherited Roth IRA",
+  "form": "C",
+  "formName": "C_InheritedIRA \u2014 Form C \u2014 Inherited IRA (Trad/Roth)",
+  "taxQualified": true,
+  "notes": "Per PDF: accountOwnerTypeId allows Individual Adult/Minor/Trust/Estate; Minor pulls Custodian block"
+ },
+ {
+  "id": "INDIVIDUAL",
+  "label": "Individual",
+  "form": "D",
+  "formName": "D_IndividualAdult \u2014 Form D \u2014 Individual (Adult, non-IRA)",
+  "taxQualified": false,
+  "notes": ""
+ },
+ {
+  "id": "INDIVIDUAL_MINOR",
+  "label": "Individual (Minor / UTMA / UGMA)",
+  "form": "E",
+  "formName": "E_IndividualMinor \u2014 Form E \u2014 Individual (Minor / UTMA / UGMA)",
+  "taxQualified": false,
+  "notes": ""
+ },
+ {
+  "id": "JOINT_TENANTS_WITH_RIGHTS_OF_SURVIVORSHIP",
+  "label": "Joint Tenants with Rights of Survivorship (JTWROS)",
+  "form": "F",
+  "formName": "F_JointStandard \u2014 Form F \u2014 Joint (JTWROS, CP, CP-ROS, TBE)",
+  "taxQualified": false,
+  "notes": "Per PDF: jointOwnerFirst/Second/Third/Fourth* are valid only for these account types"
+ },
+ {
+  "id": "COMMUNITY_PROPERTY",
+  "label": "Community Property",
+  "form": "F",
+  "formName": "F_JointStandard \u2014 Form F \u2014 Joint (JTWROS, CP, CP-ROS, TBE)",
+  "taxQualified": false,
+  "notes": "Per PDF: jointOwnerFirst/Second/Third/Fourth* are valid only for these account types"
+ },
+ {
+  "id": "COMMUNITY_PROPERTY_WITH_RIGHTS_OF_SURVIVORSHIP",
+  "label": "Community Property with Rights of Survivorship",
+  "form": "F",
+  "formName": "F_JointStandard \u2014 Form F \u2014 Joint (JTWROS, CP, CP-ROS, TBE)",
+  "taxQualified": false,
+  "notes": "Per PDF: jointOwnerFirst/Second/Third/Fourth* are valid only for these account types"
+ },
+ {
+  "id": "TENANTS_BY_ENTIRETY",
+  "label": "Tenants by Entirety",
+  "form": "F",
+  "formName": "F_JointStandard \u2014 Form F \u2014 Joint (JTWROS, CP, CP-ROS, TBE)",
+  "taxQualified": false,
+  "notes": "Per PDF: jointOwnerFirst/Second/Third/Fourth* are valid only for these account types"
+ },
+ {
+  "id": "TENANTS_IN_COMMON",
+  "label": "Tenants in Common",
+  "form": "G",
+  "formName": "G_TenantsInCommon \u2014 Form G \u2014 Tenants in Common",
+  "taxQualified": false,
+  "notes": "Per PDF: accountOwnerTypeId is type-constrained (Individual Adult or Trust)"
+ },
+ {
+  "id": "TRUST",
+  "label": "Trust",
+  "form": "H",
+  "formName": "H_Trust \u2014 Form H \u2014 Trust",
+  "taxQualified": false,
+  "notes": "Per PDF: trustTaxpayerIdType = INDIVIDUAL pulls grantor* fields"
+ },
+ {
+  "id": "401K",
+  "label": "401(k)",
+  "form": "I",
+  "formName": "I_QualifiedPlan \u2014 Form I \u2014 Qualified Plan (401k, 403b, DB, MP, PS)",
+  "taxQualified": true,
+  "notes": ""
+ },
+ {
+  "id": "403B",
+  "label": "403(b)",
+  "form": "I",
+  "formName": "I_QualifiedPlan \u2014 Form I \u2014 Qualified Plan (401k, 403b, DB, MP, PS)",
+  "taxQualified": true,
+  "notes": ""
+ },
+ {
+  "id": "DEFINED_BENEFIT",
+  "label": "Defined Benefit Plan",
+  "form": "I",
+  "formName": "I_QualifiedPlan \u2014 Form I \u2014 Qualified Plan (401k, 403b, DB, MP, PS)",
+  "taxQualified": true,
+  "notes": ""
+ },
+ {
+  "id": "MONEY_PURCHASE",
+  "label": "Money Purchase Plan",
+  "form": "I",
+  "formName": "I_QualifiedPlan \u2014 Form I \u2014 Qualified Plan (401k, 403b, DB, MP, PS)",
+  "taxQualified": true,
+  "notes": ""
+ },
+ {
+  "id": "PROFIT_SHARING",
+  "label": "Profit Sharing Plan",
+  "form": "I",
+  "formName": "I_QualifiedPlan \u2014 Form I \u2014 Qualified Plan (401k, 403b, DB, MP, PS)",
+  "taxQualified": true,
+  "notes": ""
+ },
+ {
+  "id": "ESTATE",
+  "label": "Estate",
+  "form": "J",
+  "formName": "J_OtherOrg \u2014 Form J \u2014 Other Organization",
+  "taxQualified": false,
+  "notes": ""
+ },
+ {
+  "id": "FOUNDATION",
+  "label": "Foundation",
+  "form": "J",
+  "formName": "J_OtherOrg \u2014 Form J \u2014 Other Organization",
+  "taxQualified": false,
+  "notes": ""
+ },
+ {
+  "id": "PARTNERSHIP",
+  "label": "Partnership",
+  "form": "J",
+  "formName": "J_OtherOrg \u2014 Form J \u2014 Other Organization",
+  "taxQualified": false,
+  "notes": ""
+ },
+ {
+  "id": "SOLE_PROPRIETORSHIP",
+  "label": "Sole Proprietorship",
+  "form": "J",
+  "formName": "J_OtherOrg \u2014 Form J \u2014 Other Organization",
+  "taxQualified": false,
+  "notes": ""
+ },
+ {
+  "id": "PRIVATE_CORPORATION",
+  "label": "Private Corporation",
+  "form": "J",
+  "formName": "J_OtherOrg \u2014 Form J \u2014 Other Organization",
+  "taxQualified": false,
+  "notes": ""
+ },
+ {
+  "id": "PUBLIC_CORPORATION",
+  "label": "Public Corporation",
+  "form": "J",
+  "formName": "J_OtherOrg \u2014 Form J \u2014 Other Organization",
+  "taxQualified": false,
+  "notes": ""
+ },
+ {
+  "id": "TAX_EXEMPT",
+  "label": "Tax-Exempt Organization",
+  "form": "J",
+  "formName": "J_OtherOrg \u2014 Form J \u2014 Other Organization",
+  "taxQualified": false,
+  "notes": ""
+ },
+ {
+  "id": "ENDOWMENT",
+  "label": "Endowment",
+  "form": "J",
+  "formName": "J_OtherOrg \u2014 Form J \u2014 Other Organization",
+  "taxQualified": false,
+  "notes": ""
+ }
+]

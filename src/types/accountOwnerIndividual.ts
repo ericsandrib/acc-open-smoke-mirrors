@@ -5,6 +5,14 @@ export const EMPLOYMENT_STATUSES = ['Employed', 'Self-employed', 'Retired', 'Une
 
 export const NAME_SUFFIXES = ['Jr.', 'Sr.', 'II', 'III', 'IV', 'Esq.'] as const
 
+export const NAME_PREFIXES = ['Mr.', 'Mrs.', 'Ms.', 'Mx.', 'Dr.'] as const
+
+export const CITIZENSHIP_OPTIONS = [
+  { value: 'us', label: 'U.S' },
+  { value: 'us-resident-alien', label: 'U.S Resident Alien' },
+  { value: 'non-resident-alien', label: 'Non-Resident Alien' },
+] as const
+
 export const INCOME_RANGES = [
   'Under $25,000',
   '$25,000–$49,999',
@@ -50,10 +58,12 @@ export const PEP_OPTIONS = ['Yes', 'No', 'Not applicable'] as const
 
 /** Full in-form state including top-level party fields edited in the sheet. */
 export type IndividualAccountOwnerFormState = {
+  prefix: string
   firstName: string
   lastName: string
   middleName: string
   suffix: string
+  citizenship: string
   dob: string
   taxId: string
   relationship: string
@@ -101,10 +111,12 @@ export type IndividualAccountOwnerFormState = {
 
 export function createEmptyIndividualAccountOwnerForm(): IndividualAccountOwnerFormState {
   return {
+    prefix: '',
     firstName: '',
     lastName: '',
     middleName: '',
     suffix: '',
+    citizenship: '',
     dob: '',
     taxId: '',
     relationship: '',
@@ -153,8 +165,10 @@ function applyAccountOwnerIndividualProfileToForm(
 ): IndividualAccountOwnerFormState {
   return {
     ...base,
+    prefix: ext.prefix ?? '',
     middleName: ext.middleName ?? '',
     suffix: ext.suffix ?? '',
+    citizenship: ext.citizenship ?? '',
     legalStreet: ext.legalStreet ?? '',
     legalApt: ext.legalApt ?? '',
     legalCity: ext.legalCity ?? '',
@@ -243,8 +257,10 @@ export function splitFormIntoPartyUpdate(s: IndividualAccountOwnerFormState): {
   accountOwnerIndividual: AccountOwnerIndividualProfile
 } {
   const profile: AccountOwnerIndividualProfile = {
+    prefix: trimOrUndef(s.prefix),
     middleName: trimOrUndef(s.middleName),
     suffix: trimOrUndef(s.suffix),
+    citizenship: trimOrUndef(s.citizenship),
     legalStreet: trimOrUndef(s.legalStreet),
     legalApt: trimOrUndef(s.legalApt),
     legalCity: trimOrUndef(s.legalCity),

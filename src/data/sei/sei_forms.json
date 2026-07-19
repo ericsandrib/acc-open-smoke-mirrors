@@ -1,0 +1,52 @@
+[
+ {
+  "letter": "A",
+  "id": "A_StandardIRA",
+  "name": "Form A \u2014 Standard IRA"
+ },
+ {
+  "letter": "B",
+  "id": "B_SimpleIRA",
+  "name": "Form B \u2014 SIMPLE IRA"
+ },
+ {
+  "letter": "C",
+  "id": "C_InheritedIRA",
+  "name": "Form C \u2014 Inherited IRA (Trad/Roth)"
+ },
+ {
+  "letter": "D",
+  "id": "D_IndividualAdult",
+  "name": "Form D \u2014 Individual (Adult, non-IRA)"
+ },
+ {
+  "letter": "E",
+  "id": "E_IndividualMinor",
+  "name": "Form E \u2014 Individual (Minor / UTMA / UGMA)"
+ },
+ {
+  "letter": "F",
+  "id": "F_JointStandard",
+  "name": "Form F \u2014 Joint (JTWROS, CP, CP-ROS, TBE)"
+ },
+ {
+  "letter": "G",
+  "id": "G_TenantsInCommon",
+  "name": "Form G \u2014 Tenants in Common"
+ },
+ {
+  "letter": "H",
+  "id": "H_Trust",
+  "name": "Form H \u2014 Trust"
+ },
+ {
+  "letter": "I",
+  "id": "I_QualifiedPlan",
+  "name": "Form I \u2014 Qualified Plan (401k,403b,DB,MP,PS)"
+ },
+ {
+  "letter": "J",
+  "id": "J_OtherOrg",
+  "name": "Form J \u2014 Other Organization"
+ }
+]

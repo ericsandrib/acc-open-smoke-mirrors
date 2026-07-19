@@ -515,3 +515,10 @@ input[type="checkbox"]:not(:disabled),
 input[type="radio"]:not(:disabled) {
   cursor: pointer;
 }
+
+/* Placeholder for the Create-an-Action Context rich-text editor. */
+.compose-context-editor:empty::before {
+  content: attr(data-placeholder);
+  color: var(--color-muted-foreground);
+  pointer-events: none;
+}

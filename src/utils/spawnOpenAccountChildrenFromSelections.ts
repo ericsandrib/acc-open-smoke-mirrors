@@ -1,7 +1,6 @@
 import type { Dispatch } from 'react'
 import type { WorkflowAction } from '@/types/workflow'
 import type { Selection } from '@/components/wizard/forms/AccountTypePickerDialog'
-import { SCHWAB_APPLICATION_OPTIONS } from '@/utils/custodians'
 
 export function spawnOpenAccountChildrenFromSelections(
   dispatch: Dispatch<WorkflowAction>,
@@ -10,8 +9,8 @@ export function spawnOpenAccountChildrenFromSelections(
 ) {
   for (const sel of selections) {
     const totalForType = sel.count
-    const opt = SCHWAB_APPLICATION_OPTIONS.find((o) => o.id === sel.applicationType)
-    const baseName = opt?.shortLabel ?? sel.label
+    // shortLabel is custodian-aware (Schwab/Fidelity application or SEI registration).
+    const baseName = sel.shortLabel || sel.label
 
     for (let i = 0; i < totalForType; i++) {
       const idx = i + 1

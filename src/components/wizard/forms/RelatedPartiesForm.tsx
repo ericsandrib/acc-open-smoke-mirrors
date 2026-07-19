@@ -19,8 +19,11 @@ import {
 import {
   hydrateIndividualFormFromParty,
   splitFormIntoPartyUpdate,
+  NAME_PREFIXES,
+  CITIZENSHIP_OPTIONS,
   type IndividualAccountOwnerFormState,
 } from '@/types/accountOwnerIndividual'
+import { toast } from 'sonner'
 import { isTrustEntityParty } from '@/utils/trustEntityParty'
 import { EditLegalEntitySheet } from './EditLegalEntitySheet'
 
@@ -172,6 +175,10 @@ const ID_TYPES = ['Driver\'s License', 'Passport', 'State ID', 'Military ID'] as
 const sectionCls = 'text-sm font-semibold text-foreground'
 const fieldCls = 'text-xs font-medium text-foreground'
 
+function RequiredMark() {
+  return <span className="text-destructive ml-0.5" aria-hidden>*</span>
+}
+
 interface ContactEditFields {
   firstName: string
   lastName: string
@@ -240,7 +247,7 @@ function EditIndividualSheet({
   const isDirty = JSON.stringify(form) !== snapshot || idType || idNumber || idState || idExpiration
   const mailingLocked = form.mailingSameAsLegal
 
-  const handleSave = () => {
+  const persistUpdates = () => {
     const { top, accountOwnerIndividual } = splitFormIntoPartyUpdate(form)
     dispatch({
       type: 'UPDATE_RELATED_PARTY',
@@ -250,6 +257,16 @@ function EditIndividualSheet({
         accountOwnerIndividual,
       },
     })
+  }
+
+  const handleSave = () => {
+    persistUpdates()
+    onOpenChange(false)
+  }
+
+  const handleComplete = () => {
+    persistUpdates()
+    toast.success(`${party.name || 'Contact'} marked complete`)
     onOpenChange(false)
   }
 
@@ -266,7 +283,19 @@ function EditIndividualSheet({
             <h4 className={sectionCls}>Personal Information</h4>
             <div className="space-y-3">
               <div className="space-y-1.5">
-                <Label className={fieldCls}>First name</Label>
+                <Label className={fieldCls}>Prefix</Label>
+                <Select value={form.prefix || '__none__'} onValueChange={(v) => patch({ prefix: v === '__none__' ? '' : v })}>
+                  <SelectTrigger><SelectValue placeholder="None" /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="__none__">None</SelectItem>
+                    {NAME_PREFIXES.map((x) => (
+                      <SelectItem key={x} value={x}>{x}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-1.5">
+                <Label className={fieldCls}>First name<RequiredMark /></Label>
                 <Input value={form.firstName} onChange={(e) => patch({ firstName: e.target.value })} />
               </div>
               <div className="space-y-1.5">
@@ -274,7 +303,7 @@ function EditIndividualSheet({
                 <Input value={form.middleName} onChange={(e) => patch({ middleName: e.target.value })} />
               </div>
               <div className="space-y-1.5">
-                <Label className={fieldCls}>Last name</Label>
+                <Label className={fieldCls}>Last name<RequiredMark /></Label>
                 <Input value={form.lastName} onChange={(e) => patch({ lastName: e.target.value })} />
               </div>
               <div className="space-y-1.5">
@@ -294,8 +323,26 @@ function EditIndividualSheet({
                 <Input type="date" value={form.dob} max={new Date().toISOString().split('T')[0]} onChange={(e) => patch({ dob: e.target.value })} />
               </div>
               <div className="space-y-1.5">
-                <Label className={fieldCls}>SSN / Tax ID</Label>
+                <Label className={fieldCls}>US Tax ID Number</Label>
                 <SensitiveTaxIdInput value={form.taxId} onChange={(e) => patch({ taxId: e.target.value })} placeholder="XXX-XX-XXXX" />
+              </div>
+              <div className="space-y-1.5">
+                <Label className={fieldCls}>Citizenship</Label>
+                <div className="flex flex-wrap gap-x-6 gap-y-2 pt-0.5">
+                  {CITIZENSHIP_OPTIONS.map((opt) => (
+                    <label key={opt.value} className="flex items-center gap-2 text-sm cursor-pointer">
+                      <input
+                        type="radio"
+                        name="citizenship"
+                        value={opt.value}
+                        checked={form.citizenship === opt.value}
+                        onChange={() => patch({ citizenship: opt.value })}
+                        className="h-4 w-4 accent-primary"
+                      />
+                      {opt.label}
+                    </label>
+                  ))}
+                </div>
               </div>
               <div className="space-y-1.5">
                 <Label className={fieldCls}>Relationship</Label>
@@ -323,14 +370,14 @@ function EditIndividualSheet({
           {/* Address */}
           <section className="space-y-3">
             <h4 className={sectionCls}>Address</h4>
-            <p className="text-xs text-muted-foreground font-medium">Legal (residential) address</p>
+            <p className="text-xs text-muted-foreground font-medium">Legal Residential Address</p>
             <div className="space-y-3">
               <div className="space-y-1.5">
-                <Label className={fieldCls}>Street</Label>
+                <Label className={fieldCls}>Address Line 1</Label>
                 <Input value={form.legalStreet} onChange={(e) => patch({ legalStreet: e.target.value })} />
               </div>
               <div className="space-y-1.5">
-                <Label className={fieldCls}>Apt / unit</Label>
+                <Label className={fieldCls}>Address Line 2</Label>
                 <Input value={form.legalApt} onChange={(e) => patch({ legalApt: e.target.value })} />
               </div>
               <div className="space-y-1.5">
@@ -477,8 +524,9 @@ function EditIndividualSheet({
             </>
           )}
         </div>
-        <div className="px-6 py-4 border-t border-border shrink-0 flex justify-end">
-          <Button onClick={handleSave} disabled={!isDirty}>Save</Button>
+        <div className="px-6 py-4 border-t border-border shrink-0 flex justify-end gap-2">
+          <Button variant="outline" onClick={handleSave} disabled={!isDirty}>Save</Button>
+          <Button onClick={handleComplete}>Complete</Button>
         </div>
       </SheetContent>
     </Sheet>

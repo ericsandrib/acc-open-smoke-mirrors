@@ -14,10 +14,9 @@ import { teamMembers } from '@/data/teamMembers'
 import {
   CUSTODIAN_OPTIONS,
   ACCOUNT_CATEGORY_OPTIONS,
-  SCHWAB_APPLICATION_OPTIONS,
+  getAccountSelectorConfig,
   type CustodianId,
   type AccountCategoryId,
-  type SchwabApplicationType,
 } from '@/utils/custodians'
 
 const QUANTITY_OPTIONS = Array.from({ length: 10 }, (_, i) => ({
@@ -27,13 +26,17 @@ const QUANTITY_OPTIONS = Array.from({ length: 10 }, (_, i) => ({
 
 interface Row {
   id: string
-  applicationType: SchwabApplicationType | ''
+  /** Application type (Schwab/Fidelity) or registration type id (SEI). */
+  applicationType: string
   quantity: number
 }
 
 export type Selection = {
-  applicationType: SchwabApplicationType
+  /** Application type id (Schwab/Fidelity) or SEI registration type id. */
+  applicationType: string
   label: string
+  /** Short label used for the spawned child task name. */
+  shortLabel: string
   count: number
   custodian: CustodianId
   category: AccountCategoryId
@@ -61,6 +64,16 @@ export function AccountTypePickerDialog({ open, onOpenChange, onConfirm }: Accou
   const [investmentProfessionalId, setInvestmentProfessionalId] = useState('')
 
   const advisorOptions = teamMembers.map((m) => ({ value: m.id, label: m.name }))
+
+  // Application type (Schwab/Fidelity) vs registration type (SEI) is conditional
+  // on the selected custodian — this drives the label, placeholder, and options.
+  const selectorConfig = getAccountSelectorConfig(custodian)
+
+  const handleCustodianChange = (next: CustodianId) => {
+    setCustodian(next)
+    // Options differ per custodian; clear stale selections from the prior one.
+    setRows([createRow()])
+  }
 
   const handleReset = () => {
     setRows([createRow()])
@@ -92,10 +105,10 @@ export function AccountTypePickerDialog({ open, onOpenChange, onConfirm }: Accou
   const totalAccounts = validRows.reduce((sum, r) => sum + r.quantity, 0)
 
   const buildSelections = (): Selection[] => {
-    const grouped = new Map<SchwabApplicationType, number>()
+    const grouped = new Map<string, number>()
 
     for (const row of validRows) {
-      const t = row.applicationType as SchwabApplicationType
+      const t = row.applicationType
       grouped.set(t, (grouped.get(t) ?? 0) + row.quantity)
     }
 
@@ -103,10 +116,11 @@ export function AccountTypePickerDialog({ open, onOpenChange, onConfirm }: Accou
     const officeCode = advisor?.officeCode ?? ''
 
     return Array.from(grouped.entries()).map(([t, count]) => {
-      const opt = SCHWAB_APPLICATION_OPTIONS.find((o) => o.id === t)
+      const opt = selectorConfig.options.find((o) => o.id === t)
       return {
         applicationType: t,
         label: opt?.label ?? String(t),
+        shortLabel: opt?.shortLabel ?? opt?.label ?? String(t),
         count,
         custodian: custodian as CustodianId,
         category,
@@ -150,7 +164,7 @@ export function AccountTypePickerDialog({ open, onOpenChange, onConfirm }: Accou
                 <Label>
                   Custodian <span className="text-destructive">*</span>
                 </Label>
-                <Select value={custodian || undefined} onValueChange={(v) => setCustodian(v as CustodianId)}>
+                <Select value={custodian || undefined} onValueChange={(v) => handleCustodianChange(v as CustodianId)}>
                   <SelectTrigger className="h-9 w-full text-left [&>span]:text-left">
                     <SelectValue placeholder="Select custodian…" />
                   </SelectTrigger>
@@ -206,7 +220,7 @@ export function AccountTypePickerDialog({ open, onOpenChange, onConfirm }: Accou
           <div className="rounded-lg border border-border overflow-visible">
             <div className="grid grid-cols-[1fr_90px_40px] gap-3 px-4 py-2.5 bg-muted/50 border-b border-border">
               <span className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-                Application type
+                {selectorConfig.fieldLabel}
               </span>
               <span className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Qty</span>
               <span />
@@ -218,16 +232,16 @@ export function AccountTypePickerDialog({ open, onOpenChange, onConfirm }: Accou
                 className="grid grid-cols-[1fr_90px_40px] gap-3 items-center px-4 py-3 border-b border-border last:border-b-0"
               >
                 <div className="space-y-1.5 min-w-0">
-                  <Label className="sr-only">Application type</Label>
+                  <Label className="sr-only">{selectorConfig.fieldLabel}</Label>
                   <Select
                     value={row.applicationType || undefined}
-                    onValueChange={(v) => updateRow(row.id, { applicationType: v as SchwabApplicationType })}
+                    onValueChange={(v) => updateRow(row.id, { applicationType: v })}
                   >
                     <SelectTrigger className="h-9 w-full text-left [&>span]:line-clamp-2 [&>span]:text-left">
-                      <SelectValue placeholder="Select application type…" />
+                      <SelectValue placeholder={selectorConfig.placeholder} />
                     </SelectTrigger>
                     <SelectContent className="max-h-[min(24rem,70vh)] w-[var(--radix-select-trigger-width)] max-w-[var(--radix-select-trigger-width)] min-w-0">
-                      {SCHWAB_APPLICATION_OPTIONS.map((opt) => (
+                      {selectorConfig.options.map((opt) => (
                         <SelectItem
                           key={opt.id}
                           value={opt.id}
@@ -277,10 +291,17 @@ export function AccountTypePickerDialog({ open, onOpenChange, onConfirm }: Accou
               Add another application type
             </button>
           </div>
-          <p className="text-xs text-muted-foreground leading-relaxed">
-            Registration details (Individual, Joint, IRA subtype, etc.) are captured inside each
-            application's form sections.
-          </p>
+          {selectorConfig.kind === 'application' ? (
+            <p className="text-xs text-muted-foreground leading-relaxed">
+              Registration details (Individual, Joint, IRA subtype, etc.) are captured inside each
+              application's form sections.
+            </p>
+          ) : (
+            <p className="text-xs text-muted-foreground leading-relaxed">
+              Each row is one SEI registration (account) type. Remaining registration details are
+              captured inside each account's form sections.
+            </p>
+          )}
         </div>
 
         <div className="px-6 py-4 border-t border-border shrink-0 flex items-center justify-between gap-3">
