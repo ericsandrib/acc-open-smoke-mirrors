@@ -88,10 +88,14 @@ export function SettingsPage() {
           <div className="rounded-lg border border-border bg-card px-4 py-3 shadow-sm space-y-2">
             <Label htmlFor="kyc-workflow-mode" className="text-foreground">
               KYC orchestration
+              <span className="ml-2 rounded-full border border-border px-2 py-0.5 text-[10px] font-medium uppercase tracking-wide text-muted-foreground align-middle">
+                Internal demo control
+              </span>
             </Label>
             <p className="text-xs text-muted-foreground">
-              Separate mode uses dedicated KYC and account child workflows in the onboarding Journeys list.
-              Single-flow embeds owner KYC, AML, and CIP in the wizard and shows only top-level actions on Journeys.
+              Not part of the client-facing path — use this to steer the KYC timing discussion.
+              Separate (Stratos default) runs KYC early as dedicated per-person workflows.
+              Single-flow embeds owner KYC, AML, and CIP in the wizard and batches screening at forms-package send.
             </p>
             <Select
               value={kycWorkflowMode}

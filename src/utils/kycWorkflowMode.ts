@@ -7,7 +7,10 @@ export function getPersistedKycWorkflowMode(): KycWorkflowMode {
   const stored = localStorage.getItem(STORAGE_KEY)
   if (stored === 'separate') return 'separate'
   if (stored === 'single-flow') return 'single-flow'
-  return 'single-flow'
+  // Stratos default (2026-07-19): KYC runs early as its own per-person workflows.
+  // Single-flow (batched at forms-package send) is retained behind the internal
+  // Settings toggle to support the one-workflow-vs-two discussion.
+  return 'separate'
 }
 
 export function persistKycWorkflowMode(mode: KycWorkflowMode): void {
