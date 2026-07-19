@@ -34,6 +34,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { useOpenAccountsVariant } from '@/components/wizard/openAccountsVariantContext'
 import { cn } from '@/lib/utils'
 import { isEmbeddedAccountOwnerKycEnabled } from '@/utils/ownerKycReview'
+import { SeiIndividualOwnerHeader } from '@/components/wizard/forms/SeiIndividualOwnerHeader'
 
 type OwnerRow = { id: string; type: 'existing'; partyId?: string }
 type BeneficiaryDesignationType = 'primary' | 'contingent'
@@ -116,6 +117,8 @@ export function AcctChildOwnerInfoForm() {
 
   const { kycWorkflowMode, hideKycChildWorkflows } = useTheme()
   const childId = ctx?.child.id ?? ''
+  // Writer for the account's own metadata (custodian, SEI fields, MRDC state).
+  const { updateField: updateChildMeta } = useTaskData(childId || '__no_child_meta__')
   const singleFlowKyc = isEmbeddedAccountOwnerKycEnabled({
     kycWorkflowMode,
     hideKycChildWorkflows,
@@ -127,6 +130,14 @@ export function AcctChildOwnerInfoForm() {
   const trustEntityOwnersOnly = childRegType === 'TRUST'
   const allowLegalEntityAsOwner =
     !trustEntityOwnersOnly && registrationAllowsLegalEntityAsAccountOwner(childRegType)
+
+  // SEI custody: render the SEI form header (form selector + MRDC) above the shared sections.
+  const isSei = childMeta?.custodian === 'sei'
+  const seiAccountType = (childMeta?.seiAccountType as string | undefined) ?? ''
+  const seiFirmCode = (childMeta?.firmCode as string | undefined) ?? ''
+  const seiAdvisorId = (childMeta?.advisorId as string | undefined) ?? ''
+  const seiInvestmentProgramId = (childMeta?.investmentProgramId as string | undefined) ?? ''
+  const seiMrdcSubmitted = childMeta?.mrdcSubmitted === true
 
   const accountOwnerCandidates = useMemo(() => {
     if (trustEntityOwnersOnly) {
@@ -159,6 +170,14 @@ export function AcctChildOwnerInfoForm() {
 
   const maxOwners = getMaxAccountOwnersForRegistration(childRegType)
   const requiredOwnerSlots = Math.max(1, maxOwners)
+
+  const firstOwnerParty = owners[0]?.partyId
+    ? state.relatedParties.find((p) => p.id === owners[0].partyId)
+    : undefined
+  const seiOwnerPresent = owners.some((o) => o.partyId)
+  const seiOwnerName = firstOwnerParty?.name ?? ''
+  const seiOwnerTaxId =
+    (firstOwnerParty?.ssn as string | undefined) ?? (firstOwnerParty?.taxId as string | undefined) ?? ''
 
   const [addMemberSheetOwnerId, setAddMemberSheetOwnerId] = useState<string | null>(null)
   const openAccountsParent = ctx ? findParentTaskForChild(state, ctx.child.id) : undefined
@@ -361,6 +380,36 @@ export function AcctChildOwnerInfoForm() {
         </div>
       ) : null}
       <div className={lockForExternalSubmission ? 'space-y-7 pointer-events-none opacity-75 select-none' : 'space-y-7'}>
+      {isSei ? (
+        <section id="acct-sei" className="space-y-6 scroll-mt-16">
+          <SeiIndividualOwnerHeader
+            seiAccountType={seiAccountType}
+            firmCode={seiFirmCode}
+            advisorId={seiAdvisorId}
+            investmentProgramId={seiInvestmentProgramId}
+            onChangeInvestmentProgram={(id) => updateChildMeta('investmentProgramId', id)}
+            accountNumber={(childMeta?.accountNumber as string) ?? ''}
+            ownerPresent={seiOwnerPresent}
+            ownerName={seiOwnerName}
+            ownerTaxId={seiOwnerTaxId}
+            mrdcSubmitted={seiMrdcSubmitted}
+            onSendMrdc={() => updateChildMeta('mrdcSubmitted', true)}
+            headerClass={childSectionHeaderClass}
+            titleClass={childSectionTitleClass}
+            bodyClass={childSectionBodyClass}
+            cardClass={
+              isCardVariant
+                ? cn(
+                    'rounded-xl p-6 overflow-hidden',
+                    isVersion2 && 'border border-foreground/30 bg-background',
+                    isVersion3 && 'v3-card-inner-strokes border border-foreground/20 bg-[#fafafa]',
+                    isVersion4 && 'border border-foreground/30 bg-white',
+                  )
+                : undefined
+            }
+          />
+        </section>
+      ) : null}
       <section id="acct-owners" className="space-y-6 scroll-mt-16">
         <div
           className={cn(
@@ -818,7 +867,9 @@ export function AcctChildOwnerInfoForm() {
           updateField={updateField}
           registrationType={childRegType}
           productAccountTypeOverride={productAccountTypeOverride}
-          prefilledAccountNumber={(childMeta?.accountNumber as string) ?? ''}
+          prefilledAccountNumber={
+            isSei && !seiMrdcSubmitted ? '' : ((childMeta?.accountNumber as string) ?? '')
+          }
           hideHeader
         />
         <AccountAdditionalInformationSection data={data} updateField={updateField} hideHeader />
