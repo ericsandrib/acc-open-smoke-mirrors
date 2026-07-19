@@ -65,8 +65,7 @@ export const taskDescriptions: Partial<Record<string, string>> = {
     'Set up accounts, complete identity verification, and prepare documents for client signature.',
   'open-accounts-with-annuity':
     'Set up accounts that include an annuity.',
-  'acct-child-account-owners':
-    'Set up the account, add owners and participants, request margin and options, answer remaining account questions, and attach supporting owner documents as needed.',
+  // 'acct-child-account-owners' subtitle intentionally omitted — TBD (per Eric 2026-07-19).
   'acct-child-funding-transfers':
     'Kick off one or more funding and account transfer workflows for this account—each line opens its own detail flow, similar to Accounts to Be Opened on the parent task.',
   'funding-line-child-setup':

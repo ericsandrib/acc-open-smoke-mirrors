@@ -69,17 +69,3 @@ export const SEI_LIVE_FORMS: SeiForm[] = ['individual-owner']
 export function getSeiAccountType(seiAccountType: string | undefined): SeiAccountType | undefined {
   return SEI_ACCOUNT_TYPES.find((t) => t.seiAccountType === seiAccountType)
 }
-
-/** SEI investment programs (investmentProgramId in the SEI account-creation API). */
-export interface SeiInvestmentProgram {
-  id: string
-  label: string
-}
-
-export const SEI_INVESTMENT_PROGRAMS: SeiInvestmentProgram[] = [
-  { id: '5', label: 'SEI Managed Account — Moderate Growth' },
-  { id: '12', label: 'SEI Managed Account — Conservative' },
-  { id: '18', label: 'SEI Managed Account — Aggressive Growth' },
-  { id: '24', label: 'SEI Strategic Portfolios — Core Market' },
-  { id: '31', label: 'SEI Tax-Managed — Balanced' },
-]
