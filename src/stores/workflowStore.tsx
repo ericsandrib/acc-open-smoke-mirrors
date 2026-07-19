@@ -912,6 +912,10 @@ function workflowReducer(state: WorkflowState, action: WorkflowAction): Workflow
       const config = getChildTypeConfig(action.childType)
       let spawnedChildId = ''
       let spawnedAccountGen: ReturnType<typeof generateAccountOpenIdentifiers> | undefined
+      // SEI accounts have no account number at open — it is assigned by SEI's
+      // account-creation call later, not fabricated at spawn.
+      const isSeiAccount =
+        (action.metadata as Record<string, unknown> | undefined)?.custodian === 'sei'
       const newTasks = state.tasks.map((t) => {
         if (t.id === action.parentTaskId) {
           const priorChildren = t.children ?? []
@@ -930,6 +934,10 @@ function workflowReducer(state: WorkflowState, action: WorkflowAction): Workflow
                 ...spawnedAccountGen,
                 accountNumber: demoAccountNumberForBrokerageIndex(priorBrokerage),
               }
+            }
+            if (isSeiAccount) {
+              // No number until SEI's account-creation call assigns one.
+              spawnedAccountGen = { ...spawnedAccountGen, accountNumber: '' }
             }
             childName = accountOpeningChildNameWithAccountTail(
               action.childName,
